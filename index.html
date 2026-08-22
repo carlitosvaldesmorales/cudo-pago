@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#8d1f1f">
+  <title>Datos de transferencia CUDO</title>
+  <style>
+    :root {--bg:#f4f1ec;--card:#8d1f1f;--ink:#2a211f;--light:#fffaf7;--muted:#6f625d}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);display:flex;align-items:center;justify-content:center}
+    main{width:min(560px,100%)}
+    h1{margin:0 0 10px;text-align:center;font-family:Georgia,serif;font-size:clamp(38px,9vw,58px)}
+    .sub{text-align:center;margin:0 0 24px;color:var(--muted);font-size:18px}
+    .card{background:var(--card);color:var(--light);border-radius:26px;padding:22px;box-shadow:0 12px 30px rgba(0,0,0,.14)}
+    .row{padding:13px 0;border-bottom:1px solid rgba(255,255,255,.24)}
+    .row:last-child{border-bottom:none}
+    .label{display:block;font-weight:800;font-size:14px;opacity:.9;margin-bottom:4px}
+    .value{font-family:Georgia,serif;font-size:21px;line-height:1.3;word-break:break-word}
+    button{width:100%;margin-top:18px;padding:18px 20px;border:0;border-radius:20px;cursor:pointer;background:#b32a2a;color:white;font-size:18px;font-weight:900;box-shadow:0 6px 16px rgba(0,0,0,.15)}
+    .status{min-height:24px;text-align:center;margin-top:12px;font-weight:800}
+    .hint{text-align:center;color:var(--muted);font-size:14px;line-height:1.45;margin-top:8px}
+    .fallback{margin-top:14px;padding:14px;border-radius:14px;background:white;white-space:pre-wrap;user-select:all;font-size:14px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Datos de pago CUDO</h1>
+    <p class="sub">Transferencia bancaria</p>
+    <section class="card">
+      <div class="row"><span class="label">Nombre</span><span class="value">Patricio Javier Torres Salinas</span></div>
+      <div class="row"><span class="label">RUT</span><span class="value">19.603.739-K</span></div>
+      <div class="row"><span class="label">Institución</span><span class="value">Mercado Pago</span></div>
+      <div class="row"><span class="label">Tipo de cuenta</span><span class="value">Cuenta Vista</span></div>
+      <div class="row"><span class="label">Número de cuenta</span><span class="value">1030125354</span></div>
+      <div class="row"><span class="label">Correo electrónico</span><span class="value">patriciojaviertorressalinas@gmail.com</span></div>
+    </section>
+    <button id="copyBtn" type="button">COPIAR DATOS DE TRANSFERENCIA</button>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div class="hint">Después abre tu banco y pega los datos donde corresponda.</div>
+    <div id="fallback" class="fallback" hidden></div>
+  </main>
+  <script>
+    const data=`Patricio Javier Torres Salinas\n19.603.739-K\nMercado Pago\nCuenta Vista\n1030125354\npatriciojaviertorressalinas@gmail.com`;
+    const btn=document.getElementById('copyBtn');
+    const status=document.getElementById('status');
+    const fallback=document.getElementById('fallback');
+    btn.addEventListener('click',async()=>{
+      try{
+        await navigator.clipboard.writeText(data);
+        status.textContent='✓ Datos copiados al portapapeles';
+        btn.textContent='✓ DATOS COPIADOS';
+      }catch(e){
+        fallback.hidden=false;
+        fallback.textContent=data;
+        const range=document.createRange();range.selectNodeContents(fallback);
+        const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+        status.textContent='Mantén presionado y toca “Copiar”.';
+      }
+    });
+  </script>
+</body>
+</html>
