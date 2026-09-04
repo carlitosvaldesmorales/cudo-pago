@@ -109,6 +109,186 @@ window.cudoBindPlayerFilters=function(filterId,gridId){
   position.addEventListener('change',apply);
 };
 
+window.cudoBindGallery=function(filterId,albumsId,gridId,countId){
+  const filters=document.getElementById(filterId);
+  const albumsRoot=document.getElementById(albumsId);
+  const grid=document.getElementById(gridId);
+  const count=document.getElementById(countId);
+  if(!filters||!albumsRoot||!grid)return;
+
+  const cards=[...grid.querySelectorAll('.photo')];
+  if(!cards.length){
+    filters.hidden=true;
+    albumsRoot.hidden=true;
+    return;
+  }
+
+  const albumSelect=filters.querySelector('#galleryAlbum');
+  const categorySelect=filters.querySelector('#galleryCategory');
+  const yearSelect=filters.querySelector('#galleryYear');
+  if(!albumSelect||!categorySelect||!yearSelect)return;
+
+  const addOptions=(select,values)=>values.forEach(value=>{
+    const option=document.createElement('option');
+    option.value=value;
+    option.textContent=value;
+    select.append(option);
+  });
+
+  const albums=[...new Map(cards.map(card=>[card.dataset.albumId,card.dataset.album])).entries()]
+    .filter(([id,name])=>id&&name)
+    .sort((a,b)=>a[1].localeCompare(b[1],'es'));
+  const categories=[...new Set(cards.map(card=>card.dataset.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  const years=[...new Set(cards.map(card=>card.dataset.year).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+  albums.forEach(([id,name])=>{
+    const option=document.createElement('option');
+    option.value=id;
+    option.textContent=name;
+    albumSelect.append(option);
+  });
+  addOptions(categorySelect,categories);
+  addOptions(yearSelect,years);
+
+  const albumGroups=new Map();
+  cards.forEach(card=>{
+    const id=card.dataset.albumId;
+    if(!id)return;
+    if(!albumGroups.has(id))albumGroups.set(id,{name:card.dataset.album,category:card.dataset.category,count:0});
+    albumGroups.get(id).count++;
+  });
+  albumsRoot.replaceChildren();
+  [...albumGroups.entries()].sort((a,b)=>a[1].name.localeCompare(b[1].name,'es')).forEach(([id,info])=>{
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='albumcard';
+    button.dataset.album=id;
+    const strong=document.createElement('strong');
+    strong.textContent=info.name;
+    const span=document.createElement('span');
+    span.textContent=`${info.count} ${info.count===1?'foto':'fotos'}${info.category?' · '+info.category:''}`;
+    button.append(strong,span);
+    button.addEventListener('click',()=>{
+      albumSelect.value=id;
+      apply();
+      grid.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    albumsRoot.append(button);
+  });
+
+  const apply=()=>{
+    let visible=0;
+    cards.forEach(card=>{
+      const albumOK=albumSelect.value==='TODOS'||card.dataset.albumId===albumSelect.value;
+      const categoryOK=categorySelect.value==='TODAS'||card.dataset.category===categorySelect.value;
+      const yearOK=yearSelect.value==='TODOS'||card.dataset.year===yearSelect.value;
+      const show=albumOK&&categoryOK&&yearOK;
+      card.hidden=!show;
+      if(show)visible++;
+    });
+    albumsRoot.querySelectorAll('.albumcard').forEach(button=>button.classList.toggle('active',albumSelect.value!=='TODOS'&&button.dataset.album===albumSelect.value));
+    if(count)count.textContent=`${visible} ${visible===1?'fotografía':'fotografías'}`;
+    grid.querySelectorAll('.filter-empty').forEach(node=>node.remove());
+    if(!visible){
+      const box=document.createElement('div');
+      box.className='empty filter-empty';
+      box.style.gridColumn='1/-1';
+      const strong=document.createElement('strong');
+      const span=document.createElement('span');
+      strong.textContent='No hay fotografías en este filtro';
+      span.textContent='Cambia el álbum, categoría o año para explorar otras publicaciones.';
+      box.append(strong,span);
+      grid.append(box);
+    }
+  };
+
+  [albumSelect,categorySelect,yearSelect].forEach(select=>select.addEventListener('change',apply));
+  filters.hidden=false;
+  albumsRoot.hidden=!albumsRoot.children.length;
+  apply();
+
+  const overlay=document.createElement('div');
+  overlay.className='lightbox';
+  overlay.hidden=true;
+  overlay.setAttribute('role','dialog');
+  overlay.setAttribute('aria-modal','true');
+  overlay.setAttribute('aria-label','Visor de fotografías C.U.D.O.');
+  const shell=document.createElement('div');
+  shell.className='lightboxshell';
+  const close=document.createElement('button');
+  close.type='button';
+  close.className='lightboxclose';
+  close.setAttribute('aria-label','Cerrar fotografía');
+  close.textContent='×';
+  const prev=document.createElement('button');
+  prev.type='button';
+  prev.className='lightboxnav prev';
+  prev.setAttribute('aria-label','Fotografía anterior');
+  prev.textContent='‹';
+  const next=document.createElement('button');
+  next.type='button';
+  next.className='lightboxnav next';
+  next.setAttribute('aria-label','Fotografía siguiente');
+  next.textContent='›';
+  const image=document.createElement('img');
+  image.className='lightboximage';
+  const caption=document.createElement('div');
+  caption.className='lightboxcaption';
+  const captionMeta=document.createElement('div');
+  captionMeta.className='meta';
+  const captionTitle=document.createElement('strong');
+  const captionDescription=document.createElement('p');
+  caption.append(captionMeta,captionTitle,captionDescription);
+  shell.append(close,prev,image,next,caption);
+  overlay.append(shell);
+  document.body.append(overlay);
+
+  let activeButton=null;
+  const visibleButtons=()=>cards.filter(card=>!card.hidden).map(card=>card.querySelector('.photoopen')).filter(Boolean);
+  const showButton=button=>{
+    if(!button)return;
+    activeButton=button;
+    image.src=button.dataset.image;
+    image.alt=button.dataset.alt||'Fotografía C.U.D.O.';
+    captionMeta.textContent=button.dataset.meta||'';
+    captionTitle.textContent=button.dataset.title||'';
+    captionDescription.textContent=button.dataset.description||'';
+    overlay.hidden=false;
+    document.body.classList.add('lightbox-open');
+    close.focus();
+  };
+  const closeOverlay=()=>{
+    overlay.hidden=true;
+    document.body.classList.remove('lightbox-open');
+    const restore=activeButton;
+    activeButton=null;
+    image.removeAttribute('src');
+    if(restore)restore.focus();
+  };
+  const move=delta=>{
+    const buttons=visibleButtons();
+    if(!buttons.length)return;
+    let index=buttons.indexOf(activeButton);
+    if(index<0)index=0;
+    index=(index+delta+buttons.length)%buttons.length;
+    showButton(buttons[index]);
+  };
+
+  cards.forEach(card=>{
+    const button=card.querySelector('.photoopen');
+    if(button)button.addEventListener('click',()=>showButton(button));
+  });
+  close.addEventListener('click',closeOverlay);
+  prev.addEventListener('click',()=>move(-1));
+  next.addEventListener('click',()=>move(1));
+  overlay.addEventListener('click',event=>{if(event.target===overlay)closeOverlay()});
+  document.addEventListener('keydown',event=>{
+    if(overlay.hidden)return;
+    if(event.key==='Escape')closeOverlay();
+    if(event.key==='ArrowLeft')move(-1);
+    if(event.key==='ArrowRight')move(1);
+  });
+};
+
 window.cudoRenderCollection=async function({url,target,status,type}){
   const root=document.getElementById(target);
   const st=document.getElementById(status);
@@ -125,7 +305,7 @@ window.cudoRenderCollection=async function({url,target,status,type}){
     if(!ref)return null;
     try{
       const resolved=new URL(String(ref),window.location.href);
-      if(!['http:','https:'].includes(resolved.protocol))return null;
+      if(resolved.protocol!=='https:')return null;
       const img=document.createElement('img');
       img.src=resolved.href;
       img.alt=String(alt||'C.U.D.O.');
@@ -235,6 +415,8 @@ window.cudoRenderCollection=async function({url,target,status,type}){
       });
     }
 
+    if(type==='galeria')items.sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||''))||String(a.album||'').localeCompare(String(b.album||''),'es'));
+
     root.replaceChildren();
     items.forEach(item=>{
       let article;
@@ -279,14 +461,29 @@ window.cudoRenderCollection=async function({url,target,status,type}){
       }
 
       if(type==='galeria'){
+        const img=safeImage(item.imagen_ref,item.alt);
+        if(!img)return;
         article=document.createElement('article');
         article.className='photo';
-        const img=safeImage(item.imagen_ref,item.titulo||'Galería C.U.D.O.');
-        if(img)article.append(img);
+        article.dataset.albumId=String(item.album_id||'');
+        article.dataset.album=String(item.album||'');
+        article.dataset.category=String(item.categoria||'');
+        article.dataset.year=String(item.fecha||'').slice(0,4);
+        const open=document.createElement('button');
+        open.type='button';
+        open.className='photoopen';
+        open.setAttribute('aria-label','Abrir foto: '+String(item.titulo||'C.U.D.O.'));
+        open.dataset.image=img.src;
+        open.dataset.alt=String(item.alt||'');
+        open.dataset.title=String(item.titulo||'');
+        open.dataset.meta=[item.fecha,item.album,item.categoria].filter(Boolean).join(' · ');
+        open.dataset.description=String(item.descripcion||'');
+        open.append(img);
         const body=document.createElement('div');
         body.className='photobody';
-        body.append(text('div',item.fecha,'meta'),text('h2',item.titulo),text('p',item.descripcion));
-        article.append(body);
+        body.append(text('div',[item.fecha,item.album].filter(Boolean).join(' · '),'meta'),text('h2',item.titulo));
+        if(item.descripcion)body.append(text('p',item.descripcion));
+        article.append(open,body);
       }
 
       if(type==='partidos'){
