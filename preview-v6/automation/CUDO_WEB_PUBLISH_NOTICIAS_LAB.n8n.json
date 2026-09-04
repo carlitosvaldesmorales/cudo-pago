@@ -1,0 +1,171 @@
+{
+  "name": "CUDO_WEB_PUBLISH_NOTICIAS_LAB",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger LAB",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "NOTICIAS",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "read-noticias",
+      "name": "Read SIM_WEB_NOTICIAS",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [460, 300],
+      "alwaysOutputData": true,
+      "notes": "Asignar credencial Google de sistemas@cudo.cl al importar. No incluir credenciales en el JSON."
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = items.map(i => i.json).filter(r => Object.keys(r || {}).length);\nconst clean = v => (v ?? '').toString().trim();\nconst eligible = rows.filter(r =>\n  clean(r.ESTADO) === 'PUBLICADO' &&\n  clean(r.PUBLICAR) === 'SI' &&\n  clean(r.PRIVACIDAD) === 'PUBLICO' &&\n  clean(r.CLASIFICACION) === 'EVIDENCIA' &&\n  clean(r.ID_NOTICIA) && clean(r.FECHA) && clean(r.SLUG) && clean(r.TITULO) && clean(r.RESUMEN)\n);\nconst safeItems = eligible.map(r => ({\n  id: clean(r.ID_NOTICIA),\n  fecha: clean(r.FECHA),\n  slug: clean(r.SLUG),\n  titulo: clean(r.TITULO),\n  resumen: clean(r.RESUMEN),\n  cuerpo: clean(r.CUERPO),\n  imagen_ref: clean(r.IMAGEN_REF)\n}));\nconst doc = {\n  schema_version: '1.0',\n  generated_at: new Date().toISOString(),\n  source: 'SIM_WEB_NOTICIAS',\n  items: safeItems\n};\nconst text = JSON.stringify(doc, null, 2) + '\\n';\nreturn [{json:{\n  total_rows: rows.length,\n  published_rows: safeItems.length,\n  discarded_rows: rows.length - safeItems.length,\n  payload_text: text,\n  content_b64: Buffer.from(text, 'utf8').toString('base64')\n}}];"
+      },
+      "id": "build-json",
+      "name": "Filter + Build Public JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300],
+      "notes": "Gate estricto: PUBLICADO + SI + PUBLICO + EVIDENCIA. Solo exporta campos públicos permitidos."
+    },
+    {
+      "parameters": {
+        "requestMethod": "GET",
+        "url": "https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/contents/preview-v6/data/noticias.json?ref=portal-shell-v6",
+        "jsonParameters": true,
+        "options": {
+          "headerParametersJson": "{\"Authorization\":\"Bearer {{$env.CUDO_GITHUB_TOKEN}}\",\"Accept\":\"application/vnd.github+json\",\"X-GitHub-Api-Version\":\"2022-11-28\"}"
+        }
+      },
+      "id": "get-current",
+      "name": "GitHub GET current JSON",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [940, 300],
+      "notes": "Token en variable/credencial CUDO_GITHUB_TOKEN. Nunca guardar token en el workflow."
+    },
+    {
+      "parameters": {
+        "jsCode": "const build = $('Filter + Build Public JSON').first().json;\nconst currentRaw = ($json.content || '').replace(/\\n/g, '');\nlet currentText = '';\ntry { currentText = Buffer.from(currentRaw, 'base64').toString('utf8'); } catch (e) {}\nlet same = false;\ntry {\n  const a = JSON.parse(currentText || '{}');\n  const b = JSON.parse(build.payload_text || '{}');\n  delete a.generated_at; delete b.generated_at;\n  same = JSON.stringify(a) === JSON.stringify(b);\n} catch (e) {}\nreturn [{json:{\n  changed: !same,\n  current_sha: $json.sha || '',\n  content_b64: build.content_b64,\n  total_rows: build.total_rows,\n  published_rows: build.published_rows,\n  discarded_rows: build.discarded_rows\n}}];"
+      },
+      "id": "compare",
+      "name": "Compare Public Projection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300],
+      "notes": "Ignora generated_at para evitar commits cuando el contenido público no cambió."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.changed}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "if-changed",
+      "name": "IF public content changed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1410, 300]
+    },
+    {
+      "parameters": {
+        "requestMethod": "PUT",
+        "url": "https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/contents/preview-v6/data/noticias.json",
+        "jsonParameters": true,
+        "options": {
+          "headerParametersJson": "{\"Authorization\":\"Bearer {{$env.CUDO_GITHUB_TOKEN}}\",\"Accept\":\"application/vnd.github+json\",\"X-GitHub-Api-Version\":\"2022-11-28\"}"
+        },
+        "bodyParametersJson": "={{ JSON.stringify({message:'LAB: publicar Noticias desde SIM_WEB_NOTICIAS',content:$node['Compare Public Projection'].json.content_b64,sha:$node['Compare Public Projection'].json.current_sha,branch:'portal-shell-v6'}) }}"
+      },
+      "id": "put-json",
+      "name": "GitHub PUT noticias.json LAB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1650, 220],
+      "notes": "Guard rail: branch fija portal-shell-v6. Este workflow no escribe main."
+    },
+    {
+      "parameters": {
+        "jsCode": "const build = $('Filter + Build Public JSON').first().json;\nconst updated = Boolean($json && $json.commit && $json.commit.sha);\nreturn [{json:{\n  TIMESTAMP: new Date().toISOString(),\n  RUN_ID: 'LAB-' + Date.now(),\n  AMBIENTE: 'LAB',\n  BRANCH: 'portal-shell-v6',\n  PATH: 'preview-v6/data/noticias.json',\n  TOTAL_FILAS: build.total_rows,\n  PUBLICADAS: build.published_rows,\n  DESCARTADAS: build.discarded_rows,\n  RESULTADO: updated ? 'UPDATED' : 'NO_CHANGES',\n  COMMIT_SHA: updated ? $json.commit.sha : '',\n  EJECUTADO_POR: 'n8n',\n  DETALLE: updated ? 'Proyección pública actualizada' : 'Sin cambios de contenido público'\n}}];"
+      },
+      "id": "build-log",
+      "name": "Build Publish Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1880, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "PUBLISH_LOG",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "append-log",
+      "name": "Append PUBLISH_LOG",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [2120, 300],
+      "notes": "Asignar la misma credencial Google institucional al importar."
+    }
+  ],
+  "connections": {
+    "Manual Trigger LAB": {"main":[[{"node":"Read SIM_WEB_NOTICIAS","type":"main","index":0}]]},
+    "Read SIM_WEB_NOTICIAS": {"main":[[{"node":"Filter + Build Public JSON","type":"main","index":0}]]},
+    "Filter + Build Public JSON": {"main":[[{"node":"GitHub GET current JSON","type":"main","index":0}]]},
+    "GitHub GET current JSON": {"main":[[{"node":"Compare Public Projection","type":"main","index":0}]]},
+    "Compare Public Projection": {"main":[[{"node":"IF public content changed?","type":"main","index":0}]]},
+    "IF public content changed?": {
+      "main": [
+        [{"node":"GitHub PUT noticias.json LAB","type":"main","index":0}],
+        [{"node":"Build Publish Log","type":"main","index":0}]
+      ]
+    },
+    "GitHub PUT noticias.json LAB": {"main":[[{"node":"Build Publish Log","type":"main","index":0}]]},
+    "Build Publish Log": {"main":[[{"node":"Append PUBLISH_LOG","type":"main","index":0}]]}
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "cudo-web-noticias-lab-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
