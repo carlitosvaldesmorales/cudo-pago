@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - portal-package-v7
+      - prod-data-v7
       - main
     paths:
       - 'preview-v7/data/**'
