@@ -65,6 +65,50 @@ window.cudoBindMatchFilters=function(filterId,gridId){
   }));
 };
 
+window.cudoBindPlayerFilters=function(filterId,gridId){
+  const filters=document.getElementById(filterId);
+  const grid=document.getElementById(gridId);
+  if(!filters||!grid)return;
+  const category=filters.querySelector('#playerCategory');
+  const position=filters.querySelector('#playerPosition');
+  if(!category||!position)return;
+
+  const cards=[...grid.querySelectorAll('.player')];
+  const categories=[...new Set(cards.map(card=>card.dataset.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  categories.forEach(value=>{
+    const option=document.createElement('option');
+    option.value=value;
+    option.textContent=value;
+    category.append(option);
+  });
+
+  const apply=()=>{
+    let visible=0;
+    cards.forEach(card=>{
+      const catOK=category.value==='TODAS'||card.dataset.category===category.value;
+      const posOK=position.value==='TODAS'||card.dataset.position===position.value;
+      const show=catOK&&posOK;
+      card.hidden=!show;
+      if(show)visible++;
+    });
+    grid.querySelectorAll('.filter-empty').forEach(node=>node.remove());
+    if(cards.length&&!visible){
+      const box=document.createElement('div');
+      box.className='empty filter-empty';
+      box.style.gridColumn='1/-1';
+      const strong=document.createElement('strong');
+      const span=document.createElement('span');
+      strong.textContent='No hay jugadores en este filtro';
+      span.textContent='Cambia la categoría o posición para ver otros integrantes del plantel.';
+      box.append(strong,span);
+      grid.append(box);
+    }
+  };
+
+  category.addEventListener('change',apply);
+  position.addEventListener('change',apply);
+};
+
 window.cudoRenderCollection=async function({url,target,status,type}){
   const root=document.getElementById(target);
   const st=document.getElementById(status);
@@ -102,7 +146,8 @@ window.cudoRenderCollection=async function({url,target,status,type}){
 
   const labels={
     noticias:['Aún no hay noticias publicadas','El módulo está listo y esperando contenido validado.'],
-    equipos:['Planteles aún no publicados','La estructura está lista; no se muestran jugadores ni datos hasta contar con información validada para publicación.'],
+    equipos:['Categorías aún no publicadas','La estructura está lista y mostrará únicamente categorías validadas.'],
+    plantel:['Plantel aún no publicado','No se muestran jugadores, fotografías ni datos hasta contar con información validada y autorizada para publicación.'],
     galeria:['Galería aún sin publicaciones','La estructura está lista y mostrará únicamente fotografías autorizadas para uso público.'],
     partidos:['Partidos aún no publicados','El núcleo deportivo está listo para mostrar próximos encuentros y resultados una vez validados.'],
     tabla:['Tabla aún no publicada','La estructura está lista y mostrará posiciones únicamente cuando existan datos oficiales validados.']
@@ -180,6 +225,16 @@ window.cudoRenderCollection=async function({url,target,status,type}){
       });
     }
 
+    if(type==='plantel'){
+      const positionRank={ARQUERO:0,DEFENSA:1,VOLANTE:2,DELANTERO:3};
+      items.sort((a,b)=>{
+        const cat=String(a.categoria||'').localeCompare(String(b.categoria||''),'es');
+        if(cat)return cat;
+        const pos=(positionRank[String(a.posicion||'').toUpperCase()]??9)-(positionRank[String(b.posicion||'').toUpperCase()]??9);
+        return pos||Number(a.numero)-Number(b.numero);
+      });
+    }
+
     root.replaceChildren();
     items.forEach(item=>{
       let article;
@@ -203,6 +258,24 @@ window.cudoRenderCollection=async function({url,target,status,type}){
         body.className='teambody';
         body.append(text('div',item.categoria,'meta'),text('h2',item.nombre),text('p',item.descripcion));
         article.append(badge,body);
+      }
+
+      if(type==='plantel'){
+        article=document.createElement('article');
+        article.className='player';
+        article.dataset.category=String(item.categoria||'');
+        article.dataset.position=String(item.posicion||'').toUpperCase();
+        const media=document.createElement('div');
+        media.className='playermedia';
+        const img=safeImage(item.foto_ref,item.nombre_deportivo||'Jugador C.U.D.O.');
+        if(img)media.append(img);else media.append(text('div','CUDO','playerplaceholder'));
+        media.append(text('span','#'+item.numero,'playernumber'));
+        const body=document.createElement('div');
+        body.className='playerbody';
+        const role=[item.posicion,item.categoria].filter(Boolean).join(' · ');
+        body.append(text('div',role,'meta'),text('h2',item.nombre_deportivo));
+        if(item.capitan===true)body.append(text('span','CAPITÁN','captainbadge'));
+        article.append(media,body);
       }
 
       if(type==='galeria'){
