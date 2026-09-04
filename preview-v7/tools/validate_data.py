@@ -30,6 +30,12 @@ SPECS = {
         "allowed": {"id", "fecha", "titulo", "descripcion", "imagen_ref"},
         "unique": ("id",),
     },
+    "partidos.json": {
+        "source": "CUDO_WEB_PARTIDOS",
+        "required": {"id", "fecha", "local", "visita", "estado_partido"},
+        "allowed": {"id", "fecha", "hora", "local", "visita", "recinto", "categoria", "competencia", "estado_partido", "goles_local", "goles_visita"},
+        "unique": ("id",),
+    },
 }
 
 TOP_LEVEL = {"schema_version", "generated_at", "source", "items"}
@@ -38,6 +44,7 @@ PRIVATE_KEYS = {
     "fecha_nacimiento", "nacimiento", "responsable", "observaciones", "fuente",
     "clasificacion", "clasificación", "privacidad", "publicar", "estado",
 }
+MATCH_STATES = {"PROGRAMADO", "FINALIZADO", "SUSPENDIDO", "CANCELADO"}
 
 
 def fail(message: str) -> None:
@@ -54,6 +61,11 @@ def validate_image_ref(value: object, where: str) -> None:
     parsed = urlparse(value.strip())
     if parsed.scheme and parsed.scheme not in {"http", "https"}:
         fail(f"{where}: protocolo de imagen no permitido: {parsed.scheme}")
+
+
+def validate_score(value: object, where: str, key: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        fail(f"{where}: {key} debe ser un entero mayor o igual a 0")
 
 
 def validate_file(filename: str, spec: dict) -> None:
@@ -115,6 +127,20 @@ def validate_file(filename: str, spec: dict) -> None:
 
         if "imagen_ref" in item and item["imagen_ref"] not in (None, ""):
             validate_image_ref(item["imagen_ref"], where)
+
+        if filename == "partidos.json":
+            state = str(item["estado_partido"]).strip().upper()
+            if state not in MATCH_STATES:
+                fail(f"{where}: estado_partido inválido: {state}")
+            if state == "FINALIZADO":
+                if "goles_local" not in item or "goles_visita" not in item:
+                    fail(f"{where}: un partido FINALIZADO debe incluir ambos marcadores")
+                validate_score(item["goles_local"], where, "goles_local")
+                validate_score(item["goles_visita"], where, "goles_visita")
+            else:
+                for score_key in ("goles_local", "goles_visita"):
+                    if score_key in item and item[score_key] is not None:
+                        validate_score(item[score_key], where, score_key)
 
     print(f"OK  {filename}: {len(doc['items'])} item(s)")
 
