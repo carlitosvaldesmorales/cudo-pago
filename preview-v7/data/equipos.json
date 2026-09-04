@@ -1,6 +1,13 @@
 {
   "schema_version": "1.0",
-  "generated_at": null,
+  "generated_at": "2026-09-04",
   "source": "CUDO_WEB_EQUIPOS",
-  "items": []
+  "items": [
+    {
+      "id": "CUDO-EQ-SENIOR-2026",
+      "nombre": "Senior",
+      "categoria": "SENIOR",
+      "descripcion": "Nómina 2026 registrada con 30 jugadores. Los perfiles individuales se publicarán únicamente cuando completen los datos deportivos y controles de publicación definidos por el club."
+    }
+  ]
 }
