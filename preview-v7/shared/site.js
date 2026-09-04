@@ -1,4 +1,21 @@
 document.addEventListener('DOMContentLoaded',()=>{
+  const path=window.location.pathname;
+  const atRoot=/\/preview-v7\/?$/.test(path);
+  const atPartidos=/\/preview-v7\/partidos\/?$/.test(path);
+  const partidosHref=atRoot?'partidos/':(atPartidos?'./':'../partidos/');
+
+  document.querySelectorAll('.navlinks,.mobilepanel').forEach(container=>{
+    if(container.querySelector('[data-nav-partidos]'))return;
+    const equipo=[...container.querySelectorAll('a')].find(a=>a.textContent.trim()==='EQUIPOS');
+    const link=document.createElement('a');
+    link.href=partidosHref;
+    link.textContent='PARTIDOS';
+    link.dataset.navPartidos='true';
+    if(atPartidos)link.classList.add('active');
+    if(equipo)container.insertBefore(link,equipo);
+    else container.append(link);
+  });
+
   const b=document.getElementById('menuBtn');
   const p=document.getElementById('mobilePanel');
   if(!b||!p)return;
@@ -52,7 +69,8 @@ window.cudoRenderCollection=async function({url,target,status,type}){
   const labels={
     noticias:['Aún no hay noticias publicadas','El módulo está listo y esperando contenido validado.'],
     equipos:['Planteles aún no publicados','La estructura está lista; no se muestran jugadores ni datos hasta contar con información validada para publicación.'],
-    galeria:['Galería aún sin publicaciones','La estructura está lista y mostrará únicamente fotografías autorizadas para uso público.']
+    galeria:['Galería aún sin publicaciones','La estructura está lista y mostrará únicamente fotografías autorizadas para uso público.'],
+    partidos:['Partidos aún no publicados','El núcleo deportivo está listo para mostrar próximos encuentros, resultados y calendario una vez validados.']
   };
 
   if(!labels[type]){
@@ -105,6 +123,26 @@ window.cudoRenderCollection=async function({url,target,status,type}){
         body.className='photobody';
         body.append(text('div',item.fecha,'meta'),text('h2',item.titulo),text('p',item.descripcion));
         article.append(body);
+      }
+
+      if(type==='partidos'){
+        article=document.createElement('article');
+        article.className='match';
+        const top=document.createElement('div');
+        top.className='matchtop';
+        const when=[item.fecha,item.hora].filter(Boolean).join(' · ');
+        top.append(text('div',when,'date'),text('span',item.estado_partido||'PROGRAMADO','pill'));
+        const teams=document.createElement('div');
+        teams.className='matchteams';
+        const home=text('strong',item.local,'side');
+        const away=text('strong',item.visita,'side');
+        const middle=document.createElement('div');
+        const finalizado=String(item.estado_partido||'').toUpperCase()==='FINALIZADO';
+        middle.className=finalizado?'score':'versus';
+        middle.textContent=finalizado?`${item.goles_local} - ${item.goles_visita}`:'VS';
+        teams.append(home,middle,away);
+        const meta=[item.competencia,item.categoria,item.recinto].filter(Boolean).join(' · ');
+        article.append(top,teams,text('div',meta,'matchmeta'));
       }
 
       if(article)root.append(article);
