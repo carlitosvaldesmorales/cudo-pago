@@ -33,8 +33,8 @@ SPECS = {
     },
     "galeria.json": {
         "source": "CUDO_WEB_GALERIA",
-        "required": {"id", "fecha", "titulo", "imagen_ref"},
-        "allowed": {"id", "fecha", "titulo", "descripcion", "imagen_ref"},
+        "required": {"id", "fecha", "titulo", "imagen_ref", "alt", "album_id", "album", "categoria"},
+        "allowed": {"id", "fecha", "titulo", "descripcion", "imagen_ref", "alt", "album_id", "album", "categoria"},
         "unique": ("id",),
     },
     "partidos.json": {
@@ -56,12 +56,14 @@ PRIVATE_KEYS = {
     "rut", "email", "correo", "telefono", "teléfono", "phone", "direccion", "dirección",
     "fecha_nacimiento", "nacimiento", "responsable", "observaciones", "fuente",
     "clasificacion", "clasificación", "privacidad", "publicar", "estado", "apoderado",
-    "contacto_emergencia", "documento", "ficha_medica", "ficha_médica",
+    "contacto_emergencia", "documento", "ficha_medica", "ficha_médica", "autorizado",
+    "autorizada", "autorizacion", "autorización", "consentimiento", "es_menor", "menor_edad",
 }
 MATCH_STATES = {"PROGRAMADO", "FINALIZADO", "SUSPENDIDO", "CANCELADO"}
 PLAYER_POSITIONS = {"ARQUERO", "DEFENSA", "VOLANTE", "DELANTERO"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+ALBUM_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def fail(message: str) -> None:
@@ -76,8 +78,8 @@ def validate_image_ref(value: object, where: str, key: str = "imagen_ref") -> No
     if not isinstance(value, str) or not value.strip():
         fail(f"{where}: {key} debe ser texto no vacío")
     parsed = urlparse(value.strip())
-    if parsed.scheme and parsed.scheme not in {"http", "https"}:
-        fail(f"{where}: protocolo de imagen no permitido: {parsed.scheme}")
+    if parsed.scheme and parsed.scheme != "https":
+        fail(f"{where}: {key} solo admite HTTPS o ruta relativa")
 
 
 def validate_int(value: object, where: str, key: str, *, minimum: int | None = None) -> None:
@@ -161,6 +163,13 @@ def validate_file(filename: str, spec: dict) -> None:
                 fail(f"{where}: posicion inválida: {position}")
             if "capitan" in item and not isinstance(item["capitan"], bool):
                 fail(f"{where}: capitan debe ser booleano")
+
+        if filename == "galeria.json":
+            if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
+                fail(f"{where}: fecha debe usar formato YYYY-MM-DD")
+            album_id = str(item["album_id"]).strip()
+            if not ALBUM_ID_RE.fullmatch(album_id):
+                fail(f"{where}: album_id debe usar minúsculas, números y guiones")
 
         if filename == "partidos.json":
             if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
