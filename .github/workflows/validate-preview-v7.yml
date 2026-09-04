@@ -1,0 +1,31 @@
+name: CUDO V7 - validar datos publicos
+
+on:
+  push:
+    branches:
+      - portal-package-v7
+      - main
+    paths:
+      - 'preview-v7/data/**'
+      - 'preview-v7/tools/validate_data.py'
+      - '.github/workflows/validate-preview-v7.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'preview-v7/data/**'
+      - 'preview-v7/tools/validate_data.py'
+      - '.github/workflows/validate-preview-v7.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-public-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar contratos publicos V7
+        run: python3 preview-v7/tools/validate_data.py
