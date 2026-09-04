@@ -25,6 +25,12 @@ SPECS = {
         "allowed": {"id", "nombre", "categoria", "descripcion"},
         "unique": ("id",),
     },
+    "plantel.json": {
+        "source": "CUDO_WEB_PLANTEL",
+        "required": {"id", "nombre_deportivo", "numero", "posicion", "categoria"},
+        "allowed": {"id", "nombre_deportivo", "numero", "posicion", "categoria", "foto_ref", "capitan"},
+        "unique": ("id",),
+    },
     "galeria.json": {
         "source": "CUDO_WEB_GALERIA",
         "required": {"id", "fecha", "titulo", "imagen_ref"},
@@ -49,9 +55,11 @@ TOP_LEVEL = {"schema_version", "generated_at", "source", "items"}
 PRIVATE_KEYS = {
     "rut", "email", "correo", "telefono", "teléfono", "phone", "direccion", "dirección",
     "fecha_nacimiento", "nacimiento", "responsable", "observaciones", "fuente",
-    "clasificacion", "clasificación", "privacidad", "publicar", "estado",
+    "clasificacion", "clasificación", "privacidad", "publicar", "estado", "apoderado",
+    "contacto_emergencia", "documento", "ficha_medica", "ficha_médica",
 }
 MATCH_STATES = {"PROGRAMADO", "FINALIZADO", "SUSPENDIDO", "CANCELADO"}
+PLAYER_POSITIONS = {"ARQUERO", "DEFENSA", "VOLANTE", "DELANTERO"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -64,9 +72,9 @@ def nonblank(value: object) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
-def validate_image_ref(value: object, where: str) -> None:
+def validate_image_ref(value: object, where: str, key: str = "imagen_ref") -> None:
     if not isinstance(value, str) or not value.strip():
-        fail(f"{where}: imagen_ref debe ser texto no vacío")
+        fail(f"{where}: {key} debe ser texto no vacío")
     parsed = urlparse(value.strip())
     if parsed.scheme and parsed.scheme not in {"http", "https"}:
         fail(f"{where}: protocolo de imagen no permitido: {parsed.scheme}")
@@ -126,8 +134,11 @@ def validate_file(filename: str, spec: dict) -> None:
         if missing:
             fail(f"{where}: faltan campos requeridos: {sorted(missing)}")
 
+        integer_required = {"numero", "posicion_tabla", "posicion", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"}
         for key in spec["required"]:
-            if key in {"posicion", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"}:
+            if key in integer_required and isinstance(item.get(key), int) and not isinstance(item.get(key), bool):
+                continue
+            if key in {"posicion", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts", "numero"}:
                 continue
             if not nonblank(item.get(key)):
                 fail(f"{where}: {key} no puede estar vacío")
@@ -140,6 +151,16 @@ def validate_file(filename: str, spec: dict) -> None:
 
         if "imagen_ref" in item and item["imagen_ref"] not in (None, ""):
             validate_image_ref(item["imagen_ref"], where)
+        if "foto_ref" in item and item["foto_ref"] not in (None, ""):
+            validate_image_ref(item["foto_ref"], where, "foto_ref")
+
+        if filename == "plantel.json":
+            validate_int(item["numero"], where, "numero", minimum=1)
+            position = str(item["posicion"]).strip().upper()
+            if position not in PLAYER_POSITIONS:
+                fail(f"{where}: posicion inválida: {position}")
+            if "capitan" in item and not isinstance(item["capitan"], bool):
+                fail(f"{where}: capitan debe ser booleano")
 
         if filename == "partidos.json":
             if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
