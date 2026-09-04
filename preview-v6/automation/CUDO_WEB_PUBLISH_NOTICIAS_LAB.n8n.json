@@ -12,16 +12,8 @@
     {
       "parameters": {
         "operation": "read",
-        "documentId": {
-          "__rl": true,
-          "value": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "NOTICIAS",
-          "mode": "name"
-        },
+        "documentId": {"__rl": true, "value": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "NOTICIAS", "mode": "name"},
         "options": {}
       },
       "id": "read-noticias",
@@ -34,14 +26,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const rows = items.map(i => i.json).filter(r => Object.keys(r || {}).length);\nconst clean = v => (v ?? '').toString().trim();\nconst eligible = rows.filter(r =>\n  clean(r.ESTADO) === 'PUBLICADO' &&\n  clean(r.PUBLICAR) === 'SI' &&\n  clean(r.PRIVACIDAD) === 'PUBLICO' &&\n  clean(r.CLASIFICACION) === 'EVIDENCIA' &&\n  clean(r.ID_NOTICIA) && clean(r.FECHA) && clean(r.SLUG) && clean(r.TITULO) && clean(r.RESUMEN)\n);\nconst safeItems = eligible.map(r => ({\n  id: clean(r.ID_NOTICIA),\n  fecha: clean(r.FECHA),\n  slug: clean(r.SLUG),\n  titulo: clean(r.TITULO),\n  resumen: clean(r.RESUMEN),\n  cuerpo: clean(r.CUERPO),\n  imagen_ref: clean(r.IMAGEN_REF)\n}));\nconst doc = {\n  schema_version: '1.0',\n  generated_at: new Date().toISOString(),\n  source: 'SIM_WEB_NOTICIAS',\n  items: safeItems\n};\nconst text = JSON.stringify(doc, null, 2) + '\\n';\nreturn [{json:{\n  total_rows: rows.length,\n  published_rows: safeItems.length,\n  discarded_rows: rows.length - safeItems.length,\n  payload_text: text,\n  content_b64: Buffer.from(text, 'utf8').toString('base64')\n}}];"
+        "jsCode": "const rows = items.map(i => i.json).filter(r => Object.keys(r || {}).length);\nconst norm = v => String(v ?? '').trim().toUpperCase();\nconst clean = v => String(v ?? '').trim();\n\nconst gated = rows.filter(r =>\n  norm(r.ESTADO) === 'PUBLICADO' &&\n  norm(r.PUBLICAR) === 'SI' &&\n  norm(r.PRIVACIDAD) === 'PUBLICO'\n);\n\nconst required = ['ID_NOTICIA','FECHA','SLUG','TITULO','RESUMEN'];\nconst invalid = gated.filter(r => required.some(k => !clean(r[k])));\nif (invalid.length) {\n  throw new Error(`Hay ${invalid.length} fila(s) publicables con campos obligatorios vacíos. No se modifica GitHub.`);\n}\n\nconst ids = new Set();\nconst slugs = new Set();\nfor (const r of gated) {\n  const id = clean(r.ID_NOTICIA);\n  const slug = clean(r.SLUG);\n  if (ids.has(id)) throw new Error(`ID_NOTICIA duplicado: ${id}`);\n  if (slugs.has(slug)) throw new Error(`SLUG duplicado: ${slug}`);\n  ids.add(id);\n  slugs.add(slug);\n}\n\nfunction dateKey(v) {\n  const s = clean(v);\n  const iso = Date.parse(s);\n  if (!Number.isNaN(iso)) return iso;\n  const m = s.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})/);\n  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])).getTime();\n  return 0;\n}\n\nconst safeItems = gated.map(r => ({\n  id: clean(r.ID_NOTICIA),\n  fecha: clean(r.FECHA),\n  slug: clean(r.SLUG),\n  titulo: clean(r.TITULO),\n  resumen: clean(r.RESUMEN),\n  cuerpo: clean(r.CUERPO),\n  imagen_ref: clean(r.IMAGEN_REF)\n})).sort((a,b) => dateKey(b.fecha) - dateKey(a.fecha));\n\nconst doc = {\n  schema_version: '1.0',\n  generated_at: new Date().toISOString(),\n  source: 'SIM_WEB_NOTICIAS',\n  items: safeItems\n};\n\nconst text = JSON.stringify(doc, null, 2) + '\\n';\n\nreturn [{json:{\n  total_rows: rows.length,\n  published_rows: safeItems.length,\n  discarded_rows: rows.length - gated.length,\n  gate: 'ESTADO=PUBLICADO && PUBLICAR=SI && PRIVACIDAD=PUBLICO',\n  payload_text: text,\n  content_b64: Buffer.from(text, 'utf8').toString('base64')\n}}];"
       },
       "id": "build-json",
       "name": "Filter + Build Public JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [700, 300],
-      "notes": "Gate estricto: PUBLICADO + SI + PUBLICO + EVIDENCIA. Solo exporta campos públicos permitidos."
+      "notes": "Gate canónico: PUBLICADO + SI + PUBLICO. Valida obligatorios y duplicados; solo exporta campos públicos permitidos."
     },
     {
       "parameters": {
@@ -61,7 +53,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const build = $('Filter + Build Public JSON').first().json;\nconst currentRaw = ($json.content || '').replace(/\\n/g, '');\nlet currentText = '';\ntry { currentText = Buffer.from(currentRaw, 'base64').toString('utf8'); } catch (e) {}\nlet same = false;\ntry {\n  const a = JSON.parse(currentText || '{}');\n  const b = JSON.parse(build.payload_text || '{}');\n  delete a.generated_at; delete b.generated_at;\n  same = JSON.stringify(a) === JSON.stringify(b);\n} catch (e) {}\nreturn [{json:{\n  changed: !same,\n  current_sha: $json.sha || '',\n  content_b64: build.content_b64,\n  total_rows: build.total_rows,\n  published_rows: build.published_rows,\n  discarded_rows: build.discarded_rows\n}}];"
+        "jsCode": "const build = $('Filter + Build Public JSON').first().json;\nconst currentRaw = ($json.content || '').replace(/\\n/g, '');\nlet currentText = '';\ntry { currentText = Buffer.from(currentRaw, 'base64').toString('utf8'); } catch (e) {}\n\nlet same = false;\ntry {\n  const a = JSON.parse(currentText || '{}');\n  const b = JSON.parse(build.payload_text || '{}');\n  delete a.generated_at;\n  delete b.generated_at;\n  same = JSON.stringify(a) === JSON.stringify(b);\n} catch (e) {}\n\nreturn [{json:{\n  changed: !same,\n  current_sha: $json.sha || '',\n  content_b64: build.content_b64,\n  total_rows: build.total_rows,\n  published_rows: build.published_rows,\n  discarded_rows: build.discarded_rows\n}}];"
       },
       "id": "compare",
       "name": "Compare Public Projection",
@@ -72,14 +64,7 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{$json.changed}}",
-              "operation": "isTrue"
-            }
-          ]
-        }
+        "conditions": {"boolean": [{"value1": "={{$json.changed}}", "operation": "isTrue"}]}
       },
       "id": "if-changed",
       "name": "IF public content changed?",
@@ -117,22 +102,9 @@
     {
       "parameters": {
         "operation": "append",
-        "documentId": {
-          "__rl": true,
-          "value": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI",
-          "mode": "id"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "PUBLISH_LOG",
-          "mode": "name"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "matchingColumns": [],
-          "schema": []
-        },
+        "documentId": {"__rl": true, "value": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI", "mode": "id"},
+        "sheetName": {"__rl": true, "value": "PUBLISH_LOG", "mode": "name"},
+        "columns": {"mappingMode": "autoMapInputData", "value": {}, "matchingColumns": [], "schema": []},
         "options": {}
       },
       "id": "append-log",
@@ -144,28 +116,18 @@
     }
   ],
   "connections": {
-    "Manual Trigger LAB": {"main":[[{"node":"Read SIM_WEB_NOTICIAS","type":"main","index":0}]]},
-    "Read SIM_WEB_NOTICIAS": {"main":[[{"node":"Filter + Build Public JSON","type":"main","index":0}]]},
-    "Filter + Build Public JSON": {"main":[[{"node":"GitHub GET current JSON","type":"main","index":0}]]},
-    "GitHub GET current JSON": {"main":[[{"node":"Compare Public Projection","type":"main","index":0}]]},
-    "Compare Public Projection": {"main":[[{"node":"IF public content changed?","type":"main","index":0}]]},
-    "IF public content changed?": {
-      "main": [
-        [{"node":"GitHub PUT noticias.json LAB","type":"main","index":0}],
-        [{"node":"Build Publish Log","type":"main","index":0}]
-      ]
-    },
-    "GitHub PUT noticias.json LAB": {"main":[[{"node":"Build Publish Log","type":"main","index":0}]]},
-    "Build Publish Log": {"main":[[{"node":"Append PUBLISH_LOG","type":"main","index":0}]]}
+    "Manual Trigger LAB": {"main": [[{"node": "Read SIM_WEB_NOTICIAS", "type": "main", "index": 0}]]},
+    "Read SIM_WEB_NOTICIAS": {"main": [[{"node": "Filter + Build Public JSON", "type": "main", "index": 0}]]},
+    "Filter + Build Public JSON": {"main": [[{"node": "GitHub GET current JSON", "type": "main", "index": 0}]]},
+    "GitHub GET current JSON": {"main": [[{"node": "Compare Public Projection", "type": "main", "index": 0}]]},
+    "Compare Public Projection": {"main": [[{"node": "IF public content changed?", "type": "main", "index": 0}]]},
+    "IF public content changed?": {"main": [[{"node": "GitHub PUT noticias.json LAB", "type": "main", "index": 0}], [{"node": "Build Publish Log", "type": "main", "index": 0}]]},
+    "GitHub PUT noticias.json LAB": {"main": [[{"node": "Build Publish Log", "type": "main", "index": 0}]]},
+    "Build Publish Log": {"main": [[{"node": "Append PUBLISH_LOG", "type": "main", "index": 0}]]}
   },
   "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
+  "settings": {"executionOrder": "v1"},
   "active": false,
-  "versionId": "cudo-web-noticias-lab-v1",
-  "meta": {
-    "templateCredsSetupCompleted": false
-  },
+  "meta": {"templateCredsSetupCompleted": false},
   "tags": []
 }
