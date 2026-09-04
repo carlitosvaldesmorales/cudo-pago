@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
@@ -36,6 +37,12 @@ SPECS = {
         "allowed": {"id", "fecha", "hora", "local", "visita", "recinto", "categoria", "competencia", "estado_partido", "goles_local", "goles_visita"},
         "unique": ("id",),
     },
+    "tabla.json": {
+        "source": "CUDO_WEB_TABLA",
+        "required": {"id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"},
+        "allowed": {"id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"},
+        "unique": ("id",),
+    },
 }
 
 TOP_LEVEL = {"schema_version", "generated_at", "source", "items"}
@@ -45,6 +52,8 @@ PRIVATE_KEYS = {
     "clasificacion", "clasificación", "privacidad", "publicar", "estado",
 }
 MATCH_STATES = {"PROGRAMADO", "FINALIZADO", "SUSPENDIDO", "CANCELADO"}
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
 
 def fail(message: str) -> None:
@@ -63,9 +72,11 @@ def validate_image_ref(value: object, where: str) -> None:
         fail(f"{where}: protocolo de imagen no permitido: {parsed.scheme}")
 
 
-def validate_score(value: object, where: str, key: str) -> None:
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        fail(f"{where}: {key} debe ser un entero mayor o igual a 0")
+def validate_int(value: object, where: str, key: str, *, minimum: int | None = None) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        fail(f"{where}: {key} debe ser entero")
+    if minimum is not None and value < minimum:
+        fail(f"{where}: {key} debe ser mayor o igual a {minimum}")
 
 
 def validate_file(filename: str, spec: dict) -> None:
@@ -116,6 +127,8 @@ def validate_file(filename: str, spec: dict) -> None:
             fail(f"{where}: faltan campos requeridos: {sorted(missing)}")
 
         for key in spec["required"]:
+            if key in {"posicion", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"}:
+                continue
             if not nonblank(item.get(key)):
                 fail(f"{where}: {key} no puede estar vacío")
 
@@ -129,18 +142,32 @@ def validate_file(filename: str, spec: dict) -> None:
             validate_image_ref(item["imagen_ref"], where)
 
         if filename == "partidos.json":
+            if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
+                fail(f"{where}: fecha debe usar formato YYYY-MM-DD")
+            if item.get("hora") not in (None, "") and not TIME_RE.fullmatch(str(item["hora"]).strip()):
+                fail(f"{where}: hora debe usar formato HH:MM de 24 horas")
             state = str(item["estado_partido"]).strip().upper()
             if state not in MATCH_STATES:
                 fail(f"{where}: estado_partido inválido: {state}")
             if state == "FINALIZADO":
                 if "goles_local" not in item or "goles_visita" not in item:
                     fail(f"{where}: un partido FINALIZADO debe incluir ambos marcadores")
-                validate_score(item["goles_local"], where, "goles_local")
-                validate_score(item["goles_visita"], where, "goles_visita")
+                validate_int(item["goles_local"], where, "goles_local", minimum=0)
+                validate_int(item["goles_visita"], where, "goles_visita", minimum=0)
             else:
                 for score_key in ("goles_local", "goles_visita"):
                     if score_key in item and item[score_key] is not None:
-                        validate_score(item[score_key], where, score_key)
+                        validate_int(item[score_key], where, score_key, minimum=0)
+
+        if filename == "tabla.json":
+            validate_int(item["posicion"], where, "posicion", minimum=1)
+            for key in ("pj", "pg", "pe", "pp", "gf", "gc", "pts"):
+                validate_int(item[key], where, key, minimum=0)
+            validate_int(item["dg"], where, "dg")
+            if item["pg"] + item["pe"] + item["pp"] > item["pj"]:
+                fail(f"{where}: PG+PE+PP no puede superar PJ")
+            if item["dg"] != item["gf"] - item["gc"]:
+                fail(f"{where}: DG debe ser igual a GF-GC")
 
     print(f"OK  {filename}: {len(doc['items'])} item(s)")
 
