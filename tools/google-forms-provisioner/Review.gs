@@ -11,7 +11,6 @@ const CUDO_REVIEW_QA = {
 function provisionRevisionQA() {
   const result = provisionForm_(CUDO_REVIEW_QA);
   initializeReviewAudit_();
-  installReviewTrigger_(result.FORM_ID);
   return result;
 }
 
