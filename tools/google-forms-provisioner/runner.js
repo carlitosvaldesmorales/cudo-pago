@@ -57,38 +57,58 @@ function validateProvisionResult(result) {
   if (failures.length) throw new Error(`Validación QA falló:\n${failures.join('\n')}`);
 }
 
+async function resolveExecutableDeployment(script, scriptId, preferredId, versionNumber, description) {
+  const listed = await script.projects.deployments.list({ scriptId });
+  const deployments = listed.data.deployments || [];
+  let selected = null;
+
+  if (preferredId) selected = deployments.find(d => d.deploymentId === preferredId && hasExecutionApi(d)) || null;
+  if (!selected) selected = deployments.find(hasExecutionApi) || null;
+
+  if (selected) {
+    await script.projects.deployments.update({
+      scriptId,
+      deploymentId: selected.deploymentId,
+      requestBody: { deploymentConfig: { scriptId, versionNumber, manifestFileName: 'appsscript', description } }
+    });
+    const refreshed = await script.projects.deployments.get({ scriptId, deploymentId: selected.deploymentId });
+    if (!hasExecutionApi(refreshed.data)) throw new Error(`Deployment ${selected.deploymentId} perdió EXECUTION_API al actualizarse`);
+    return refreshed.data;
+  }
+
+  console.log('No existe un deployment EXECUTION_API válido; creando uno nuevo desde el manifest versionado...');
+  const created = await script.projects.deployments.create({
+    scriptId,
+    requestBody: { versionNumber, manifestFileName: 'appsscript', description }
+  });
+  if (!created.data.deploymentId) throw new Error('Google no devolvió deploymentId al crear la implementación');
+  const refreshed = await script.projects.deployments.get({ scriptId, deploymentId: created.data.deploymentId });
+  if (!hasExecutionApi(refreshed.data)) {
+    throw new Error(`Google creó deployment ${created.data.deploymentId} pero no lo expuso como EXECUTION_API`);
+  }
+  return refreshed.data;
+}
+
 async function main() {
   const scriptId = requiredEnv('CUDO_APPS_SCRIPT_ID');
-  const deploymentId = requiredEnv('CUDO_APPS_SCRIPT_DEPLOYMENT_ID');
+  const preferredDeploymentId = String(process.env.CUDO_APPS_SCRIPT_DEPLOYMENT_ID || '').trim();
   const auth = buildOAuthClient();
   const script = google.script({ version: 'v1', auth });
   const description = `CUDO QA auto ${process.env.GITHUB_SHA || new Date().toISOString()}`;
 
-  console.log('[1/5] Validando proyecto e implementación existentes...');
+  console.log('[1/5] Validando proyecto Apps Script...');
   const project = await script.projects.get({ scriptId });
   if (project.data.scriptId !== scriptId) throw new Error('El Script ID devuelto por Google no coincide con el configurado');
-  const deploymentBefore = await script.projects.deployments.get({ scriptId, deploymentId });
-  if (!hasExecutionApi(deploymentBefore.data)) {
-    console.log('Deployment sin EXECUTION_API antes de actualizar; se intentará reparar desde appsscript.json.');
-  }
 
   console.log('[2/5] Actualizando HEAD del Apps Script existente...');
   await script.projects.updateContent({ scriptId, requestBody: { files: loadAppsScriptFiles(__dirname) } });
 
-  console.log('[3/5] Creando versión inmutable y actualizando deployment...');
+  console.log('[3/5] Creando versión inmutable y resolviendo deployment API executable...');
   const version = await script.projects.versions.create({ scriptId, requestBody: { description } });
   const versionNumber = version.data.versionNumber;
   if (!Number.isInteger(versionNumber)) throw new Error('Google no devolvió versionNumber');
-  await script.projects.deployments.update({
-    scriptId,
-    deploymentId,
-    requestBody: { deploymentConfig: { scriptId, versionNumber, manifestFileName: 'appsscript', description } }
-  });
-
-  const deploymentAfter = await script.projects.deployments.get({ scriptId, deploymentId });
-  if (!hasExecutionApi(deploymentAfter.data)) {
-    throw new Error(`El deployment ${deploymentId} sigue sin EXECUTION_API después de publicar el manifest corregido`);
-  }
+  const deployment = await resolveExecutableDeployment(script, scriptId, preferredDeploymentId, versionNumber, description);
+  const deploymentId = deployment.deploymentId;
 
   console.log('[4/5] Ejecutando provisionAllQA...');
   const execution = await script.scripts.run({
