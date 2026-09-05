@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-05T18:22:48Z",
+  "generated_at": "2026-09-05T22:51:05.629Z",
   "source": "CUDO_WEB_PARTIDOS",
   "items": [
     {
@@ -10,7 +10,7 @@
       "hora": "14:00",
       "categoria": "TERCERA",
       "local": "CUDO",
-      "visita": "Sara huape",
+      "visita": "Sara huape ",
       "recinto": "Cudo",
       "estado_partido": "FINALIZADO",
       "goles_local": 3,
