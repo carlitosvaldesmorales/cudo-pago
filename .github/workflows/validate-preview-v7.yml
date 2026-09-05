@@ -5,9 +5,11 @@ on:
     branches:
       - portal-package-v7
       - prod-data-v7
+      - seed-data-v7
       - main
     paths:
       - 'preview-v7/data/**'
+      - 'preview-v7/shared/seed-data.js'
       - 'preview-v7/tools/validate_data.py'
       - '.github/workflows/validate-preview-v7.yml'
   pull_request:
@@ -15,6 +17,7 @@ on:
       - main
     paths:
       - 'preview-v7/data/**'
+      - 'preview-v7/shared/seed-data.js'
       - 'preview-v7/tools/validate_data.py'
       - '.github/workflows/validate-preview-v7.yml'
 
@@ -30,3 +33,27 @@ jobs:
 
       - name: Validar contratos publicos V7
         run: python3 preview-v7/tools/validate_data.py
+
+      - name: Validar seed deportivo V7
+        run: |
+          node --check preview-v7/shared/seed-data.js
+          node <<'NODE'
+          global.window = {};
+          require('./preview-v7/shared/seed-data.js');
+          const s = window.CUDO_SEED_SUMMARY;
+          const d = window.CUDO_SEED_DATA;
+          if (!s || s.clubes !== 11 || s.grupos.A !== 6 || s.grupos.B !== 5) throw new Error('Estructura de grupos seed inválida');
+          if (s.partidos !== 108 || s.filas_tabla !== 44) throw new Error(`Volumen seed inesperado: ${JSON.stringify(s)}`);
+          if (d.partidos.items.length !== 108 || d.tabla.items.length !== 44) throw new Error('Dataset seed incompleto');
+          const cats = new Set(['TERCERA','SEGUNDA','SENIOR','PRIMERA']);
+          for (const m of d.partidos.items) {
+            if (!m.id || !m.fecha || !m.local || !m.visita || !m.estado_partido || !cats.has(m.categoria)) throw new Error(`Partido seed inválido: ${m.id}`);
+            if (m.estado_partido === 'FINALIZADO' && (!Number.isInteger(m.goles_local) || !Number.isInteger(m.goles_visita))) throw new Error(`Marcador inválido: ${m.id}`);
+          }
+          for (const r of d.tabla.items) {
+            if (r.dg !== r.gf - r.gc) throw new Error(`DG inválida: ${r.id}`);
+            if (r.pg + r.pe + r.pp !== r.pj) throw new Error(`PJ inconsistente: ${r.id}`);
+            if (r.pts !== r.pg * 3 + r.pe) throw new Error(`PTS inconsistente: ${r.id}`);
+          }
+          console.log('OK seed deportivo:', s);
+          NODE
