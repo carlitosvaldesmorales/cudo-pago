@@ -69,10 +69,12 @@ function provisionForm_(cfg) {
   }
 
   // Conservamos RAW_FORM_PARTIDOS como capa RAW estable para que CONTROL no dependa
-  // del nombre que Google asigne a la pestaña de respuestas.
+  // del nombre que Google asigne a la pestaña de respuestas. Google Forms inserta
+  // nuevas respuestas sobre la fila 2, por lo que una referencia directa A2:O se
+  // desplaza. INDIRECT mantiene fijo el origen lógico en A2:O.
   if (raw.getMaxRows() > 1) raw.getRange(2, 1, raw.getMaxRows() - 1, 15).clearContent();
   const responseName = responseSheet.getName().replace(/'/g, "''");
-  raw.getRange('A2').setFormula(`=ARRAYFORMULA('${responseName}'!A2:O)`);
+  raw.getRange('A2').setFormula(`=ARRAYFORMULA(INDIRECT("'${responseName}'!A2:O"))`);
 
   // Guardar el Form dentro de la carpeta institucional del ambiente.
   DriveApp.getFileById(form.getId()).moveTo(DriveApp.getFolderById(cfg.captureFolderId));
