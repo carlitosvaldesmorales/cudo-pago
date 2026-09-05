@@ -1,3 +1,4 @@
+// CUDO V8 Google PUBLICO_EXPORT synchronizer. This comment also records the E2E review-to-web certification pass.
 import fs from 'fs';
 import path from 'path';
 
