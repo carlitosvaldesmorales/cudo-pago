@@ -26,10 +26,11 @@ Un cambio técnicamente correcto NO se considera aprobado si el render final pie
 - La composición desktop/tablet/móvil conserva el mismo protagonista.
 
 ### Partidos
-- **Tabla de posiciones dentro del primer bloque útil**, antes del listado largo de fixture/resultados.
+- **Tabla de posiciones dentro del primer bloque útil**, antes del listado de fechas/resultados.
 - Próxima jornada presentada como CUDO vs rival, agrupando Tercera, Segunda, Senior y Primera.
+- El calendario principal de club muestra las jornadas de CUDO, no una pared con todos los partidos de los 11 clubes.
 - Los cuatro partidos de una misma jornada no pueden sentirse como cuatro eventos sin relación.
-- Fixture histórico/resultados queda después de tabla + jornada.
+- Resultados y próximas fechas quedan después de tabla + jornada.
 
 ### Equipos
 - Los jugadores/fotografía aparecen temprano.
@@ -39,7 +40,7 @@ Un cambio técnicamente correcto NO se considera aprobado si el render final pie
 ### Noticias
 - Portada editorial con historia principal.
 - Fotografías sin watermark.
-- Fotografías mock no deben sugerir falsamente que son registros reales de CUDO.
+- Fotografías de demostración no deben sugerir falsamente que son registros reales de CUDO.
 
 ### Galería
 - Fotografías visibles antes que filtros administrativos.
@@ -66,42 +67,51 @@ En todos:
 ## 5. Datos representativos
 Mientras producción no alimente contratos:
 - 4 categorías.
-- 84 jugadores mock.
-- 108 partidos mock.
+- 84 jugadores de demostración.
+- estructura de campeonato con 11 clubes y 2 grupos.
 - 44 filas de tabla.
-- 6 noticias mock.
-- 15 fotografías mock.
+- 6 noticias.
+- 15 fotografías.
 
 El volumen debe probar el diseño, pero su naturaleza técnica solo aparece en `?qa=1`.
 
 ## 6. Inspección obligatoria
 El QA debe:
-1. recorrer la página COMPLETA, no solo top + 50%;
+1. recorrer la página COMPLETA y disparar carga lazy antes de capturar;
 2. generar full-page screenshots de las seis vistas y tres viewports;
-3. capturar secciones críticas individualmente (hero, tabla/jornada, plantel, noticia principal, galería, footer);
-4. probar menú móvil, filtros de plantel, filtros de partidos, tabla, álbumes y lightbox;
-5. revisar imágenes rotas/watermarks obvios y consola;
-6. comprobar orden visual de secciones críticas;
-7. comparar contra baselines aprobados cuando existan.
+3. capturar secciones críticas individualmente;
+4. probar menú móvil, filtros de plantel, filtros de jornadas, tabla, álbumes y lightbox;
+5. restaurar el estado inicial después de probar interacciones y antes de capturar;
+6. revisar imágenes rotas/watermarks obvios y consola;
+7. comprobar orden visual de secciones críticas;
+8. comparar contra baselines aprobados cuando existan.
 
-## 7. Criterio de rechazo inmediato
+## 7. Higiene de arquitectura
+- V8 no puede cargar lógica de navegación, rutas o compatibilidad desde `preview-v7` ni otra versión anterior.
+- Un preview anterior puede conservarse como rollback, pero nunca ser dependencia runtime de V8.
+- El runtime V8 debe ser explícito y autocontenido.
+
+## 8. Criterio de rechazo inmediato
 FAIL si:
-- tabla de posiciones de Partidos está al final;
+- tabla de posiciones de Partidos queda al final;
 - seed/mock/brief aparece como mensaje público;
 - escudo pegado/sobredimensionado;
 - una foto con watermark llega al render;
 - Galería muestra controles antes de contenido fotográfico;
 - Equipos es selector genérico sin protagonismo de jugadores;
 - las seis páginas repiten la misma composición sin función propia;
-- una jornada de cuatro categorías no se entiende como una sola fecha/rival.
+- una jornada de cuatro categorías no se entiende como una sola fecha/rival;
+- el calendario de Partidos se transforma en una lista interminable de partidos ajenos a CUDO;
+- V8 depende en runtime de código de `preview-v7`.
 
-## 8. Aprobación
+## 9. Aprobación
 Solo se marca **QA VISUAL PASS** cuando:
 - contratos/datos pasan;
 - navegador pasa en 3 viewports;
 - inspección completa pasa;
 - interacciones pasan;
 - 0 fallas reales;
-- el render respeta `DESIGN_MARKETING_CONTRACT.md`.
+- el render respeta `DESIGN_MARKETING_CONTRACT.md`;
+- y el baseline visual es aprobado por humano.
 
 **Regla:** commit exitoso ≠ diseño aprobado. Deploy exitoso ≠ QA visual aprobado.
