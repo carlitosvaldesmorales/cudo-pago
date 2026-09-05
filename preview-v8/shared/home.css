@@ -1,0 +1,102 @@
+/* CUDO V8 · Home art direction
+   La portada es una vista propia. No debe heredar la composición de páginas interiores. */
+
+.view-home .hero-v8{min-height:590px;background-position:center 50%}
+.view-home .hero-v8:before{background:linear-gradient(90deg,rgba(3,17,48,.96) 0%,rgba(3,22,61,.82) 38%,rgba(3,22,61,.28) 68%,rgba(3,22,61,.08) 100%),linear-gradient(0deg,rgba(3,22,61,.58),transparent 52%)}
+.view-home .hero-v8:after{right:4%;top:-100px;width:220px;height:820px;opacity:.34}
+.view-home .hero-v8 .wrap{min-height:590px;display:flex;align-items:flex-end;padding-bottom:112px}
+.view-home .hero-copy{max-width:690px}
+.view-home .hero-signature,.view-home .hero-tags{display:none!important}
+.view-home .hero-v8 .eyebrow{font-size:10px;letter-spacing:.22em;margin-bottom:14px}
+.view-home .hero-v8 h1{font-size:clamp(78px,7.8vw,116px);line-height:.8;margin:0 0 22px;max-width:760px}
+.view-home .hero-v8 .lead{max-width:560px;font-size:16px;line-height:1.62}
+.home-meta-line{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:20px;color:#fff;font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.home-meta-line span+span:before{content:"•";margin-right:12px;color:var(--gold)}
+.view-home .actions{margin-top:24px;align-items:center}
+.view-home .actions .secondary{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)}
+
+.view-home .match-ribbon{margin-top:-72px}
+.view-home .match-center-shell{border-radius:22px;box-shadow:0 28px 60px rgba(3,22,61,.2)}
+.view-home .match-center-head{padding:15px 24px;background:linear-gradient(90deg,#03163d,#082d66)}
+.view-home .match-center-head strong{font-size:20px}
+.view-home .home-match-grid .jornada-card{min-height:225px;padding:24px 26px}
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"]{background:linear-gradient(145deg,#0a438f,#03163d);color:#fff}
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"] .jornada-title strong,
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"] .jornada-row .cat,
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"] .jornada-row .result{color:#fff}
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"] .jornada-title span{color:#cbd6e7}
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"] .jornada-row{border-color:rgba(255,255,255,.13)}
+.view-home .home-match-grid .jornada-card[data-state="PROGRAMADO"] .jornada-eyebrow{color:var(--gold)}
+
+.view-home [data-qa-section="home-noticias"]{padding-top:92px;padding-bottom:84px}
+.view-home .home-news{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,.85fr);grid-template-rows:1fr 1fr;gap:18px;align-items:stretch}
+.view-home .home-news .news{min-height:0}
+.view-home .home-news .news:first-child{grid-column:1;grid-row:1/3;display:flex;flex-direction:column}
+.view-home .home-news .news:first-child img{height:430px;aspect-ratio:auto;object-fit:cover}
+.view-home .home-news .news:first-child .newsbody{padding:22px 24px 26px}
+.view-home .home-news .news:first-child h2{font-size:39px}
+.view-home .home-news .news:nth-child(2),.view-home .home-news .news:nth-child(3){grid-column:2;display:grid;grid-template-columns:42% 58%;min-height:220px}
+.view-home .home-news .news:nth-child(2){grid-row:1}.view-home .home-news .news:nth-child(3){grid-row:2}
+.view-home .home-news .news:nth-child(2) img,.view-home .home-news .news:nth-child(3) img{width:100%;height:100%;aspect-ratio:auto;object-fit:cover}
+.view-home .home-news .news:nth-child(2) .newsbody,.view-home .home-news .news:nth-child(3) .newsbody{padding:18px}
+.view-home .home-news .news:nth-child(2) h2,.view-home .home-news .news:nth-child(3) h2{font-size:24px}
+.view-home .home-news .news:nth-child(n+4){display:none}
+
+.view-home [data-qa-section="home-equipos"]{padding:70px 0 76px}
+.view-home .category-strip{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.view-home .category-card{min-height:190px;padding:24px 22px;border-radius:16px;background:linear-gradient(150deg,#0a3978 0%,#03163d 72%)}
+.view-home .category-card .n{font-size:66px}
+.view-home .category-card strong{font-size:30px;margin-top:18px}
+.view-home .category-card:nth-child(2){background:linear-gradient(150deg,#09326d,#03163d 72%)}
+.view-home .category-card:nth-child(3){background:linear-gradient(150deg,#0c468d,#03163d 72%)}
+.view-home .category-card:nth-child(4){background:linear-gradient(150deg,#082b61,#03163d 72%)}
+
+.view-home [data-qa-section="home-galeria"]{padding:76px 0 84px}
+.view-home .home-gallery{display:grid;grid-template-columns:1.35fr .85fr .85fr;grid-auto-rows:220px;grid-auto-flow:dense;gap:14px}
+.view-home .home-gallery .photo{height:100%;min-height:0}
+.view-home .home-gallery .photo:nth-child(n+6){display:none!important}
+.view-home .home-gallery .photo:first-child{grid-row:span 2}
+.view-home .home-gallery .photo:nth-child(4){grid-column:span 2}
+.view-home .home-gallery .photoopen,.view-home .home-gallery .photo img{width:100%;height:100%;object-fit:cover}
+.view-home .home-gallery .photobody{position:absolute;left:0;right:0;bottom:0;padding:54px 17px 15px;background:linear-gradient(transparent,rgba(3,22,61,.9));color:#fff}
+.view-home .home-gallery .photobody h2{font-size:22px;margin-bottom:0}
+.view-home .home-gallery .photo p{display:none}
+
+@media(max-width:980px){
+  .view-home .home-news{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+  .view-home .home-news .news:first-child{grid-column:1/-1;grid-row:auto}
+  .view-home .home-news .news:first-child img{height:360px}
+  .view-home .home-news .news:nth-child(2),.view-home .home-news .news:nth-child(3){grid-column:auto;grid-row:auto;display:block;min-height:0}
+  .view-home .home-news .news:nth-child(2) img,.view-home .home-news .news:nth-child(3) img{height:220px}
+  .view-home .home-gallery{grid-template-columns:1fr 1fr;grid-auto-rows:220px}
+  .view-home .home-gallery .photo:first-child{grid-row:span 1}.view-home .home-gallery .photo:nth-child(4){grid-column:span 1}
+}
+
+@media(max-width:620px){
+  .view-home .hero-v8{min-height:520px;background-position:60% center}
+  .view-home .hero-v8:before{background:linear-gradient(0deg,rgba(3,22,61,.95) 0%,rgba(3,22,61,.78) 50%,rgba(3,22,61,.22) 100%)}
+  .view-home .hero-v8:after{right:-72px;top:-80px;opacity:.28}
+  .view-home .hero-v8 .wrap{min-height:520px;padding-bottom:72px;align-items:flex-end}
+  .view-home .hero-v8 h1{font-size:58px;line-height:.82;margin-bottom:17px}
+  .view-home .hero-v8 .lead{font-size:13px;line-height:1.55;max-width:94%}
+  .home-meta-line{gap:7px;font-size:8px;letter-spacing:.08em;margin-top:14px}
+  .home-meta-line span+span:before{margin-right:7px}
+  .view-home .actions{display:flex;gap:9px;flex-wrap:nowrap;margin-top:20px}
+  .view-home .actions .btn{width:auto;flex:1;min-height:44px;padding:0 13px;font-size:9px}
+  .view-home .match-ribbon{margin-top:-34px}
+  .view-home .match-center-head{padding:11px 14px}.view-home .match-center-head strong{font-size:16px}.view-home .match-center-head a{font-size:8px}
+  .view-home .home-match-grid .jornada-card{min-height:0;padding:16px}
+  .view-home [data-qa-section="home-noticias"]{padding:58px 0}
+  .view-home .home-news{grid-template-columns:1fr;gap:12px}
+  .view-home .home-news .news:first-child,.view-home .home-news .news:nth-child(2),.view-home .home-news .news:nth-child(3){grid-column:1;display:block}
+  .view-home .home-news .news:first-child img,.view-home .home-news .news:nth-child(2) img,.view-home .home-news .news:nth-child(3) img{height:210px}
+  .view-home .home-news .news:first-child h2{font-size:29px}.view-home .home-news .news:nth-child(2) h2,.view-home .home-news .news:nth-child(3) h2{font-size:23px}
+  .view-home [data-qa-section="home-equipos"]{padding:54px 0 60px}
+  .view-home .category-strip{grid-template-columns:1fr 1fr;gap:9px}
+  .view-home .category-card{min-height:150px;padding:18px 16px}.view-home .category-card .n{font-size:50px}.view-home .category-card strong{font-size:25px;margin-top:11px}
+  .view-home [data-qa-section="home-galeria"]{padding:58px 0 64px}
+  .view-home .home-gallery{grid-template-columns:1fr 1fr;grid-auto-rows:180px;gap:9px}
+  .view-home .home-gallery .photo:first-child{grid-column:1/-1;grid-row:span 2}
+  .view-home .home-gallery .photo:nth-child(4){grid-column:auto}
+  .view-home .home-gallery .photobody{padding:40px 12px 11px}.view-home .home-gallery .photobody h2{font-size:18px}
+}
