@@ -1,63 +1,107 @@
 # CUDO V8 · Contrato de QA visual
 
-Este documento es el gate entre **Diseño/Marketing** y **Programación**. Un cambio técnicamente correcto no se considera aprobado si incumple este contrato.
+Este documento es el gate entre **Diseño/Marketing** y **Programación**. Su fuente de intención es `DESIGN_MARKETING_CONTRACT.md`.
 
-## 1. Identidad CUDO — obligatorio en todas las vistas
-- Franja institucional amarillo · azul · rojo visible.
-- Escudo CUDO visible y con proporción correcta; nunca pegado como elemento accidental.
-- Azul profundo como base, rojo para acción/competencia y amarillo como acento.
-- Titulares deportivos con `Barlow Condensed`; texto funcional con `Inter`.
-- Hero/pagehead, cierre y footer deben pertenecer al mismo sistema visual.
-- La página debe seguir pareciendo CUDO aunque se oculte el nombre del módulo.
+## Principio
+Un cambio técnicamente correcto NO se considera aprobado si el render final pierde composición, jerarquía, narrativa o función. Contar elementos no equivale a mirar el diseño.
 
-## 2. Jerarquía de marketing
-- Fútbol/partido/club primero; arquitectura técnica después.
-- `HAZTE SOCIO` debe conservar jerarquía de CTA en desktop y móvil.
-- Inicio debe priorizar: identidad → Match Center → noticias → categorías → galería → socios.
-- No se permiten mensajes técnicos visibles como `Fuente pública:` ni badges QA en la vista normal.
-- El aviso SEED/MOCK puede existir mientras sea preview, pero debe ser secundario y no competir con el contenido.
+## 1. Identidad transversal
+- Franja institucional amarillo · azul · rojo visible y discreta.
+- Escudo CUDO integrado; se rechaza si compite con el contenido, queda borroso, pegado o sobredimensionado.
+- Azul profundo base; rojo acción/competencia; amarillo acento.
+- Titulares `Barlow Condensed`; texto funcional `Inter`.
+- Todas las vistas comparten ADN, pero NO pueden ser clones de una misma plantilla.
 
-## 3. Navegación
-- Una sola entrada `PARTIDOS` en navegación desktop y una sola en móvil.
-- Una sola opción activa por vista.
-- El menú móvil debe abrir/cerrar correctamente y contener `HAZTE SOCIO`.
-- Ningún cambio puede volver a introducir rutas de versiones anteriores (`preview-v7`).
+## 2. Marketing y lenguaje público
+- Fútbol/club/comunidad primero.
+- `HAZTE SOCIO` conserva jerarquía de CTA sin dominar la vista.
+- Cero lenguaje técnico visible: `QA`, `SEED`, `MOCK`, `PREVIEW`, `Fuente pública`, `contrato`, instrucciones de diseño o implementación.
+- El copy debe hablar al visitante, nunca describir cómo debería verse la página.
+
+## 3. Reglas por vista
+### Inicio
+- Fotografía protagonista.
+- Escudo secundario e integrado.
+- Próxima jornada/último resultado visibles temprano.
+- La composición desktop/tablet/móvil conserva el mismo protagonista.
+
+### Partidos
+- **Tabla de posiciones dentro del primer bloque útil**, antes del listado largo de fixture/resultados.
+- Próxima jornada presentada como CUDO vs rival, agrupando Tercera, Segunda, Senior y Primera.
+- Los cuatro partidos de una misma jornada no pueden sentirse como cuatro eventos sin relación.
+- Fixture histórico/resultados queda después de tabla + jornada.
+
+### Equipos
+- Los jugadores/fotografía aparecen temprano.
+- Las cuatro categorías no pueden ser cuatro tarjetas genéricas visualmente idénticas.
+- Plantel legible por categoría y posición.
+
+### Noticias
+- Portada editorial con historia principal.
+- Fotografías sin watermark.
+- Fotografías mock no deben sugerir falsamente que son registros reales de CUDO.
+
+### Galería
+- Fotografías visibles antes que filtros administrativos.
+- Álbumes con portada fotográfica.
+- Filtros compactos/secundarios.
+
+### El Club
+- Narrativa institucional propia con alternancia visual.
+- No secuencia genérica de cards.
+- No inventar hechos institucionales.
 
 ## 4. Responsive
-Viewports mínimos certificados:
-- Desktop: 1440 × 1000.
-- Tablet: 1024 × 900.
-- Mobile: 390 × 844.
+Viewports mínimos:
+- Desktop 1440 × 1000
+- Tablet 1024 × 900
+- Mobile 390 × 844
 
 En todos:
-- Sin overflow horizontal del documento.
-- Sin contenido principal cortado fuera del viewport.
-- Tablas pueden usar scroll horizontal dentro de su propio contenedor.
-- En móvil la navegación desktop se oculta y aparece el botón de menú.
-- Cards, fotos, dorsales, titulares y CTA mantienen jerarquía legible.
+- Sin overflow horizontal.
+- Misma dirección de arte adaptada; no se resuelve móvil eliminando al protagonista de desktop.
+- Tablas pueden hacer scroll dentro de su contenedor.
+- Menú móvil usable y `HAZTE SOCIO` disponible.
 
-## 5. Contenido de prueba representativo
-Mientras producción no alimente los contratos, el seed debe permitir dimensionar el producto:
+## 5. Datos representativos
+Mientras producción no alimente contratos:
 - 4 categorías.
-- 84 jugadores mock: Tercera 18, Segunda 18, Senior 30, Primera 18.
+- 84 jugadores mock.
 - 108 partidos mock.
 - 44 filas de tabla.
 - 6 noticias mock.
-- 15 fotografías mock de galería.
+- 15 fotografías mock.
 
-El frontend de producción debe consumir el mismo contrato; cambiar la fuente no puede exigir rediseño.
+El volumen debe probar el diseño, pero su naturaleza técnica solo aparece en `?qa=1`.
 
-## 6. Medios
-- Escudo y activos institucionales locales deben cargar siempre.
-- Una imagen externa fallida no puede mostrar el icono roto del navegador: debe caer en fallback CUDO.
-- Las fotografías no pueden deformarse; se usa recorte controlado (`object-fit`).
+## 6. Inspección obligatoria
+El QA debe:
+1. recorrer la página COMPLETA, no solo top + 50%;
+2. generar full-page screenshots de las seis vistas y tres viewports;
+3. capturar secciones críticas individualmente (hero, tabla/jornada, plantel, noticia principal, galería, footer);
+4. probar menú móvil, filtros de plantel, filtros de partidos, tabla, álbumes y lightbox;
+5. revisar imágenes rotas/watermarks obvios y consola;
+6. comprobar orden visual de secciones críticas;
+7. comparar contra baselines aprobados cuando existan.
 
-## 7. Criterio de aprobación
-Un paquete solo se marca **QA VISUAL PASS** cuando:
-1. pasa el validador de contratos/datos;
-2. pasa el navegador automatizado en los 3 viewports;
-3. no tiene errores críticos de consola;
-4. genera capturas de evidencia;
-5. la portada productiva raíz no fue alterada por un preview.
+## 7. Criterio de rechazo inmediato
+FAIL si:
+- tabla de posiciones de Partidos está al final;
+- seed/mock/brief aparece como mensaje público;
+- escudo pegado/sobredimensionado;
+- una foto con watermark llega al render;
+- Galería muestra controles antes de contenido fotográfico;
+- Equipos es selector genérico sin protagonismo de jugadores;
+- las seis páginas repiten la misma composición sin función propia;
+- una jornada de cuatro categorías no se entiende como una sola fecha/rival.
+
+## 8. Aprobación
+Solo se marca **QA VISUAL PASS** cuando:
+- contratos/datos pasan;
+- navegador pasa en 3 viewports;
+- inspección completa pasa;
+- interacciones pasan;
+- 0 fallas reales;
+- el render respeta `DESIGN_MARKETING_CONTRACT.md`.
 
 **Regla:** commit exitoso ≠ diseño aprobado. Deploy exitoso ≠ QA visual aprobado.
