@@ -1,9 +1,10 @@
-name: CUDO V8 - QA visual real
+name: CUDO V8 - QA contrato visual
 
 on:
   push:
     branches:
       - qa-visual-v8
+      - v8-root-design-qa-fix
       - main
     paths:
       - 'preview-v8/**'
@@ -19,7 +20,7 @@ permissions:
   contents: read
 
 jobs:
-  visual-qa:
+  visual-contract-qa:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,12 +51,10 @@ jobs:
       - name: Diagnosticar overflow móvil
         run: node preview-v8/tools/overflow_diag.mjs
 
-      - name: Ejecutar agente QA visual V8
-        run: |
-          node preview-v8/tools/visual_qa.mjs || true
-          node preview-v8/tools/visual_qa_finalize.mjs
+      - name: Ejecutar agente QA visual integral V8
+        run: node preview-v8/tools/visual_qa.mjs
 
-      - name: Evidencia QA visual
+      - name: Evidencia QA visual completa
         if: always()
         uses: actions/upload-artifact@v4
         with:
