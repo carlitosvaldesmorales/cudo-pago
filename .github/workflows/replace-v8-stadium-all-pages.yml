@@ -1,0 +1,46 @@
+name: V8 replace stadium photo everywhere
+
+on:
+  push:
+    branches:
+      - v8-stadium-all-pages
+
+permissions:
+  contents: write
+
+jobs:
+  replace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v8-stadium-all-pages
+          fetch-depth: 0
+
+      - name: Verificar asset restaurado
+        run: |
+          test -f assets/estadio-cudo-hero.avif
+          test "$(wc -c < assets/estadio-cudo-hero.avif)" -eq 59506
+
+      - name: Reemplazar todas las referencias V8 a la foto antigua
+        run: |
+          mapfile -t FILES < <(grep -RIl --exclude-dir=.git "assets/estadio-v2.webp" preview-v8 || true)
+          printf 'Referencias encontradas en:\n%s\n' "${FILES[*]}"
+          test "${#FILES[@]}" -gt 0
+          for f in "${FILES[@]}"; do
+            sed -i 's#assets/estadio-v2\.webp#assets/estadio-cudo-hero.avif?v=faithful-hero-59506#g' "$f"
+          done
+          if grep -RIn --exclude-dir=.git "assets/estadio-v2.webp" preview-v8; then
+            echo 'ERROR: quedaron referencias a la foto antigua'
+            exit 1
+          fi
+
+      - name: Limpiar instalador temporal y guardar cambio
+        run: |
+          rm -f .github/workflows/replace-v8-stadium-all-pages.yml
+          git config user.name "carlitosvaldesmorales"
+          git config user.email "carlos.valdes.morales@gmail.com"
+          git add preview-v8 .github/workflows/replace-v8-stadium-all-pages.yml
+          git diff --cached --check
+          git commit -m "V8: usar foto restaurada del estadio en todas las vistas"
+          git push origin HEAD:v8-stadium-all-pages
