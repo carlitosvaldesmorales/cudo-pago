@@ -14,7 +14,7 @@
 .news p,.photo p,.matchmeta,.versus,.status,.jornada-title span{color:var(--a11y-muted)!important}
 
 /* Dark surfaces: use high-luminance text. */
-.section.dark .section-kicker,.section.dark .section-link,.team .meta,.matchday-feature .section-kicker{color:#f7d96c!important}
+.section.dark .section-kicker,.section.dark .section-link,.team .meta,.matchday-feature .section-kicker,.roster-intro .section-kicker{color:#f7d96c!important}
 .section.dark .status,.team p,.category-card span,.roster-feature-copy p,.pagehead p,.matchday-feature .jornada-title span{color:#f1f5fb!important}
 
 /* Decorative large numerals must not be exposed as low-contrast meaningful text. */
