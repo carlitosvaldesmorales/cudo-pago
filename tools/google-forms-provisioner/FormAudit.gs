@@ -22,3 +22,18 @@ function auditHumanFormsQA(){
   });
   return out;
 }
+
+function findFileUploadFormTemplatesQA(){
+  const files=DriveApp.getFilesByType(MimeType.GOOGLE_FORMS);
+  const candidates=[];
+  let scanned=0;
+  while(files.hasNext()&&scanned<250){
+    const file=files.next();scanned++;
+    try{
+      const form=FormApp.openById(file.getId());
+      const uploads=form.getItems(FormApp.ItemType.FILE_UPLOAD);
+      if(uploads.length)candidates.push({id:file.getId(),name:file.getName(),title:form.getTitle(),fileUploadCount:uploads.length,uploadTitles:uploads.map(i=>i.getTitle())});
+    }catch(e){}
+  }
+  return {scanned,candidates};
+}
