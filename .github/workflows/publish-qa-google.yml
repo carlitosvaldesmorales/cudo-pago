@@ -1,0 +1,82 @@
+name: CUDO V8 - publicar QA Google
+
+on:
+  push:
+    branches:
+      - qa-v8-google-data
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/publish-qa-google.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-v8-publish-qa-google
+  cancel-in-progress: true
+
+jobs:
+  validate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout QA Google
+        uses: actions/checkout@v4
+        with:
+          ref: qa-v8-google-data
+          path: source
+
+      - name: Validar contrato público JSON
+        run: python3 source/preview-v8/tools/validate_data.py
+
+      - name: Validar adapter QA sin mock
+        run: |
+          node --check source/preview-v8/shared/site.js
+          node --check source/preview-v8/shared/seed-data.js
+          node --check source/preview-v8/shared/data-source.js
+          python3 - <<'PY'
+          from pathlib import Path
+          adapter=Path('source/preview-v8/shared/data-source.js').read_text(encoding='utf-8')
+          shim=Path('source/preview-v8/shared/seed-data.js').read_text(encoding='utf-8')
+          assert "environment:'QA'" in adapter
+          assert 'mock:false' in adapter
+          for token in ['CUDO_SEED_DATA','randomuser.me','VISTA DEMOSTRATIVA','FOTO MOCK']:
+              assert token not in adapter+'\n'+shim, token
+          print('QA Google sin fallback mock: OK')
+          PY
+
+      - name: Checkout main como destino de publicación
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: publish
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Publicar snapshot QA aislado
+        run: |
+          rm -rf publish/qa-v8-google
+          mkdir -p publish/qa-v8-google
+          rsync -a --delete source/preview-v8/ publish/qa-v8-google/
+          cat > publish/qa-v8-google/QA_BUILD.json <<EOF
+          {
+            "environment": "QA",
+            "source_branch": "qa-v8-google-data",
+            "source_commit": "${GITHUB_SHA}",
+            "published_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+      - name: Commit de publicación solo si cambió QA
+        working-directory: publish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qa-v8-google
+          if git diff --cached --quiet; then
+            echo 'Sin cambios QA para publicar.'
+            exit 0
+          fi
+          git commit -m "QA publish: ${GITHUB_SHA::8}"
+          git push origin HEAD:main
