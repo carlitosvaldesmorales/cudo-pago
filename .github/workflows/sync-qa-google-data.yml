@@ -7,16 +7,18 @@ on:
   push:
     branches:
       - qa-v8-google-data
+      - cudo-web-ux-01-v8
     paths:
       - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'preview-v8/shared/site-runtime-v8.js'
       - '.github/workflows/sync-qa-google-data.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: cudo-v8-sync-qa-google-data
-  cancel-in-progress: false
+  group: cudo-v8-sync-qa-google-data-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   sync-validate-publish:
@@ -28,10 +30,10 @@ jobs:
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
 
     steps:
-      - name: Checkout qa-v8-google-data
+      - name: Checkout source branch
         uses: actions/checkout@v4
         with:
-          ref: qa-v8-google-data
+          ref: ${{ github.ref_name }}
           path: source
           fetch-depth: 0
 
@@ -51,7 +53,13 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Sincronizar PUBLICO_EXPORT hacia JSON V8
+      - name: Validar scripts antes de sincronizar
+        working-directory: source
+        run: |
+          node --check preview-v8/tools/sync_google_publico.mjs
+          node --check preview-v8/shared/site-runtime-v8.js
+
+      - name: Sincronizar PUBLICO_EXPORT e imágenes aprobadas hacia V8
         working-directory: source
         run: node preview-v8/tools/sync_google_publico.mjs
 
@@ -98,7 +106,7 @@ jobs:
         working-directory: source
         run: node preview-v8/tools/qa_google_render.mjs
 
-      - name: Commit datos QA sólo si cambiaron
+      - name: Commit datos y media QA sólo si cambiaron
         working-directory: source
         shell: bash
         run: |
@@ -106,14 +114,16 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add preview-v8/data/*.json
+          if [ -d preview-v8/media ]; then git add preview-v8/media; fi
           if git diff --cached --quiet; then
-            echo 'PUBLICO_EXPORT sin cambios; rama QA no requiere commit.'
+            echo 'PUBLICO_EXPORT/media sin cambios; rama QA no requiere commit.'
           else
-            git commit -m "QA data sync: Google PUBLICO_EXPORT"
-            git push origin HEAD:qa-v8-google-data
+            git commit -m "QA data/media sync: Google PUBLICO_EXPORT"
+            git push origin HEAD:${GITHUB_REF_NAME}
           fi
 
       - name: Checkout main como destino
+        if: github.ref_name == 'qa-v8-google-data'
         uses: actions/checkout@v4
         with:
           ref: main
@@ -121,6 +131,7 @@ jobs:
           fetch-depth: 0
 
       - name: Publicar snapshot QA validado
+        if: github.ref_name == 'qa-v8-google-data'
         shell: bash
         run: |
           set -euo pipefail
@@ -138,6 +149,7 @@ jobs:
           EOF
 
       - name: Commit publicación main sólo si cambió
+        if: github.ref_name == 'qa-v8-google-data'
         working-directory: publish
         shell: bash
         run: |
