@@ -18,37 +18,30 @@ function requiredEnv(name) {
   return String(value).trim();
 }
 
-function parseJsonEnv(name) {
-  const raw = requiredEnv(name);
-  try {
-    return JSON.parse(raw);
-  } catch (err) {
-    throw new Error(`${name} no contiene JSON válido: ${err.message}`);
+async function buildOAuthClient() {
+  const clientId = requiredEnv('CUDO_GOOGLE_OAUTH_CLIENT_ID');
+  const refreshToken = requiredEnv('CUDO_GOOGLE_REFRESH_TOKEN');
+  const body = new URLSearchParams({
+    client_id: clientId,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token'
+  });
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  const token = await response.json();
+  if (!response.ok || !token.access_token) {
+    throw new Error(`No se pudo refrescar OAuth: HTTP ${response.status} ${token.error_description || token.error || 'error desconocido'}`);
   }
-}
 
-function buildOAuthClient() {
-  const clientData = parseJsonEnv('CUDO_GOOGLE_OAUTH_CLIENT_JSON');
-  const credentials = clientData.installed || clientData.web;
-  if (!credentials) {
-    throw new Error('CUDO_GOOGLE_OAUTH_CLIENT_JSON debe contener installed o web');
-  }
-
-  const redirectUri = Array.isArray(credentials.redirect_uris)
-    ? credentials.redirect_uris[0]
-    : undefined;
-
-  const auth = new google.auth.OAuth2(
-    credentials.client_id,
-    credentials.client_secret,
-    redirectUri
-  );
-
-  const tokens = parseJsonEnv('CUDO_GOOGLE_OAUTH_TOKENS_JSON');
-  if (!tokens.refresh_token && !tokens.access_token) {
-    throw new Error('CUDO_GOOGLE_OAUTH_TOKENS_JSON no contiene refresh_token ni access_token');
-  }
-  auth.setCredentials(tokens);
+  const auth = new google.auth.OAuth2(clientId);
+  auth.setCredentials({
+    access_token: token.access_token,
+    expiry_date: Date.now() + Number(token.expires_in || 3600) * 1000
+  });
   return auth;
 }
 
@@ -67,9 +60,7 @@ function loadAppsScriptFiles(baseDir) {
   }
 
   const manifestPath = path.join(baseDir, 'appsscript.json');
-  if (!fs.existsSync(manifestPath)) {
-    throw new Error('Falta appsscript.json');
-  }
+  if (!fs.existsSync(manifestPath)) throw new Error('Falta appsscript.json');
 
   files.push({
     name: 'appsscript',
@@ -77,10 +68,7 @@ function loadAppsScriptFiles(baseDir) {
     source: fs.readFileSync(manifestPath, 'utf8')
   });
 
-  if (files.length < 2) {
-    throw new Error('No se encontraron archivos Apps Script para publicar');
-  }
-
+  if (files.length < 2) throw new Error('No se encontraron archivos Apps Script para publicar');
   return files;
 }
 
@@ -105,16 +93,14 @@ function validateProvisionResult(result) {
     }
   }
 
-  if (failures.length) {
-    throw new Error(`Validación QA falló:\n${failures.join('\n')}`);
-  }
+  if (failures.length) throw new Error(`Validación QA falló:\n${failures.join('\n')}`);
 }
 
 async function main() {
   const scriptId = requiredEnv('CUDO_APPS_SCRIPT_ID');
   const deploymentId = requiredEnv('CUDO_APPS_SCRIPT_DEPLOYMENT_ID');
   const baseDir = __dirname;
-  const auth = buildOAuthClient();
+  const auth = await buildOAuthClient();
   const script = google.script({ version: 'v1', auth });
   const description = `CUDO QA auto ${process.env.GITHUB_SHA || new Date().toISOString()}`;
 
@@ -127,15 +113,12 @@ async function main() {
   const deployment = await script.projects.deployments.get({ scriptId, deploymentId });
   const entryPoints = deployment.data.entryPoints || [];
   const hasExecutionApi = entryPoints.some(ep => ep.entryPointType === 'EXECUTION_API');
-  if (!hasExecutionApi) {
-    throw new Error(`El deployment ${deploymentId} no es un API executable`);
-  }
+  if (!hasExecutionApi) throw new Error(`El deployment ${deploymentId} no es un API executable`);
 
   console.log('[2/5] Actualizando HEAD del Apps Script existente...');
-  const files = loadAppsScriptFiles(baseDir);
   await script.projects.updateContent({
     scriptId,
-    requestBody: { files }
+    requestBody: { files: loadAppsScriptFiles(baseDir) }
   });
 
   console.log('[3/5] Creando versión inmutable y actualizando el deployment estable...');
@@ -144,9 +127,7 @@ async function main() {
     requestBody: { description }
   });
   const versionNumber = version.data.versionNumber;
-  if (!Number.isInteger(versionNumber)) {
-    throw new Error('Google no devolvió versionNumber al crear la versión');
-  }
+  if (!Number.isInteger(versionNumber)) throw new Error('Google no devolvió versionNumber al crear la versión');
 
   await script.projects.deployments.update({
     scriptId,
@@ -164,15 +145,11 @@ async function main() {
   console.log('[4/5] Ejecutando provisionAllQA mediante scripts.run...');
   const execution = await script.scripts.run({
     scriptId: deploymentId,
-    requestBody: {
-      function: 'provisionAllQA',
-      devMode: false
-    }
+    requestBody: { function: 'provisionAllQA', devMode: false }
   });
 
   if (execution.data.error) {
-    const details = execution.data.error.details || [];
-    throw new Error(`scripts.run devolvió error: ${JSON.stringify(details)}`);
+    throw new Error(`scripts.run devolvió error: ${JSON.stringify(execution.data.error.details || [])}`);
   }
 
   const result = execution.data.response && execution.data.response.result;
