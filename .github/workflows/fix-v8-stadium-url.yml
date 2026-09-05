@@ -1,0 +1,30 @@
+name: Fix V8 stadium URL
+
+on:
+  push:
+    branches:
+      - v8-stadium-all-pages
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v8-stadium-all-pages
+          fetch-depth: 0
+      - name: Corregir cache query duplicada
+        run: |
+          sed -i 's#estadio-cudo-hero\.avif?v=faithful-hero-59506?v=e1c04b9#estadio-cudo-hero.avif?v=faithful-hero-59506#g' preview-v8/shared/home.css
+          ! grep -RIn --exclude-dir=.git 'faithful-hero-59506?v=' preview-v8
+          ! grep -RIn --exclude-dir=.git 'assets/estadio-v2.webp' preview-v8
+          rm -f .github/workflows/fix-v8-stadium-url.yml
+          git config user.name "carlitosvaldesmorales"
+          git config user.email "carlos.valdes.morales@gmail.com"
+          git add preview-v8/shared/home.css .github/workflows/fix-v8-stadium-url.yml
+          git diff --cached --check
+          git commit -m "V8: normalizar URL de foto restaurada"
+          git push origin HEAD:v8-stadium-all-pages
