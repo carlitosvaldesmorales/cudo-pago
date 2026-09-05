@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 
 const REPO = 'carlitosvaldesmorales/cudo-pago';
 const BRANCH = 'cudo-qa-auto-01';
+const WORKFLOW = 'cudo-qa-forms-auto.yml';
 const GOOGLE_CLIENT_ID = '257090036200-mr8qoeglsklm8peu9s8mp8r9dcdphab4.apps.googleusercontent.com';
 const CALLBACK_HOST = '127.0.0.1';
 const CALLBACK_PORT = 53682;
@@ -132,8 +133,67 @@ function setGitHubSecret(name, value) {
   }
 }
 
+function verifyGitHubSecret(name) {
+  const result = run('gh', ['secret', 'list', '--repo', REPO, '--json', 'name'], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  if (result.status !== 0) {
+    fail(`No pude verificar GitHub Secrets: ${String(result.stderr || '').trim()}`);
+  }
+  let secrets;
+  try {
+    secrets = JSON.parse(String(result.stdout || '[]'));
+  } catch (err) {
+    fail(`Respuesta inválida al verificar GitHub Secrets: ${err.message}`);
+  }
+  if (!Array.isArray(secrets) || !secrets.some(item => item && item.name === name)) {
+    fail(`${name} no aparece en GitHub Secrets después de cargarlo.`);
+  }
+}
+
+function dispatchAndWatchWorkflow() {
+  console.log('\n[CI] Disparando CUDO QA Forms Auto...');
+  let result = run('gh', ['workflow', 'run', WORKFLOW, '--repo', REPO, '--ref', BRANCH], {
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  if (result.status !== 0) {
+    fail(`No pude disparar el workflow: ${String(result.stderr || '').trim()}`);
+  }
+
+  // Espera breve para que GitHub registre el workflow_dispatch y luego obtiene el run más reciente.
+  run('sh', ['-lc', 'sleep 3']);
+  result = run('gh', [
+    'run', 'list', '--repo', REPO,
+    '--workflow', WORKFLOW,
+    '--branch', BRANCH,
+    '--event', 'workflow_dispatch',
+    '--limit', '1',
+    '--json', 'databaseId',
+    '--jq', '.[0].databaseId'
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+  if (result.status !== 0 || !String(result.stdout || '').trim()) {
+    fail(`No pude obtener el run disparado: ${String(result.stderr || '').trim()}`);
+  }
+
+  const runId = String(result.stdout).trim();
+  console.log(`[CI] Run ID: ${runId}`);
+  console.log('[CI] Esperando resultado final...');
+
+  result = run('gh', ['run', 'watch', runId, '--repo', REPO, '--exit-status'], {
+    stdio: 'inherit'
+  });
+  if (result.status !== 0) {
+    console.error('\n[CI] Workflow falló. Mostrando logs fallidos:');
+    run('gh', ['run', 'view', runId, '--repo', REPO, '--log-failed'], { stdio: 'inherit' });
+    fail(`CUDO QA Forms Auto falló en el run ${runId}.`);
+  }
+
+  console.log(`\nOK: CUDO QA Forms Auto terminó SUCCESS. Run ${runId}.`);
+}
+
 async function main() {
-  console.log('CUDO QA OAuth bootstrap — ejecución única');
+  console.log('CUDO QA OAuth + cierre CI — ejecución única');
   console.log(`Repositorio: ${REPO}`);
   console.log(`Rama de trabajo: ${BRANCH}`);
   console.log('OAuth Client: cudo-os-desktop-sistemas / arke-cudo-core');
@@ -143,7 +203,7 @@ async function main() {
   }
   const authStatus = run('gh', ['auth', 'status'], { stdio: ['ignore', 'pipe', 'pipe'] });
   if (authStatus.status !== 0) {
-    fail('GitHub CLI no está autenticado. Ejecuta "gh auth login" una vez y vuelve a ejecutar este bootstrap.');
+    fail('GitHub CLI no está autenticado. Ejecuta "gh auth login" una vez y vuelve a ejecutar este cierre.');
   }
 
   const { verifier, challenge } = createPkce();
@@ -162,7 +222,7 @@ async function main() {
   });
   const authUrl = `${AUTH_ENDPOINT}?${params.toString()}`;
 
-  console.log('\nSe abrirá Google para una autorización única.');
+  console.log('\n[1/4] Autorización Google');
   const code = await waitForOAuthCode(authUrl, state);
   const tokens = await exchangeCode(code, verifier);
 
@@ -170,11 +230,18 @@ async function main() {
     fail('Google no devolvió refresh_token. No se cargó ningún secreto en GitHub.');
   }
 
+  console.log('[2/4] Cargando refresh token en GitHub Secrets');
   setGitHubSecret('CUDO_GOOGLE_REFRESH_TOKEN', tokens.refresh_token);
 
-  console.log('\nOK: refresh token QA cargado en GitHub Secrets.');
-  console.log('No se necesitó client_secret ni archivo OAuth local.');
-  console.log('Siguiente paso: ejecutar CUDO QA Forms Auto y certificar los cinco módulos QA.');
+  console.log('[3/4] Verificando que GitHub registró el secreto');
+  verifyGitHubSecret('CUDO_GOOGLE_REFRESH_TOKEN');
+  console.log('OK: CUDO_GOOGLE_REFRESH_TOKEN existe en GitHub Secrets.');
+
+  console.log('[4/4] Ejecutando y esperando CI completo');
+  dispatchAndWatchWorkflow();
+
+  console.log('\nCIERRE AUTOMÁTICO COMPLETADO.');
+  console.log('OAuth cargado, secreto verificado y workflow ejecutado con resultado SUCCESS.');
 }
 
 main().catch(err => fail(err && err.message ? err.message : String(err)));
