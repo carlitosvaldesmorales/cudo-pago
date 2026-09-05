@@ -6,6 +6,7 @@ on:
       - portal-package-v7
       - prod-data-v7
       - seed-data-v7
+      - seed-realistic-v7
       - main
     paths:
       - 'preview-v7/data/**'
@@ -34,7 +35,7 @@ jobs:
       - name: Validar contratos publicos V7
         run: python3 preview-v7/tools/validate_data.py
 
-      - name: Validar seed deportivo V7
+      - name: Validar seed realista V7
         run: |
           node --check preview-v7/shared/seed-data.js
           node <<'NODE'
@@ -43,9 +44,14 @@ jobs:
           const s = window.CUDO_SEED_SUMMARY;
           const d = window.CUDO_SEED_DATA;
           if (!s || s.clubes !== 11 || s.grupos.A !== 6 || s.grupos.B !== 5) throw new Error('Estructura de grupos seed inválida');
-          if (s.partidos !== 108 || s.filas_tabla !== 44) throw new Error(`Volumen seed inesperado: ${JSON.stringify(s)}`);
-          if (d.partidos.items.length !== 108 || d.tabla.items.length !== 44) throw new Error('Dataset seed incompleto');
+          if (s.jugadores !== 84 || s.por_categoria.SENIOR !== 30 || s.por_categoria.TERCERA !== 18 || s.por_categoria.SEGUNDA !== 18 || s.por_categoria.PRIMERA !== 18) throw new Error(`Volumen de plantel seed inesperado: ${JSON.stringify(s)}`);
+          if (s.partidos !== 108 || s.filas_tabla !== 44 || s.noticias !== 6 || s.fotos !== 15) throw new Error(`Volumen seed inesperado: ${JSON.stringify(s)}`);
+          if (d.plantel.items.length !== 84 || d.partidos.items.length !== 108 || d.tabla.items.length !== 44 || d.noticias.items.length !== 6 || d.galeria.items.length !== 15) throw new Error('Dataset seed incompleto');
           const cats = new Set(['TERCERA','SEGUNDA','SENIOR','PRIMERA']);
+          for (const p of d.plantel.items) {
+            if (!p.id || !p.nombre_deportivo || !Number.isInteger(p.numero) || !cats.has(p.categoria)) throw new Error(`Jugador seed inválido: ${p.id}`);
+            if (!/^https:\/\//.test(p.foto_ref || '')) throw new Error(`Foto mock inválida: ${p.id}`);
+          }
           for (const m of d.partidos.items) {
             if (!m.id || !m.fecha || !m.local || !m.visita || !m.estado_partido || !cats.has(m.categoria)) throw new Error(`Partido seed inválido: ${m.id}`);
             if (m.estado_partido === 'FINALIZADO' && (!Number.isInteger(m.goles_local) || !Number.isInteger(m.goles_visita))) throw new Error(`Marcador inválido: ${m.id}`);
@@ -55,5 +61,7 @@ jobs:
             if (r.pg + r.pe + r.pp !== r.pj) throw new Error(`PJ inconsistente: ${r.id}`);
             if (r.pts !== r.pg * 3 + r.pe) throw new Error(`PTS inconsistente: ${r.id}`);
           }
-          console.log('OK seed deportivo:', s);
+          for (const n of d.noticias.items) if (!/^https:\/\//.test(n.imagen_ref || '')) throw new Error(`Imagen noticia inválida: ${n.id}`);
+          for (const g of d.galeria.items) if (!/^https:\/\//.test(g.imagen_ref || '')) throw new Error(`Imagen galería inválida: ${g.id}`);
+          console.log('OK seed realista:', s);
           NODE
