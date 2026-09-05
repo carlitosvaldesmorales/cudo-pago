@@ -1,0 +1,60 @@
+name: CUDO V8 - QA visual real
+
+on:
+  push:
+    branches:
+      - qa-visual-v8
+      - main
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/qa-visual-v8.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/qa-visual-v8.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  visual-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Levantar preview local
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-v8-http.log 2>&1 &
+          echo $! > /tmp/cudo-v8-http.pid
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cudo-v8-http.log
+          exit 1
+
+      - name: Ejecutar agente QA visual V8
+        run: node preview-v8/tools/visual_qa.mjs
+
+      - name: Evidencia QA visual
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-v8-qa-visual
+          path: qa-v8-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
