@@ -35,71 +35,90 @@ const CUDO_REVIEW_TARGETS = {
 function normalizeHuman_(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
 function isCudo_(value){const n=normalizeHuman_(value);return n==='cudo'||n==='c u d o'||n.includes('club union deportivo orilla');}
 
-function installReviewTrigger_(formId){
-  ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='handleReviewSubmitQA').forEach(t=>ScriptApp.deleteTrigger(t));
-  const form=FormApp.openById(formId);
-  ScriptApp.newTrigger('handleReviewSubmitQA').forForm(form).onFormSubmit().create();
+function processPendingReviewsQA(){
+  const ss=SpreadsheetApp.openById(CUDO_REVIEW_QA.spreadsheetId);
+  const audit=ss.getSheetByName('AUDITORIA_REVISION');
+  if(!audit)throw new Error('Falta AUDITORIA_REVISION');
+  SpreadsheetApp.flush();
+  const last=audit.getLastRow();
+  if(last<2)return {processed:0,ok:0,error:0};
+  const rows=audit.getRange(2,1,last-1,16).getValues();
+  let processed=0,ok=0,error=0;
+  rows.forEach((row,i)=>{
+    const requestId=String(row[0]||'').trim();
+    const status=String(row[9]||'').trim();
+    if(!requestId||status)return;
+    const data={
+      timestamp:row[1] instanceof Date?row[1]:new Date(),
+      type:String(row[2]||''), human:String(row[3]||''), decision:String(row[4]||''), authorized:String(row[5]||''), minors:String(row[6]||''),
+      notes:String(row[7]||''), reviewer:String(row[8]||''), correctionField:String(row[14]||''), newValue:String(row[15]||'').trim(), rowIndex:i+2
+    };
+    const outcome=applyReviewData_(data);
+    processed++; if(outcome.status==='APLICADO')ok++; else error++;
+  });
+  return {processed,ok,error};
 }
 
 function handleReviewSubmitQA(e){
   const answers={};
   e.response.getItemResponses().forEach(ir=>answers[ir.getItem().getTitle()]=ir.getResponse());
-  const type=String(answers['¿Qué contenido desea revisar?']||'');
-  const human=String(answers['Identifique el contenido']||'');
-  const decision=String(answers['Decisión de revisión']||'');
-  const authorized=String(answers['¿La publicación está autorizada?']||'');
-  const minors=String(answers['Si aparecen menores, ¿la autorización fue verificada?']||'');
-  const notes=String(answers['Observaciones de revisión']||'');
-  const reviewer=String(answers['Nombre del revisor']||'');
-  const correctionField=String(answers['¿Qué dato se corrige?']||'');
-  const newValue=String(answers['¿Cuál es el valor aprobado?']||'').trim();
-  const target=CUDO_REVIEW_TARGETS[type];
-  if(!target){writeReviewOutcome_(e.response.getTimestamp(),'ERROR','',0,'Tipo de contenido no soportado',correctionField,newValue);return;}
+  return applyReviewData_({
+    timestamp:e.response.getTimestamp(),
+    type:String(answers['¿Qué contenido desea revisar?']||''),
+    human:String(answers['Identifique el contenido']||''),
+    decision:String(answers['Decisión de revisión']||''),
+    authorized:String(answers['¿La publicación está autorizada?']||''),
+    minors:String(answers['Si aparecen menores, ¿la autorización fue verificada?']||''),
+    notes:String(answers['Observaciones de revisión']||''),
+    reviewer:String(answers['Nombre del revisor']||''),
+    correctionField:String(answers['¿Qué dato se corrige?']||''),
+    newValue:String(answers['¿Cuál es el valor aprobado?']||'').trim()
+  });
+}
 
+function applyReviewData_(data){
+  const target=CUDO_REVIEW_TARGETS[data.type];
+  if(!target)return finishReview_(data,'ERROR','',0,'Tipo de contenido no soportado');
   const ss=SpreadsheetApp.openById(target.spreadsheetId);
   const source=ss.getSheetByName(target.sheet),revision=ss.getSheetByName(target.revision),corrections=ss.getSheetByName(target.corrections);
-  if(!source||!revision||!corrections){writeReviewOutcome_(e.response.getTimestamp(),'ERROR','',0,'Falta hoja canónica, REVISION o CORRECCIONES',correctionField,newValue);return;}
+  if(!source||!revision||!corrections)return finishReview_(data,'ERROR','',0,'Falta hoja canónica, REVISION o CORRECCIONES');
   const values=source.getDataRange().getDisplayValues().slice(1).filter(r=>String(r[0]).trim()!=='');
-  const needle=normalizeHuman_(human);
-  if(!needle){writeReviewOutcome_(e.response.getTimestamp(),'ERROR','',0,'Identificador vacío',correctionField,newValue);return;}
+  const needle=normalizeHuman_(data.human);
+  if(!needle)return finishReview_(data,'ERROR','',0,'Identificador vacío');
   const matches=values.filter(r=>normalizeHuman_(target.label(r)).includes(needle));
-  if(matches.length!==1){writeReviewOutcome_(e.response.getTimestamp(),matches.length?'AMBIGUO':'NO_ENCONTRADO','',matches.length,`Coincidencias: ${matches.length}`,correctionField,newValue);return;}
+  if(matches.length!==1)return finishReview_(data,matches.length?'AMBIGUO':'NO_ENCONTRADO','',matches.length,`Coincidencias: ${matches.length}`);
 
-  const current=matches[0];
-  const id=String(current[0]);
-
-  if(decision==='Aprobar corrección'){
-    const result=applyCorrection_(target,corrections,current,correctionField,newValue,reviewer,notes);
+  const current=matches[0],id=String(current[0]);
+  if(data.decision==='Aprobar corrección'){
+    const result=applyCorrection_(target,corrections,current,data.correctionField,data.newValue,data.reviewer,data.notes);
     SpreadsheetApp.flush();
-    writeReviewOutcome_(e.response.getTimestamp(),result.ok?'APLICADO':'ERROR',id,1,result.message,correctionField,newValue);
-    return;
+    return finishReview_(data,result.ok?'APLICADO':'ERROR',id,1,result.message);
   }
 
-  const gate=reviewGate_(decision,authorized);
-  if(!gate){writeReviewOutcome_(e.response.getTimestamp(),'ERROR',id,1,'Decisión no soportada',correctionField,newValue);return;}
+  const gate=reviewGate_(data.decision,data.authorized);
+  if(!gate)return finishReview_(data,'ERROR',id,1,'Decisión no soportada');
   const row=[id,gate.estado,gate.publicar,gate.privacidad,gate.autorizacion];
-  if(target.minors)row.push(minors==='SI'?'AUTORIZADO':minors==='NO'?'RECHAZADO':'NO_APLICA');
-  row.push(reviewer,new Date(),notes);
+  if(target.minors)row.push(data.minors==='SI'?'AUTORIZADO':data.minors==='NO'?'RECHAZADO':'NO_APLICA');
+  row.push(data.reviewer,new Date(),data.notes);
   upsertById_(revision,id,row);
   SpreadsheetApp.flush();
-  writeReviewOutcome_(e.response.getTimestamp(),'APLICADO',id,1,`${decision} aplicado`,correctionField,newValue);
+  return finishReview_(data,'APLICADO',id,1,`${data.decision} aplicado`);
 }
 
 function applyCorrection_(target,sheet,current,field,newValue,reviewer,notes){
   if(!field||field==='Otro')return {ok:false,message:'La corrección requiere un dato estructurado distinto de Otro'};
   if(newValue==='')return {ok:false,message:'La corrección requiere un nuevo valor'};
-
   const snapshot=target.snapshot.map(i=>current[i]??'');
   let correctionIndex=target.fields[field]||null;
 
-  if(target.sheet==='CONTROL'&&target.spreadsheetId==='1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI'){
+  if(target.spreadsheetId==='1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI'){
     const cudoLocal=isCudo_(current[6]);
     if(field==='Equipo o rival')correctionIndex=cudoLocal?7:6;
     if(field==='Goles de CUDO')correctionIndex=cudoLocal?10:11;
     if(field==='Goles del rival')correctionIndex=cudoLocal?11:10;
   }
-
   if(!correctionIndex)return {ok:false,message:`El dato “${field}” no se puede corregir automáticamente en este tipo de contenido`};
+
   const numericFields=['Número de camiseta','Goles de CUDO','Goles del rival','Partidos jugados (PJ)','Partidos ganados (PG)','Partidos empatados (PE)','Partidos perdidos (PP)','Goles a favor (GF)','Goles en contra (GC)','Puntos','Posición en la tabla'];
   if(numericFields.includes(field)&&(!/^\d+$/.test(newValue)||Number(newValue)<0))return {ok:false,message:`${field} debe ser un número entero igual o mayor que 0`};
   if(field==='Fecha'&&!/^\d{4}-\d{2}-\d{2}$/.test(newValue))return {ok:false,message:'La fecha aprobada debe escribirse como AAAA-MM-DD'};
@@ -110,8 +129,7 @@ function applyCorrection_(target,sheet,current,field,newValue,reviewer,notes){
     const gf=Number(snapshot[8]),gc=Number(snapshot[9]);
     if(Number.isFinite(gf)&&Number.isFinite(gc))snapshot[10]=String(gf-gc);
   }
-  const row=[String(current[0]),...snapshot,reviewer,new Date(),notes];
-  upsertById_(sheet,String(current[0]),row);
+  upsertById_(sheet,String(current[0]),[String(current[0]),...snapshot,reviewer,new Date(),notes]);
   return {ok:true,message:`Corrección aplicada: ${field}`};
 }
 
@@ -134,11 +152,18 @@ function upsertById_(sheet,id,row){
   sheet.getRange(last+1,1,1,row.length).setValues([row]);
 }
 
-function writeReviewOutcome_(timestamp,status,id,count,result,field,newValue){
-  const ss=SpreadsheetApp.openById(CUDO_REVIEW_QA.spreadsheetId);
-  const audit=ss.getSheetByName('AUDITORIA_REVISION');
-  const rows=audit.getRange(2,2,Math.max(audit.getLastRow()-1,1),1).getValues();
-  let rowIndex=Math.max(audit.getLastRow(),2);
-  for(let i=rows.length-1;i>=0;i--){const v=rows[i][0];if(v instanceof Date&&Math.abs(v.getTime()-timestamp.getTime())<2000){rowIndex=i+2;break;}}
-  audit.getRange(rowIndex,10,1,7).setValues([[status,id,count,result,new Date(),field||'',newValue||'']]);
+function finishReview_(data,status,id,count,result){
+  writeReviewOutcome_(data.timestamp,status,id,count,result,data.correctionField,data.newValue,data.rowIndex);
+  return {status,id,count,result};
+}
+
+function writeReviewOutcome_(timestamp,status,id,count,result,field,newValue,rowIndex){
+  const ss=SpreadsheetApp.openById(CUDO_REVIEW_QA.spreadsheetId),audit=ss.getSheetByName('AUDITORIA_REVISION');
+  let targetRow=Number(rowIndex||0);
+  if(!targetRow){
+    const rows=audit.getRange(2,2,Math.max(audit.getLastRow()-1,1),1).getValues();
+    targetRow=Math.max(audit.getLastRow(),2);
+    for(let i=rows.length-1;i>=0;i--){const v=rows[i][0];if(v instanceof Date&&Math.abs(v.getTime()-timestamp.getTime())<2000){targetRow=i+2;break;}}
+  }
+  audit.getRange(targetRow,10,1,7).setValues([[status,id,count,result,new Date(),field||'',newValue||'']]);
 }
