@@ -4,128 +4,22 @@ const { google } = require('googleapis');
 
 const REQUIRED_QA_KEYS = ['QA_NOTICIAS','QA_EQUIPOS','QA_PLANTEL','QA_PARTIDOS','QA_TABLA','QA_GALERIA'];
 
-function requiredEnv(name) {
-  const value = process.env[name];
-  if (!value || !String(value).trim()) throw new Error(`${name} no está configurado`);
-  return String(value).trim();
+function requiredEnv(name){const value=process.env[name];if(!value||!String(value).trim())throw new Error(`${name} no está configurado`);return String(value).trim();}
+function buildOAuthClient(){const auth=new google.auth.OAuth2(requiredEnv('CUDO_GOOGLE_OAUTH_CLIENT_ID'),requiredEnv('CUDO_GOOGLE_OAUTH_CLIENT_SECRET'));auth.setCredentials({refresh_token:requiredEnv('CUDO_GOOGLE_REFRESH_TOKEN')});return auth;}
+function loadAppsScriptFiles(baseDir){const files=[];for(const entry of fs.readdirSync(baseDir,{withFileTypes:true})){if(entry.isFile()&&entry.name.endsWith('.gs'))files.push({name:path.basename(entry.name,'.gs'),type:'SERVER_JS',source:fs.readFileSync(path.join(baseDir,entry.name),'utf8')});}const manifestPath=path.join(baseDir,'appsscript.json');if(!fs.existsSync(manifestPath))throw new Error('Falta appsscript.json');files.push({name:'appsscript',type:'JSON',source:fs.readFileSync(manifestPath,'utf8')});if(files.length<2)throw new Error('No se encontraron archivos Apps Script para publicar');return files;}
+function hasExecutionApi(deployment){return (deployment?.entryPoints||[]).some(ep=>ep.entryPointType==='EXECUTION_API');}
+function validateProvisionResult(result){if(!result||typeof result!=='object'||Array.isArray(result))throw new Error('provisionAllQA no devolvió un objeto de resultados');const failures=[];for(const key of REQUIRED_QA_KEYS){const item=result[key];if(!item||typeof item!=='object'){failures.push(`${key}: resultado ausente`);continue;}if(item.ERROR){failures.push(`${key}: ${item.ERROR}`);continue;}if(!item.FORM_ID||!item.FORM_RESPONDER_URL||!item.LINKED_SPREADSHEET_ID)failures.push(`${key}: metadata incompleta`);}if(failures.length)throw new Error(`Validación QA falló:\n${failures.join('\n')}`);}
+function validateSingleForm(name,item){if(!item||typeof item!=='object')throw new Error(`${name}: resultado ausente`);if(item.ERROR)throw new Error(`${name}: ${item.ERROR}`);if(!item.FORM_ID||!item.FORM_RESPONDER_URL||!item.LINKED_SPREADSHEET_ID||item.ESTADO!=='ACEPTANDO_RESPUESTAS')throw new Error(`${name}: metadata incompleta o formulario cerrado`);}
+async function resolveExecutableDeployment(script,scriptId,preferredId,versionNumber,description){const listed=await script.projects.deployments.list({scriptId});const deployments=listed.data.deployments||[];let selected=null;if(preferredId)selected=deployments.find(d=>d.deploymentId===preferredId&&hasExecutionApi(d))||null;if(!selected)selected=deployments.find(hasExecutionApi)||null;if(selected){await script.projects.deployments.update({scriptId,deploymentId:selected.deploymentId,requestBody:{deploymentConfig:{scriptId,versionNumber,manifestFileName:'appsscript',description}}});const refreshed=await script.projects.deployments.get({scriptId,deploymentId:selected.deploymentId});if(!hasExecutionApi(refreshed.data))throw new Error(`Deployment ${selected.deploymentId} perdió EXECUTION_API al actualizarse`);return refreshed.data;}const created=await script.projects.deployments.create({scriptId,requestBody:{versionNumber,manifestFileName:'appsscript',description}});if(!created.data.deploymentId)throw new Error('Google no devolvió deploymentId');const refreshed=await script.projects.deployments.get({scriptId,deploymentId:created.data.deploymentId});if(!hasExecutionApi(refreshed.data))throw new Error(`Deployment ${created.data.deploymentId} no expuso EXECUTION_API`);return refreshed.data;}
+async function runFunction(script,deploymentId,fn){const execution=await script.scripts.run({scriptId:deploymentId,requestBody:{function:fn,devMode:false}});if(execution.data.error)throw new Error(`${fn} devolvió error: ${JSON.stringify(execution.data.error.details||[])}`);return execution.data.response&&execution.data.response.result;}
+
+async function main(){
+  const scriptId=requiredEnv('CUDO_APPS_SCRIPT_ID');const preferredDeploymentId=String(process.env.CUDO_APPS_SCRIPT_DEPLOYMENT_ID||'').trim();const auth=buildOAuthClient();const script=google.script({version:'v1',auth});const description=`CUDO QA auto ${process.env.GITHUB_SHA||new Date().toISOString()}`;
+  console.log('[1/6] Validando proyecto Apps Script...');const project=await script.projects.get({scriptId});if(project.data.scriptId!==scriptId)throw new Error('El Script ID devuelto por Google no coincide');
+  console.log('[2/6] Actualizando HEAD...');await script.projects.updateContent({scriptId,requestBody:{files:loadAppsScriptFiles(__dirname)}});
+  console.log('[3/6] Versionando y resolviendo deployment...');const version=await script.projects.versions.create({scriptId,requestBody:{description}});const versionNumber=version.data.versionNumber;if(!Number.isInteger(versionNumber))throw new Error('Google no devolvió versionNumber');const deployment=await resolveExecutableDeployment(script,scriptId,preferredDeploymentId,versionNumber,description);const deploymentId=deployment.deploymentId;
+  console.log('[4/6] Provisionando seis dominios visibles...');const result=await runFunction(script,deploymentId,'provisionAllQA');validateProvisionResult(result);
+  console.log('[5/6] Provisionando mantenimiento humano...');const maintenance=await runFunction(script,deploymentId,'provisionMantenimientoQA');validateSingleForm('QA_MANTENIMIENTO',maintenance);
+  console.log('[6/6] QA básico completo.');console.log(JSON.stringify({ok:true,scriptId,deploymentId,versionNumber,modules:REQUIRED_QA_KEYS,result,maintenance},null,2));
 }
-
-function buildOAuthClient() {
-  const clientId = requiredEnv('CUDO_GOOGLE_OAUTH_CLIENT_ID');
-  const clientSecret = requiredEnv('CUDO_GOOGLE_OAUTH_CLIENT_SECRET');
-  const refreshToken = requiredEnv('CUDO_GOOGLE_REFRESH_TOKEN');
-  const auth = new google.auth.OAuth2(clientId, clientSecret);
-  auth.setCredentials({ refresh_token: refreshToken });
-  return auth;
-}
-
-function loadAppsScriptFiles(baseDir) {
-  const entries = fs.readdirSync(baseDir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.gs')) continue;
-    files.push({
-      name: path.basename(entry.name, '.gs'),
-      type: 'SERVER_JS',
-      source: fs.readFileSync(path.join(baseDir, entry.name), 'utf8')
-    });
-  }
-  const manifestPath = path.join(baseDir, 'appsscript.json');
-  if (!fs.existsSync(manifestPath)) throw new Error('Falta appsscript.json');
-  files.push({ name: 'appsscript', type: 'JSON', source: fs.readFileSync(manifestPath, 'utf8') });
-  if (files.length < 2) throw new Error('No se encontraron archivos Apps Script para publicar');
-  return files;
-}
-
-function hasExecutionApi(deployment) {
-  return (deployment?.entryPoints || []).some(ep => ep.entryPointType === 'EXECUTION_API');
-}
-
-function validateProvisionResult(result) {
-  if (!result || typeof result !== 'object' || Array.isArray(result)) {
-    throw new Error('provisionAllQA no devolvió un objeto de resultados');
-  }
-  const failures = [];
-  for (const key of REQUIRED_QA_KEYS) {
-    const item = result[key];
-    if (!item || typeof item !== 'object') { failures.push(`${key}: resultado ausente`); continue; }
-    if (item.ERROR) { failures.push(`${key}: ${item.ERROR}`); continue; }
-    if (!item.FORM_ID || !item.FORM_RESPONDER_URL || !item.LINKED_SPREADSHEET_ID) {
-      failures.push(`${key}: metadata incompleta`);
-    }
-  }
-  if (failures.length) throw new Error(`Validación QA falló:\n${failures.join('\n')}`);
-}
-
-async function resolveExecutableDeployment(script, scriptId, preferredId, versionNumber, description) {
-  const listed = await script.projects.deployments.list({ scriptId });
-  const deployments = listed.data.deployments || [];
-  let selected = null;
-
-  if (preferredId) selected = deployments.find(d => d.deploymentId === preferredId && hasExecutionApi(d)) || null;
-  if (!selected) selected = deployments.find(hasExecutionApi) || null;
-
-  if (selected) {
-    await script.projects.deployments.update({
-      scriptId,
-      deploymentId: selected.deploymentId,
-      requestBody: { deploymentConfig: { scriptId, versionNumber, manifestFileName: 'appsscript', description } }
-    });
-    const refreshed = await script.projects.deployments.get({ scriptId, deploymentId: selected.deploymentId });
-    if (!hasExecutionApi(refreshed.data)) throw new Error(`Deployment ${selected.deploymentId} perdió EXECUTION_API al actualizarse`);
-    return refreshed.data;
-  }
-
-  console.log('No existe un deployment EXECUTION_API válido; creando uno nuevo desde el manifest versionado...');
-  const created = await script.projects.deployments.create({
-    scriptId,
-    requestBody: { versionNumber, manifestFileName: 'appsscript', description }
-  });
-  if (!created.data.deploymentId) throw new Error('Google no devolvió deploymentId al crear la implementación');
-  const refreshed = await script.projects.deployments.get({ scriptId, deploymentId: created.data.deploymentId });
-  if (!hasExecutionApi(refreshed.data)) {
-    throw new Error(`Google creó deployment ${created.data.deploymentId} pero no lo expuso como EXECUTION_API`);
-  }
-  return refreshed.data;
-}
-
-async function main() {
-  const scriptId = requiredEnv('CUDO_APPS_SCRIPT_ID');
-  const preferredDeploymentId = String(process.env.CUDO_APPS_SCRIPT_DEPLOYMENT_ID || '').trim();
-  const auth = buildOAuthClient();
-  const script = google.script({ version: 'v1', auth });
-  const description = `CUDO QA auto ${process.env.GITHUB_SHA || new Date().toISOString()}`;
-
-  console.log('[1/5] Validando proyecto Apps Script...');
-  const project = await script.projects.get({ scriptId });
-  if (project.data.scriptId !== scriptId) throw new Error('El Script ID devuelto por Google no coincide con el configurado');
-
-  console.log('[2/5] Actualizando HEAD del Apps Script existente...');
-  await script.projects.updateContent({ scriptId, requestBody: { files: loadAppsScriptFiles(__dirname) } });
-
-  console.log('[3/5] Creando versión inmutable y resolviendo deployment API executable...');
-  const version = await script.projects.versions.create({ scriptId, requestBody: { description } });
-  const versionNumber = version.data.versionNumber;
-  if (!Number.isInteger(versionNumber)) throw new Error('Google no devolvió versionNumber');
-  const deployment = await resolveExecutableDeployment(script, scriptId, preferredDeploymentId, versionNumber, description);
-  const deploymentId = deployment.deploymentId;
-
-  console.log('[4/5] Ejecutando provisionAllQA...');
-  const execution = await script.scripts.run({
-    scriptId: deploymentId,
-    requestBody: { function: 'provisionAllQA', devMode: false }
-  });
-  if (execution.data.error) throw new Error(`scripts.run devolvió error: ${JSON.stringify(execution.data.error.details || [])}`);
-
-  const result = execution.data.response && execution.data.response.result;
-  console.log('[5/5] Validando los seis módulos visibles de V8...');
-  validateProvisionResult(result);
-  console.log(JSON.stringify({ ok: true, scriptId, deploymentId, versionNumber, modules: REQUIRED_QA_KEYS, result }, null, 2));
-}
-
-main().catch(err => {
-  const status = err && err.response && err.response.status;
-  const data = err && err.response && err.response.data;
-  console.error('CUDO QA Forms Auto ERROR:', status ? `HTTP ${status}` : '', data || err.message || err);
-  process.exit(1);
-});
+main().catch(err=>{const status=err&&err.response&&err.response.status;const data=err&&err.response&&err.response.data;console.error('CUDO QA Forms Auto ERROR:',status?`HTTP ${status}`:'',data||err.message||err);process.exit(1);});
