@@ -6,7 +6,7 @@ const CUDO_FORMS_CONFIG = {
     specSheet: 'FORM_SPEC',
     rawSheet: 'RAW_FORM_NOTICIAS',
     title: 'CUDO QA · Noticias',
-    description: 'Formulario QA de CUDO para probar el circuito Noticias → CONTROL → PUBLICO_EXPORT → GitHub. No usar para datos reales.'
+    description: 'Carga de noticias para la web CUDO. Completa los datos en lenguaje simple; la publicación se procesa automáticamente después del control.'
   },
   QA_EQUIPOS: {
     env: 'QA',
@@ -14,8 +14,8 @@ const CUDO_FORMS_CONFIG = {
     captureFolderId: '1TtGqzfFOqQTIioySe8BmX64c3wGGIRhY',
     specSheet: 'FORM_SPEC',
     rawSheet: 'RAW_FORM_EQUIPOS',
-    title: 'CUDO QA · Equipos',
-    description: 'Formulario QA de CUDO para probar el circuito Equipos → CONTROL → PUBLICO_EXPORT → GitHub. No usar para datos reales.'
+    title: 'CUDO QA · Series y Equipos',
+    description: 'Carga de series y equipos que aparecen en la web CUDO. Completa la información solicitada sin tocar planillas ni código.'
   },
   QA_PLANTEL: {
     env: 'QA',
@@ -23,8 +23,8 @@ const CUDO_FORMS_CONFIG = {
     captureFolderId: '1TtGqzfFOqQTIioySe8BmX64c3wGGIRhY',
     specSheet: 'FORM_SPEC',
     rawSheet: 'RAW_FORM_PLANTEL',
-    title: 'CUDO QA · Plantel',
-    description: 'Formulario QA de CUDO para probar el circuito Plantel sin PII real. No usar datos personales reales.'
+    title: 'CUDO QA · Jugadores / Plantel',
+    description: 'Carga de jugadores y plantel para la web CUDO. Usa solamente información pública y fotografías autorizadas.'
   },
   QA_PARTIDOS: {
     env: 'QA',
@@ -32,8 +32,17 @@ const CUDO_FORMS_CONFIG = {
     captureFolderId: '1TtGqzfFOqQTIioySe8BmX64c3wGGIRhY',
     specSheet: 'FORM_SPEC',
     rawSheet: 'RAW_FORM_PARTIDOS',
-    title: 'CUDO QA · Partidos y Resultados',
-    description: 'Formulario QA de CUDO para probar el circuito Form → Sheet → CONTROL → PUBLICO_EXPORT → GitHub. No usar para datos reales.'
+    title: 'CUDO QA · Fechas, Partidos y Resultados',
+    description: 'Carga una fecha, partido o resultado de CUDO. La web tomará los datos desde el circuito de publicación validado.'
+  },
+  QA_TABLA: {
+    env: 'QA',
+    spreadsheetId: '1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',
+    captureFolderId: '1TtGqzfFOqQTIioySe8BmX64c3wGGIRhY',
+    specSheet: 'FORM_SPEC',
+    rawSheet: 'RAW_FORM_TABLA',
+    title: 'CUDO QA · Tabla de Posiciones',
+    description: 'Carga una fila de la tabla de posiciones que se muestra en la web CUDO. Ingresa los valores oficiales de la competencia y categoría.'
   },
   QA_GALERIA: {
     env: 'QA',
@@ -42,7 +51,7 @@ const CUDO_FORMS_CONFIG = {
     specSheet: 'FORM_SPEC',
     rawSheet: 'RAW_FORM_GALERIA',
     title: 'CUDO QA · Galería',
-    description: 'Formulario QA de CUDO para probar el circuito Galería → CONTROL → PUBLICO_EXPORT → GitHub. No usar fotos reales sin autorización.'
+    description: 'Carga fotografías para la galería de la web CUDO. Usa solamente imágenes autorizadas; si aparecen menores, debe existir autorización correspondiente.'
   },
   PROD_PARTIDOS: {
     env: 'PROD',
@@ -56,7 +65,7 @@ const CUDO_FORMS_CONFIG = {
 };
 
 function provisionAllQA() {
-  const keys = ['QA_NOTICIAS', 'QA_EQUIPOS', 'QA_PLANTEL', 'QA_PARTIDOS', 'QA_GALERIA'];
+  const keys = ['QA_NOTICIAS', 'QA_EQUIPOS', 'QA_PLANTEL', 'QA_PARTIDOS', 'QA_TABLA', 'QA_GALERIA'];
   const results = {};
   const errors = [];
   keys.forEach(key => {
@@ -80,6 +89,7 @@ function provisionNoticiasQA() { return provisionForm_(CUDO_FORMS_CONFIG.QA_NOTI
 function provisionEquiposQA() { return provisionForm_(CUDO_FORMS_CONFIG.QA_EQUIPOS); }
 function provisionPlantelQA() { return provisionForm_(CUDO_FORMS_CONFIG.QA_PLANTEL); }
 function provisionPartidosQA() { return provisionForm_(CUDO_FORMS_CONFIG.QA_PARTIDOS); }
+function provisionTablaQA() { return provisionForm_(CUDO_FORMS_CONFIG.QA_TABLA); }
 function provisionGaleriaQA() { return provisionForm_(CUDO_FORMS_CONFIG.QA_GALERIA); }
 
 function provisionPartidosPROD(confirmacion) {
@@ -106,6 +116,7 @@ function provisionForm_(cfg) {
   const existingFormId = String(spec.getRange('I1').getValue() || '').trim();
   if (existingFormId) {
     const existing = FormApp.openById(existingFormId);
+    existing.setTitle(cfg.title).setDescription(cfg.description);
     const existingResponseSheet = String(spec.getRange('I5').getValue() || '').trim();
     if (!existingResponseSheet) throw new Error('FORM existente pero RESPONSE_SHEET está vacío en FORM_SPEC.');
     linkRaw_(raw, existingResponseSheet, rawColumnCount);
