@@ -37,6 +37,10 @@ function loadAppsScriptFiles(baseDir) {
   return files;
 }
 
+function hasExecutionApi(deployment) {
+  return (deployment?.entryPoints || []).some(ep => ep.entryPointType === 'EXECUTION_API');
+}
+
 function validateProvisionResult(result) {
   if (!result || typeof result !== 'object' || Array.isArray(result)) {
     throw new Error('provisionAllQA no devolvió un objeto de resultados');
@@ -63,9 +67,9 @@ async function main() {
   console.log('[1/5] Validando proyecto e implementación existentes...');
   const project = await script.projects.get({ scriptId });
   if (project.data.scriptId !== scriptId) throw new Error('El Script ID devuelto por Google no coincide con el configurado');
-  const deployment = await script.projects.deployments.get({ scriptId, deploymentId });
-  if (!(deployment.data.entryPoints || []).some(ep => ep.entryPointType === 'EXECUTION_API')) {
-    throw new Error(`El deployment ${deploymentId} no es un API executable`);
+  const deploymentBefore = await script.projects.deployments.get({ scriptId, deploymentId });
+  if (!hasExecutionApi(deploymentBefore.data)) {
+    console.log('Deployment sin EXECUTION_API antes de actualizar; se intentará reparar desde appsscript.json.');
   }
 
   console.log('[2/5] Actualizando HEAD del Apps Script existente...');
@@ -80,6 +84,11 @@ async function main() {
     deploymentId,
     requestBody: { deploymentConfig: { scriptId, versionNumber, manifestFileName: 'appsscript', description } }
   });
+
+  const deploymentAfter = await script.projects.deployments.get({ scriptId, deploymentId });
+  if (!hasExecutionApi(deploymentAfter.data)) {
+    throw new Error(`El deployment ${deploymentId} sigue sin EXECUTION_API después de publicar el manifest corregido`);
+  }
 
   console.log('[4/5] Ejecutando provisionAllQA...');
   const execution = await script.scripts.run({
