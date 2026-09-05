@@ -4,6 +4,12 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '17 * * * *'
+  push:
+    branches:
+      - qa-v8-google-data
+    paths:
+      - 'preview-v8/tools/sync_google_publico.mjs'
+      - '.github/workflows/sync-qa-google-data.yml'
 
 permissions:
   contents: write
