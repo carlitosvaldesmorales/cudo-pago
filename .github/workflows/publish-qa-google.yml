@@ -19,7 +19,7 @@ concurrency:
 jobs:
   validate-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout QA Google
         uses: actions/checkout@v4
@@ -35,6 +35,7 @@ jobs:
           node --check source/preview-v8/shared/site.js
           node --check source/preview-v8/shared/seed-data.js
           node --check source/preview-v8/shared/data-source.js
+          node --check source/preview-v8/tools/qa_google_render.mjs
           python3 - <<'PY'
           from pathlib import Path
           adapter=Path('source/preview-v8/shared/data-source.js').read_text(encoding='utf-8')
@@ -45,6 +46,33 @@ jobs:
               assert token not in adapter+'\n'+shim, token
           print('QA Google sin fallback mock: OK')
           PY
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar Playwright
+        working-directory: source
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Levantar preview QA real
+        working-directory: source
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-qa-google-http.log 2>&1 &
+          echo $! > /tmp/cudo-qa-google-http.pid
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cudo-qa-google-http.log
+          exit 1
+
+      - name: Validar render E2E Google → V8
+        working-directory: source
+        run: node preview-v8/tools/qa_google_render.mjs
 
       - name: Checkout main como destino de publicación
         uses: actions/checkout@v4
