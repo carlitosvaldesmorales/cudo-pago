@@ -15,6 +15,17 @@ El Inicio es una vista editorial propia. No debe construirse como una copia de l
 - Tercera, Segunda, Senior y Primera pueden aparecer como información secundaria, nunca como pills que compitan con el claim.
 - Desktop y móvil deben ser la misma dirección de arte adaptada, no dos diseños distintos.
 
+## Ley de identidad fotográfica CUDO
+
+Las fotografías documentales del club son evidencia visual real. Rostros, escudo, camisetas, lienzos, banderas y textos reales son zonas inmutables.
+
+- La IA generativa no puede reinterpretar, reemplazar ni redibujar personas, caras, escudos, camisetas, lienzos, banderas o textos reales.
+- Se permite mejora no generativa: super-resolución, reducción de ruido, nitidez, contraste, color y luminosidad, siempre preservando los píxeles e identidad documental.
+- Si fuese necesario extender una imagen, solo pueden generarse zonas neutras que no alteren identidad; la zona documental original debe conservarse intacta.
+- Una imagen no pasa QA porque simplemente cargue o tenga resolución nominal suficiente. Debe revisarse en el tamaño, recorte y ampliación reales del hero.
+- Si el render muestra pérdida visible de nitidez, deformación, caras alteradas, escudo modificado o textos reinterpretados, el resultado queda rechazado aunque el pipeline técnico esté verde.
+- Para el hero aprobado del estadio, el asset debe vivir como archivo real del repositorio; no debe ocultarse como una fotografía base64 gigante incrustada en CSS.
+
 ## Jornada
 
 - La próxima jornada tiene prioridad sobre la jornada anterior.
@@ -54,5 +65,6 @@ Antes de promover una modificación del Inicio a main:
 1. QA funcional y responsive.
 2. Captura full-page desktop y móvil del commit candidato.
 3. Revisión visual humana contra este contrato.
-4. Si existe una desviación visible, el pipeline verde no autoriza publicación.
-5. Solo después de la revisión visual se promueve a main/GitHub Pages.
+4. Verificación específica de nitidez e identidad de cualquier fotografía principal.
+5. Si existe una desviación visible, el pipeline verde no autoriza publicación.
+6. Solo después de la revisión visual se promueve a main/GitHub Pages.
