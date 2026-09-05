@@ -1,18 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-05T01:20:00-04:00",
+  "generated_at": null,
   "source": "CUDO_WEB_PARTIDOS",
-  "items": [
-    {
-      "id": "QA-PAR-20260905013500-001",
-      "competencia": "Campeonato 2026",
-      "fecha": "2026-09-06",
-      "hora": "13:30",
-      "categoria": "TERCERA",
-      "local": "CUDO",
-      "visita": "RIVAL QA",
-      "recinto": "Cancha QA",
-      "estado_partido": "PROGRAMADO"
-    }
-  ]
+  "items": []
 }
