@@ -15,15 +15,16 @@ async function runFunction(script,deploymentId,fn){const execution=await script.
 
 async function main(){
  const scriptId=requiredEnv('CUDO_APPS_SCRIPT_ID'),preferred=String(process.env.CUDO_APPS_SCRIPT_DEPLOYMENT_ID||'').trim(),auth=buildOAuthClient(),script=google.script({version:'v1',auth}),description=`CUDO QA auto ${process.env.GITHUB_SHA||new Date().toISOString()}`;
- console.log('[1/10] Validando proyecto Apps Script...');const project=await script.projects.get({scriptId});if(project.data.scriptId!==scriptId)throw new Error('Script ID no coincide');
- console.log('[2/10] Actualizando HEAD...');await script.projects.updateContent({scriptId,requestBody:{files:loadAppsScriptFiles(__dirname)}});
- console.log('[3/10] Versionando y resolviendo deployment...');const version=await script.projects.versions.create({scriptId,requestBody:{description}}),versionNumber=version.data.versionNumber,deployment=await resolveExecutableDeployment(script,scriptId,preferred,versionNumber,description),deploymentId=deployment.deploymentId;
- console.log('[4/10] Provisionando seis dominios visibles...');const result=await runFunction(script,deploymentId,'provisionAllQA');validateProvisionResult(result);
- console.log('[5/10] Aplicando ramificación humana de Partidos...');const partidosBranching=await runFunction(script,deploymentId,'ensurePartidosBranchingQA');if(!partidosBranching?.ok||partidosBranching.pages?.length!==2||partidosBranching.choices?.length!==4)throw new Error(`Ramificación Partidos inválida: ${JSON.stringify(partidosBranching)}`);
- console.log('[6/10] Provisionando mantenimiento humano...');const maintenance=await runFunction(script,deploymentId,'provisionMantenimientoQA');validateSingleForm('QA_MANTENIMIENTO',maintenance);
- console.log('[7/10] Provisionando revisión humana...');const review=await runFunction(script,deploymentId,'provisionRevisionQA');validateSingleForm('QA_REVISION',review);
- console.log('[8/10] Procesando cola de revisiones pendientes...');const reviewQueue=await runFunction(script,deploymentId,'processPendingReviewsQA');if(!reviewQueue||typeof reviewQueue!=='object'||Number(reviewQueue.error||0)>0)throw new Error(`Cola inválida: ${JSON.stringify(reviewQueue)}`);
- console.log('[9/10] Auditando formularios humanos vivos...');const humanAudit=await runFunction(script,deploymentId,'auditHumanFormsQA');validateHumanAudit(humanAudit);
- console.log('[10/10] QA básico completo.');console.log(JSON.stringify({ok:true,scriptId,deploymentId,versionNumber,result,partidosBranching,maintenance,review,reviewQueue,humanAudit},null,2));
+ console.log('[1/11] Validando proyecto Apps Script...');const project=await script.projects.get({scriptId});if(project.data.scriptId!==scriptId)throw new Error('Script ID no coincide');
+ console.log('[2/11] Actualizando HEAD...');await script.projects.updateContent({scriptId,requestBody:{files:loadAppsScriptFiles(__dirname)}});
+ console.log('[3/11] Versionando y resolviendo deployment...');const version=await script.projects.versions.create({scriptId,requestBody:{description}}),versionNumber=version.data.versionNumber,deployment=await resolveExecutableDeployment(script,scriptId,preferred,versionNumber,description),deploymentId=deployment.deploymentId;
+ console.log('[4/11] Provisionando seis dominios visibles...');const result=await runFunction(script,deploymentId,'provisionAllQA');validateProvisionResult(result);
+ console.log('[5/11] Aplicando ramificación humana de Partidos...');const partidosBranching=await runFunction(script,deploymentId,'ensurePartidosBranchingQA');if(!partidosBranching?.ok||partidosBranching.pages?.length!==2||partidosBranching.choices?.length!==4)throw new Error(`Ramificación Partidos inválida: ${JSON.stringify(partidosBranching)}`);
+ console.log('[6/11] Provisionando mantenimiento humano...');const maintenance=await runFunction(script,deploymentId,'provisionMantenimientoQA');validateSingleForm('QA_MANTENIMIENTO',maintenance);
+ console.log('[7/11] Provisionando revisión humana...');const review=await runFunction(script,deploymentId,'provisionRevisionQA');validateSingleForm('QA_REVISION',review);
+ console.log('[8/11] Procesando cola de revisiones pendientes...');const reviewQueue=await runFunction(script,deploymentId,'processPendingReviewsQA');if(!reviewQueue||typeof reviewQueue!=='object'||Number(reviewQueue.error||0)>0)throw new Error(`Cola inválida: ${JSON.stringify(reviewQueue)}`);
+ console.log('[9/11] Auditando formularios humanos vivos...');const humanAudit=await runFunction(script,deploymentId,'auditHumanFormsQA');validateHumanAudit(humanAudit);
+ console.log('[10/11] Buscando plantillas existentes con carga de archivos...');const fileUploadTemplates=await runFunction(script,deploymentId,'findFileUploadFormTemplatesQA');
+ console.log('[11/11] QA básico completo.');console.log(JSON.stringify({ok:true,scriptId,deploymentId,versionNumber,result,partidosBranching,maintenance,review,reviewQueue,humanAudit,fileUploadTemplates},null,2));
 }
 main().catch(err=>{const status=err?.response?.status,data=err?.response?.data;console.error('CUDO QA Forms Auto ERROR:',status?`HTTP ${status}`:'',data||err.message||err);process.exit(1);});
