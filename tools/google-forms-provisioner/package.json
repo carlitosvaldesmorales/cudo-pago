@@ -5,7 +5,8 @@
   "description": "Deploy and execute CUDO QA Forms provisioner through the Google Apps Script API.",
   "main": "runner.js",
   "scripts": {
-    "run": "node runner.js"
+    "run": "node runner.js",
+    "bootstrap:oauth": "node bootstrap-oauth-local.js"
   },
   "dependencies": {
     "googleapis": "^160.0.0"
