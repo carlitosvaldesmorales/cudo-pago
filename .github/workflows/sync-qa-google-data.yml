@@ -19,9 +19,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sync-google-publico:
+  sync-validate-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
@@ -32,6 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: qa-v8-google-data
+          path: source
           fetch-depth: 0
 
       - name: Validar credenciales Google
@@ -51,12 +52,54 @@ jobs:
           node-version: '24'
 
       - name: Sincronizar PUBLICO_EXPORT hacia JSON V8
+        working-directory: source
         run: node preview-v8/tools/sync_google_publico.mjs
 
       - name: Validar contrato público
+        working-directory: source
         run: python3 preview-v8/tools/validate_data.py
 
-      - name: Commit sólo si cambió contenido público
+      - name: Validar adapter QA sin mock
+        working-directory: source
+        run: |
+          node --check preview-v8/shared/site.js
+          node --check preview-v8/shared/seed-data.js
+          node --check preview-v8/shared/data-source.js
+          node --check preview-v8/tools/qa_google_render.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          adapter=Path('preview-v8/shared/data-source.js').read_text(encoding='utf-8')
+          shim=Path('preview-v8/shared/seed-data.js').read_text(encoding='utf-8')
+          assert "environment:'QA'" in adapter
+          assert 'mock:false' in adapter
+          for token in ['CUDO_SEED_DATA','randomuser.me','VISTA DEMOSTRATIVA','FOTO MOCK']:
+              assert token not in adapter+'\n'+shim, token
+          print('QA Google sin fallback mock: OK')
+          PY
+
+      - name: Instalar Playwright
+        working-directory: source
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Levantar preview QA real
+        working-directory: source
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-qa-http.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cudo-qa-http.log
+          exit 1
+
+      - name: Validar render E2E Google a V8
+        working-directory: source
+        run: node preview-v8/tools/qa_google_render.mjs
+
+      - name: Commit datos QA sólo si cambiaron
+        working-directory: source
         shell: bash
         run: |
           set -euo pipefail
@@ -64,8 +107,47 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add preview-v8/data/*.json
           if git diff --cached --quiet; then
-            echo 'PUBLICO_EXPORT sin cambios; no se crea commit.'
+            echo 'PUBLICO_EXPORT sin cambios; rama QA no requiere commit.'
+          else
+            git commit -m "QA data sync: Google PUBLICO_EXPORT"
+            git push origin HEAD:qa-v8-google-data
+          fi
+
+      - name: Checkout main como destino
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: publish
+          fetch-depth: 0
+
+      - name: Publicar snapshot QA validado
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf publish/qa-v8-google
+          mkdir -p publish/qa-v8-google
+          rsync -a --delete source/preview-v8/ publish/qa-v8-google/
+          cat > publish/qa-v8-google/QA_BUILD.json <<EOF
+          {
+            "environment": "QA",
+            "source_branch": "qa-v8-google-data",
+            "source_commit": "$(git -C source rev-parse HEAD)",
+            "workflow_run": "${GITHUB_RUN_ID}",
+            "published_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+      - name: Commit publicación main sólo si cambió
+        working-directory: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qa-v8-google
+          if git diff --cached --quiet; then
+            echo 'Snapshot QA sin cambios; main no requiere commit.'
             exit 0
           fi
-          git commit -m "QA data sync: Google PUBLICO_EXPORT"
-          git push origin HEAD:qa-v8-google-data
+          git commit -m "QA publish E2E: ${GITHUB_RUN_ID}"
+          git push origin HEAD:main
