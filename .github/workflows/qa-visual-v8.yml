@@ -48,7 +48,9 @@ jobs:
           exit 1
 
       - name: Ejecutar agente QA visual V8
-        run: node preview-v8/tools/visual_qa.mjs
+        run: |
+          node preview-v8/tools/visual_qa.mjs || true
+          node preview-v8/tools/visual_qa_finalize.mjs
 
       - name: Evidencia QA visual
         if: always()
