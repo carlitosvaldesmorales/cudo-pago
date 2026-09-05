@@ -1,5 +1,5 @@
 (()=>{
-  const fallback=new URL('../assets/estadio-v2.webp',location.href).href;
+  const fallback=new URL('../assets/estadio-cudo-hero.avif?v=faithful-hero-59506',location.href).href;
 
   const repairMedia=()=>{
     document.querySelectorAll('#homeNews img,#homeGallery img').forEach(img=>{
