@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - cudo-qa-auto-01
+      - cudo-web-ux-01-impl
     paths:
       - 'tools/google-forms-provisioner/**'
       - '.github/workflows/cudo-qa-forms-auto.yml'
