@@ -10,6 +10,10 @@
     .status[hidden]{display:none!important}
     .gallerytoolbar>*{min-width:0!important}
     .gallerytoolbar select{width:100%!important;min-width:0!important;max-width:100%!important}
+    .albumcard{min-width:0!important}
+    .albumcard strong,.albumcard span{overflow-wrap:anywhere}
+    @media(max-width:900px){.galleryalbums{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+    @media(max-width:620px){.galleryalbums{grid-template-columns:minmax(0,1fr)!important}}
   `;
   document.head.append(style);
 
