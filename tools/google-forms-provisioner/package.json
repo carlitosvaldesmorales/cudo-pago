@@ -1,0 +1,13 @@
+{
+  "name": "cudo-google-forms-provisioner",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Deploy and execute CUDO QA Forms provisioner through the Google Apps Script API.",
+  "main": "runner.js",
+  "scripts": {
+    "run": "node runner.js"
+  },
+  "dependencies": {
+    "googleapis": "^160.0.0"
+  }
+}
