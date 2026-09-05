@@ -15,11 +15,12 @@ async function runFunction(script,deploymentId,fn){const execution=await script.
 
 async function main(){
   const scriptId=requiredEnv('CUDO_APPS_SCRIPT_ID');const preferredDeploymentId=String(process.env.CUDO_APPS_SCRIPT_DEPLOYMENT_ID||'').trim();const auth=buildOAuthClient();const script=google.script({version:'v1',auth});const description=`CUDO QA auto ${process.env.GITHUB_SHA||new Date().toISOString()}`;
-  console.log('[1/6] Validando proyecto Apps Script...');const project=await script.projects.get({scriptId});if(project.data.scriptId!==scriptId)throw new Error('El Script ID devuelto por Google no coincide');
-  console.log('[2/6] Actualizando HEAD...');await script.projects.updateContent({scriptId,requestBody:{files:loadAppsScriptFiles(__dirname)}});
-  console.log('[3/6] Versionando y resolviendo deployment...');const version=await script.projects.versions.create({scriptId,requestBody:{description}});const versionNumber=version.data.versionNumber;if(!Number.isInteger(versionNumber))throw new Error('Google no devolvió versionNumber');const deployment=await resolveExecutableDeployment(script,scriptId,preferredDeploymentId,versionNumber,description);const deploymentId=deployment.deploymentId;
-  console.log('[4/6] Provisionando seis dominios visibles...');const result=await runFunction(script,deploymentId,'provisionAllQA');validateProvisionResult(result);
-  console.log('[5/6] Provisionando mantenimiento humano...');const maintenance=await runFunction(script,deploymentId,'provisionMantenimientoQA');validateSingleForm('QA_MANTENIMIENTO',maintenance);
-  console.log('[6/6] QA básico completo.');console.log(JSON.stringify({ok:true,scriptId,deploymentId,versionNumber,modules:REQUIRED_QA_KEYS,result,maintenance},null,2));
+  console.log('[1/7] Validando proyecto Apps Script...');const project=await script.projects.get({scriptId});if(project.data.scriptId!==scriptId)throw new Error('El Script ID devuelto por Google no coincide');
+  console.log('[2/7] Actualizando HEAD...');await script.projects.updateContent({scriptId,requestBody:{files:loadAppsScriptFiles(__dirname)}});
+  console.log('[3/7] Versionando y resolviendo deployment...');const version=await script.projects.versions.create({scriptId,requestBody:{description}});const versionNumber=version.data.versionNumber;if(!Number.isInteger(versionNumber))throw new Error('Google no devolvió versionNumber');const deployment=await resolveExecutableDeployment(script,scriptId,preferredDeploymentId,versionNumber,description);const deploymentId=deployment.deploymentId;
+  console.log('[4/7] Provisionando seis dominios visibles...');const result=await runFunction(script,deploymentId,'provisionAllQA');validateProvisionResult(result);
+  console.log('[5/7] Provisionando mantenimiento humano...');const maintenance=await runFunction(script,deploymentId,'provisionMantenimientoQA');validateSingleForm('QA_MANTENIMIENTO',maintenance);
+  console.log('[6/7] Provisionando revisión humana...');const review=await runFunction(script,deploymentId,'provisionRevisionQA');validateSingleForm('QA_REVISION',review);
+  console.log('[7/7] QA básico completo.');console.log(JSON.stringify({ok:true,scriptId,deploymentId,versionNumber,modules:REQUIRED_QA_KEYS,result,maintenance,review},null,2));
 }
 main().catch(err=>{const status=err&&err.response&&err.response.status;const data=err&&err.response&&err.response.data;console.error('CUDO QA Forms Auto ERROR:',status?`HTTP ${status}`:'',data||err.message||err);process.exit(1);});
