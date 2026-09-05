@@ -1,0 +1,4 @@
+{
+  "mode": "seed",
+  "description": "seed mantiene el fallback mock para módulos sin datos reales. Cambiar a production solo con autorización humana cuando los módulos públicos estén listos."
+}
