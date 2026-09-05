@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: cudo-qa-forms-auto
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy-and-provision:
