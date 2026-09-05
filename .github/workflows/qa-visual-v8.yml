@@ -47,6 +47,9 @@ jobs:
           cat /tmp/cudo-v8-http.log
           exit 1
 
+      - name: Diagnosticar overflow móvil
+        run: node preview-v8/tools/overflow_diag.mjs
+
       - name: Ejecutar agente QA visual V8
         run: |
           node preview-v8/tools/visual_qa.mjs || true
