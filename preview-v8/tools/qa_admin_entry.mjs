@@ -2,16 +2,22 @@ import fs from 'fs';
 
 const html=fs.readFileSync('preview-v8/admin/index.html','utf8');
 const cfg=JSON.parse(fs.readFileSync('preview-v8/admin/forms-config.json','utf8'));
+const visible=html
+  .replace(/<script[\s\S]*?<\/script>/gi,'')
+  .replace(/<style[\s\S]*?<\/style>/gi,'')
+  .replace(/<[^>]+>/g,' ')
+  .replace(/\s+/g,' ');
+
 const checks=[
-  ['título humano',html.includes('Administrar contenido del CUDO')],
-  ['noticias',html.includes('Publicar una noticia')],
-  ['equipos',html.includes('Administrar equipo o serie')],
-  ['plantel',html.includes('Agregar jugador')],
-  ['partidos',html.includes('Registrar partido o resultado')],
-  ['tabla',html.includes('Actualizar tabla')],
-  ['galería',html.includes('Subir a galería')],
-  ['mantenimiento',html.includes('Corregir, actualizar, retirar o reactivar')],
-  ['sin exposición técnica',!/>[^<]*(GitHub|JSON|Apps Script|PUBLICO_EXPORT|CONTROL)[^<]*</i.test(html.replace('No necesitas abrir planillas, GitHub, JSON ni código.',''))],
+  ['título humano',visible.includes('Administrar contenido del CUDO')],
+  ['noticias',visible.includes('Publicar una noticia')],
+  ['equipos',visible.includes('Administrar equipo o serie')],
+  ['plantel',visible.includes('Agregar jugador')],
+  ['partidos',visible.includes('Registrar partido o resultado')],
+  ['tabla',visible.includes('Actualizar tabla')],
+  ['galería',visible.includes('Subir a galería')],
+  ['mantenimiento',visible.includes('Corregir, actualizar, retirar o reactivar')],
+  ['sin exposición técnica',!/(GitHub|JSON|Apps Script|PUBLICO_EXPORT|CONTROL)/i.test(visible)],
   ['config schema',cfg.schema_version==='1.0']
 ];
 const failed=checks.filter(([,ok])=>!ok);
