@@ -55,6 +55,12 @@ function rowsToItems(values,numeric) {
   return values.slice(1).filter(row=>row.some(v=>String(v??'').trim()!=='')).map(row=>Object.fromEntries(headers.map((h,i)=>[h,numeric.includes(h)?toNumber(row[i]??''):row[i]??''])));
 }
 
+function canonicalizeModuleItems(moduleKey,items){
+  if(moduleKey!=='partidos')return items;
+  const canon=v=>String(v??'').trim().toUpperCase()==='CUDO'?'CUDO':v;
+  return items.map(item=>({...item,local:canon(item.local),visita:canon(item.visita)}));
+}
+
 function extractDriveIds(value) {
   const s=String(value||'');
   const ids=[];
@@ -109,7 +115,8 @@ fs.mkdirSync(OUT_DIR,{recursive:true});fs.mkdirSync(MEDIA_DIR,{recursive:true});
 const summary = {};
 for (const module of MODULES) {
   const rawItems=rowsToItems(await readSheet(token,module.spreadsheetId,module.sheet),module.numeric);
-  const items=await materializeMedia(token,module,rawItems);
+  const canonicalItems=canonicalizeModuleItems(module.key,rawItems);
+  const items=await materializeMedia(token,module,canonicalItems);
   const out = path.join(OUT_DIR,`${module.key}.json`);
   const previous = readExisting(out);
   const changed = !previous || previous.schema_version !== '1.0' || previous.source !== module.source || !sameItems(previous.items,items);
