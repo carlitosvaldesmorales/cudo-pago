@@ -27,6 +27,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Higiene de arquitectura V8
+        run: |
+          test -f preview-v8/shared/site-runtime-v8.js
+          test ! -f preview-v8/shared/site-core.js
+          if grep -R "preview-v7" preview-v8/shared preview-v8/*.html preview-v8/*/index.html --include='*.js' --include='*.html'; then
+            echo "V8 no puede depender de rutas o runtime V7"
+            exit 1
+          fi
+
       - name: Node 20
         uses: actions/setup-node@v4
         with:
