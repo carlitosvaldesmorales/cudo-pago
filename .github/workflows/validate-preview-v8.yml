@@ -1,0 +1,58 @@
+name: CUDO V8 - validar preview visual
+
+on:
+  push:
+    branches:
+      - visual-brand-v8
+      - main
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/validate-preview-v8.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/validate-preview-v8.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-v8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar contratos V8
+        run: python3 preview-v8/tools/validate_data.py
+      - name: Validar Javascript
+        run: |
+          node --check preview-v8/shared/site.js
+          node --check preview-v8/shared/seed-data.js
+      - name: Validar volumen seed
+        run: |
+          node <<'NODE'
+          global.window={};
+          require('./preview-v8/shared/seed-data.js');
+          const s=window.CUDO_SEED_SUMMARY;
+          if(!s||s.jugadores!==84||s.partidos!==108||s.filas_tabla!==44||s.noticias!==6||s.fotos!==15) throw new Error('Seed V8 incompleto');
+          if(s.por_categoria.SENIOR!==30||s.por_categoria.TERCERA!==18||s.por_categoria.SEGUNDA!==18||s.por_categoria.PRIMERA!==18) throw new Error('Volumen por categoría incorrecto');
+          console.log('V8 seed OK',s);
+          NODE
+      - name: Validar paquete visual
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          pages=['index.html','club/index.html','noticias/index.html','partidos/index.html','equipos/index.html','galeria/index.html']
+          root=Path('preview-v8')
+          for p in pages:
+              text=(root/p).read_text(encoding='utf-8')
+              assert 'site.css' in text, p
+              assert 'logo-cudo.png' in text, p
+              assert 'PARTIDOS' in text, p
+              assert 'C.U.D.O.' in text, p
+          css=(root/'shared/site.css').read_text(encoding='utf-8')
+          for token in ['--navy','--red','--gold','.pagehead','.playergrid','.matchgrid','.gallerygrid']:
+              assert token in css, token
+          print('Paquete visual V8 OK')
+          PY
