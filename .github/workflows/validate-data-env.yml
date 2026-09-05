@@ -1,0 +1,50 @@
+name: CUDO V8 - validar ambiente de datos
+
+on:
+  push:
+    branches:
+      - qa-v8-google-data
+      - prod-v8-google-data
+    paths:
+      - 'preview-v8/data/**'
+      - 'preview-v8/shared/data-source.js'
+      - 'preview-v8/shared/seed-data.js'
+      - 'preview-v8/tools/validate_data.py'
+      - '.github/workflows/validate-data-env.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-data-env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validar contrato público JSON
+        run: python3 preview-v8/tools/validate_data.py
+      - name: Validar Javascript del adapter
+        run: |
+          node --check preview-v8/shared/site.js
+          node --check preview-v8/shared/seed-data.js
+          node --check preview-v8/shared/data-source.js
+      - name: Garantizar separación QA/PROD y ausencia de mock
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          branch=os.environ['BRANCH_NAME']
+          adapter=Path('preview-v8/shared/data-source.js').read_text(encoding='utf-8')
+          shim=Path('preview-v8/shared/seed-data.js').read_text(encoding='utf-8')
+          expected={'qa-v8-google-data':"environment:'QA'",'prod-v8-google-data':"environment:'PROD'"}
+          assert branch in expected, branch
+          assert expected[branch] in adapter, f'Ambiente incorrecto para {branch}'
+          assert 'mock:false' in adapter, 'El adapter de integración no puede habilitar mock'
+          forbidden=['CUDO_SEED_DATA','randomuser.me','VISTA DEMOSTRATIVA','FOTO MOCK']
+          combined=adapter+'\n'+shim
+          for token in forbidden:
+              assert token not in combined, f'Mock filtrado al ambiente {branch}: {token}'
+          print('Separación de ambiente OK:', branch)
+          PY
