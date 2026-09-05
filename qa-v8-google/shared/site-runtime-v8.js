@@ -1,0 +1,74 @@
+(()=>{
+  document.addEventListener('DOMContentLoaded',()=>{
+    const button=document.getElementById('menuBtn');
+    const panel=document.getElementById('mobilePanel');
+    if(!button||!panel)return;
+    button.setAttribute('aria-controls','mobilePanel');
+    const set=open=>{panel.classList.toggle('open',open);button.setAttribute('aria-expanded',String(open));button.textContent=open?'×':'☰'};
+    button.addEventListener('click',()=>set(!panel.classList.contains('open')));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')set(false)});
+    window.addEventListener('resize',()=>{if(innerWidth>900)set(false)});
+    panel.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>set(false)));
+  });
+
+  const text=(tag,value,className)=>{const n=document.createElement(tag);if(className)n.className=className;n.textContent=String(value??'');return n};
+  const empty=(root,title,msg)=>{root.replaceChildren();const box=document.createElement('div');box.className='empty';box.style.gridColumn='1/-1';box.append(text('strong',title),text('span',msg));root.append(box)};
+  const safeImage=(ref,alt)=>{
+    if(!ref)return null;
+    try{const u=new URL(String(ref),location.href);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['127.0.0.1','localhost'].includes(u.hostname)))return null;const img=document.createElement('img');img.src=u.href;img.alt=String(alt||'C.U.D.O.');img.loading='lazy';img.decoding='async';return img}catch{return null}
+  };
+
+  window.cudoBindPlayerFilters=function(filterId,gridId){
+    const filters=document.getElementById(filterId),grid=document.getElementById(gridId);if(!filters||!grid)return;
+    const category=filters.querySelector('#playerCategory'),position=filters.querySelector('#playerPosition');if(!category||!position)return;
+    const cards=[...grid.querySelectorAll('.player')];
+    [...new Set(cards.map(c=>c.dataset.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;category.append(o)});
+    const apply=()=>{let visible=0;cards.forEach(card=>{const show=(category.value==='TODAS'||card.dataset.category===category.value)&&(position.value==='TODAS'||card.dataset.position===position.value);card.hidden=!show;if(show)visible++});grid.querySelector('.filter-empty')?.remove();if(cards.length&&!visible){const b=document.createElement('div');b.className='empty filter-empty';b.style.gridColumn='1/-1';b.append(text('strong','No hay jugadores en este filtro'),text('span','Cambia la categoría o posición para ver otros integrantes del plantel.'));grid.append(b)}};
+    category.addEventListener('change',apply);position.addEventListener('change',apply);
+  };
+
+  window.cudoBindGallery=function(filterId,albumsId,gridId,countId){
+    const filters=document.getElementById(filterId),albumsRoot=document.getElementById(albumsId),grid=document.getElementById(gridId),count=document.getElementById(countId);if(!filters||!albumsRoot||!grid)return;
+    const cards=[...grid.querySelectorAll('.photo')];if(!cards.length){filters.hidden=true;albumsRoot.hidden=true;return}
+    const albumSelect=filters.querySelector('#galleryAlbum'),categorySelect=filters.querySelector('#galleryCategory'),yearSelect=filters.querySelector('#galleryYear');if(!albumSelect||!categorySelect||!yearSelect)return;
+    const add=(select,value,label=value)=>{const o=document.createElement('option');o.value=value;o.textContent=label;select.append(o)};
+    const albums=[...new Map(cards.map(c=>[c.dataset.albumId,c.dataset.album])).entries()].filter(([id,name])=>id&&name).sort((a,b)=>a[1].localeCompare(b[1],'es'));
+    albums.forEach(([id,name])=>add(albumSelect,id,name));
+    [...new Set(cards.map(c=>c.dataset.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')).forEach(v=>add(categorySelect,v));
+    [...new Set(cards.map(c=>c.dataset.year).filter(Boolean))].sort((a,b)=>b.localeCompare(a)).forEach(v=>add(yearSelect,v));
+    const groups=new Map();cards.forEach(c=>{const id=c.dataset.albumId;if(!id)return;if(!groups.has(id))groups.set(id,{name:c.dataset.album,category:c.dataset.category,count:0});groups.get(id).count++});
+    albumsRoot.replaceChildren();[...groups.entries()].sort((a,b)=>a[1].name.localeCompare(b[1].name,'es')).forEach(([id,info])=>{const b=document.createElement('button');b.type='button';b.className='albumcard';b.dataset.album=id;b.append(text('strong',info.name),text('span',`${info.count} ${info.count===1?'foto':'fotos'}${info.category?' · '+info.category:''}`));b.addEventListener('click',()=>{albumSelect.value=id;apply();grid.scrollIntoView({behavior:'smooth',block:'start'})});albumsRoot.append(b)});
+    const apply=()=>{let visible=0;cards.forEach(c=>{const show=(albumSelect.value==='TODOS'||c.dataset.albumId===albumSelect.value)&&(categorySelect.value==='TODAS'||c.dataset.category===categorySelect.value)&&(yearSelect.value==='TODOS'||c.dataset.year===yearSelect.value);c.hidden=!show;if(show)visible++});albumsRoot.querySelectorAll('.albumcard').forEach(b=>b.classList.toggle('active',albumSelect.value!=='TODOS'&&b.dataset.album===albumSelect.value));if(count)count.textContent=`${visible} ${visible===1?'fotografía':'fotografías'}`;grid.querySelector('.filter-empty')?.remove();if(!visible){const b=document.createElement('div');b.className='empty filter-empty';b.style.gridColumn='1/-1';b.append(text('strong','No hay fotografías en este filtro'),text('span','Cambia el álbum, categoría o año para explorar otros momentos.'));grid.append(b)}};
+    [albumSelect,categorySelect,yearSelect].forEach(s=>s.addEventListener('change',apply));filters.hidden=false;albumsRoot.hidden=!albumsRoot.children.length;apply();
+
+    const overlay=document.createElement('div');overlay.className='lightbox';overlay.hidden=true;overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Visor de fotografías C.U.D.O.');
+    const shell=document.createElement('div');shell.className='lightboxshell';const close=text('button','×','lightboxclose');close.type='button';close.setAttribute('aria-label','Cerrar fotografía');const prev=text('button','‹','lightboxnav prev');prev.type='button';prev.setAttribute('aria-label','Fotografía anterior');const next=text('button','›','lightboxnav next');next.type='button';next.setAttribute('aria-label','Fotografía siguiente');const image=document.createElement('img');image.className='lightboximage';const caption=document.createElement('div');caption.className='lightboxcaption';const cm=text('div','','meta'),ct=text('strong',''),cd=text('p','');caption.append(cm,ct,cd);shell.append(close,prev,image,next,caption);overlay.append(shell);document.body.append(overlay);
+    let active=null;const visibleButtons=()=>cards.filter(c=>!c.hidden).map(c=>c.querySelector('.photoopen')).filter(Boolean);
+    const show=b=>{if(!b)return;active=b;image.src=b.dataset.image;image.alt=b.dataset.alt||'Fotografía C.U.D.O.';cm.textContent=b.dataset.meta||'';ct.textContent=b.dataset.title||'';cd.textContent=b.dataset.description||'';overlay.hidden=false;document.body.classList.add('lightbox-open');close.focus()};
+    const closeBox=()=>{overlay.hidden=true;document.body.classList.remove('lightbox-open');const restore=active;active=null;image.removeAttribute('src');restore?.focus()};
+    const move=d=>{const buttons=visibleButtons();if(!buttons.length)return;let i=buttons.indexOf(active);if(i<0)i=0;show(buttons[(i+d+buttons.length)%buttons.length])};
+    cards.forEach(c=>c.querySelector('.photoopen')?.addEventListener('click',e=>show(e.currentTarget)));close.addEventListener('click',closeBox);prev.addEventListener('click',()=>move(-1));next.addEventListener('click',()=>move(1));overlay.addEventListener('click',e=>{if(e.target===overlay)closeBox()});document.addEventListener('keydown',e=>{if(overlay.hidden)return;if(e.key==='Escape')closeBox();if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1)});
+  };
+
+  window.cudoRenderCollection=async function({url,target,status,type}){
+    const root=document.getElementById(target),st=document.getElementById(status);if(!root)return;
+    const labels={noticias:['Aún no hay noticias publicadas','Cuando exista información validada aparecerá aquí.'],equipos:['Categorías aún no publicadas','Las categorías se mostrarán cuando exista información validada.'],plantel:['Plantel aún no publicado','Los jugadores aparecerán cuando exista información autorizada.'],galeria:['Galería aún sin publicaciones','Las fotografías aparecerán cuando estén autorizadas.'],tabla:['Tabla aún no publicada','Las posiciones aparecerán cuando existan resultados oficiales.']};
+    try{
+      const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();if(!data||!Array.isArray(data.items))throw new Error('Contrato inválido');if(st)st.textContent='';if(!data.items.length){empty(root,...(labels[type]||['Contenido no disponible','']));return}
+      let items=data.items.filter(x=>x&&typeof x==='object');
+      if(type==='tabla'){
+        items=[...items].sort((a,b)=>Number(a.posicion)-Number(b.posicion));root.replaceChildren();const groups=new Map();items.forEach(item=>{const k=[item.competencia||'',item.categoria||''].join('||');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(item)});groups.forEach(rows=>{const block=document.createElement('section');block.className='standingsblock';const first=rows[0]||{};const label=[first.competencia,first.categoria].filter(Boolean).join(' · ');if(label)block.append(text('div',label,'standingslabel'));const scroll=document.createElement('div');scroll.className='standingsscroll';const table=document.createElement('table');table.className='standingstable';const head=document.createElement('thead'),hr=document.createElement('tr');['POS','EQUIPO','PJ','PG','PE','PP','GF','GC','DG','PTS'].forEach(v=>hr.append(text('th',v)));head.append(hr);const body=document.createElement('tbody');rows.forEach(item=>{const tr=document.createElement('tr');[item.posicion,item.equipo,item.pj,item.pg,item.pe,item.pp,item.gf,item.gc,item.dg,item.pts].forEach((v,i)=>{const td=text('td',v);if(i===1)td.className='teamname';if(i===9)td.className='points';tr.append(td)});body.append(tr)});table.append(head,body);scroll.append(table);block.append(scroll);root.append(block)});return;
+      }
+      if(type==='plantel'){const rank={ARQUERO:0,DEFENSA:1,VOLANTE:2,DELANTERO:3};items=[...items].sort((a,b)=>String(a.categoria||'').localeCompare(String(b.categoria||''),'es')||((rank[String(a.posicion||'').toUpperCase()]??9)-(rank[String(b.posicion||'').toUpperCase()]??9))||Number(a.numero)-Number(b.numero))}
+      if(type==='galeria')items=[...items].sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+      root.replaceChildren();
+      items.forEach(item=>{
+        if(type==='noticias'){const a=document.createElement('article');a.className='news';const img=safeImage(item.imagen_ref,item.titulo);if(img)a.append(img);const b=document.createElement('div');b.className='newsbody';b.append(text('div',item.fecha,'date'),text('h2',item.titulo),text('p',item.resumen));a.append(b);root.append(a)}
+        if(type==='equipos'){const a=document.createElement('article');a.className='team';const badge=text('div','CUDO','team-badge'),b=document.createElement('div');b.className='teambody';b.append(text('div',item.categoria,'meta'),text('h2',item.nombre),text('p',item.descripcion));a.append(badge,b);root.append(a)}
+        if(type==='plantel'){const a=document.createElement('article');a.className='player';a.dataset.category=String(item.categoria||'');a.dataset.position=String(item.posicion||'').toUpperCase();const m=document.createElement('div');m.className='playermedia';const img=safeImage(item.foto_ref,item.nombre_deportivo);m.append(img||text('div','CUDO','playerplaceholder'),text('span','#'+item.numero,'playernumber'));const b=document.createElement('div');b.className='playerbody';b.append(text('div',[item.posicion,item.categoria].filter(Boolean).join(' · '),'meta'),text('h2',item.nombre_deportivo));if(item.capitan===true)b.append(text('span','CAPITÁN','captainbadge'));a.append(m,b);root.append(a)}
+        if(type==='galeria'){const img=safeImage(item.imagen_ref,item.alt);if(!img)return;const a=document.createElement('article');a.className='photo';a.dataset.albumId=String(item.album_id||'');a.dataset.album=String(item.album||'');a.dataset.category=String(item.categoria||'');a.dataset.year=String(item.fecha||'').slice(0,4);const open=document.createElement('button');open.type='button';open.className='photoopen';open.setAttribute('aria-label','Abrir foto: '+String(item.titulo||'C.U.D.O.'));Object.assign(open.dataset,{image:img.src,alt:String(item.alt||''),title:String(item.titulo||''),meta:[item.fecha,item.album,item.categoria].filter(Boolean).join(' · '),description:String(item.descripcion||'')});open.append(img);const b=document.createElement('div');b.className='photobody';b.append(text('div',[item.fecha,item.album].filter(Boolean).join(' · '),'meta'),text('h2',item.titulo));if(item.descripcion)b.append(text('p',item.descripcion));a.append(open,b);root.append(a)}
+      });
+      if(!root.children.length)empty(root,'Contenido no disponible','No hay elementos públicos para mostrar.');
+    }catch{if(st)st.textContent='';empty(root,'Contenido temporalmente no disponible','Intenta nuevamente más tarde.')}
+  };
+})();

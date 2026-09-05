@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-09-05T10:44:46-04:00",
+  "source": "CUDO_WEB_PARTIDOS",
+  "items": [
+    {
+      "id": "QA-PAR-20260905144145-001",
+      "competencia": "Amistoso",
+      "fecha": "2026-08-30",
+      "hora": "14:00",
+      "categoria": "TERCERA",
+      "local": "Cudo",
+      "visita": "Sara huape ",
+      "recinto": "Cudo",
+      "estado_partido": "FINALIZADO",
+      "goles_local": 3,
+      "goles_visita": 2
+    }
+  ]
+}
