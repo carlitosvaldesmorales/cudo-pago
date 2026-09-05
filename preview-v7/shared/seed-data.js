@@ -88,6 +88,7 @@
   const urls={};
   const blobUrl=type=>urls[type]||(urls[type]=URL.createObjectURL(new Blob([JSON.stringify(docs[type])],{type:'application/json'})));
 
+  window.CUDO_SEED_DATA=docs;
   window.cudoResolveDataUrl=async(realUrl,type)=>{
     try{
       const response=await fetch(realUrl,{cache:'no-store'});
