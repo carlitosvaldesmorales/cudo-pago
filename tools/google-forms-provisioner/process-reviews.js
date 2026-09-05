@@ -1,3 +1,4 @@
+// Queue processor used by automated QA and scheduled production review processing.
 const { google } = require('googleapis');
 
 function requiredEnv(name){const value=process.env[name];if(!value||!String(value).trim())throw new Error(`${name} no está configurado`);return String(value).trim();}
