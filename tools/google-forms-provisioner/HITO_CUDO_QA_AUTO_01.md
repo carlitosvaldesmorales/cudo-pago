@@ -1,6 +1,8 @@
 # HITO CUDO-QA-AUTO-01
 
-Estado: MATERIALIZADO EN RAMA `cudo-qa-auto-01` / PENDIENTE AUTORIZACIÓN OAuth ÚNICA Y CERTIFICACIÓN
+Estado: CERTIFICADO
+
+Fecha de certificación: 2026-09-05
 
 ## Decisión de arquitectura
 
@@ -12,15 +14,14 @@ El proyecto `CUDO_WEB_FORMS_QA` se conserva: no se borra ni se recrea.
 
 - Google Cloud project: `arke-cudo-core`
 - Project number: `257090036200`
-- OAuth desktop client: `cudo-os-desktop-sistemas`
-- OAuth Client ID: `257090036200-mr8qoeglsklm8peu9s8mp8r9dcdphab4.apps.googleusercontent.com`
+- OAuth desktop client dedicado QA: `cudo-qa-github-actions`
 - Script ID: `1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8`
 - API executable deployment ID: `AKfycbzfvr6SZM7wZGMv0qCFrhWE-z-YpNbyxxyBy4DxJOMWyIvUNU8zkMLsJxau4h0SVIKWuw`
 
-## Flujo recurrente
+## Flujo recurrente certificado
 
 1. Cambio aprobado en `tools/google-forms-provisioner/`.
-2. GitHub Actions obtiene un access token usando `CUDO_GOOGLE_REFRESH_TOKEN` + Client ID.
+2. GitHub Actions obtiene un access token con el OAuth Client QA dedicado y el refresh token almacenado en GitHub Secrets.
 3. `projects.updateContent()` actualiza HEAD del Apps Script existente.
 4. `projects.versions.create()` crea una versión inmutable.
 5. `projects.deployments.update()` mueve el API executable estable a esa versión.
@@ -28,17 +29,19 @@ El proyecto `CUDO_WEB_FORMS_QA` se conserva: no se borra ni se recrea.
 7. El runner valida Noticias, Equipos, Plantel, Partidos y Galería.
 8. Cualquier error hace fallar el workflow.
 
-## Bootstrap único pendiente
+## Bootstrap OAuth completado
 
-Se usa OAuth Desktop con PKCE. No se requiere recuperar ni almacenar `client_secret`.
+El bootstrap único quedó completado con el cliente Desktop dedicado `cudo-qa-github-actions`.
 
-GitHub necesita solo un secreto OAuth:
+GitHub Secrets utilizados:
 
+- `CUDO_GOOGLE_OAUTH_CLIENT_ID`
+- `CUDO_GOOGLE_OAUTH_CLIENT_SECRET`
 - `CUDO_GOOGLE_REFRESH_TOKEN`
 
-El Client ID no es secreto y está fijado en el workflow.
+El JSON OAuth local se usa únicamente durante el bootstrap inicial. No debe copiarse al repositorio ni compartirse por chat.
 
-El bootstrap local solicita estos scopes:
+Scopes autorizados:
 
 - `https://www.googleapis.com/auth/forms`
 - `https://www.googleapis.com/auth/spreadsheets`
@@ -46,7 +49,25 @@ El bootstrap local solicita estos scopes:
 - `https://www.googleapis.com/auth/script.projects`
 - `https://www.googleapis.com/auth/script.deployments`
 
-`bootstrap-oauth-local.js` abre Google, usa PKCE, captura el callback en localhost y carga el refresh token directamente a GitHub mediante `gh secret set`, sin imprimirlo.
+## Evidencia de certificación
+
+GitHub Actions workflow: `CUDO QA Forms Auto`
+
+- Run ID: `33982208576`
+- Resultado: `SUCCESS`
+- Job: `deploy-and-provision`
+- Resultado job: `SUCCESS`
+- Apps Script version creada: `2`
+
+`scripts.run(provisionAllQA)` confirmó sin errores:
+
+- QA_NOTICIAS: OK / ACEPTANDO_RESPUESTAS
+- QA_EQUIPOS: OK / ACEPTANDO_RESPUESTAS
+- QA_PLANTEL: OK / ACEPTANDO_RESPUESTAS
+- QA_PARTIDOS: OK / ACEPTANDO_RESPUESTAS
+- QA_GALERIA: OK / ACEPTANDO_RESPUESTAS
+
+El índice maestro `CUDO_WEB_INDICE_DATOS_2026` / `FORMULARIOS_QA` quedó verificado con los cinco módulos en `VALIDACION=OK` y `ESTADO=ACEPTANDO_RESPUESTAS`.
 
 ## Componentes retirados del flujo activo
 
@@ -57,7 +78,7 @@ El bootstrap local solicita estos scopes:
 - `Automation.gs`
 - `CUDO_GOOGLE_OAUTH_CLIENT_JSON`
 - `CUDO_GOOGLE_OAUTH_TOKENS_JSON`
-- almacenamiento de `client_secret`
+- OAuth histórico `cudo-os-desktop-sistemas` como dependencia de QA
 
 ## Regla de no retorno
 
@@ -74,9 +95,9 @@ Ese patrón queda permitido solo como emergencia controlada.
 - No crea ni elimina proyectos Apps Script.
 - No ejecuta funciones PROD.
 - La ejecución permitida en el workflow es `provisionAllQA`.
-- El único secreto recurrente es el refresh token almacenado en GitHub Secrets.
-- La autorización local usa PKCE y `state` para proteger el flujo OAuth.
+- Las credenciales OAuth recurrentes están almacenadas únicamente como GitHub Secrets.
+- El JSON OAuth descargado no forma parte del repositorio.
 
-## Criterio de cierre
+## Cierre
 
-El hito queda CERTIFICADO cuando un workflow `CUDO QA Forms Auto` termine SUCCESS y la respuesta de `scripts.run` confirme los cinco módulos QA sin errores.
+CUDO-QA-AUTO-01 queda CERTIFICADO. La responsabilidad recurrente pasa al pipeline automatizado. La intervención humana queda limitada a autorizaciones excepcionales, rotación/revocación de credenciales o fallas reales de plataforma.
