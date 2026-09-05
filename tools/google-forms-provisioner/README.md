@@ -11,20 +11,22 @@ GitHub es la fuente de verdad del código. El proyecto existente `CUDO_WEB_FORMS
 ## Runtime confirmado
 
 - Google Cloud estándar: `arke-cudo-core` / project number `257090036200`
+- OAuth desktop client: `cudo-os-desktop-sistemas`
+- OAuth Client ID: `257090036200-mr8qoeglsklm8peu9s8mp8r9dcdphab4.apps.googleusercontent.com`
 - Script ID: `1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8`
 - API executable deployment ID: `AKfycbzfvr6SZM7wZGMv0qCFrhWE-z-YpNbyxxyBy4DxJOMWyIvUNU8zkMLsJxau4h0SVIKWuw`
 
 ## Flujo recurrente
 
-`GitHub → Apps Script API → projects.updateContent → version → deployment → scripts.run(provisionAllQA) → validación QA`
+`GitHub → OAuth refresh → Apps Script API → projects.updateContent → version → deployment → scripts.run(provisionAllQA) → validación QA`
 
 `provisionAllQA()` crea/reutiliza y valida Noticias, Equipos, Plantel, Partidos y Galería. PROD no se ejecuta desde este workflow.
 
 ## Bootstrap OAuth único
 
-CUDO-OS ya posee un OAuth Client de escritorio fuera del repositorio, bajo `arke-os-runtime/secrets/`. Esos archivos están deliberadamente excluidos de Git.
+El OAuth Client Desktop ya está identificado. Para clientes instalados se usa PKCE, por lo que este bootstrap no necesita recuperar ni almacenar `client_secret`.
 
-El token histórico de CUDO-OS no se modifica. Para la automatización QA se genera una autorización específica con la unión de scopes requerida por el deployment y por `provisionAllQA`:
+Scopes solicitados:
 
 - `https://www.googleapis.com/auth/forms`
 - `https://www.googleapis.com/auth/spreadsheets`
@@ -32,23 +34,21 @@ El token histórico de CUDO-OS no se modifica. Para la automatización QA se gen
 - `https://www.googleapis.com/auth/script.projects`
 - `https://www.googleapis.com/auth/script.deployments`
 
-Desde una copia local actualizada de `cudo-pago`, ejecutar en esta carpeta:
+Desde esta carpeta:
 
 ```bash
-npm install --no-audit --no-fund && npm run bootstrap:oauth
+npm run bootstrap:oauth
 ```
 
-`bootstrap-oauth-local.js`:
+El bootstrap:
 
-1. busca el OAuth Client existente de CUDO-OS sin imprimir sus credenciales;
-2. comprueba que GitHub CLI (`gh`) esté autenticado;
-3. abre el consentimiento Google en el navegador;
+1. comprueba `gh auth status`;
+2. genera PKCE + `state` localmente;
+3. abre el consentimiento Google para `sistemas@cudo.cl`;
 4. captura el callback OAuth en `127.0.0.1`;
-5. obtiene un refresh token nuevo para QA;
-6. carga directamente `CUDO_GOOGLE_OAUTH_CLIENT_JSON` y `CUDO_GOOGLE_OAUTH_TOKENS_JSON` como GitHub Actions Secrets;
-7. no altera el token histórico de CUDO-OS y no imprime secretos.
-
-Si `gh` no está instalado o autenticado, el bootstrap se detiene antes de modificar nada.
+5. obtiene un refresh token QA;
+6. carga únicamente `CUDO_GOOGLE_REFRESH_TOKEN` como GitHub Actions Secret;
+7. no imprime el token y no requiere `client_secret`.
 
 ## Ambientes
 
