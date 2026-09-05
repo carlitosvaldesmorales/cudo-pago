@@ -1,0 +1,65 @@
+name: CUDO V8 - sync QA Google data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-v8-sync-qa-google-data
+  cancel-in-progress: false
+
+jobs:
+  sync-google-publico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+
+    steps:
+      - name: Checkout qa-v8-google-data
+        uses: actions/checkout@v4
+        with:
+          ref: qa-v8-google-data
+          fetch-depth: 0
+
+      - name: Validar credenciales Google
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in CUDO_GOOGLE_OAUTH_CLIENT_ID CUDO_GOOGLE_OAUTH_CLIENT_SECRET CUDO_GOOGLE_REFRESH_TOKEN; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::$v no está configurado"
+              exit 1
+            fi
+          done
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Sincronizar PUBLICO_EXPORT hacia JSON V8
+        run: node preview-v8/tools/sync_google_publico.mjs
+
+      - name: Validar contrato público
+        run: python3 preview-v8/tools/validate_data.py
+
+      - name: Commit sólo si cambió contenido público
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add preview-v8/data/*.json
+          if git diff --cached --quiet; then
+            echo 'PUBLICO_EXPORT sin cambios; no se crea commit.'
+            exit 0
+          fi
+          git commit -m "QA data sync: Google PUBLICO_EXPORT"
+          git push origin HEAD:qa-v8-google-data
