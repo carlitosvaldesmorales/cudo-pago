@@ -21,8 +21,8 @@ function initializeMaintenanceAudit_() {
   const raw = ss.getSheetByName(CUDO_MAINTENANCE_QA.rawSheet);
   if (!raw) throw new Error('Falta RAW_FORM_MANTENCION');
 
-  // A:I se derivan del formulario humano. J:Q quedan reservadas para revisión/aplicación,
-  // preservando la trazabilidad antes/después sin borrar la solicitud original.
+  // A:I son identidad y solicitud humana. J:Q quedan para resolución/aplicación.
+  // R:S conservan el campo estructurado y el nuevo valor solicitados.
   audit.getRange('A2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";"QA-MAN-"&TEXT(RAW_FORM_MANTENCION!A2:A;"yyyymmddhhmmss")&"-"&TEXT(ROW(RAW_FORM_MANTENCION!A2:A)-1;"000")))');
   audit.getRange('B2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";RAW_FORM_MANTENCION!A2:A))');
   audit.getRange('C2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";RAW_FORM_MANTENCION!B2:B))');
@@ -33,5 +33,7 @@ function initializeMaintenanceAudit_() {
   audit.getRange('H2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";RAW_FORM_MANTENCION!G2:G))');
   audit.getRange('I2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";RAW_FORM_MANTENCION!H2:H))');
   audit.getRange('J2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";"PENDIENTE_REVISION"))');
+  audit.getRange('R2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";RAW_FORM_MANTENCION!I2:I))');
+  audit.getRange('S2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_MANTENCION!A2:A="";"";RAW_FORM_MANTENCION!J2:J))');
   SpreadsheetApp.flush();
 }
