@@ -7,12 +7,12 @@ const outDir='qa-v8-artifacts';
 fs.mkdirSync(outDir,{recursive:true});
 
 const views=[
-  {name:'inicio',path:'/'},
-  {name:'club',path:'/club/'},
-  {name:'noticias',path:'/noticias/'},
-  {name:'partidos',path:'/partidos/'},
-  {name:'equipos',path:'/equipos/'},
-  {name:'galeria',path:'/galeria/'}
+  {name:'inicio',path:'/',signature:'.hero-v8'},
+  {name:'club',path:'/club/',signature:'.club-manifesto'},
+  {name:'noticias',path:'/noticias/',signature:'.news-magazine'},
+  {name:'partidos',path:'/partidos/',signature:'.championship-grid'},
+  {name:'equipos',path:'/equipos/',signature:'.roster-intro'},
+  {name:'galeria',path:'/galeria/',signature:'.gallerygrid'}
 ];
 const viewports=[
   {name:'desktop',width:1440,height:1000},
@@ -20,10 +20,11 @@ const viewports=[
   {name:'mobile',width:390,height:844}
 ];
 
-const report={generated_at:new Date().toISOString(),contract:'preview-v8/QA_VISUAL_CONTRACT.md',checks:[],errors:[],warnings:[]};
+const report={generated_at:new Date().toISOString(),contract:'preview-v8/DESIGN_MARKETING_CONTRACT.md',checks:[],errors:[],warnings:[],visual_certification:'PENDING_HUMAN_BASELINE'};
 const fail=(view,viewport,rule,detail)=>report.errors.push({view,viewport,rule,detail});
 const warn=(view,viewport,rule,detail)=>report.warnings.push({view,viewport,rule,detail});
 const pass=(view,viewport,rule,detail='OK')=>report.checks.push({view,viewport,rule,detail});
+const banned=/\b(QA|SEED|MOCK|PREVIEW|FUENTE PÚBLICA|CONTRATO VISUAL|DATOS DE PRUEBA)\b/i;
 
 const browser=await chromium.launch({headless:true});
 try{
@@ -34,143 +35,95 @@ try{
       const pageErrors=[];
       page.on('pageerror',err=>pageErrors.push(String(err)));
       page.on('console',msg=>{if(msg.type()==='error')pageErrors.push('console: '+msg.text())});
-      const url=base+view.path;
       try{
-        const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});
-        if(!response||!response.ok()){
-          fail(view.name,viewport.name,'HTTP',`No cargó correctamente: ${response?.status()}`);
-          await page.close();
-          continue;
-        }
-        await page.waitForTimeout(2500);
+        const response=await page.goto(base+view.path,{waitUntil:'domcontentloaded',timeout:45000});
+        if(!response?.ok())throw new Error('HTTP '+response?.status());
+        await page.waitForTimeout(3200);
         await page.evaluate(()=>document.fonts?.ready);
 
-        const state=await page.evaluate(()=>{
-          const visible=el=>{
-            if(!el)return false;
-            const s=getComputedStyle(el),r=el.getBoundingClientRect();
-            return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0;
-          };
-          const textCount=(rootSelector,label)=>{
-            const root=document.querySelector(rootSelector);
-            if(!root)return 0;
-            return [...root.querySelectorAll('a')].filter(a=>a.textContent.trim().toUpperCase()===label).length;
-          };
-          const brand=document.querySelector('.brand img');
-          const bodyFont=getComputedStyle(document.body).fontFamily;
-          const heading=document.querySelector('h1,.section-title');
-          const headingFont=heading?getComputedStyle(heading).fontFamily:'';
-          const statusVisible=[...document.querySelectorAll('.status')].filter(visible).map(n=>n.textContent.trim());
-          const brokenImages=[...document.images].filter(img=>img.complete&&img.naturalWidth===0).map(img=>img.src);
-          const activeDesktop=[...document.querySelectorAll('.navlinks a.active')].filter(visible).length;
-          const qa=document.querySelector('.qa');
-          const stripe=document.querySelector('.club-stripe');
-          const topbar=document.querySelector('.topbar');
+        const state=await page.evaluate(({signature})=>{
+          const visible=el=>{if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0};
+          const top=sel=>{const e=document.querySelector(sel);return e?e.getBoundingClientRect().top+scrollY:null};
+          const imgs=[...document.images];
           return {
-            width:window.innerWidth,
-            docWidth:document.documentElement.scrollWidth,
-            bodyFont,headingFont,
-            brand:{exists:!!brand,visible:visible(brand),loaded:!!brand&&brand.complete&&brand.naturalWidth>0,w:brand?.getBoundingClientRect().width||0,h:brand?.getBoundingClientRect().height||0},
-            stripe:{exists:!!stripe,visible:visible(stripe),height:stripe?.getBoundingClientRect().height||0},
-            topbar:{exists:!!topbar,visible:visible(topbar),height:topbar?.getBoundingClientRect().height||0},
-            desktopPartidos:textCount('.navlinks','PARTIDOS'),
-            mobilePartidos:textCount('.mobilepanel','PARTIDOS'),
-            activeDesktop,
-            qaVisible:visible(qa),
-            statusVisible,
-            brokenImages,
-            navlinksVisible:visible(document.querySelector('.navlinks')),
-            mobileButtonVisible:visible(document.querySelector('.mobilemenu')),
-            seedNotes:[...document.querySelectorAll('.seed-note')].filter(visible).length,
-            counts:{
-              news:document.querySelectorAll('.news').length,
-              players:document.querySelectorAll('.player').length,
-              teams:document.querySelectorAll('.team').length,
-              matches:document.querySelectorAll('.match').length,
-              standings:document.querySelectorAll('.standingsblock').length,
-              photos:document.querySelectorAll('.photo').length,
-              albums:document.querySelectorAll('.albumcard').length,
-              identity:document.querySelectorAll('.identity-card').length
-            }
+            width:innerWidth,docWidth:document.documentElement.scrollWidth,docHeight:document.documentElement.scrollHeight,
+            visibleText:document.body.innerText,
+            signature:visible(document.querySelector(signature)),
+            broken:imgs.filter(i=>i.complete&&i.naturalWidth===0&&i.getAttribute('src')).map(i=>i.src),
+            imageSrcs:imgs.map(i=>i.src),
+            navPartidos:[...document.querySelectorAll('.navlinks a')].filter(a=>a.textContent.trim().toUpperCase()==='PARTIDOS').length,
+            qaVisible:[...document.querySelectorAll('.qa,.seed-note')].some(visible),
+            bodyFont:getComputedStyle(document.body).fontFamily,
+            headingFont:getComputedStyle(document.querySelector('h1,h2')||document.body).fontFamily,
+            positions:{hero:top('.hero-v8'),matchRibbon:top('.match-ribbon'),homeNews:top('#homeNews'),championship:top('.championship-top'),standings:top('.standings-priority'),fixture:top('.fixture-secondary'),roster:top('.roster-intro'),teamGrid:top('.teamgrid'),news:top('.news-magazine'),gallery:top('.gallerygrid'),galleryControls:top('.gallery-controls-block')},
+            counts:{news:document.querySelectorAll('.news').length,players:document.querySelectorAll('.player').length,teams:document.querySelectorAll('.team').length,matches:document.querySelectorAll('.match').length,standings:document.querySelectorAll('.standingsblock').length,photos:document.querySelectorAll('.photo').length,albums:document.querySelectorAll('.albumcard').length,chapters:document.querySelectorAll('.club-chapter').length,collage:document.querySelectorAll('.roster-collage img').length,jornadaRows:document.querySelectorAll('.jornada-row').length}
           };
-        });
+        },{signature:view.signature});
 
-        if(state.docWidth>state.width+2)fail(view.name,viewport.name,'RESP-01',`Overflow horizontal ${state.docWidth}px > ${state.width}px`); else pass(view.name,viewport.name,'RESP-01');
-        if(!state.brand.exists||!state.brand.visible||!state.brand.loaded||state.brand.w<35)fail(view.name,viewport.name,'BRAND-01',`Escudo inválido ${JSON.stringify(state.brand)}`); else pass(view.name,viewport.name,'BRAND-01');
-        if(!state.stripe.exists||!state.stripe.visible||state.stripe.height<5)fail(view.name,viewport.name,'BRAND-02','Franja CUDO ausente o insuficiente'); else pass(view.name,viewport.name,'BRAND-02');
-        if(!state.topbar.exists||!state.topbar.visible||state.topbar.height<70||state.topbar.height>105)fail(view.name,viewport.name,'BRAND-03',`Topbar fuera de rango: ${state.topbar.height}`); else pass(view.name,viewport.name,'BRAND-03');
-        if(!/Inter/i.test(state.bodyFont))fail(view.name,viewport.name,'BRAND-04',`Body no declara Inter: ${state.bodyFont}`); else pass(view.name,viewport.name,'BRAND-04');
-        if(!/Barlow Condensed/i.test(state.headingFont))fail(view.name,viewport.name,'BRAND-05',`Titular no declara Barlow Condensed: ${state.headingFont}`); else pass(view.name,viewport.name,'BRAND-05');
-        if(state.desktopPartidos!==1)fail(view.name,viewport.name,'NAV-01',`PARTIDOS desktop=${state.desktopPartidos}`); else pass(view.name,viewport.name,'NAV-01');
-        if(state.mobilePartidos!==1)fail(view.name,viewport.name,'NAV-02',`PARTIDOS móvil=${state.mobilePartidos}`); else pass(view.name,viewport.name,'NAV-02');
-        if(state.activeDesktop!==1)fail(view.name,viewport.name,'NAV-03',`Enlaces activos desktop=${state.activeDesktop}`); else pass(view.name,viewport.name,'NAV-03');
-        if(state.qaVisible)fail(view.name,viewport.name,'MKT-01','Badge QA visible en vista pública'); else pass(view.name,viewport.name,'MKT-01');
-        if(state.statusVisible.some(v=>/^Fuente pública:/i.test(v)))fail(view.name,viewport.name,'MKT-02','Texto técnico Fuente pública visible'); else pass(view.name,viewport.name,'MKT-02');
-        if(state.brokenImages.length)fail(view.name,viewport.name,'MEDIA-01',`Imágenes rotas: ${state.brokenImages.slice(0,3).join(', ')}`); else pass(view.name,viewport.name,'MEDIA-01');
-        if(pageErrors.length)fail(view.name,viewport.name,'JS-01',pageErrors.slice(0,5).join(' | ')); else pass(view.name,viewport.name,'JS-01');
+        if(state.docWidth>state.width+2)fail(view.name,viewport.name,'RESP-01',`overflow ${state.docWidth}>${state.width}`);else pass(view.name,viewport.name,'RESP-01');
+        if(!state.signature)fail(view.name,viewport.name,'ART-01',`firma de composición ausente: ${view.signature}`);else pass(view.name,viewport.name,'ART-01');
+        if(state.navPartidos!==1)fail(view.name,viewport.name,'NAV-01',`PARTIDOS desktop=${state.navPartidos}`);else pass(view.name,viewport.name,'NAV-01');
+        if(state.qaVisible||banned.test(state.visibleText))fail(view.name,viewport.name,'MKT-01','lenguaje técnico/QA visible al público');else pass(view.name,viewport.name,'MKT-01');
+        if(state.broken.length)fail(view.name,viewport.name,'MEDIA-01',`imágenes rotas: ${state.broken.slice(0,3).join(', ')}`);else pass(view.name,viewport.name,'MEDIA-01');
+        if(state.imageSrcs.some(s=>/jamie|watermark|alamy|shutterstock|gettyimages/i.test(s)))fail(view.name,viewport.name,'MEDIA-02','fuente de imagen con watermark/riesgo editorial');else pass(view.name,viewport.name,'MEDIA-02');
+        if(!/Inter/i.test(state.bodyFont))fail(view.name,viewport.name,'BRAND-01',state.bodyFont);else pass(view.name,viewport.name,'BRAND-01');
+        if(!/Barlow Condensed/i.test(state.headingFont))fail(view.name,viewport.name,'BRAND-02',state.headingFont);else pass(view.name,viewport.name,'BRAND-02');
+        if(pageErrors.length)fail(view.name,viewport.name,'JS-01',pageErrors.slice(0,4).join(' | '));else pass(view.name,viewport.name,'JS-01');
+
+        if(view.name==='inicio'){
+          if(!(state.positions.hero<state.positions.matchRibbon&&state.positions.matchRibbon<state.positions.homeNews))fail(view.name,viewport.name,'HOME-ORDER','hero → jornada → noticias no se respeta');else pass(view.name,viewport.name,'HOME-ORDER');
+          const crestVisible=await page.locator('.hero-crest').evaluateAll(es=>es.some(e=>getComputedStyle(e).display!=='none')).catch(()=>false);
+          if(crestVisible)fail(view.name,viewport.name,'HOME-CREST','escudo gigante heredado sigue visible');else pass(view.name,viewport.name,'HOME-CREST');
+          if(state.counts.news<3||state.counts.photos<6)fail(view.name,viewport.name,'HOME-VOLUME',JSON.stringify(state.counts));else pass(view.name,viewport.name,'HOME-VOLUME');
+        }
+
+        if(view.name==='partidos'){
+          if(!(state.positions.championship<state.positions.fixture&&state.positions.standings<state.positions.fixture))fail(view.name,viewport.name,'MATCH-ORDER','tabla/jornada no están antes del fixture');else pass(view.name,viewport.name,'MATCH-ORDER');
+          if(state.counts.standings<4)fail(view.name,viewport.name,'MATCH-TABLE',`tablas=${state.counts.standings}`);else pass(view.name,viewport.name,'MATCH-TABLE');
+          if(state.counts.jornadaRows<4)fail(view.name,viewport.name,'MATCH-JORNADA',`filas de jornada=${state.counts.jornadaRows}`);else pass(view.name,viewport.name,'MATCH-JORNADA');
+          const tab=page.locator('#standingsTabs button').nth(2);if(await tab.count()){await tab.click();await page.waitForTimeout(120);const visibleTables=await page.locator('.standingsblock:not([hidden])').count();if(!visibleTables)fail(view.name,viewport.name,'MATCH-TABS','filtro tabla sin resultados');else pass(view.name,viewport.name,'MATCH-TABS')}
+        }
+
+        if(view.name==='equipos'){
+          if(!(state.positions.roster<state.positions.teamGrid))fail(view.name,viewport.name,'TEAM-ORDER','personas no aparecen antes que selector de categorías');else pass(view.name,viewport.name,'TEAM-ORDER');
+          if(state.counts.collage<4)fail(view.name,viewport.name,'TEAM-COLLAGE',`collage=${state.counts.collage}`);else pass(view.name,viewport.name,'TEAM-COLLAGE');
+          if(state.counts.teams!==4||state.counts.players!==84)fail(view.name,viewport.name,'TEAM-VOLUME',JSON.stringify(state.counts));else pass(view.name,viewport.name,'TEAM-VOLUME');
+          await page.selectOption('#playerCategory','SENIOR');await page.waitForTimeout(80);const visiblePlayers=await page.locator('#playerGrid .player:not([hidden])').count();if(visiblePlayers!==30)fail(view.name,viewport.name,'TEAM-FILTER',`Senior visibles=${visiblePlayers}`);else pass(view.name,viewport.name,'TEAM-FILTER');
+        }
+
+        if(view.name==='noticias'){
+          if(state.counts.news<6)fail(view.name,viewport.name,'NEWS-VOLUME',`noticias=${state.counts.news}`);else pass(view.name,viewport.name,'NEWS-VOLUME');
+          const first=page.locator('.news').first();if(!(await first.isVisible()))fail(view.name,viewport.name,'NEWS-HERO','historia principal no visible');else pass(view.name,viewport.name,'NEWS-HERO');
+        }
+
+        if(view.name==='galeria'){
+          if(!(state.positions.gallery<state.positions.galleryControls))fail(view.name,viewport.name,'GALLERY-ORDER','controles aparecen antes que fotografías');else pass(view.name,viewport.name,'GALLERY-ORDER');
+          if(state.counts.photos!==15||state.counts.albums<3)fail(view.name,viewport.name,'GALLERY-VOLUME',JSON.stringify(state.counts));else pass(view.name,viewport.name,'GALLERY-VOLUME');
+          const first=page.locator('.photoopen').first();if(await first.count()){await first.click();await page.waitForTimeout(100);const open=await page.locator('.lightbox:not([hidden])').count();if(!open)fail(view.name,viewport.name,'GALLERY-LIGHTBOX','lightbox no abrió');else pass(view.name,viewport.name,'GALLERY-LIGHTBOX');await page.keyboard.press('Escape')}
+        }
+
+        if(view.name==='club'){
+          if(state.counts.chapters<2)fail(view.name,viewport.name,'CLUB-NARRATIVE',`capítulos=${state.counts.chapters}`);else pass(view.name,viewport.name,'CLUB-NARRATIVE');
+        }
 
         if(viewport.name==='mobile'){
-          if(state.navlinksVisible)fail(view.name,viewport.name,'RESP-02','Navegación desktop visible en móvil'); else pass(view.name,viewport.name,'RESP-02');
-          if(!state.mobileButtonVisible)fail(view.name,viewport.name,'RESP-03','Botón móvil no visible'); else pass(view.name,viewport.name,'RESP-03');
-          const btn=page.locator('#menuBtn');
-          if(await btn.count()){
-            await btn.click();
-            await page.waitForTimeout(150);
-            const menu=await page.evaluate(()=>{
-              const panel=document.querySelector('#mobilePanel');
-              const visible=panel&&getComputedStyle(panel).display!=='none';
-              const socio=panel?[...panel.querySelectorAll('a')].filter(a=>a.textContent.trim().toUpperCase().includes('HAZTE SOCIO')).length:0;
-              return {visible,socio};
-            });
-            if(!menu.visible)fail(view.name,viewport.name,'NAV-04','Menú móvil no abre'); else pass(view.name,viewport.name,'NAV-04');
-            if(menu.socio!==1)fail(view.name,viewport.name,'MKT-03',`CTA HAZTE SOCIO móvil=${menu.socio}`); else pass(view.name,viewport.name,'MKT-03');
-            await btn.click();
-          }
-        }else{
-          if(!state.navlinksVisible)fail(view.name,viewport.name,'RESP-04','Navegación desktop oculta'); else pass(view.name,viewport.name,'RESP-04');
+          const menu=page.locator('#menuBtn');if(await menu.count()){await menu.click();await page.waitForTimeout(100);const panelVisible=await page.locator('#mobilePanel.open').count();const socio=await page.locator('#mobilePanel a').filter({hasText:'HAZTE SOCIO'}).count();if(!panelVisible||socio!==1)fail(view.name,viewport.name,'MOBILE-NAV',`panel=${panelVisible} socio=${socio}`);else pass(view.name,viewport.name,'MOBILE-NAV')}
         }
 
-        const c=state.counts;
-        if(view.name==='inicio'){
-          if(c.news<3)fail(view.name,viewport.name,'VOL-01',`Noticias portada=${c.news}`); else pass(view.name,viewport.name,'VOL-01');
-          if(c.photos<6)fail(view.name,viewport.name,'VOL-02',`Fotos portada=${c.photos}`); else pass(view.name,viewport.name,'VOL-02');
+        await page.screenshot({path:path.join(outDir,`${view.name}-${viewport.name}-full.png`),fullPage:true});
+        const critical={inicio:['.hero-v8','.match-ribbon'],club:['.club-manifesto','.club-chapter'],noticias:['.news-magazine'],partidos:['.championship-top','.fixture-secondary'],equipos:['.roster-intro','#planteles'],galeria:['.gallerygrid','.gallery-controls-block']}[view.name]||[];
+        for(let i=0;i<critical.length;i++){
+          const loc=page.locator(critical[i]).first();if(await loc.count()&&await loc.isVisible())await loc.screenshot({path:path.join(outDir,`${view.name}-${viewport.name}-section-${i+1}.png`)}).catch(()=>{});
         }
-        if(view.name==='club'&&c.identity!==4)fail(view.name,viewport.name,'VOL-03',`Bloques identidad=${c.identity}`); else if(view.name==='club')pass(view.name,viewport.name,'VOL-03');
-        if(view.name==='noticias'&&c.news<6)fail(view.name,viewport.name,'VOL-04',`Noticias=${c.news}`); else if(view.name==='noticias')pass(view.name,viewport.name,'VOL-04');
-        if(view.name==='equipos'){
-          if(c.teams!==4)fail(view.name,viewport.name,'VOL-05',`Categorías=${c.teams}`); else pass(view.name,viewport.name,'VOL-05');
-          if(c.players!==84)fail(view.name,viewport.name,'VOL-06',`Jugadores=${c.players}`); else pass(view.name,viewport.name,'VOL-06');
-        }
-        if(view.name==='partidos'){
-          if(c.matches!==108)fail(view.name,viewport.name,'VOL-07',`Partidos=${c.matches}`); else pass(view.name,viewport.name,'VOL-07');
-          if(c.standings!==8)fail(view.name,viewport.name,'VOL-08',`Tablas=${c.standings}`); else pass(view.name,viewport.name,'VOL-08');
-        }
-        if(view.name==='galeria'){
-          if(c.photos!==15)fail(view.name,viewport.name,'VOL-09',`Fotos=${c.photos}`); else pass(view.name,viewport.name,'VOL-09');
-          if(c.albums<3)warn(view.name,viewport.name,'VOL-10',`Álbumes detectados=${c.albums}`); else pass(view.name,viewport.name,'VOL-10');
-        }
-
-        await page.screenshot({path:path.join(outDir,`${view.name}-${viewport.name}-top.png`),fullPage:false});
-        await page.evaluate(()=>window.scrollTo(0,Math.max(0,(document.documentElement.scrollHeight-window.innerHeight)/2)));
-        await page.waitForTimeout(100);
-        await page.screenshot({path:path.join(outDir,`${view.name}-${viewport.name}-mid.png`),fullPage:false});
-      }catch(error){
-        fail(view.name,viewport.name,'RUN',String(error));
-      }
+      }catch(error){fail(view.name,viewport.name,'RUN',String(error))}
       await page.close();
     }
     await context.close();
   }
-}finally{
-  await browser.close();
-}
+}finally{await browser.close()}
 
-const summary={passes:report.checks.length,warnings:report.warnings.length,errors:report.errors.length};
-report.summary=summary;
+report.summary={passes:report.checks.length,warnings:report.warnings.length,errors:report.errors.length};
 fs.writeFileSync(path.join(outDir,'qa-report.json'),JSON.stringify(report,null,2));
-fs.writeFileSync(path.join(outDir,'qa-report.md'),`# CUDO V8 · QA visual\n\n- PASS: ${summary.passes}\n- WARN: ${summary.warnings}\n- FAIL: ${summary.errors}\n\n${report.errors.map(e=>`- ❌ **${e.view}/${e.viewport} · ${e.rule}** — ${e.detail}`).join('\n')||'- ✅ Sin fallas críticas'}\n\n${report.warnings.map(e=>`- ⚠️ **${e.view}/${e.viewport} · ${e.rule}** — ${e.detail}`).join('\n')}\n`);
-console.log(JSON.stringify(summary));
-if(report.errors.length){
-  console.error(JSON.stringify(report.errors,null,2));
-  process.exit(1);
-}
+fs.writeFileSync(path.join(outDir,'qa-report.md'),`# CUDO V8 · QA de contrato visual\n\n- PASS: ${report.summary.passes}\n- WARN: ${report.summary.warnings}\n- FAIL: ${report.summary.errors}\n- Certificación visual: **${report.visual_certification}**\n\n${report.errors.map(e=>`- ❌ **${e.view}/${e.viewport} · ${e.rule}** — ${e.detail}`).join('\n')||'- ✅ Sin fallas automáticas del contrato'}\n\n> Un QA automático verde no equivale a aprobación de diseño. La certificación final requiere baseline visual aprobado por humano.\n`);
+console.log(JSON.stringify(report.summary));
+if(report.errors.length)process.exit(1);
