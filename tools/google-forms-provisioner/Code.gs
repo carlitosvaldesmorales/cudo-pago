@@ -53,23 +53,15 @@ function provisionForm_(cfg){
   return writeMetadata_(spec,form,responseSheet.getName());
 }
 
-function reconcileQuestions_(form,specRows){
-  const items=form.getItems();
-  if(items.length!==specRows.length){
-    for(let i=items.length-1;i>=0;i--)form.deleteItem(i);
-    specRows.forEach(row=>addQuestion_(form,row));
-    return;
-  }
-  for(let i=0;i<specRows.length;i++){
-    const row=specRows[i],item=items[i];
-    if(!itemCompatible_(item,row)){
-      for(let j=items.length-1;j>=0;j--)form.deleteItem(j);
-      specRows.forEach(r=>addQuestion_(form,r));
-      return;
-    }
-    updateQuestion_(item,row);
-  }
+function removeNavigationBeforeRebuild_(form){
+  form.getItems(FormApp.ItemType.LIST).forEach(item=>{
+    const list=item.asListItem();
+    const values=list.getChoices().map(c=>c.getValue());
+    if(values.length)list.setChoiceValues(values);
+  });
 }
+function rebuildQuestions_(form,specRows){removeNavigationBeforeRebuild_(form);const items=form.getItems();for(let i=items.length-1;i>=0;i--)form.deleteItem(i);specRows.forEach(row=>addQuestion_(form,row));}
+function reconcileQuestions_(form,specRows){const items=form.getItems();if(items.length!==specRows.length){rebuildQuestions_(form,specRows);return;}for(let i=0;i<specRows.length;i++){const row=specRows[i],item=items[i];if(!itemCompatible_(item,row)){rebuildQuestions_(form,specRows);return;}updateQuestion_(item,row);}}
 
 function itemCompatible_(item,row){
   const kind=String(row[2]).trim().toUpperCase(),type=item.getType();
@@ -105,7 +97,6 @@ function validateProvision_(cfg,ss,raw,form,responseSheetName,rawColumnCount,spe
   if(!rawFormula.includes('INDIRECT')||!rawFormula.includes(safeResponseName)||!rawFormula.includes(`A2:${lastCol}`))errors.push(`RAW no está enlazado de forma estable a ${responseSheetName}!A2:${lastCol}`);
   if(errors.length)throw new Error(`${cfg.env}/${cfg.title}: ${errors.join(' | ')}`);return true;
 }
-
 function linkRaw_(raw,responseSheetName,columnCount){if(raw.getMaxRows()>1)raw.getRange(2,1,raw.getMaxRows()-1,columnCount).clearContent();const responseName=String(responseSheetName).replace(/'/g,"''"),lastCol=columnToLetter_(columnCount);raw.getRange('A2').setFormula(`=ARRAYFORMULA(INDIRECT("'${responseName}'!A2:${lastCol}"))`)}
 function columnToLetter_(column){let temp='',letter='';while(column>0){temp=(column-1)%26;letter=String.fromCharCode(temp+65)+letter;column=(column-temp-1)/26}return letter}
 
@@ -114,5 +105,4 @@ function addQuestion_(form,row){
   switch(kind){case'LISTA':item=form.addListItem().setTitle(title).setChoiceValues(String(opciones).split('|').map(v=>v.trim()).filter(Boolean));break;case'TEXTO_CORTO':case'NUMERO':item=form.addTextItem().setTitle(title);break;case'PARRAFO':item=form.addParagraphTextItem().setTitle(title);break;case'FECHA':item=form.addDateItem().setTitle(title).setIncludesYear(true);break;case'HORA':item=form.addTimeItem().setTitle(title);break;default:throw new Error(`Tipo de pregunta no soportado en FORM_SPEC: ${kind}`)}
   item.setRequired(required);if(typeof item.setHelpText==='function')item.setHelpText(help);return item;
 }
-
 function writeMetadata_(spec,form,responseSheetName){const values=[['FORM_ID',form.getId()],['FORM_EDIT_URL',form.getEditUrl()],['FORM_RESPONDER_URL',form.getPublishedUrl()],['LINKED_SPREADSHEET_ID',form.getDestinationId()||''],['RESPONSE_SHEET',responseSheetName||''],['ESTADO',form.isAcceptingResponses()?'ACEPTANDO_RESPUESTAS':'CERRADO'],['ACTUALIZADO',new Date()]];spec.getRange(1,8,values.length,2).setValues(values);return Object.fromEntries(values)}
