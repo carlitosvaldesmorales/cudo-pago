@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 
-const REQUIRED_QA_KEYS = ['QA_NOTICIAS','QA_EQUIPOS','QA_PLANTEL','QA_PARTIDOS','QA_GALERIA'];
+const REQUIRED_QA_KEYS = ['QA_NOTICIAS','QA_EQUIPOS','QA_PLANTEL','QA_PARTIDOS','QA_TABLA','QA_GALERIA'];
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -89,7 +89,7 @@ async function main() {
   if (execution.data.error) throw new Error(`scripts.run devolvió error: ${JSON.stringify(execution.data.error.details || [])}`);
 
   const result = execution.data.response && execution.data.response.result;
-  console.log('[5/5] Validando los cinco módulos QA...');
+  console.log('[5/5] Validando los seis módulos visibles de V8...');
   validateProvisionResult(result);
   console.log(JSON.stringify({ ok: true, scriptId, deploymentId, versionNumber, modules: REQUIRED_QA_KEYS, result }, null, 2));
 }
