@@ -22,8 +22,8 @@ jobs:
     env:
       CUDO_APPS_SCRIPT_ID: 1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8
       CUDO_APPS_SCRIPT_DEPLOYMENT_ID: AKfycbzfvr6SZM7wZGMv0qCFrhWE-z-YpNbyxxyBy4DxJOMWyIvUNU8zkMLsJxau4h0SVIKWuw
-      CUDO_GOOGLE_OAUTH_CLIENT_JSON: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_JSON }}
-      CUDO_GOOGLE_OAUTH_TOKENS_JSON: ${{ secrets.CUDO_GOOGLE_OAUTH_TOKENS_JSON }}
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: 257090036200-mr8qoeglsklm8peu9s8mp8r9dcdphab4.apps.googleusercontent.com
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,12 +32,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for v in CUDO_GOOGLE_OAUTH_CLIENT_JSON CUDO_GOOGLE_OAUTH_TOKENS_JSON; do
-            if [ -z "${!v:-}" ]; then
-              echo "::error::$v no está configurado. Es bootstrap OAuth de una sola vez, no operación recurrente."
-              exit 1
-            fi
-          done
+          if [ -z "${CUDO_GOOGLE_REFRESH_TOKEN:-}" ]; then
+            echo "::error::CUDO_GOOGLE_REFRESH_TOKEN no está configurado. Ejecuta el bootstrap OAuth una sola vez."
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
