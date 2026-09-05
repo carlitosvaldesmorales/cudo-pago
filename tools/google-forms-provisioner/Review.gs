@@ -11,6 +11,7 @@ const CUDO_REVIEW_QA = {
 function provisionRevisionQA() {
   const result = provisionForm_(CUDO_REVIEW_QA);
   initializeReviewAudit_();
+  installReviewTrigger_(result.FORM_ID);
   return result;
 }
 
@@ -27,6 +28,6 @@ function initializeReviewAudit_() {
   audit.getRange('G2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_REVISION!A2:A="";"";RAW_FORM_REVISION!F2:F))');
   audit.getRange('H2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_REVISION!A2:A="";"";RAW_FORM_REVISION!G2:G))');
   audit.getRange('I2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_REVISION!A2:A="";"";RAW_FORM_REVISION!H2:H))');
-  audit.getRange('J2').setFormula('=ARRAYFORMULA(IF(RAW_FORM_REVISION!A2:A="";"";"PENDIENTE_PROCESO"))');
+  if (audit.getMaxRows() > 1) audit.getRange(2, 10, audit.getMaxRows() - 1, 5).clearContent();
   SpreadsheetApp.flush();
 }
