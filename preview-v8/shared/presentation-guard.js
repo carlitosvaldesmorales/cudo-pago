@@ -8,6 +8,8 @@
     .qa-mode .qa{display:block!important}
     .mobilepanel .mobilecta{background:#e21b2d!important;border-radius:10px!important;text-align:center!important;margin-top:10px!important;border-bottom:0!important;color:#fff!important}
     .status[hidden]{display:none!important}
+    .gallerytoolbar>*{min-width:0!important}
+    .gallerytoolbar select{width:100%!important;min-width:0!important;max-width:100%!important}
   `;
   document.head.append(style);
 
