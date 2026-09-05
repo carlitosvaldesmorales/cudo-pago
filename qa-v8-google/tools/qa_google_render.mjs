@@ -12,11 +12,10 @@ const datasets={
   equipos:read('equipos'),
   plantel:read('plantel'),
   partidos:read('partidos'),
+  tabla:read('tabla'),
   galeria:read('galeria')
 };
 
-// Contrato canónico: el frontend agrupa jornadas de CUDO. Si una fila representa
-// a CUDO, el nombre público debe salir exactamente como CUDO, no "Cudo" ni variantes.
 for(const item of datasets.partidos.items||[]){
   const local=clean(item.local), visita=clean(item.visita);
   assert(upper(local)==='CUDO'||upper(visita)==='CUDO',`Partido ${item.id} no involucra a CUDO`);
@@ -34,29 +33,31 @@ try{
   const checkPage=async(path,items,getExpected)=>{
     const response=await page.goto(base+path,{waitUntil:'networkidle',timeout:45000});
     assert(response?.ok(),`${path}: HTTP ${response?.status()}`);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(450);
     const body=clean(await page.locator('body').innerText());
+    const normalizedBody=body.toLocaleLowerCase('es');
     for(const item of items||[]){
       const expected=getExpected(item).filter(Boolean);
       for(const token of expected){
-        assert(body.toLocaleLowerCase('es').includes(clean(token).toLocaleLowerCase('es')),`${path}: no se renderizó ${JSON.stringify(token)} del item ${item.id||'sin-id'}`);
+        assert(normalizedBody.includes(clean(token).toLocaleLowerCase('es')),`${path}: no se renderizó ${JSON.stringify(token)} del item ${item.id||'sin-id'}`);
       }
     }
   };
 
   await checkPage('/noticias/',datasets.noticias.items,i=>[i.titulo]);
   await checkPage('/equipos/',datasets.equipos.items,i=>[i.nombre]);
-  await checkPage('/equipos/',datasets.plantel.items,i=>[i.nombre_deportivo]);
-  await checkPage('/galeria/',datasets.galeria.items,i=>[i.titulo]);
+  await checkPage('/equipos/',datasets.plantel.items,i=>[i.nombre_deportivo, i.numero]);
+  await checkPage('/galeria/',datasets.galeria.items,i=>[i.titulo, i.album]);
+  await checkPage('/partidos/',datasets.tabla.items,i=>[i.equipo]);
   await checkPage('/partidos/',datasets.partidos.items,i=>{
     const rival=upper(i.local)==='CUDO'?i.visita:i.local;
-    const tokens=[rival];
+    const tokens=[rival, i.categoria];
     if(upper(i.estado_partido)==='FINALIZADO')tokens.push(`${i.goles_local} - ${i.goles_visita}`);
     return tokens;
   });
 
   assert(pageErrors.length===0,`Errores JS/console: ${pageErrors.join(' | ')}`);
-  console.log('QA Google render E2E: OK');
+  console.log('QA Google render E2E todos los módulos: OK');
 } finally {
   await browser.close();
 }
