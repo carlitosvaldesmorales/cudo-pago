@@ -20,68 +20,34 @@ jobs:
   deploy-and-provision:
     runs-on: ubuntu-latest
     env:
-      CUDO_APPS_SCRIPT_ID: ${{ secrets.CUDO_APPS_SCRIPT_ID }}
-      CUDO_APPS_SCRIPT_DEPLOYMENT_ID: ${{ secrets.CUDO_APPS_SCRIPT_DEPLOYMENT_ID }}
-      CUDO_QA_AUTOMATION_TOKEN: ${{ secrets.CUDO_QA_AUTOMATION_TOKEN }}
-      CLASP_AUTH_JSON: ${{ secrets.CLASP_AUTH_JSON }}
+      CUDO_APPS_SCRIPT_ID: 1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8
+      CUDO_APPS_SCRIPT_DEPLOYMENT_ID: AKfycbzfvr6SZM7wZGMv0qCFrhWE-z-YpNbyxxyBy4DxJOMWyIvUNU8zkMLsJxau4h0SVIKWuw
+      CUDO_GOOGLE_OAUTH_CLIENT_JSON: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_JSON }}
+      CUDO_GOOGLE_OAUTH_TOKENS_JSON: ${{ secrets.CUDO_GOOGLE_OAUTH_TOKENS_JSON }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate bootstrap secrets
+      - name: Validate OAuth bootstrap
         shell: bash
         run: |
           set -euo pipefail
-          for v in CUDO_APPS_SCRIPT_ID CUDO_APPS_SCRIPT_DEPLOYMENT_ID CUDO_QA_AUTOMATION_TOKEN CLASP_AUTH_JSON; do
+          for v in CUDO_GOOGLE_OAUTH_CLIENT_JSON CUDO_GOOGLE_OAUTH_TOKENS_JSON; do
             if [ -z "${!v:-}" ]; then
-              echo "::error::$v no está configurado. Este es un requisito bootstrap, no una tarea recurrente."
+              echo "::error::$v no está configurado. Es bootstrap OAuth de una sola vez, no operación recurrente."
               exit 1
             fi
           done
 
-      - name: Prepare clasp project
-        shell: bash
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Google API client
         working-directory: tools/google-forms-provisioner
-        run: |
-          set -euo pipefail
-          printf '%s' "$CLASP_AUTH_JSON" > "$HOME/.clasprc.json"
-          chmod 600 "$HOME/.clasprc.json"
-          cat > .clasp.json <<EOF
-          {
-            "scriptId": "$CUDO_APPS_SCRIPT_ID",
-            "rootDir": "."
-          }
-          EOF
+        run: npm install --no-audit --no-fund
 
-      - name: Push source to Apps Script
+      - name: Update Apps Script, deploy version and provision QA
         working-directory: tools/google-forms-provisioner
-        run: npx -y @google/clasp@3.4.0 push --force
-
-      - name: Update stable web app deployment
-        working-directory: tools/google-forms-provisioner
-        run: npx -y @google/clasp@3.4.0 update-deployment "$CUDO_APPS_SCRIPT_DEPLOYMENT_ID" --description "CUDO QA auto $GITHUB_SHA"
-
-      - name: Trigger provisionAllQA
-        id: provision
-        shell: bash
-        run: |
-          set -euo pipefail
-          endpoint="https://script.google.com/macros/s/${CUDO_APPS_SCRIPT_DEPLOYMENT_ID}/exec"
-          response="$(curl --fail-with-body --silent --show-error --location \
-            --retry 3 --retry-delay 2 \
-            -H 'Content-Type: application/json' \
-            --data "$(jq -nc --arg token "$CUDO_QA_AUTOMATION_TOKEN" '{action:"provisionAllQA",token:$token}')" \
-            "$endpoint")"
-          printf '%s\n' "$response" | jq .
-          ok="$(printf '%s' "$response" | jq -r '.ok // false')"
-          if [ "$ok" != "true" ]; then
-            echo "::error::provisionAllQA devolvió error"
-            exit 1
-          fi
-
-      - name: Remove local auth material
-        if: always()
-        shell: bash
-        run: |
-          rm -f "$HOME/.clasprc.json"
-          rm -f tools/google-forms-provisioner/.clasp.json
+        run: node runner.js
