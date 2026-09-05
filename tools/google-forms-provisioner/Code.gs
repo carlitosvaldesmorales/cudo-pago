@@ -58,14 +58,21 @@ const CUDO_FORMS_CONFIG = {
 function provisionAllQA() {
   const keys = ['QA_NOTICIAS', 'QA_EQUIPOS', 'QA_PLANTEL', 'QA_PARTIDOS', 'QA_GALERIA'];
   const results = {};
+  const errors = [];
   keys.forEach(key => {
     try {
       results[key] = provisionForm_(CUDO_FORMS_CONFIG[key]);
     } catch (err) {
-      results[key] = { ERROR: String(err && err.message ? err.message : err) };
+      const msg = String(err && err.message ? err.message : err);
+      results[key] = { ERROR: msg };
+      errors.push(`${key}: ${msg}`);
     }
   });
   console.log(JSON.stringify(results, null, 2));
+  if (errors.length) {
+    throw new Error(`Provisionamiento QA incompleto (${errors.length}/${keys.length} con error):\n${errors.join('\n')}`);
+  }
+  console.log(`CUDO Forms QA: ${keys.length}/${keys.length} formularios OK`);
   return results;
 }
 
@@ -92,17 +99,19 @@ function provisionForm_(cfg) {
   const rawColumnCount = rawHeaderValues.filter(v => String(v).trim() !== '').length;
   if (rawColumnCount < 2) throw new Error(`${cfg.rawSheet} no tiene encabezados RAW válidos.`);
 
+  const specRows = spec.getRange(2, 1, Math.max(spec.getLastRow() - 1, 0), 6).getValues()
+    .filter(r => String(r[0]).trim() !== '');
+  if (!specRows.length) throw new Error('FORM_SPEC no contiene preguntas.');
+
   const existingFormId = String(spec.getRange('I1').getValue() || '').trim();
   if (existingFormId) {
     const existing = FormApp.openById(existingFormId);
     const existingResponseSheet = String(spec.getRange('I5').getValue() || '').trim();
-    if (existingResponseSheet) linkRaw_(raw, existingResponseSheet, rawColumnCount);
+    if (!existingResponseSheet) throw new Error('FORM existente pero RESPONSE_SHEET está vacío en FORM_SPEC.');
+    linkRaw_(raw, existingResponseSheet, rawColumnCount);
+    validateProvision_(cfg, ss, spec, raw, existing, existingResponseSheet, rawColumnCount, specRows.length);
     return writeMetadata_(spec, existing, existingResponseSheet);
   }
-
-  const rows = spec.getRange(2, 1, Math.max(spec.getLastRow() - 1, 0), 6).getValues()
-    .filter(r => String(r[0]).trim() !== '');
-  if (!rows.length) throw new Error('FORM_SPEC no contiene preguntas.');
 
   const beforeSheetIds = new Set(ss.getSheets().map(s => s.getSheetId()));
 
@@ -113,7 +122,7 @@ function provisionForm_(cfg) {
     .setShowLinkToRespondAgain(true)
     .setAcceptingResponses(true);
 
-  rows.forEach(row => addQuestion_(form, row));
+  specRows.forEach(row => addQuestion_(form, row));
   form.setDestination(FormApp.DestinationType.SPREADSHEET, cfg.spreadsheetId);
 
   let responseSheet = null;
@@ -127,8 +136,28 @@ function provisionForm_(cfg) {
 
   linkRaw_(raw, responseSheet.getName(), rawColumnCount);
   DriveApp.getFileById(form.getId()).moveTo(DriveApp.getFolderById(cfg.captureFolderId));
+  validateProvision_(cfg, ss, spec, raw, form, responseSheet.getName(), rawColumnCount, specRows.length);
 
   return writeMetadata_(spec, form, responseSheet.getName());
+}
+
+function validateProvision_(cfg, ss, spec, raw, form, responseSheetName, rawColumnCount, expectedQuestions) {
+  const errors = [];
+  if (form.getDestinationId() !== cfg.spreadsheetId) errors.push(`destino incorrecto: ${form.getDestinationId()}`);
+  if (!form.isAcceptingResponses()) errors.push('formulario no acepta respuestas');
+  if (!form.getPublishedUrl()) errors.push('URL pública vacía');
+  if (form.getItems().length !== expectedQuestions) errors.push(`preguntas=${form.getItems().length}, esperadas=${expectedQuestions}`);
+  if (!ss.getSheetByName(responseSheetName)) errors.push(`pestaña de respuestas inexistente: ${responseSheetName}`);
+
+  const rawFormula = String(raw.getRange('A2').getFormula() || '');
+  const safeResponseName = String(responseSheetName).replace(/'/g, "''");
+  const lastCol = columnToLetter_(rawColumnCount);
+  if (!rawFormula.includes('INDIRECT') || !rawFormula.includes(safeResponseName) || !rawFormula.includes(`A2:${lastCol}`)) {
+    errors.push(`RAW no está enlazado de forma estable a ${responseSheetName}!A2:${lastCol}`);
+  }
+
+  if (errors.length) throw new Error(`${cfg.env}/${cfg.title}: ${errors.join(' | ')}`);
+  return true;
 }
 
 function linkRaw_(raw, responseSheetName, columnCount) {
