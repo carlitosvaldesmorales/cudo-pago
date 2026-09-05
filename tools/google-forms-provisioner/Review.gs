@@ -4,8 +4,9 @@ const CUDO_REVIEW_QA = {
   captureFolderId: '1TtGqzfFOqQTIioySe8BmX64c3wGGIRhY',
   specSheet: 'FORM_SPEC',
   rawSheet: 'RAW_FORM_REVISION',
-  title: 'CUDO QA · Revisar contenido antes de publicar',
-  description: 'Use este formulario para aprobar, rechazar, retirar, reactivar o corregir contenido de la web CUDO. Identifique el contenido con palabras normales. Si hay más de una coincidencia, el sistema no aplicará cambios automáticamente.'
+  title: 'Revisar contenido antes de publicar',
+  description: 'Use este formulario para aprobar, rechazar, retirar, reactivar o corregir contenido de la web CUDO. Identifique el contenido con palabras normales. Si hay más de una coincidencia, el sistema no aplicará cambios automáticamente.',
+  confirmation: 'Recibimos la revisión. El cambio se aplicará cuando el sistema procese la decisión autorizada.'
 };
 
 function provisionRevisionQA() {
