@@ -1,3 +1,4 @@
+// PACK01 Tally media sync: Noticias + Plantel + Galeria
 import fs from 'fs';
 import path from 'path';
 const CLIENT_ID=process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID,CLIENT_SECRET=process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET,REFRESH_TOKEN=process.env.CUDO_GOOGLE_REFRESH_TOKEN;
