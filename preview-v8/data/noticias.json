@@ -1,6 +1,16 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-04T19:19:00-04:00",
+  "generated_at": "2026-09-06T02:11:03.921Z",
   "source": "CUDO_WEB_NOTICIAS",
-  "items": []
+  "items": [
+    {
+      "id": "QA-NOT-20260906020659-001",
+      "fecha": "2026-09-05",
+      "slug": "qa-not-20260906020659-001",
+      "titulo": "La Camiseta no solo se pone para jugar!!",
+      "resumen": "La Camiseta no solo se pone para jugar!!",
+      "cuerpo": "La Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!",
+      "imagen_ref": "media/noticias/tally-yr8Dd6.jpg"
+    }
+  ]
 }
