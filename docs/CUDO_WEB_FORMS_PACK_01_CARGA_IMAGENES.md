@@ -1,6 +1,6 @@
 # CUDO-WEB-FORMS — PACK 01 / CARGA HUMANA DE IMÁGENES
 
-Estado inicial: **ABIERTO — NO CONFORME**
+Estado del pack: **ABIERTO — NO CONFORME**
 
 ## Objetivo funcional
 Una persona no técnica debe poder seleccionar una imagen desde teléfono/computador al administrar **Noticias**, **Plantel** o **Galería**, sin escribir URL, ID de Drive ni datos técnicos. La imagen debe recorrer el flujo vigente:
@@ -44,19 +44,35 @@ Nunca se considera válido `deleteItem()` masivo sobre un formulario con ítems 
 - P15: el implementador no se autocertifica; el gate objetivo independiente debe ser ejecutado y su resultado registrado.
 
 ## Gates
-### Gate A — Seguridad del provisionador
-No avanza si existe riesgo de borrado de `FILE_UPLOAD`.
+### Gate A — Seguridad del provisionador — **CONFORME**
+Criterio: no avanza si existe riesgo de borrado de `FILE_UPLOAD`.
 
-### Gate B — Captura humana
-Los tres dominios permiten seleccionar archivo sin dato técnico.
+Materializado:
+- `SafeProvision.gs` detecta tipos protegidos y bloquea reconstrucción destructiva antes de cualquier `deleteItem()`.
+- `Code.gs` reconoce `FILE_UPLOAD` como compatible en los slots humanos `IMAGEN_REF` / `FOTO_REF`, preserva ese ítem al actualizar y exige el guard global antes de una reconstrucción.
+- `qa-pack01-static.mjs` es un gate reproducible que falla si desaparece cualquiera de esas protecciones.
+- el workflow `CUDO QA Forms Auto` ejecuta ese gate antes de tocar Apps Script / Forms.
 
-### Gate C — Datos
+Evidencia:
+- commit blindaje inicial: `e6f5efe978a0e35ead25e2295bc7fe9eb71cabf0`.
+- commit blindaje global: `2c77cdf475ee88999bdb4d97376016fb2e1a97b1`.
+- commit gate objetivo: `101b8965720055a254c905a07d2390754751ae1c`.
+- GitHub Actions run `34002839964`, job `101404680638`: **SUCCESS**.
+- salida objetiva: `PACK01_GATE_A_STATIC: PASS`.
+- provisionamiento posterior: **11/11 pasos OK**, versión Apps Script `41`, seis formularios QA + ramificación Partidos + mantenimiento + revisión + auditoría, sin regresiones detectadas.
+
+Conclusión Gate A: **cerrado y verificable**. El pack completo sigue abierto porque todavía no existen preguntas reales `FILE_UPLOAD` en Noticias, Plantel y Galería.
+
+### Gate B — Captura humana — **ABIERTO**
+Los tres dominios deben permitir seleccionar archivo sin dato técnico.
+
+### Gate C — Datos — **ABIERTO**
 RAW/CONTROL/revisión/PUBLICO_EXPORT conservan asociación y estados correctos.
 
-### Gate D — Media/JSON/V8
+### Gate D — Media/JSON/V8 — **ABIERTO**
 Normalización, JSON y render real funcionan.
 
-### Gate E — Verificación independiente
+### Gate E — Verificación independiente — **ABIERTO**
 Runner/QA objetivo reproducible en verde. Prueba humana móvil real se registra por separado cuando requiera dispositivo/autorización del usuario.
 
 ## Evidencia mínima de cierre
