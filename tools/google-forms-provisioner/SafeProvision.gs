@@ -13,6 +13,36 @@ function provisionAllQASafe(){
   return results;
 }
 
+/**
+ * Returns items that the provisioner must never delete implicitly.
+ * FILE_UPLOAD is the first protected type required by CUDO-WEB-FORMS PACK 01.
+ * Unknown/non-managed item types are protected as well: destructive rebuild is only
+ * permitted when every current non-page item is one of the types created by addQuestion_.
+ */
+function protectedItems_(form){
+  const managed=[
+    FormApp.ItemType.TEXT,
+    FormApp.ItemType.PARAGRAPH_TEXT,
+    FormApp.ItemType.MULTIPLE_CHOICE,
+    FormApp.ItemType.CHECKBOX,
+    FormApp.ItemType.LIST,
+    FormApp.ItemType.DATE,
+    FormApp.ItemType.TIME
+  ];
+  return form.getItems().filter(item=>{
+    const type=item.getType();
+    if(type===FormApp.ItemType.PAGE_BREAK)return false;
+    return managed.indexOf(type)===-1;
+  });
+}
+
+function assertDestructiveRebuildSafe_(form,context){
+  const protectedItems=protectedItems_(form);
+  if(!protectedItems.length)return;
+  const detail=protectedItems.map(item=>`${item.getType()}: ${String(item.getTitle()||'(sin título)').trim()}`).join(' | ');
+  throw new Error(`${context}: reconstrucción destructiva BLOQUEADA; existen ítems protegidos que deben preservarse: ${detail}`);
+}
+
 function provisionPartidosResetSafeQA_(){
   const cfg=CUDO_FORMS_CONFIG.QA_PARTIDOS;
   const ss=SpreadsheetApp.openById(cfg.spreadsheetId),spec=ss.getSheetByName(cfg.specSheet),raw=ss.getSheetByName(cfg.rawSheet);
@@ -24,8 +54,8 @@ function provisionPartidosResetSafeQA_(){
   const specRows=lastRow?spec.getRange(2,1,lastRow,7).getValues().filter(r=>String(r[0]).trim()!==''):[];
   if(!specRows.length)throw new Error('Partidos: FORM_SPEC vacío');
 
-  // Remove all navigation links before deleting/rebuilding items. Google Forms rejects
-  // deleting page-break targets while choices or other page breaks still point to them.
+  // Remove navigation links before deleting/rebuilding page-managed items. Google Forms
+  // rejects deleting page-break targets while choices or page breaks still point to them.
   form.getItems(FormApp.ItemType.LIST).forEach(item=>{
     const list=item.asListItem();
     const values=list.getChoices().map(c=>c.getValue());
@@ -44,6 +74,10 @@ function provisionPartidosResetSafeQA_(){
     }
   }
   if(!compatible||current.some(i=>i.getType()===FormApp.ItemType.PAGE_BREAK)){
+    // Root safety rule: never mass-delete a form containing FILE_UPLOAD or another
+    // non-managed item. This makes a future manual upload question fail-safe instead
+    // of being silently destroyed by provisioning.
+    assertDestructiveRebuildSafe_(form,'Partidos');
     for(let i=form.getItems().length-1;i>=0;i--)form.deleteItem(i);
     specRows.forEach(row=>addQuestion_(form,row));
   }else{
