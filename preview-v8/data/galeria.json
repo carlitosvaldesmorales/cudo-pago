@@ -1,6 +1,18 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-05T18:02:31.229Z",
+  "generated_at": "2026-09-06T02:44:42.742Z",
   "source": "CUDO_WEB_GALERIA",
-  "items": []
+  "items": [
+    {
+      "id": "QA-GAL-20260906022413-001",
+      "album_id": "refuerzos-2026",
+      "album": "Refuerzos ",
+      "fecha": "2026-08-01",
+      "categoria": "CLUB",
+      "titulo": "Refuerzos",
+      "descripcion": "Refuerzos 2026\n",
+      "imagen_ref": "media/galeria/tally-jX8LPJ.png",
+      "alt": "Refuerzos "
+    }
+  ]
 }
