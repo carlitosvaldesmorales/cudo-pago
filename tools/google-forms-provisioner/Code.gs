@@ -63,8 +63,10 @@ function removeNavigationBeforeRebuild_(form){
 function rebuildQuestions_(form,specRows){removeNavigationBeforeRebuild_(form);const items=form.getItems();for(let i=items.length-1;i>=0;i--)form.deleteItem(i);specRows.forEach(row=>addQuestion_(form,row));}
 function reconcileQuestions_(form,specRows){const items=form.getItems();if(items.length!==specRows.length){rebuildQuestions_(form,specRows);return;}for(let i=0;i<specRows.length;i++){const row=specRows[i],item=items[i];if(!itemCompatible_(item,row)){rebuildQuestions_(form,specRows);return;}updateQuestion_(item,row);}}
 
+function isManualFileUploadSlot_(row){const kind=String(row[2]||'').trim().toUpperCase(),dest=String(row[5]||'').trim().toUpperCase();return kind==='TEXTO_CORTO'&&['IMAGEN_REF','FOTO_REF'].includes(dest);}
 function itemCompatible_(item,row){
   const kind=String(row[2]).trim().toUpperCase(),type=item.getType();
+  if(isManualFileUploadSlot_(row)&&type===FormApp.ItemType.FILE_UPLOAD)return true;
   if(kind==='LISTA')return type===FormApp.ItemType.LIST;
   if(kind==='PARRAFO')return type===FormApp.ItemType.PARAGRAPH_TEXT;
   if(kind==='FECHA')return type===FormApp.ItemType.DATE;
@@ -74,6 +76,7 @@ function itemCompatible_(item,row){
 }
 
 function updateQuestion_(item,row){
+  if(isManualFileUploadSlot_(row)&&item.getType()===FormApp.ItemType.FILE_UPLOAD)return item;
   const [,pregunta,tipo,obligatoria,opciones,,ayuda]=row;
   const title=String(pregunta).trim(),required=String(obligatoria).trim().toUpperCase()==='SI',kind=String(tipo).trim().toUpperCase(),help=String(ayuda||'').trim();
   let typed;
