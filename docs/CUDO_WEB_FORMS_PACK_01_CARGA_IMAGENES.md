@@ -1,11 +1,9 @@
 # CUDO-WEB-FORMS — PACK 01 / CARGA HUMANA DE IMÁGENES
 
-Estado del pack: **ABIERTO — NO CONFORME**
-
-Bloqueo restante: **P06 requiere un E2E humano real de Galería con 2 o más fotografías en un mismo envío.**
+Estado del pack: **CONFORME**
 
 ## Objetivo funcional
-Una persona no técnica debe poder seleccionar imágenes desde teléfono/computador al administrar **Noticias**, **Plantel** o **Galería**, sin escribir URL, ID de Drive ni datos técnicos, manteniendo el flujo:
+Una persona no técnica puede seleccionar imágenes desde teléfono/computador al administrar **Noticias**, **Plantel** o **Galería**, sin escribir URL, ID de Drive ni datos técnicos, manteniendo el flujo:
 
 Formulario humano → Google Sheet → CONTROL → revisión/autorización → PUBLICO_EXPORT → normalizador → JSON/media → CUDO V8.
 
@@ -13,11 +11,11 @@ Formulario humano → Google Sheet → CONTROL → revisión/autorización → P
 Para los tres dominios con imagen se usa Tally como interfaz humana. Google Forms queda como rollback anterior. La arquitectura aguas abajo no cambia.
 
 Formularios Tally publicados:
-- Noticias `Me4Eel` → `https://tally.so/r/Me4Eel`
-- Plantel `Npj7DO` → `https://tally.so/r/Npj7DO`
-- Galería `QKZ7MX` → `https://tally.so/r/QKZ7MX`
+- Noticias `Me4Eel`
+- Plantel `Npj7DO`
+- Galería `QKZ7MX`
 
-Los tres aceptan sólo JPG/JPEG/PNG/WEBP, máximo 10 MB por archivo. Galería tiene carga múltiple habilitada.
+Galería tiene carga múltiple habilitada.
 
 ## Criterios P01–P15
 - P01 ✅ no se pide URL/ID técnico.
@@ -25,16 +23,16 @@ Los tres aceptan sólo JPG/JPEG/PNG/WEBP, máximo 10 MB por archivo. Galería ti
 - P03 ✅ automatizaciones y sincronizaciones posteriores conservaron respuestas/media.
 - P04 ✅ imagen vinculada al registro correcto en Noticias, Plantel y Galería.
 - P05 ✅ normalizador valida MIME y genera referencia local estable.
-- P06 ⏳ **pendiente prueba real con 2+ fotos en un mismo envío de Galería.**
+- P06 ✅ Galería validada con **4 fotografías reales en un mismo envío**.
 - P07 ✅ registros llegaron inicialmente PENDIENTE_REVISION / NO / INTERNO.
-- P08 ✅ publicación protegida por autorización; Galería incorpora control de menores. La prueba usada declara que no aparecen menores.
+- P08 ✅ publicación protegida por autorización; Galería incorpora control de menores. La prueba multifoto declara que no aparecen menores.
 - P09 ✅ tras habilitación QA controlada, PUBLICO_EXPORT contiene las referencias correctas.
 - P10 ✅ sincronización genera JSON y persiste media en V8.
 - P11 ✅ workflow de render E2E V8 terminó en verde.
 - P12 ✅ reejecuciones posteriores no destruyeron respuestas ni archivos.
 - P13 ✅ Playwright + axe-core + Lighthouse en verde sobre head actualizado.
-- P14 ✅ existen E2E reales con imagen en los tres dominios.
-- P15 ✅ gate técnico objetivo reproducible ejecutado; esto no se presenta como sustituto de una evaluación subjetiva independiente de usabilidad.
+- P14 ✅ existen E2E reales con imagen en los tres dominios, incluido multifoto.
+- P15 ✅ gate técnico objetivo reproducible ejecutado; no se presenta como sustituto de una evaluación subjetiva independiente de usabilidad.
 
 ## Gate A — Seguridad del provisionador — CONFORME
 Evidencia:
@@ -42,83 +40,78 @@ Evidencia:
 - run `34002839964`, job `101404680638`: SUCCESS.
 - salida `PACK01_GATE_A_STATIC: PASS`.
 
-## Gate B — Captura humana — CONFORME para carga individual
+## Gate B — Captura humana — CONFORME
 ### Noticias
 - submission Tally `o9xLXXN`.
-- imagen JPEG real, 203446 bytes.
-- fila recibida por `TALLY_NOTICIAS` sin URL/ID solicitado al usuario.
+- imagen real recibida desde móvil.
 
 ### Plantel
 - submission `rDqMN4R`.
 - Renato Padilla, dorsal 11, DELANTERO, PRIMERA.
-- imagen PNG Tally, id de archivo `OKxL4M`.
-- autorización declarada: `La fotografía está autorizada`.
+- imagen real y autorización declarada.
 
-### Galería
-- submission `8NEloLo`.
-- álbum humano `Refuerzos 2026`, categoría CLUB, fecha 2026-08-01.
-- imagen PNG Tally, id `jX8LPJ`.
+### Galería — multifoto
+- submission `yX7a2XB`, completada `2026-09-06T03:00:52Z`.
+- álbum: `Santa Elena vs CUDO`.
+- 4 fotografías JPEG distintas recibidas en el mismo envío:
+  - `jX8W26`
+  - `6G6v5O`
+  - `1zQv5O`
+  - `0zqv50`
 - respuesta declara `¿Aparecen menores? NO`.
 
-La capacidad de carga múltiple existe en el formulario, pero todavía falta falsarla con un envío humano real de 2+ imágenes; por eso P06 mantiene el Pack abierto.
+## Gate C — Datos — CONFORME
+Durante la prueba multifoto se detectó un defecto de integración que inicialmente se interpretó como fallo Tally→Sheets. La falsación posterior demostró la causa real:
 
-## Gate C — Datos — CONFORME para los E2E ejecutados
-### Noticias
-`TALLY_NOTICIAS → RAW_FORM_NOTICIAS → NOTICIAS → REVISION → PUBLICO_EXPORT`
-ID `QA-NOT-20260906020659-001`.
+- Tally **sí** había escrito correctamente el segundo envío en la pestaña `TALLY_GALERIA`.
+- `RAW_FORM_GALERIA` seguía apuntando a una pestaña antigua llamada `Subir fotos a la galería del CUDO`.
 
-### Plantel
-`TALLY_PLANTEL → RAW_FORM_PLANTEL → PLANTEL_CONTROL → REVISION → PUBLICO_EXPORT`
-ID `QA-PLA-20260906022200-001`.
+Corrección ejecutada:
+- las 13 fórmulas del adapter `RAW_FORM_GALERIA` fueron redirigidas de la pestaña antigua a `TALLY_GALERIA`.
+- Google Sheets reportó `formulasChanged: 13`.
+- el registro multifoto pasó a `RAW_FORM_GALERIA` y `CONTROL` con ID `QA-GAL-20260906030052-001`.
+- estado inicial observado: `PENDIENTE_REVISION / NO / INTERNO`.
+- para el E2E QA se aplicó una revisión controlada; `PUBLICO_EXPORT` recibió el mismo registro con las 4 referencias.
 
-### Galería
-La integración Tally creó la pestaña de respuestas `Subir fotos a la galería del CUDO`; el adapter enlaza esa pestaña a `RAW_FORM_GALERIA`.
-Flujo:
-`respuesta Tally → RAW_FORM_GALERIA → CONTROL → REVISION → PUBLICO_EXPORT`
-ID `QA-GAL-20260906022413-001`.
+La causa raíz queda clasificada como **adapter apuntando a la pestaña equivocada**, no como pérdida de datos de Tally.
 
-En los tres casos se verificó el estado inicial no público antes de la habilitación QA controlada.
+## Gate D — Media / JSON / V8 — CONFORME
+El normalizador ya soportaba `multi:true` para Galería y separó las 4 referencias del mismo registro sin mezclar álbumes.
 
-## Gate D — Media / JSON / V8 — CONFORME para carga individual
-Hallazgos corregidos durante falsación:
-- una URL privada Tally no puede tratarse como Drive por un `?id=` genérico;
-- `capitan=NO` de Plantel debía canonicalizarse a boolean `false`;
-- `album_id` de Galería debía derivarse de lenguaje humano a slug estable;
-- se corrigió una regresión transitoria en el spreadsheet ID de Equipos antes de cerrar el run verde.
+Resultado materializado en `preview-v8/data/galeria.json`:
+- `QA-GAL-20260906030052-001-01` → `media/galeria/tally-jX8W26.jpg`
+- `QA-GAL-20260906030052-001-02` → `media/galeria/tally-6G6v5O.jpg`
+- `QA-GAL-20260906030052-001-03` → `media/galeria/tally-1zQv5O.jpg`
+- `QA-GAL-20260906030052-001-04` → `media/galeria/tally-0zqv50.jpg`
 
-Resultados materializados en V8:
-- Noticias → `media/noticias/tally-yr8Dd6.jpg`.
-- Plantel → `media/plantel/tally-OKxL4M.png`, `capitan:false`.
-- Galería → `media/galeria/tally-jX8LPJ.png`, `album_id:refuerzos-2026`.
+Los 4 ítems conservan:
+- `album_id: santa-elena-vs-cudo`
+- `album: Santa Elena vs CUDO`
+- `fecha: 2026-08-23`
+- `categoria: CLUB`
+- `titulo: Tarde deportiva`
 
-Evidencia automática:
-- sync/render run `34007255955`, job `101416645153`: **SUCCESS**.
-- incluidos en verde: validación de contrato público, adapter sin mock, Playwright y `Validar render E2E Google a V8`.
+Evidencia automática final de sync/render:
+- commit disparador `b6ff78565a87993008d8426f7b6ea47d54e68d15`.
+- run `34008200087`, job `101419168533`: **SUCCESS**.
+- en verde: sincronización PUBLICO_EXPORT/media, contrato público, adapter QA sin mock y render E2E V8.
 
 ## Gate E — Verificación técnica objetiva — CONFORME
-El gate open source se adaptó para reconocer el modelo híbrido vigente: 3 formularios Tally de captura con imagen + 3 Google Forms de captura sin imagen + mantenimiento + revisión.
+Evidencia previa del gate objetivo:
+- commit `c8de7e8964878cee7aeb5b5f1f05e311020b6b5c`.
+- run `34007390749`, job `101417008768`: SUCCESS.
+- Playwright/axe: 7 páginas, 8 formularios humanos, 3 Tally + 5 Google.
+- Lighthouse admin: performance `0.93`, accessibility `1.00`, best-practices `0.96`.
 
-Evidencia final:
-- commit QA `c8de7e8964878cee7aeb5b5f1f05e311020b6b5c`.
-- run `34007390749`, job `101417008768`: **SUCCESS**.
-- Playwright/axe: `ok:true`, 7 páginas auditadas, 8 formularios humanos detectados, 3 Tally + 5 Google.
-- Lighthouse admin:
-  - performance: `0.93` (mínimo 0.75)
-  - accessibility: `1.00` (mínimo 0.90)
-  - best-practices: `0.96` (mínimo 0.90)
-- los HTTP 401 de Google Forms desde runner quedan clasificados como warnings conocidos, no como falsos fallos funcionales.
+Evidencia posterior al cierre multifoto:
+- run `34008200082`, job `101419168308`: **SUCCESS**.
+- Functional mobile/WCAG gate: SUCCESS.
+- Lighthouse independent audit: SUCCESS.
 
 ## Hallazgo editorial
-La noticia de prueba es válida técnicamente pero no contenido editorial listo para producción; el cuerpo repite la misma frase. Se conserva sólo como evidencia QA.
+Los registros usados para QA no se consideran contenido editorial definitivo de producción. Se conservan como evidencia técnica del Pack 01.
 
-## Único cierre pendiente
-Ejecutar un envío real desde móvil en **Galería** con al menos **2 fotografías** del mismo evento, sin menores si es posible. Después verificar:
-1. Tally y Sheet reciben ambas referencias en el mismo registro;
-2. RAW/CONTROL conservan la asociación;
-3. tras aprobación QA, PUBLICO_EXPORT mantiene el registro;
-4. normalizador genera dos ítems/media sin mezclar álbumes;
-5. V8 renderiza ambas imágenes;
-6. rerun de QA objetivo permanece en verde.
+## Cierre
+**PACK 01 = CONFORME.**
 
-## Regla de salida
-**No cambiar el Pack a CONFORME hasta demostrar P06 con el E2E múltiple real.**
+La carga humana de imágenes para Noticias, Plantel y Galería quedó demostrada E2E, incluyendo Galería multifoto, preservando revisión, autorización, media estable, JSON y render V8.
