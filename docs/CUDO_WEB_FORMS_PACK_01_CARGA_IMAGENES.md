@@ -2,114 +2,123 @@
 
 Estado del pack: **ABIERTO — NO CONFORME**
 
+Bloqueo restante: **P06 requiere un E2E humano real de Galería con 2 o más fotografías en un mismo envío.**
+
 ## Objetivo funcional
-Una persona no técnica debe poder seleccionar una imagen desde teléfono/computador al administrar **Noticias**, **Plantel** o **Galería**, sin escribir URL, ID de Drive ni datos técnicos. La imagen debe recorrer el flujo vigente:
+Una persona no técnica debe poder seleccionar imágenes desde teléfono/computador al administrar **Noticias**, **Plantel** o **Galería**, sin escribir URL, ID de Drive ni datos técnicos, manteniendo el flujo:
 
-Formulario humano → Google Sheet → CONTROL → revisión/autorización → PUBLICO_EXPORT → normalizador → JSON → CUDO V8.
-
-## Alcance estricto
-Incluye solamente:
-1. Blindaje del provisionador para no destruir preguntas/ítems protegidos de carga de archivo.
-2. Noticias: fotografía principal.
-3. Plantel: fotografía del jugador.
-4. Galería: una o más fotografías del mismo evento.
-5. Normalización de referencias Drive/Tally a media estable consumible por V8.
-6. Validación E2E y gate independiente objetivo.
-
-Fuera de alcance: socios, finanzas, estadio, infraestructura, Cudito y cualquier módulo nuevo.
+Formulario humano → Google Sheet → CONTROL → revisión/autorización → PUBLICO_EXPORT → normalizador → JSON/media → CUDO V8.
 
 ## Decisión de captura Pack 01
-Google Forms se mantiene como implementación anterior/rollback. Para los dominios con imágenes se valida **Tally como interfaz humana de captura**, manteniendo intacta la arquitectura de datos CUDO aguas abajo.
+Para los tres dominios con imagen se usa Tally como interfaz humana. Google Forms queda como rollback anterior. La arquitectura aguas abajo no cambia.
 
-Piloto materializado:
-- Formulario Tally `Publicar una noticia del CUDO`.
-- Form ID: `Me4Eel`.
-- Captura directa de 1 imagen, máximo 10 MB, tipos JPG/JPEG/PNG/WEBP/HEIC.
-- Integración con la planilla `CUDO_WEB_NOTICIAS_2026`, pestaña `TALLY_NOTICIAS`.
-- `RAW_FORM_NOTICIAS` adapta automáticamente columnas Tally al contrato existente.
+Formularios Tally publicados:
+- Noticias `Me4Eel` → `https://tally.so/r/Me4Eel`
+- Plantel `Npj7DO` → `https://tally.so/r/Npj7DO`
+- Galería `QKZ7MX` → `https://tally.so/r/QKZ7MX`
 
-## Contrato de no destrucción
-El provisionador Google anterior NO puede borrar ni recrear silenciosamente un formulario que contenga un `FILE_UPLOAD` o cualquier ítem no gestionado/protegido. Si detecta uno, debe preservarlo o fallar de forma segura antes de modificarlo.
+Los tres aceptan sólo JPG/JPEG/PNG/WEBP, máximo 10 MB por archivo. Galería tiene carga múltiple habilitada.
 
-## Criterios de aceptación obligatorios
-- P01: usuario normal no ve ni ingresa URL/ID técnico para la imagen.
-- P02: carga desde móvil es el camino normal.
-- P03: Noticias, Plantel y Galería conservan su carga tras reejecutar automatizaciones.
-- P04: archivo aceptado queda vinculado al registro correcto.
-- P05: normalizador acepta únicamente MIME de imagen permitido y genera referencia estable.
-- P06: Galería soporta múltiples fotos sin mezclar eventos/registros.
-- P07: el registro nuevo queda PENDIENTE_REVISION; cargar una foto no publica automáticamente.
-- P08: autorización de publicación es exigida donde corresponde; menores permanecen bloqueados mientras su autorización no esté verificada.
-- P09: tras aprobación, CONTROL → PUBLICO_EXPORT contiene la referencia correcta.
-- P10: sincronización genera JSON válido y copia/expone media consumible por V8.
-- P11: V8 renderiza la imagen sin URL rota y con el comportamiento visual existente.
-- P12: reejecutar automatizaciones no destruye respuestas, archivos ni preguntas protegidas.
-- P13: pruebas técnicas/accesibilidad del alcance terminan en verde.
-- P14: existe evidencia reproducible de al menos un E2E real con imagen.
-- P15: el implementador no se autocertifica; el gate objetivo independiente debe ser ejecutado y su resultado registrado.
+## Criterios P01–P15
+- P01 ✅ no se pide URL/ID técnico.
+- P02 ✅ cargas reales realizadas desde móvil.
+- P03 ✅ automatizaciones y sincronizaciones posteriores conservaron respuestas/media.
+- P04 ✅ imagen vinculada al registro correcto en Noticias, Plantel y Galería.
+- P05 ✅ normalizador valida MIME y genera referencia local estable.
+- P06 ⏳ **pendiente prueba real con 2+ fotos en un mismo envío de Galería.**
+- P07 ✅ registros llegaron inicialmente PENDIENTE_REVISION / NO / INTERNO.
+- P08 ✅ publicación protegida por autorización; Galería incorpora control de menores. La prueba usada declara que no aparecen menores.
+- P09 ✅ tras habilitación QA controlada, PUBLICO_EXPORT contiene las referencias correctas.
+- P10 ✅ sincronización genera JSON y persiste media en V8.
+- P11 ✅ workflow de render E2E V8 terminó en verde.
+- P12 ✅ reejecuciones posteriores no destruyeron respuestas ni archivos.
+- P13 ✅ Playwright + axe-core + Lighthouse en verde sobre head actualizado.
+- P14 ✅ existen E2E reales con imagen en los tres dominios.
+- P15 ✅ gate técnico objetivo reproducible ejecutado; esto no se presenta como sustituto de una evaluación subjetiva independiente de usabilidad.
 
-## Gates
-### Gate A — Seguridad del provisionador — **CONFORME**
-Materializado y verificado anteriormente.
-
+## Gate A — Seguridad del provisionador — CONFORME
 Evidencia:
 - commits `e6f5efe978a0e35ead25e2295bc7fe9eb71cabf0`, `2c77cdf475ee88999bdb4d97376016fb2e1a97b1`, `101b8965720055a254c905a07d2390754751ae1c`.
-- GitHub Actions run `34002839964`, job `101404680638`: **SUCCESS**.
-- `PACK01_GATE_A_STATIC: PASS`.
+- run `34002839964`, job `101404680638`: SUCCESS.
+- salida `PACK01_GATE_A_STATIC: PASS`.
 
-### Gate B — Captura humana — **PARCIALMENTE CONFORME**
-Noticias quedó demostrado con una carga real desde móvil.
+## Gate B — Captura humana — CONFORME para carga individual
+### Noticias
+- submission Tally `o9xLXXN`.
+- imagen JPEG real, 203446 bytes.
+- fila recibida por `TALLY_NOTICIAS` sin URL/ID solicitado al usuario.
 
-Evidencia Noticias:
-- Tally submission `o9xLXXN` completada el `2026-09-06T02:06:59Z`.
-- fotografía JPEG recibida: 203446 bytes.
-- `TALLY_NOTICIAS` recibió la fila correspondiente automáticamente.
-- no se solicitó URL, ID ni dato técnico al usuario.
+### Plantel
+- submission `rDqMN4R`.
+- Renato Padilla, dorsal 11, DELANTERO, PRIMERA.
+- imagen PNG Tally, id de archivo `OKxL4M`.
+- autorización declarada: `La fotografía está autorizada`.
 
-Pendiente: reproducir el patrón en Plantel y Galería.
+### Galería
+- submission `8NEloLo`.
+- álbum humano `Refuerzos 2026`, categoría CLUB, fecha 2026-08-01.
+- imagen PNG Tally, id `jX8LPJ`.
+- respuesta declara `¿Aparecen menores? NO`.
 
-### Gate C — Datos — **PARCIALMENTE CONFORME**
-Noticias recorrió correctamente la capa de datos:
-- `TALLY_NOTICIAS` → `RAW_FORM_NOTICIAS`.
-- ID generado: `QA-NOT-20260906020659-001`.
-- estado inicial observado: `PENDIENTE_REVISION / NO / INTERNO / PENDIENTE`.
-- antes de aprobación, `PUBLICO_EXPORT` permaneció vacío.
-- tras habilitación QA controlada, `PUBLICO_EXPORT` recibió el mismo registro y su referencia de imagen.
+La capacidad de carga múltiple existe en el formulario, pero todavía falta falsarla con un envío humano real de 2+ imágenes; por eso P06 mantiene el Pack abierto.
 
-La habilitación QA directa usada para este E2E no sustituye ni recertifica el motor de revisión, que ya había sido probado separadamente con publicación/corrección/retiro/reactivación.
+## Gate C — Datos — CONFORME para los E2E ejecutados
+### Noticias
+`TALLY_NOTICIAS → RAW_FORM_NOTICIAS → NOTICIAS → REVISION → PUBLICO_EXPORT`
+ID `QA-NOT-20260906020659-001`.
 
-Pendiente: Plantel y Galería.
+### Plantel
+`TALLY_PLANTEL → RAW_FORM_PLANTEL → PLANTEL_CONTROL → REVISION → PUBLICO_EXPORT`
+ID `QA-PLA-20260906022200-001`.
 
-### Gate D — Media/JSON/V8 — **PARCIALMENTE CONFORME**
-Durante el E2E se detectó y corrigió un defecto real: el normalizador interpretaba cualquier `?id=` como Drive ID, lo que habría tratado el ID privado de Tally como archivo Google Drive.
+### Galería
+La integración Tally creó la pestaña de respuestas `Subir fotos a la galería del CUDO`; el adapter enlaza esa pestaña a `RAW_FORM_GALERIA`.
+Flujo:
+`respuesta Tally → RAW_FORM_GALERIA → CONTROL → REVISION → PUBLICO_EXPORT`
+ID `QA-GAL-20260906022413-001`.
 
-Corrección materializada en rama `cudo-web-ux-01-v8`:
-- commit `bfce55aff63c23e25ba37c721be37ad3665585d6`.
-- `extractDriveIds()` quedó restringido a URLs Google Drive/Docs.
-- se agregó reconocimiento explícito de `https://storage.tally.so/private/...`.
-- la imagen Tally se descarga mientras el enlace firmado es válido y se persiste con nombre estable `tally-<fileId>.<ext>`.
-- re-sincronizaciones reutilizan el archivo local persistido aunque el enlace firmado original ya no sea utilizable.
-- MIME permitido se valida antes de persistir.
+En los tres casos se verificó el estado inicial no público antes de la habilitación QA controlada.
 
-Evidencia automática posterior:
-- commit del bot `d0dcbee19f360ec84ba798fae11af4d9e9d564b3`, mensaje `QA data/media sync: Google PUBLICO_EXPORT`.
-- `preview-v8/data/noticias.json` contiene 1 ítem con `imagen_ref: media/noticias/tally-yr8Dd6.jpg`.
-- archivo binario `preview-v8/media/noticias/tally-yr8Dd6.jpg` existe en la rama QA.
+## Gate D — Media / JSON / V8 — CONFORME para carga individual
+Hallazgos corregidos durante falsación:
+- una URL privada Tally no puede tratarse como Drive por un `?id=` genérico;
+- `capitan=NO` de Plantel debía canonicalizarse a boolean `false`;
+- `album_id` de Galería debía derivarse de lenguaje humano a slug estable;
+- se corrigió una regresión transitoria en el spreadsheet ID de Equipos antes de cerrar el run verde.
 
-Pendiente: validación visual objetiva del render en V8 y repetir en Plantel/Galería.
+Resultados materializados en V8:
+- Noticias → `media/noticias/tally-yr8Dd6.jpg`.
+- Plantel → `media/plantel/tally-OKxL4M.png`, `capitan:false`.
+- Galería → `media/galeria/tally-jX8LPJ.png`, `album_id:refuerzos-2026`.
 
-### Gate E — Verificación independiente — **ABIERTO**
-Debe ejecutarse el gate objetivo reproducible actualizado sobre el último head y registrarse su resultado. La implementación no se autocertifica.
+Evidencia automática:
+- sync/render run `34007255955`, job `101416645153`: **SUCCESS**.
+- incluidos en verde: validación de contrato público, adapter sin mock, Playwright y `Validar render E2E Google a V8`.
 
-## Hallazgo editorial de la prueba
-El registro enviado por el usuario es válido técnicamente, pero **no se considera contenido editorial listo para producción**: el cuerpo repite cinco veces la misma frase. Se mantiene como evidencia QA y no como noticia definitiva del club.
+## Gate E — Verificación técnica objetiva — CONFORME
+El gate open source se adaptó para reconocer el modelo híbrido vigente: 3 formularios Tally de captura con imagen + 3 Google Forms de captura sin imagen + mantenimiento + revisión.
 
-## Evidencia mínima de cierre restante
-- Plantel: E2E real con imagen.
-- Galería: E2E real con una o más imágenes.
-- render visual V8 de Noticias/Plantel/Galería.
-- ejecución QA objetiva en verde sobre el head final.
-- verificación de autorización/menores donde corresponda.
+Evidencia final:
+- commit QA `c8de7e8964878cee7aeb5b5f1f05e311020b6b5c`.
+- run `34007390749`, job `101417008768`: **SUCCESS**.
+- Playwright/axe: `ok:true`, 7 páginas auditadas, 8 formularios humanos detectados, 3 Tally + 5 Google.
+- Lighthouse admin:
+  - performance: `0.93` (mínimo 0.75)
+  - accessibility: `1.00` (mínimo 0.90)
+  - best-practices: `0.96` (mínimo 0.90)
+- los HTTP 401 de Google Forms desde runner quedan clasificados como warnings conocidos, no como falsos fallos funcionales.
+
+## Hallazgo editorial
+La noticia de prueba es válida técnicamente pero no contenido editorial listo para producción; el cuerpo repite la misma frase. Se conserva sólo como evidencia QA.
+
+## Único cierre pendiente
+Ejecutar un envío real desde móvil en **Galería** con al menos **2 fotografías** del mismo evento, sin menores si es posible. Después verificar:
+1. Tally y Sheet reciben ambas referencias en el mismo registro;
+2. RAW/CONTROL conservan la asociación;
+3. tras aprobación QA, PUBLICO_EXPORT mantiene el registro;
+4. normalizador genera dos ítems/media sin mezclar álbumes;
+5. V8 renderiza ambas imágenes;
+6. rerun de QA objetivo permanece en verde.
 
 ## Regla de salida
-**PACK 01 sólo cambia a CONFORME cuando P01–P15 están demostrados. Un GAP funcional mantiene el pack ABIERTO.**
+**No cambiar el Pack a CONFORME hasta demostrar P06 con el E2E múltiple real.**
