@@ -46,6 +46,10 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Pack 01 Gate A — destructive rebuild safety
+        working-directory: tools/google-forms-provisioner
+        run: node qa-pack01-static.mjs
+
       - name: Install Google API client
         working-directory: tools/google-forms-provisioner
         run: npm install --no-audit --no-fund
