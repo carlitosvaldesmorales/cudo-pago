@@ -60,7 +60,13 @@ function removeNavigationBeforeRebuild_(form){
     if(values.length)list.setChoiceValues(values);
   });
 }
-function rebuildQuestions_(form,specRows){removeNavigationBeforeRebuild_(form);const items=form.getItems();for(let i=items.length-1;i>=0;i--)form.deleteItem(i);specRows.forEach(row=>addQuestion_(form,row));}
+function rebuildQuestions_(form,specRows){
+  assertDestructiveRebuildSafe_(form,'Formulario');
+  removeNavigationBeforeRebuild_(form);
+  const items=form.getItems();
+  for(let i=items.length-1;i>=0;i--)form.deleteItem(i);
+  specRows.forEach(row=>addQuestion_(form,row));
+}
 function reconcileQuestions_(form,specRows){const items=form.getItems();if(items.length!==specRows.length){rebuildQuestions_(form,specRows);return;}for(let i=0;i<specRows.length;i++){const row=specRows[i],item=items[i];if(!itemCompatible_(item,row)){rebuildQuestions_(form,specRows);return;}updateQuestion_(item,row);}}
 
 function isManualFileUploadSlot_(row){const kind=String(row[2]||'').trim().toUpperCase(),dest=String(row[5]||'').trim().toUpperCase();return kind==='TEXTO_CORTO'&&['IMAGEN_REF','FOTO_REF'].includes(dest);}
