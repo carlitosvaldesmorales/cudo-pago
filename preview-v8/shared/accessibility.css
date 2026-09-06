@@ -1,0 +1,21 @@
+/* CUDO V8 · WCAG final layer. Loaded last so accessibility wins over art direction. */
+:root{--a11y-red:#a30f1d;--a11y-muted:#445168}
+
+/* Light surfaces: darken small accent and secondary text. */
+.section.white .section-kicker,
+.section:not(.dark) .section-kicker,
+.section.white .section-link,
+.section:not(.dark) .section-link,
+.news .date,
+.news .meta,
+.home-match-card .label,
+.jornada-card:not([data-state="PROGRAMADO"]) .jornada-eyebrow,
+.jornada-card:not([data-state="PROGRAMADO"]) .jornada-row .time{color:var(--a11y-red)!important}
+.news p,.photo p,.matchmeta,.versus,.status,.jornada-title span{color:var(--a11y-muted)!important}
+
+/* Dark surfaces: use high-luminance text. */
+.section.dark .section-kicker,.section.dark .section-link,.team .meta,.matchday-feature .section-kicker,.roster-intro .section-kicker{color:#f7d96c!important}
+.section.dark .status,.team p,.category-card span,.roster-feature-copy p,.pagehead p,.matchday-feature .jornada-title span{color:#f1f5fb!important}
+
+/* Decorative large numerals must not be exposed as low-contrast meaningful text. */
+.category-card .n{color:rgba(255,255,255,.18)!important}

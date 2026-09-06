@@ -1,76 +1,26 @@
 import fs from 'fs';
 import path from 'path';
-
-const CLIENT_ID = process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID;
-const CLIENT_SECRET = process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET;
-const REFRESH_TOKEN = process.env.CUDO_GOOGLE_REFRESH_TOKEN;
-for (const [name, value] of Object.entries({CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN})) {
-  if (!value) throw new Error(`${name} no configurado`);
-}
-
-const ROOT = path.resolve(process.cwd());
-const OUT_DIR = path.join(ROOT, 'preview-v8', 'data');
-const MODULES = [
-  ['noticias','14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI','CUDO_WEB_NOTICIAS',[]],
-  ['equipos','1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI','CUDO_WEB_EQUIPOS',[]],
-  ['plantel','1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94','CUDO_WEB_PLANTEL',['numero']],
-  ['partidos','1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI','CUDO_WEB_PARTIDOS',['goles_local','goles_visita']],
-  ['tabla','1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY','CUDO_WEB_TABLA',['posicion','pj','pg','pe','pp','gf','gc','dg','pts']],
-  ['galeria','1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c','CUDO_WEB_GALERIA',[]]
-].map(([key,spreadsheetId,source,numeric]) => ({key,spreadsheetId,source,numeric,sheet:'PUBLICO_EXPORT'}));
-
-async function getAccessToken() {
-  const body = new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:REFRESH_TOKEN,grant_type:'refresh_token'});
-  const r = await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
-  const data = await r.json();
-  if (!r.ok || !data.access_token) throw new Error(`OAuth refresh falló HTTP ${r.status}: ${data.error_description || data.error || 'desconocido'}`);
-  return data.access_token;
-}
-
-async function readSheet(token, spreadsheetId, sheet) {
-  const range = encodeURIComponent(`${sheet}!A:Z`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
-  const r = await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
-  const data = await r.json();
-  if (!r.ok) throw new Error(`Sheets API ${spreadsheetId}/${sheet} HTTP ${r.status}: ${data.error?.message || 'desconocido'}`);
-  return data.values || [];
-}
-
-function toNumber(v) {
-  if (v === '' || v === null || v === undefined) return null;
-  const n = Number(String(v).replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
-
-function rowsToItems(values,numeric) {
-  if (!values.length) throw new Error('PUBLICO_EXPORT no tiene encabezados');
-  const headers = values[0].map(v=>String(v).trim()).filter(Boolean);
-  if (!headers.length) throw new Error('PUBLICO_EXPORT tiene encabezados vacíos');
-  return values.slice(1).filter(row=>row.some(v=>String(v??'').trim()!=='')).map(row=>Object.fromEntries(headers.map((h,i)=>[h,numeric.includes(h)?toNumber(row[i]??''):row[i]??''])));
-}
-
-function readExisting(out) {
-  if (!fs.existsSync(out)) return null;
-  try { return JSON.parse(fs.readFileSync(out,'utf8')); } catch { return null; }
-}
-
-function sameItems(a,b) { return JSON.stringify(a ?? []) === JSON.stringify(b ?? []); }
-
-const token = await getAccessToken();
-fs.mkdirSync(OUT_DIR,{recursive:true});
-const summary = {};
-for (const module of MODULES) {
-  const items = rowsToItems(await readSheet(token,module.spreadsheetId,module.sheet),module.numeric);
-  const out = path.join(OUT_DIR,`${module.key}.json`);
-  const previous = readExisting(out);
-  const changed = !previous || previous.schema_version !== '1.0' || previous.source !== module.source || !sameItems(previous.items,items);
-  const doc = {
-    schema_version:'1.0',
-    generated_at: changed ? new Date().toISOString() : (previous.generated_at ?? null),
-    source:module.source,
-    items
-  };
-  fs.writeFileSync(out,JSON.stringify(doc,null,2)+'\n','utf8');
-  summary[module.key]={items:items.length,changed,spreadsheetId:module.spreadsheetId};
-}
+const CLIENT_ID=process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID,CLIENT_SECRET=process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET,REFRESH_TOKEN=process.env.CUDO_GOOGLE_REFRESH_TOKEN;
+for(const [n,v] of Object.entries({CLIENT_ID,CLIENT_SECRET,REFRESH_TOKEN}))if(!v)throw new Error(`${n} no configurado`);
+const ROOT=path.resolve(process.cwd()),OUT_DIR=path.join(ROOT,'preview-v8','data'),MEDIA_DIR=path.join(ROOT,'preview-v8','media');
+const MODULES=[['noticias','14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI','CUDO_WEB_NOTICIAS',[],{field:'imagen_ref',multi:false}],['equipos','1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI','CUDO_WEB_EQUIPOS',[],null],['plantel','1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94','CUDO_WEB_PLANTEL',['numero'],{field:'foto_ref',multi:false}],['partidos','1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI','CUDO_WEB_PARTIDOS',['goles_local','goles_visita'],null],['tabla','1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY','CUDO_WEB_TABLA',['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],null],['galeria','1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c','CUDO_WEB_GALERIA',[],{field:'imagen_ref',multi:true}]].map(([key,spreadsheetId,source,numeric,media])=>({key,spreadsheetId,source,numeric,media,sheet:'PUBLICO_EXPORT'}));
+const WEB_IMAGE_EXT=new Map([['image/jpeg','jpg'],['image/png','png'],['image/webp','webp'],['image/gif','gif'],['image/avif','avif']]);
+async function getAccessToken(){const body=new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:REFRESH_TOKEN,grant_type:'refresh_token'});const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}),d=await r.json();if(!r.ok||!d.access_token)throw new Error(`OAuth refresh falló HTTP ${r.status}: ${d.error_description||d.error||'desconocido'}`);return d.access_token}
+async function readSheet(token,id,sheet){const range=encodeURIComponent(`${sheet}!A:Z`),r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`,{headers:{Authorization:`Bearer ${token}`}}),d=await r.json();if(!r.ok)throw new Error(`Sheets API ${id}/${sheet} HTTP ${r.status}: ${d.error?.message||'desconocido'}`);return d.values||[]}
+function toNumber(v){if(v===''||v==null)return null;const n=Number(String(v).replace(',','.'));return Number.isFinite(n)?n:null}
+function rowsToItems(values,numeric){if(!values.length)throw new Error('PUBLICO_EXPORT no tiene encabezados');const h=values[0].map(v=>String(v).trim()).filter(Boolean);if(!h.length)throw new Error('PUBLICO_EXPORT tiene encabezados vacíos');return values.slice(1).filter(r=>r.some(v=>String(v??'').trim()!=='')).map(r=>Object.fromEntries(h.map((k,i)=>[k,numeric.includes(k)?toNumber(r[i]??''):r[i]??''])))}
+function sheetSerialToDate(value){const n=Number(String(value).replace(',','.'));if(!Number.isFinite(n)||n<20000||n>100000)return String(value||'');const ms=Math.round((n-25569)*86400000);return new Date(ms).toISOString().slice(0,10)}
+function sheetSerialToTime(value){const n=Number(String(value).replace(',','.'));if(!Number.isFinite(n)||n<0||n>=1)return String(value||'');const mins=Math.round(n*1440)%1440;return `${String(Math.floor(mins/60)).padStart(2,'0')}:${String(mins%60).padStart(2,'0')}`}
+function canonicalizeModuleItems(key,items){return items.map(item=>{const x={...item};if('fecha'in x&&!/^\d{4}-\d{2}-\d{2}$/.test(String(x.fecha||'')))x.fecha=sheetSerialToDate(x.fecha);if(key==='partidos'){const canon=v=>String(v??'').trim().toUpperCase()==='CUDO'?'CUDO':String(v??'').trim();x.local=canon(x.local);x.visita=canon(x.visita);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(x.hora||'')))x.hora=sheetSerialToTime(x.hora)}return x})}
+function extractDriveIds(value){const s=String(value||''),ids=[];for(const re of [/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/g,/drive\.google\.com\/open\?id=([A-Za-z0-9_-]+)/g,/docs\.google\.com\/[^/]+\/d\/([A-Za-z0-9_-]+)/g]){let m;while((m=re.exec(s)))if(!ids.includes(m[1]))ids.push(m[1])}return ids}
+function extractTallyUrls(value){const s=String(value||''),urls=[];for(const token of s.split(/\s+/)){if(!token.startsWith('https://storage.tally.so/'))continue;try{const u=new URL(token);if(u.hostname==='storage.tally.so'&&u.pathname.startsWith('/private/')&&!urls.includes(u.toString()))urls.push(u.toString())}catch{}}return urls}
+async function driveMeta(token,id){const r=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?fields=id,name,mimeType,size&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${token}`}}),d=await r.json();if(!r.ok)throw new Error(`Drive metadata ${id} HTTP ${r.status}: ${d.error?.message||'desconocido'}`);return d}
+async function ensureDriveImage(token,key,id){const meta=await driveMeta(token,id),ext=WEB_IMAGE_EXT.get(meta.mimeType);if(!ext)throw new Error(`${key}: archivo ${meta.name||id} usa ${meta.mimeType}; conviértelo a JPG, PNG, WEBP, GIF o AVIF antes de publicar.`);const dir=path.join(MEDIA_DIR,key);fs.mkdirSync(dir,{recursive:true});const filename=`drive-${id}.${ext}`,out=path.join(dir,filename);if(!fs.existsSync(out)){const r=await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`,{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)throw new Error(`Drive download ${id} HTTP ${r.status}`);fs.writeFileSync(out,Buffer.from(await r.arrayBuffer()))}return `media/${key}/${filename}`}
+async function ensureTallyImage(key,url){const u=new URL(url),fileId=String(u.searchParams.get('id')||path.basename(u.pathname).replace(/[^A-Za-z0-9_-]/g,'')).trim();if(!fileId)throw new Error(`${key}: URL Tally sin identificador estable`);const dir=path.join(MEDIA_DIR,key);fs.mkdirSync(dir,{recursive:true});for(const ext of WEB_IMAGE_EXT.values()){const existing=path.join(dir,`tally-${fileId}.${ext}`);if(fs.existsSync(existing))return `media/${key}/${path.basename(existing)}`}
+  const r=await fetch(url,{redirect:'follow'});if(!r.ok)throw new Error(`${key}: Tally download ${fileId} HTTP ${r.status}`);const mime=String(r.headers.get('content-type')||'').split(';')[0].trim().toLowerCase(),ext=WEB_IMAGE_EXT.get(mime);if(!ext)throw new Error(`${key}: Tally ${fileId} devolvió ${mime||'MIME desconocido'}; sólo se admiten imágenes web.`);const out=path.join(dir,`tally-${fileId}.${ext}`);fs.writeFileSync(out,Buffer.from(await r.arrayBuffer()));return `media/${key}/${path.basename(out)}`}
+async function materializeMedia(token,module,items){if(!module.media)return items;const out=[];for(const item of items){const value=item[module.media.field],driveIds=extractDriveIds(value),tallyUrls=extractTallyUrls(value);const refs=[...driveIds.map(id=>({kind:'drive',id})),...tallyUrls.map(url=>({kind:'tally',url}))];if(!refs.length){out.push(item);continue}if(!module.media.multi&&refs.length>1)throw new Error(`${module.key}: el registro ${item.id||''} contiene más de una imagen`);const paths=[];for(const ref of refs)paths.push(ref.kind==='drive'?await ensureDriveImage(token,module.key,ref.id):await ensureTallyImage(module.key,ref.url));if(module.media.multi&&paths.length>1)paths.forEach((p,i)=>out.push({...item,id:`${item.id}-${String(i+1).padStart(2,'0')}`,[module.media.field]:p}));else out.push({...item,[module.media.field]:paths[0]})}return out}
+function readExisting(out){if(!fs.existsSync(out))return null;try{return JSON.parse(fs.readFileSync(out,'utf8'))}catch{return null}}
+const sameItems=(a,b)=>JSON.stringify(a??[])===JSON.stringify(b??[]);
+const token=await getAccessToken();fs.mkdirSync(OUT_DIR,{recursive:true});fs.mkdirSync(MEDIA_DIR,{recursive:true});const summary={};
+for(const module of MODULES){const raw=rowsToItems(await readSheet(token,module.spreadsheetId,module.sheet),module.numeric),canon=canonicalizeModuleItems(module.key,raw),items=await materializeMedia(token,module,canon),out=path.join(OUT_DIR,`${module.key}.json`),prev=readExisting(out),changed=!prev||prev.schema_version!=='1.0'||prev.source!==module.source||!sameItems(prev.items,items),doc={schema_version:'1.0',generated_at:changed?new Date().toISOString():(prev.generated_at??null),source:module.source,items};fs.writeFileSync(out,JSON.stringify(doc,null,2)+'\n');summary[module.key]={items:items.length,changed,spreadsheetId:module.spreadsheetId}}
 console.log(JSON.stringify({ok:true,modules:summary},null,2));

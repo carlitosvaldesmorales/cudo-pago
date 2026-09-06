@@ -1,0 +1,39 @@
+name: CUDO Review Queue
+
+on:
+  push:
+    branches:
+      - cudo-web-ux-01-v8
+    paths:
+      - '.github/workflows/cudo-review-queue.yml'
+      - 'tools/google-forms-provisioner/process-reviews.js'
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cudo-review-queue
+  cancel-in-progress: false
+
+jobs:
+  process-reviews:
+    runs-on: ubuntu-latest
+    env:
+      CUDO_APPS_SCRIPT_ID: 1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Google API client
+        working-directory: tools/google-forms-provisioner
+        run: npm install --no-audit --no-fund
+      - name: Process pending human reviews
+        working-directory: tools/google-forms-provisioner
+        run: node process-reviews.js

@@ -1,0 +1,70 @@
+name: CUDO Open Source QA
+
+on:
+  push:
+    branches:
+      - cudo-web-ux-01-v8
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/cudo-open-source-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-open-source-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install open-source QA engines
+        run: npm install --no-save playwright@1.55.0 @axe-core/playwright@4.10.2 lighthouse@12.8.1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local V8 preview
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-open-source-qa-http.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:4173/preview-v8/admin/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cudo-open-source-qa-http.log
+          exit 1
+
+      - name: Functional mobile and WCAG gate
+        run: node preview-v8/tools/qa_open_source_gate.mjs
+
+      - name: Lighthouse independent audit
+        run: |
+          mkdir -p qa-artifacts
+          npx lighthouse http://127.0.0.1:4173/preview-v8/admin/ \
+            --chrome-flags='--headless --no-sandbox --disable-dev-shm-usage' \
+            --only-categories=performance,accessibility,best-practices \
+            --output=json \
+            --output-path=qa-artifacts/lighthouse-admin.json \
+            --quiet
+          node - <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('qa-artifacts/lighthouse-admin.json','utf8'));
+          const scores=Object.fromEntries(Object.entries(r.categories).map(([k,v])=>[k,v.score]));
+          const min={performance:0.75,accessibility:0.90,'best-practices':0.90};
+          const failed=Object.entries(min).filter(([k,v])=>(scores[k]??0)<v);
+          console.log(JSON.stringify({scores,minimums:min,ok:failed.length===0},null,2));
+          if(failed.length) process.exit(1);
+          NODE
+
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-open-source-qa
+          path: qa-artifacts/
+          if-no-files-found: warn
