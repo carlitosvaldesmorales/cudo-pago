@@ -1,0 +1,48 @@
+name: CUDO Review Engine
+
+on:
+  push:
+    paths:
+      - 'qa-v8-google/tools/process_review_decisions.mjs'
+      - 'qa-v8-google/tools/sync_google_publico.mjs'
+      - '.github/workflows/cudo-review-engine.yml'
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-review-engine
+  cancel-in-progress: false
+
+jobs:
+  review-and-sync:
+    runs-on: ubuntu-latest
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Procesar decisiones CUDO Review
+        run: node qa-v8-google/tools/process_review_decisions.mjs
+      - name: Sincronizar PUBLICO_EXPORT a V8
+        run: node qa-v8-google/tools/sync_google_publico.mjs
+      - name: Publicar cambios JSON si existen
+        run: |
+          if git diff --quiet -- preview-v8/data; then
+            echo 'Sin cambios públicos.'
+            exit 0
+          fi
+          git config user.name 'cudo-review-engine'
+          git config user.email 'actions@users.noreply.github.com'
+          git add preview-v8/data
+          git commit -m 'CUDO: sincronizar contenido público desde Sheets'
+          git push
