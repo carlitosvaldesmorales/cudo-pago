@@ -1,50 +1,17 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-06T03:07:47.755Z",
+  "generated_at": "2026-09-07T00:54:45.671Z",
   "source": "CUDO_WEB_GALERIA",
   "items": [
     {
-      "id": "QA-GAL-20260906030052-001-01",
-      "album_id": "santa-elena-vs-cudo",
+      "id": "QA-GAL-20260906030052-001",
+      "album_id": "Santa Elena vs CUDO",
       "album": "Santa Elena vs CUDO",
       "fecha": "2026-08-23",
       "categoria": "CLUB",
       "titulo": "Tarde deportiva",
       "descripcion": "Fotos varias de la tarde deportiva ",
-      "imagen_ref": "media/galeria/tally-jX8W26.jpg",
-      "alt": "Jugadores "
-    },
-    {
-      "id": "QA-GAL-20260906030052-001-02",
-      "album_id": "santa-elena-vs-cudo",
-      "album": "Santa Elena vs CUDO",
-      "fecha": "2026-08-23",
-      "categoria": "CLUB",
-      "titulo": "Tarde deportiva",
-      "descripcion": "Fotos varias de la tarde deportiva ",
-      "imagen_ref": "media/galeria/tally-6G6v5O.jpg",
-      "alt": "Jugadores "
-    },
-    {
-      "id": "QA-GAL-20260906030052-001-03",
-      "album_id": "santa-elena-vs-cudo",
-      "album": "Santa Elena vs CUDO",
-      "fecha": "2026-08-23",
-      "categoria": "CLUB",
-      "titulo": "Tarde deportiva",
-      "descripcion": "Fotos varias de la tarde deportiva ",
-      "imagen_ref": "media/galeria/tally-1zQv5O.jpg",
-      "alt": "Jugadores "
-    },
-    {
-      "id": "QA-GAL-20260906030052-001-04",
-      "album_id": "santa-elena-vs-cudo",
-      "album": "Santa Elena vs CUDO",
-      "fecha": "2026-08-23",
-      "categoria": "CLUB",
-      "titulo": "Tarde deportiva",
-      "descripcion": "Fotos varias de la tarde deportiva ",
-      "imagen_ref": "media/galeria/tally-0zqv50.jpg",
+      "imagen_ref": "https://storage.tally.so/private/IMG_7971.jpeg?id=jX8W26&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImpYOFcyNiIsImZvcm1JZCI6IlFLWjdNWCIsImlhdCI6MTc4ODY2MzY1NH0.KdmSYRw10dUbDdSCgwpOCFOkCdBat0pQ8KyIvT7DUvI&signature=13db368a7d92af0b3bcfe45b0c32438faca20eb7bb501ae2ca7072ae69609837\nhttps://storage.tally.so/private/IMG_8012.jpeg?id=6G6v5O&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZHNnY1TyIsImZvcm1JZCI6IlFLWjdNWCIsImlhdCI6MTc4ODY2MzY1NH0.BKQ061pFar_DN9BhpSG-nEgg8prNEePkA5D9bmv9NVQ&signature=14298b5ea837009214ae30b919efe1f63d26bfdacfb8f22472c7340e19ff1c4b\nhttps://storage.tally.so/private/IMG_8120.jpeg?id=1zQv5O&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjF6UXY1TyIsImZvcm1JZCI6IlFLWjdNWCIsImlhdCI6MTc4ODY2MzY1NH0.XdfoJiiIn3W0DpUiNlgvlhZejxPUl2nN29sfH2pq56Q&signature=e1e0c651afb5d5c787f8c8d817a7c00ee7daa10b2e565c902e4778e17dd76d26\nhttps://storage.tally.so/private/IMG_8082.jpeg?id=0zqv50&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjB6cXY1MCIsImZvcm1JZCI6IlFLWjdNWCIsImlhdCI6MTc4ODY2MzY1NH0.ytBrqSA2DlrUoCBjELRzHcuyWL1-fgHxzfSfQsH2ZIQ&signature=3e0938585b78239109a8802168644d09ec7e7ca2f6eb27e0b20073a871062d10",
       "alt": "Jugadores "
     }
   ]

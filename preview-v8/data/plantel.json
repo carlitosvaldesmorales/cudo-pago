@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-06T02:44:41.146Z",
+  "generated_at": "2026-09-07T00:54:42.668Z",
   "source": "CUDO_WEB_PLANTEL",
   "items": [
     {
@@ -9,8 +9,8 @@
       "numero": 11,
       "posicion": "DELANTERO",
       "categoria": "PRIMERA",
-      "foto_ref": "media/plantel/tally-OKxL4M.png",
-      "capitan": false
+      "foto_ref": "https://storage.tally.so/private/38A8FBC7-E61B-403E-85F3-DCB2B7092757.png?id=OKxL4M&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ik9LeEw0TSIsImZvcm1JZCI6Ik5wajdETyIsImlhdCI6MTc4ODY2MTYxN30.APzxe3Yz1ne2uTe-LKyeRxkc4JcDYJ-KhlbGPvVbaoY&signature=dc0c7072bbd6951293a09efb0db31c6ea284f700d3664479b6f5b5dbfdc10f96",
+      "capitan": "NO"
     }
   ]
 }
