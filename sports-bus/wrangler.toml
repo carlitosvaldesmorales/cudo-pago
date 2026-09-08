@@ -1,0 +1,6 @@
+name = "cudo-sports-event-bus"
+main = "worker/index.js"
+compatibility_date = "2026-09-08"
+
+[observability]
+enabled = true
