@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cudo.cl/contracts/sports-event-v1.schema.json",
+  "title": "Sports Event Bus Event v1",
+  "type": "object",
+  "required": ["event_id", "event_type", "occurred_at", "source", "payload"],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "received_at": {"type": "string", "format": "date-time"},
+    "competition_id": {"type": ["string", "null"]},
+    "season_id": {"type": ["string", "null"]},
+    "match_id": {"type": ["string", "null"]},
+    "request_id": {"type": ["string", "null"]},
+    "source": {
+      "type": "object",
+      "required": ["channel", "kind"],
+      "properties": {
+        "channel": {"type": "string"},
+        "kind": {"type": "string"},
+        "actor_id": {"type": ["string", "null"]},
+        "actor_name": {"type": ["string", "null"]},
+        "club_id": {"type": ["string", "null"]},
+        "evidence_ref": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "status": {"enum": ["PENDING", "VERIFIED", "REJECTED", "PROVISIONAL"]},
+        "verified_by": {"type": ["string", "null"]},
+        "verified_at": {"type": ["string", "null"], "format": "date-time"}
+      },
+      "additionalProperties": true
+    },
+    "payload": {"type": "object"}
+  },
+  "additionalProperties": true
+}
