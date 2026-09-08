@@ -1,0 +1,36 @@
+name: Deploy Sports Event Bus
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/**'
+      - '.github/workflows/deploy-sports-bus.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sports-bus
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: sports-bus
+          command: deploy
