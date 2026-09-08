@@ -37,7 +37,7 @@ jobs:
           echo 'cudo.cl no propagó la versión esperada dentro de la ventana.'
           exit 1
 
-      - name: Validar recurso de escudos servido
+      - name: Validar recurso WebP de escudos servido
         shell: bash
         run: |
           set -euo pipefail
@@ -45,9 +45,11 @@ jobs:
           curl -LfsS --connect-timeout 10 --max-time 30 "$URL" -o /tmp/crests.webp
           BYTES=$(wc -c < /tmp/crests.webp)
           echo "crest_asset_bytes=$BYTES"
-          test "$BYTES" -gt 10000
-          file /tmp/crests.webp | tee /tmp/crest-file.txt
-          grep -Eqi 'Web/P|WebP' /tmp/crest-file.txt
+          test "$BYTES" -gt 30000
+          MAGIC=$(head -c 12 /tmp/crests.webp | xxd -p -c 12)
+          echo "crest_magic=$MAGIC"
+          echo "$MAGIC" | grep -Eq '^52494646[0-9a-f]{8}57454250$'
+          file /tmp/crests.webp
 
       - name: Node
         uses: actions/setup-node@v4
@@ -63,7 +65,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p qa-prod-v8
-          cat > /tmp/check-prod.mjs <<'NODE'
+          cat > check-prod.mjs <<'NODE'
           import { chromium } from 'playwright';
           import fs from 'node:fs';
           const browser = await chromium.launch({headless:true});
@@ -78,9 +80,15 @@ jobs:
             const visible=crests.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0});
             const styles=visible.map(el=>({className:el.className,bg:getComputedStyle(el).backgroundImage,w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
             const imageUrl=styles[0]?.bg.match(/url\(["']?(.*?)["']?\)/)?.[1]||'';
-            let assetOk=false, assetStatus=null, assetType=null;
-            if(imageUrl){const r=await fetch(imageUrl,{cache:'no-store'});assetStatus=r.status;assetType=r.headers.get('content-type');const b=await r.arrayBuffer();assetOk=r.ok&&b.byteLength>10000;}
-            return {matchCount:document.querySelectorAll('.champ-match').length,crestCount:crests.length,visibleCount:visible.length,styles,imageUrl,assetOk,assetStatus,assetType};
+            let assetOk=false, assetStatus=null, assetType=null, imageDecoded=false, naturalWidth=0, naturalHeight=0;
+            if(imageUrl){
+              const r=await fetch(imageUrl,{cache:'no-store'});assetStatus=r.status;assetType=r.headers.get('content-type');const b=await r.arrayBuffer();assetOk=r.ok&&b.byteLength>30000;
+              const probe=new Image();
+              const done=new Promise(resolve=>{probe.onload=()=>{imageDecoded=true;naturalWidth=probe.naturalWidth;naturalHeight=probe.naturalHeight;resolve();};probe.onerror=()=>resolve();});
+              probe.src=imageUrl+(imageUrl.includes('?')?'&':'?')+'decode=1';
+              await done;
+            }
+            return {matchCount:document.querySelectorAll('.champ-match').length,crestCount:crests.length,visibleCount:visible.length,styles,imageUrl,assetOk,assetStatus,assetType,imageDecoded,naturalWidth,naturalHeight};
           });
           fs.writeFileSync('qa-prod-v8/result.json',JSON.stringify({result,errors},null,2));
           await page.screenshot({path:'qa-prod-v8/partidos-mobile.png',fullPage:true});
@@ -92,9 +100,10 @@ jobs:
           if(result.crestCount!==6||result.visibleCount!==6) throw new Error(`Expected 6 visible crests, got ${result.visibleCount}/${result.crestCount}`);
           if(!result.styles.every(x=>x.bg.includes('anfa-chepica-2026-crests-v2.webp'))) throw new Error('Not all crests use v2 real asset');
           if(!result.styles.every(x=>x.w>=49&&x.h>=49)) throw new Error('Crest dimensions invalid');
-          if(!result.assetOk) throw new Error(`Crest asset failed: status=${result.assetStatus} type=${result.assetType}`);
+          if(!result.assetOk) throw new Error(`Crest asset fetch failed: status=${result.assetStatus} type=${result.assetType}`);
+          if(!result.imageDecoded||result.naturalWidth!==512||result.naturalHeight!==384) throw new Error(`Crest image did not decode as 512x384 WebP: ${result.naturalWidth}x${result.naturalHeight}`);
           NODE
-          node /tmp/check-prod.mjs
+          node check-prod.mjs
 
       - name: Evidencia producción
         if: always()
