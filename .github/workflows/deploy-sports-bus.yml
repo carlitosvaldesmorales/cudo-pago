@@ -39,7 +39,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          RESPONSE="$(curl --fail-with-body --silent --show-error --retry 5 --retry-delay 2 \
+          BODY_FILE="$(mktemp)"
+          HTTP_CODE="$(curl --silent --show-error --retry 2 --retry-delay 2 \
+            --output "$BODY_FILE" --write-out '%{http_code}' \
             https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/bootstrap/telegram)"
+          RESPONSE="$(cat "$BODY_FILE")"
+          echo "HTTP $HTTP_CODE"
           echo "$RESPONSE"
           node -e 'const r=JSON.parse(process.argv[1]); if(!r.ok || !r.configured) process.exit(1)' "$RESPONSE"
