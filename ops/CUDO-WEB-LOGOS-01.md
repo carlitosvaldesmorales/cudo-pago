@@ -1,22 +1,24 @@
 # CUDO-WEB-LOGOS-01
 
-Estado: EN_EJECUCION
-
-Objetivo: corregir la presentación visual de los 11 escudos y dejar QA visual reproducible.
+Estado: EN_EJECUCION — FUNCIONAL ESTABLE / FUENTE VISUAL PENDIENTE
 
 - [x] Inventariar 11 clubes
 - [x] Preparar 11 PNG individuales 512x512 localmente
-- [x] Revisar visualmente los 11 activos locales
-- [x] Detectar que la carga binaria directa a GitHub corrompió `crests-hd.webp`
-- [x] Retirar `crests-hd.webp` del runtime y restaurar transporte WebP por chunks validado
-- [x] Incorporar Playwright open source en producción
-- [x] Capturar Clubes móvil/escritorio y Partidos móvil/escritorio
-- [x] Detectar contaminación visual en bordes del sprite mediante revisión de capturas
-- [x] Aplicar máscara de borde blanca en Clubes y Campeonato para eliminar líneas/fragmentos vecinos
-- [ ] Confirmar nueva captura producción versión 20260908-2250
-- [ ] Publicar los 11 activos individuales como solución definitiva cuando el transporte binario sea reproducible
-- [ ] Cerrar CONFORME
+- [x] Detectar corrupción del WebP HD subido directamente
+- [x] Retirar el binario corrupto del runtime
+- [x] Restaurar transporte WebP por chunks validado
+- [x] Playwright open source en producción
+- [x] QA Clubes móvil/escritorio
+- [x] QA Partidos móvil/escritorio
+- [x] Transporte de escudos validado
+- [x] 11/11 clubes renderizados
+- [x] Máscara de borde para reducir contaminación entre celdas
+- [x] Run producción 34279299473: SUCCESS
+- [x] Revisión humana de captura 2260 realizada
+- [ ] CONFORME visual definitivo
 
-Regla de cierre: un workflow verde no basta. CONFORME exige inspección visual de las capturas de producción.
+Hallazgo de revisión visual: la máscara mejora fuertemente la presentación, pero el sprite fuente todavía contiene fragmentos de celdas vecinas en algunos clubes. No se declara CONFORME por ese motivo.
 
-Último run de producción solicitado: 34278962850.
+Solución definitiva ya identificada: abandonar el sprite como fuente y publicar los 11 PNG individuales preparados, preservando identidad y transparencia. El bloqueo actual es de transporte binario reproducible desde el conector GitHub; no de diseño ni de datos.
+
+Regla: workflow verde != conformidad visual. CONFORME exige fuente individual limpia + capturas inspeccionadas.
