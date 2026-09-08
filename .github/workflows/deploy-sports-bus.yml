@@ -65,8 +65,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          OUT="$(npx wrangler d1 execute cudo-sports-event-bus --remote --json --command \"SELECT (SELECT COUNT(*) FROM matches WHERE competition_id='ANFA-CHEPICA-2026') AS matches_count, (SELECT COUNT(*) FROM byes WHERE competition_id='ANFA-CHEPICA-2026') AS byes_count, (SELECT COUNT(*) FROM teams) AS teams_count;\")"
-          printf '%s\n' "$OUT" | tee /tmp/fixture.json
+          SQL="SELECT (SELECT COUNT(*) FROM matches WHERE competition_id='ANFA-CHEPICA-2026') AS matches_count, (SELECT COUNT(*) FROM byes WHERE competition_id='ANFA-CHEPICA-2026') AS byes_count, (SELECT COUNT(*) FROM teams) AS teams_count;"
+          npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "$SQL" > /tmp/fixture.json
+          cat /tmp/fixture.json
           node -e 'const x=JSON.parse(require("fs").readFileSync("/tmp/fixture.json","utf8")); const r=x[0]?.results?.[0]; if(!r || r.matches_count!==25 || r.byes_count!==5 || r.teams_count<11){ console.error(r); process.exit(1) }'
 
       - name: Deploy Worker
