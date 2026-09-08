@@ -4,3 +4,8 @@ compatibility_date = "2026-09-08"
 
 [observability]
 enabled = true
+
+# Bootstrap/repair Telegram webhook from inside Cloudflare.
+# Safe to run repeatedly: Telegram setWebhook is idempotent for the same URL/config.
+[triggers]
+crons = ["*/5 * * * *"]
