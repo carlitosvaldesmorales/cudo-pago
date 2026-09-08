@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cudo.cl/contracts/match-result-v1.schema.json",
+  "title": "Match Result Payload v1",
+  "type": "object",
+  "required": ["home", "away", "status"],
+  "properties": {
+    "home": {
+      "type": "object",
+      "required": ["id", "name", "score"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "score": {"type": "integer", "minimum": 0}
+      }
+    },
+    "away": {
+      "type": "object",
+      "required": ["id", "name", "score"],
+      "properties": {
+        "id": {"type": "string"},
+        "name": {"type": "string"},
+        "score": {"type": "integer", "minimum": 0}
+      }
+    },
+    "status": {"enum": ["SCHEDULED", "LIVE", "HALFTIME", "FINAL", "SUSPENDED", "CANCELLED"]},
+    "minute": {"type": ["integer", "null"], "minimum": 0},
+    "series": {"type": ["string", "null"]},
+    "round": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}
