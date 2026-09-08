@@ -79,9 +79,23 @@ async function handleTelegramCommand(text, event, env) {
       '',
       'Comandos:',
       '/quiensoy',
+      '/setupadmin  (solo primer administrador)',
       '/resultado PARTIDO_ID 2-1',
       '/ayuda'
     ].join('\n');
+  }
+
+  if (/^\/setupadmin\b/i.test(text)) {
+    if (!env.DB) return 'No hay persistencia disponible.';
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM reporters WHERE role='ADMIN' AND trust_level='VERIFIED' AND active=1").first();
+    if ((row?.n || 0) > 0) return 'Bootstrap cerrado: ya existe un administrador verificado.';
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      "UPDATE reporters SET club_id='CUDO', role='ADMIN', trust_level='VERIFIED', active=1, updated_at=? WHERE telegram_user_id=?"
+    ).bind(now, actorId).run();
+    const verify = await env.DB.prepare('SELECT club_id,role,trust_level FROM reporters WHERE telegram_user_id=?').bind(actorId).first();
+    if (!verify || verify.role !== 'ADMIN' || verify.trust_level !== 'VERIFIED') return 'No se pudo completar el bootstrap de administrador.';
+    return 'Administrador inicial configurado ✅\nClub: CUDO\nRol: ADMIN\nConfianza: VERIFIED';
   }
 
   if (/^\/quiensoy\b/i.test(text)) {
