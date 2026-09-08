@@ -13,15 +13,13 @@ export default {
       return json({ ok: true, service: 'sports-event-bus', version: 'v1' });
     }
 
-    // Temporary one-shot bootstrap. It uses Cloudflare secrets internally,
-    // exposes none of them, and only registers the fixed webhook URL above.
     if (url.pathname === '/bootstrap/telegram' && request.method === 'GET') {
       const result = await configureTelegramWebhook(env);
       return json(result, result.ok ? 200 : 500);
     }
 
     if (url.pathname === '/webhook/telegram' && request.method === 'POST') {
-      if (!authorized(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
+      if (!(await authorized(request, env))) return json({ ok: false, error: 'unauthorized' }, 401);
 
       const update = await request.json();
       const normalized = normalizeTelegramUpdate(update);
@@ -43,9 +41,10 @@ async function configureTelegramWebhook(env) {
     return { ok: false, error: 'telegram_secrets_missing' };
   }
 
+  const safeSecret = await deriveTelegramSafeSecret(env.TELEGRAM_WEBHOOK_SECRET);
   const setResult = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'setWebhook', {
     url: WEBHOOK_URL,
-    secret_token: env.TELEGRAM_WEBHOOK_SECRET,
+    secret_token: safeSecret,
     allowed_updates: ['message', 'edited_message', 'callback_query'],
     drop_pending_updates: true
   });
@@ -60,9 +59,7 @@ async function configureTelegramWebhook(env) {
   }
 
   const info = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'getWebhookInfo');
-  if (!info.ok) {
-    return { ok: false, error: 'getWebhookInfo_failed' };
-  }
+  if (!info.ok) return { ok: false, error: 'getWebhookInfo_failed' };
 
   const r = info.result ?? {};
   return {
@@ -75,9 +72,17 @@ async function configureTelegramWebhook(env) {
   };
 }
 
-function authorized(request, env) {
-  const secret = request.headers.get('x-telegram-bot-api-secret-token');
-  return Boolean(env.TELEGRAM_WEBHOOK_SECRET && secret === env.TELEGRAM_WEBHOOK_SECRET);
+async function authorized(request, env) {
+  const presented = request.headers.get('x-telegram-bot-api-secret-token');
+  if (!env.TELEGRAM_WEBHOOK_SECRET || !presented) return false;
+  const expected = await deriveTelegramSafeSecret(env.TELEGRAM_WEBHOOK_SECRET);
+  return presented === expected;
+}
+
+async function deriveTelegramSafeSecret(source) {
+  const bytes = new TextEncoder().encode(source);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function telegramApi(token, method, payload) {
