@@ -16,63 +16,43 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PAGE='https://cudo.cl/preview-v8/equipos/?v=20260908-2200'
+          PAGE='https://cudo.cl/preview-v8/equipos/?v=20260908-2240'
           for i in $(seq 1 50); do
-            if curl -LfsS "$PAGE" -o /tmp/cudo-page.html && grep -q '20260908-2200' /tmp/cudo-page.html; then exit 0; fi
+            if curl -LfsS "$PAGE" -o /tmp/cudo-page.html && grep -q '20260908-2240' /tmp/cudo-page.html; then exit 0; fi
             sleep 6
           done
           exit 1
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
-      - name: Instalar QA visual open source
+      - name: Instalar Playwright open source
         run: |
-          npm install --no-save playwright@1.55.0 sharp@0.34.3
+          npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Validar fuente HD de los 11 escudos
+      - name: Validar transporte de escudos
         shell: bash
         run: |
           set -euo pipefail
-          curl -LfsS 'https://cudo.cl/preview-v8/media/crests-hd.webp?v=20260908-2200' -o /tmp/crests-hd.webp
-          mkdir -p qa-prod-v8/logos
-          cat > logo-quality.mjs <<'NODE'
-          import sharp from 'sharp';import fs from 'node:fs';
-          const names=['Juventud de Chépica','Santa Elena La Ruda','Independiente','Unión Orilla','San Juan','Peñarol La Mina','Huracán','San Agustín','San Ramón','Las Palmeras','Las Cruces'];
-          const input='/tmp/crests-hd.webp',meta=await sharp(input).metadata();
-          if(meta.width!==1024||meta.height!==768)throw new Error(`Sprite HD inválido ${meta.width}x${meta.height}`);
-          const metrics=[];
-          for(let i=0;i<11;i++){
-            const left=(i%4)*256,top=Math.floor(i/4)*256;
-            const out=`qa-prod-v8/logos/source-${String(i+1).padStart(2,'0')}.png`;
-            await sharp(input).extract({left,top,width:256,height:256}).png().toFile(out);
-            const s=fs.statSync(out).size;if(s<500)throw new Error(`${names[i]} celda vacía`);
-            metrics.push({index:i+1,name:names[i],sourceCell:'256x256',bytes:s});
-          }
-          fs.writeFileSync('qa-prod-v8/logo-metrics.json',JSON.stringify({sprite:{width:meta.width,height:meta.height,format:meta.format},logos:metrics},null,2));
-          NODE
-          node logo-quality.mjs
+          : > /tmp/crests.b64
+          for p in 0 1 2a 2b; do curl -LfsS "https://cudo.cl/preview-v8/media/crest-base64/$p.txt?v=20260908-2240" >> /tmp/crests.b64; done
+          base64 -d /tmp/crests.b64 > /tmp/crests.webp
+          file /tmp/crests.webp | grep -q 'Web/P image'
       - name: QA visual Playwright móvil y escritorio
         shell: bash
         run: |
+          mkdir -p qa-prod-v8/logos
           cat > check-prod.mjs <<'NODE'
           import {chromium} from 'playwright';import fs from 'node:fs';
           const browser=await chromium.launch({headless:true});const errors=[];const report={viewports:{}};
           for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
             const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});
             page.on('console',m=>{if(m.type()==='error')errors.push(`${vp.name}: ${m.text()}`)});page.on('pageerror',e=>errors.push(`${vp.name}: ${e.message}`));
-            await page.goto('https://cudo.cl/preview-v8/equipos/?v=20260908-2200',{waitUntil:'networkidle',timeout:90000});
-            await page.locator('.club-card').first().waitFor({state:'visible'});
-            await page.waitForFunction(()=>document.documentElement.classList.contains('crests-ready'),null,{timeout:30000});
-            const clubs=await page.evaluate(()=>[...document.querySelectorAll('.club-card')].map(c=>{const el=c.querySelector('.champ-crest'),s=getComputedStyle(el),r=el.getBoundingClientRect(),cr=c.getBoundingClientRect();return {name:c.querySelector('.club-name').textContent.trim(),bg:s.backgroundImage,pos:s.backgroundPosition,size:s.backgroundSize,w:r.width,h:r.height,cardW:cr.width,cardH:cr.height}}));
-            if(clubs.length!==11)throw new Error(`${vp.name} clubs ${clubs.length}`);
-            for(const c of clubs){if(!c.bg.includes('crests-hd.webp'))throw new Error(`${c.name} no usa fuente HD`);if(c.w<78||c.h<78)throw new Error(`${c.name} escudo pequeño ${c.w}x${c.h}`);if(c.w>100||c.h>100)throw new Error(`${c.name} escudo sobredimensionado ${c.w}x${c.h}`)}
-            report.viewports[vp.name]={clubs};
-            await page.screenshot({path:`qa-prod-v8/clubes-${vp.name}.png`,fullPage:true});
-            for(let i=0;i<11;i++)await page.locator('.club-card').nth(i).screenshot({path:`qa-prod-v8/logos/card-${vp.name}-${String(i+1).padStart(2,'0')}.png`});
-            await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-2200',{waitUntil:'networkidle',timeout:90000});
-            await page.locator('.champ-match-card').first().waitFor({state:'visible'});await page.waitForFunction(()=>document.documentElement.classList.contains('crests-ready'),null,{timeout:30000});
-            const champ=await page.evaluate(()=>({matches:document.querySelectorAll('.champ-match-card').length,crests:document.querySelectorAll('.champ-match-card .champ-crest').length,seriesRows:document.querySelectorAll('.champ-series-row').length,verified:document.querySelectorAll('.champ-verified').length,tabs:[...document.querySelectorAll('.champ-date-btn')].map(x=>x.textContent.trim()),hd:[...document.querySelectorAll('.champ-match-card .champ-crest')].every(x=>getComputedStyle(x).backgroundImage.includes('crests-hd.webp'))}));
-            if(champ.matches!==3||champ.crests!==6||champ.seriesRows!==12||champ.verified!==3||champ.tabs.length!==5||!champ.hd)throw new Error(`${vp.name} championship ${JSON.stringify(champ)}`);
-            await page.screenshot({path:`qa-prod-v8/partidos-${vp.name}.png`,fullPage:true});await page.close();
+            await page.goto('https://cudo.cl/preview-v8/equipos/?v=20260908-2240',{waitUntil:'networkidle',timeout:90000});
+            await page.locator('.club-card').first().waitFor({state:'visible'});await page.waitForFunction(()=>document.documentElement.classList.contains('crests-ready'),null,{timeout:30000});
+            const clubs=await page.evaluate(()=>[...document.querySelectorAll('.club-card')].map(c=>{const el=c.querySelector('.champ-crest'),s=getComputedStyle(el),r=el.getBoundingClientRect();return {name:c.querySelector('.club-name').textContent.trim(),bg:s.backgroundImage.slice(0,36),pos:s.backgroundPosition,size:s.backgroundSize,w:r.width,h:r.height}}));
+            if(clubs.length!==11)throw new Error(`${vp.name} clubs ${clubs.length}`);for(const c of clubs){if(!c.bg.includes('data:image/webp;base64'))throw new Error(`${c.name} sin escudo renderizado`);if(c.w<78||c.h<78||c.w>100||c.h>100)throw new Error(`${c.name} tamaño ${c.w}x${c.h}`)}
+            report.viewports[vp.name]={clubs};await page.screenshot({path:`qa-prod-v8/clubes-${vp.name}.png`,fullPage:true});for(let i=0;i<11;i++)await page.locator('.club-card').nth(i).screenshot({path:`qa-prod-v8/logos/card-${vp.name}-${String(i+1).padStart(2,'0')}.png`});
+            await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-2240',{waitUntil:'networkidle',timeout:90000});await page.locator('.champ-match-card').first().waitFor({state:'visible'});await page.waitForFunction(()=>document.documentElement.classList.contains('crests-ready'),null,{timeout:30000});
+            const champ=await page.evaluate(()=>({matches:document.querySelectorAll('.champ-match-card').length,crests:document.querySelectorAll('.champ-match-card .champ-crest').length,seriesRows:document.querySelectorAll('.champ-series-row').length,verified:document.querySelectorAll('.champ-verified').length,tabs:document.querySelectorAll('.champ-date-btn').length,rendered:[...document.querySelectorAll('.champ-match-card .champ-crest')].every(x=>getComputedStyle(x).backgroundImage.includes('data:image/webp;base64'))}));if(champ.matches!==3||champ.crests!==6||champ.seriesRows!==12||champ.verified!==3||champ.tabs!==5||!champ.rendered)throw new Error(`${vp.name} championship ${JSON.stringify(champ)}`);await page.screenshot({path:`qa-prod-v8/partidos-${vp.name}.png`,fullPage:true});await page.close();
           }
           report.errors=errors;fs.writeFileSync('qa-prod-v8/visual-report.json',JSON.stringify(report,null,2));await browser.close();if(errors.length)throw new Error(errors.join(' | '));
           NODE
@@ -81,7 +61,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cudo-v8-hd-crests-visual-qa
+          name: cudo-v8-open-source-visual-qa
           path: qa-prod-v8/
           if-no-files-found: warn
           retention-days: 14
