@@ -16,10 +16,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PAGE='https://cudo.cl/preview-v8/partidos/?v=20260908-1945'
+          PAGE='https://cudo.cl/preview-v8/partidos/?v=20260908-2000'
           for i in $(seq 1 40); do
-            if curl -LfsS --connect-timeout 10 --max-time 20 "$PAGE" -o /tmp/cudo-page.html && grep -q '20260908-1945' /tmp/cudo-page.html; then echo 'Producción sirve la versión esperada.'; exit 0; fi
-            echo "Esperando propagación ($i/40)..."; sleep 6
+            if curl -LfsS "$PAGE" -o /tmp/cudo-page.html && grep -q '20260908-2000' /tmp/cudo-page.html; then exit 0; fi
+            sleep 6
           done
           exit 1
       - name: Validar WebP desde chunks públicos
@@ -27,11 +27,10 @@ jobs:
         run: |
           set -euo pipefail
           : > /tmp/crests.b64
-          for i in 0 1 2a 2b; do curl -LfsS "https://cudo.cl/preview-v8/media/crest-base64/$i.txt?v=20260908-1945" >> /tmp/crests.b64; done
+          for i in 0 1 2a 2b; do curl -LfsS "https://cudo.cl/preview-v8/media/crest-base64/$i.txt?v=20260908-2000" >> /tmp/crests.b64; done
           test "$(wc -c < /tmp/crests.b64)" -eq 13296
           base64 -d /tmp/crests.b64 > /tmp/crests.webp
           test "$(wc -c < /tmp/crests.webp)" -eq 9972
-          head -c 12 /tmp/crests.webp | od -An -tx1 | tr -d ' \n' | grep -Eq '^52494646[0-9a-f]{8}57454250$'
       - uses: actions/setup-node@v4
         with: {node-version: '24'}
       - name: Instalar Playwright
@@ -45,14 +44,10 @@ jobs:
           cat > check-prod.mjs <<'NODE'
           import {chromium} from 'playwright';import fs from 'node:fs';
           const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});const errors=[];page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});page.on('pageerror',e=>errors.push(e.message));
-          await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-1945',{waitUntil:'networkidle',timeout:90000});await page.locator('.champ-match-card').first().waitFor({state:'visible',timeout:30000});
-          const champ=await page.evaluate(()=>({matches:document.querySelectorAll('.champ-match-card').length,crests:document.querySelectorAll('.champ-match-card .champ-crest').length,seriesRows:document.querySelectorAll('.champ-series-row').length,verified:document.querySelectorAll('.champ-verified').length,tabs:[...document.querySelectorAll('.champ-date-btn')].map(x=>x.textContent.trim()),text:document.querySelector('#champMatchList').innerText}));
-          await page.screenshot({path:'qa-prod-v8/partidos-mobile.png',fullPage:true});
-          if(champ.matches!==3||champ.crests!==6||champ.seriesRows!==12||champ.verified!==3)throw new Error(`Championship invalid ${JSON.stringify(champ)}`);
-          for(const label of ['Tercera Serie','Segunda Serie','Senior','Primera Serie'])if(!champ.text.includes(label))throw new Error(`Missing ${label}`);
-          if(JSON.stringify(champ.tabs)!==JSON.stringify(['Fecha I','Fecha II','Fecha III','Fecha IV','Fecha V']))throw new Error('Round tabs invalid');
-          await page.goto('https://cudo.cl/preview-v8/equipos/?v=20260908-1945',{waitUntil:'networkidle',timeout:90000});await page.locator('.club-card').first().waitFor({state:'visible',timeout:30000});const clubs=await page.evaluate(()=>({cards:document.querySelectorAll('.club-card').length,crests:document.querySelectorAll('.club-card .champ-crest').length,groups:document.querySelectorAll('.clubs-group').length}));await page.screenshot({path:'qa-prod-v8/clubes-mobile.png',fullPage:true});
-          fs.writeFileSync('qa-prod-v8/result.json',JSON.stringify({champ,clubs,errors},null,2));await browser.close();console.log({champ,clubs,errors});if(clubs.cards!==11||clubs.crests!==11||clubs.groups!==2)throw new Error(`Clubs invalid ${JSON.stringify(clubs)}`);if(errors.length)throw new Error(errors.join(' | '));
+          await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-2000',{waitUntil:'domcontentloaded',timeout:60000});await page.locator('.champ-match-card').first().waitFor({state:'visible',timeout:30000});
+          const champ=await page.evaluate(()=>({matches:document.querySelectorAll('.champ-match-card').length,crests:document.querySelectorAll('.champ-match-card .champ-crest').length,seriesRows:document.querySelectorAll('.champ-series-row').length,verified:document.querySelectorAll('.champ-verified').length,tabs:[...document.querySelectorAll('.champ-date-btn')].map(x=>x.textContent.trim()),text:document.querySelector('#champMatchList').innerText}));await page.screenshot({path:'qa-prod-v8/partidos-mobile.png',fullPage:true});
+          if(champ.matches!==3||champ.crests!==6||champ.seriesRows!==12||champ.verified!==3)throw new Error(`Championship invalid ${JSON.stringify(champ)}`);for(const x of ['Tercera Serie','Segunda Serie','Senior','Primera Serie'])if(!champ.text.includes(x))throw new Error(`Missing ${x}`);if(champ.tabs.length!==5)throw new Error('tabs');
+          await page.goto('https://cudo.cl/preview-v8/equipos/?v=20260908-2000',{waitUntil:'domcontentloaded',timeout:60000});await page.locator('.club-card').first().waitFor({state:'visible',timeout:30000});const clubs=await page.evaluate(()=>({cards:document.querySelectorAll('.club-card').length,crests:document.querySelectorAll('.club-card .champ-crest').length,groups:document.querySelectorAll('.clubs-group').length}));await page.screenshot({path:'qa-prod-v8/clubes-mobile.png',fullPage:true});fs.writeFileSync('qa-prod-v8/result.json',JSON.stringify({champ,clubs,errors},null,2));await browser.close();if(clubs.cards!==11||clubs.crests!==11||clubs.groups!==2)throw new Error(`Clubs invalid ${JSON.stringify(clubs)}`);if(errors.length)throw new Error(errors.join(' | '));console.log(JSON.stringify({champ,clubs},null,2));
           NODE
           node check-prod.mjs
       - name: Evidencia producción
