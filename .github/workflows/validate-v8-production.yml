@@ -24,10 +24,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PAGE='https://cudo.cl/preview-v8/partidos/?v=20260908-1825'
+          PAGE='https://cudo.cl/preview-v8/partidos/?v=20260908-1830'
           for i in $(seq 1 40); do
             if curl -LfsS --connect-timeout 10 --max-time 20 "$PAGE" -o /tmp/cudo-page.html \
-              && grep -q '20260908-1825' /tmp/cudo-page.html; then
+              && grep -q '20260908-1830' /tmp/cudo-page.html; then
               echo 'Producción ya sirve la versión esperada.'
               exit 0
             fi
@@ -42,8 +42,8 @@ jobs:
         run: |
           set -euo pipefail
           : > /tmp/crests.b64
-          for i in 0 1 2; do
-            curl -LfsS --connect-timeout 10 --max-time 30 "https://cudo.cl/preview-v8/media/crest-base64/$i.txt?v=20260908-1825" >> /tmp/crests.b64
+          for i in 0 1 2a 2b; do
+            curl -LfsS --connect-timeout 10 --max-time 30 "https://cudo.cl/preview-v8/media/crest-base64/$i.txt?v=20260908-1830" >> /tmp/crests.b64
           done
           CHARS=$(wc -c < /tmp/crests.b64)
           echo "crest_base64_chars=$CHARS"
@@ -74,12 +74,12 @@ jobs:
           cat > check-prod.mjs <<'NODE'
           import { chromium } from 'playwright';
           import fs from 'node:fs';
-          const browser = await chromium.launch({headless:true});
-          const page = await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
           const errors=[];
           page.on('console',m=>{if(m.type()==='error')errors.push(`console:${m.text()}`)});
           page.on('pageerror',e=>errors.push(`pageerror:${e.message}`));
-          await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-1825',{waitUntil:'networkidle',timeout:90000});
+          await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-1830',{waitUntil:'networkidle',timeout:90000});
           await page.locator('.champ-match').first().waitFor({state:'visible',timeout:30000});
           const result=await page.evaluate(()=>{
             const crests=[...document.querySelectorAll('.champ-match .champ-crest')];
@@ -89,8 +89,7 @@ jobs:
           });
           fs.writeFileSync('qa-prod-v8/result.json',JSON.stringify({result,errors},null,2));
           await page.screenshot({path:'qa-prod-v8/partidos-mobile.png',fullPage:true});
-          const fixture=page.locator('#champFixture');
-          await fixture.screenshot({path:'qa-prod-v8/fixture-mobile.png'});
+          await page.locator('#champFixture').screenshot({path:'qa-prod-v8/fixture-mobile.png'});
           await browser.close();
           console.log(JSON.stringify({result,errors},null,2));
           if(result.matchCount!==3)throw new Error(`Expected 3 Fecha I Grupo A matches, got ${result.matchCount}`);
