@@ -1,0 +1,15 @@
+{
+  "competition_id":"ANFA-CHEPICA-2026",
+  "round_no":1,
+  "round_label":"Fecha I",
+  "played_on":"2026-08-23",
+  "source":{"publisher":"Asociación de Fútbol Chépica","type":"official_published_graphic","provided_by_user":true,"note":"Resultados publicados para Fecha I Liga ANFA Chépica Play 2026"},
+  "series_order":["TERCERA","SEGUNDA","SENIOR","PRIMERA"],
+  "results":[
+    {"match_id":"A-F1-M1","home_name":"Santa Elena La Ruda","away_name":"Unión Orilla","validation_status":"VERIFIED","series":[{"series":"TERCERA","home_score":1,"away_score":0},{"series":"SEGUNDA","home_score":2,"away_score":1},{"series":"SENIOR","home_score":0,"away_score":2},{"series":"PRIMERA","home_score":1,"away_score":2}]},
+    {"match_id":"A-F1-M2","home_name":"Independiente","away_name":"Peñarol La Mina","validation_status":"VERIFIED","series":[{"series":"TERCERA","home_score":0,"away_score":1},{"series":"SEGUNDA","home_score":1,"away_score":2},{"series":"SENIOR","home_score":1,"away_score":2},{"series":"PRIMERA","home_score":0,"away_score":2}]},
+    {"match_id":"A-F1-M3","home_name":"San Juan","away_name":"Juventud de Chépica","validation_status":"VERIFIED","series":[{"series":"TERCERA","home_score":0,"away_score":1},{"series":"SEGUNDA","home_score":0,"away_score":3},{"series":"SENIOR","home_score":1,"away_score":4},{"series":"PRIMERA","home_score":1,"away_score":1}]},
+    {"match_id":"B-F1-M1","home_name":"San Agustín","away_name":"Las Cruces","validation_status":"VERIFIED","series":[{"series":"TERCERA","home_score":0,"away_score":1},{"series":"SEGUNDA","home_score":0,"away_score":1},{"series":"SENIOR","home_score":0,"away_score":1},{"series":"PRIMERA","home_score":0,"away_score":6}]},
+    {"match_id":"B-F1-M2","home_name":"Las Palmeras","away_name":"Huracán","validation_status":"VERIFIED","series":[{"series":"TERCERA","home_score":1,"away_score":3},{"series":"SEGUNDA","home_score":1,"away_score":3},{"series":"SENIOR","home_score":0,"away_score":0},{"series":"PRIMERA","home_score":0,"away_score":2}]}
+  ]
+}
