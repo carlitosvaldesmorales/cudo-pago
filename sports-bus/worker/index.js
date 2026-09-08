@@ -3,19 +3,12 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   headers: { 'content-type': 'application/json; charset=utf-8' }
 });
 
-const WEBHOOK_URL = 'https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/webhook/telegram';
-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === '/health') {
       return json({ ok: true, service: 'sports-event-bus', version: 'v1' });
-    }
-
-    if (url.pathname === '/bootstrap/telegram' && request.method === 'GET') {
-      const result = await configureTelegramWebhook(env);
-      return json(result, result.ok ? 200 : 500);
     }
 
     if (url.pathname === '/webhook/telegram' && request.method === 'POST') {
@@ -35,42 +28,6 @@ export default {
     return json({ ok: false, error: 'not_found' }, 404);
   }
 };
-
-async function configureTelegramWebhook(env) {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
-    return { ok: false, error: 'telegram_secrets_missing' };
-  }
-
-  const safeSecret = await deriveTelegramSafeSecret(env.TELEGRAM_WEBHOOK_SECRET);
-  const setResult = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'setWebhook', {
-    url: WEBHOOK_URL,
-    secret_token: safeSecret,
-    allowed_updates: ['message', 'edited_message', 'callback_query'],
-    drop_pending_updates: true
-  });
-
-  if (!setResult.ok) {
-    return {
-      ok: false,
-      error: 'setWebhook_failed',
-      telegram_error_code: setResult.error_code ?? null,
-      telegram_description: setResult.description ?? null
-    };
-  }
-
-  const info = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'getWebhookInfo');
-  if (!info.ok) return { ok: false, error: 'getWebhookInfo_failed' };
-
-  const r = info.result ?? {};
-  return {
-    ok: r.url === WEBHOOK_URL,
-    configured: r.url === WEBHOOK_URL,
-    webhook_url: r.url || null,
-    pending_update_count: r.pending_update_count ?? null,
-    last_error_message: r.last_error_message ?? null,
-    allowed_updates: r.allowed_updates ?? null
-  };
-}
 
 async function authorized(request, env) {
   const presented = request.headers.get('x-telegram-bot-api-secret-token');
