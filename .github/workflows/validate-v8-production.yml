@@ -24,14 +24,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PAGE='https://cudo.cl/preview-v8/partidos/?v=20260908-1455'
-          for i in $(seq 1 30); do
+          PAGE='https://cudo.cl/preview-v8/partidos/?v=20260908-1818'
+          for i in $(seq 1 40); do
             if curl -LfsS --connect-timeout 10 --max-time 20 "$PAGE" -o /tmp/cudo-page.html \
-              && grep -q '20260908-1455' /tmp/cudo-page.html; then
+              && grep -q '20260908-1818' /tmp/cudo-page.html; then
               echo 'Producción ya sirve la versión esperada.'
               exit 0
             fi
-            echo "Esperando propagación ($i/30)..."
+            echo "Esperando propagación ($i/40)..."
             sleep 6
           done
           echo 'cudo.cl no propagó la versión esperada dentro de la ventana.'
@@ -41,12 +41,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://cudo.cl/preview-v8/media/anfa-chepica-2026-crests-v2.webp?v=20260908-1455'
+          URL='https://cudo.cl/preview-v8/media/anfa-chepica-2026-crests-v4.webp?v=20260908-1818'
           curl -LfsS --connect-timeout 10 --max-time 30 "$URL" -o /tmp/crests.webp
           BYTES=$(wc -c < /tmp/crests.webp)
           echo "crest_asset_bytes=$BYTES"
-          test "$BYTES" -gt 30000
-          MAGIC=$(head -c 12 /tmp/crests.webp | xxd -p -c 12)
+          test "$BYTES" -gt 8000
+          MAGIC=$(head -c 12 /tmp/crests.webp | od -An -tx1 | tr -d ' \n')
           echo "crest_magic=$MAGIC"
           echo "$MAGIC" | grep -Eq '^52494646[0-9a-f]{8}57454250$'
           file /tmp/crests.webp
@@ -73,22 +73,22 @@ jobs:
           const errors=[];
           page.on('console', m => { if (m.type()==='error') errors.push(`console:${m.text()}`); });
           page.on('pageerror', e => errors.push(`pageerror:${e.message}`));
-          await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-1455',{waitUntil:'networkidle',timeout:90000});
+          await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-1818',{waitUntil:'networkidle',timeout:90000});
           await page.locator('.champ-match').first().waitFor({state:'visible',timeout:30000});
           const result = await page.evaluate(async()=>{
             const crests=[...document.querySelectorAll('.champ-match .champ-crest')];
             const visible=crests.filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0});
             const styles=visible.map(el=>({className:el.className,bg:getComputedStyle(el).backgroundImage,w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
             const imageUrl=styles[0]?.bg.match(/url\(["']?(.*?)["']?\)/)?.[1]||'';
-            let assetOk=false, assetStatus=null, assetType=null, imageDecoded=false, naturalWidth=0, naturalHeight=0;
+            let assetOk=false, assetStatus=null, imageDecoded=false, naturalWidth=0, naturalHeight=0;
             if(imageUrl){
-              const r=await fetch(imageUrl,{cache:'no-store'});assetStatus=r.status;assetType=r.headers.get('content-type');const b=await r.arrayBuffer();assetOk=r.ok&&b.byteLength>30000;
+              const r=await fetch(imageUrl,{cache:'no-store'});assetStatus=r.status;const b=await r.arrayBuffer();assetOk=r.ok&&b.byteLength>8000;
               const probe=new Image();
               const done=new Promise(resolve=>{probe.onload=()=>{imageDecoded=true;naturalWidth=probe.naturalWidth;naturalHeight=probe.naturalHeight;resolve();};probe.onerror=()=>resolve();});
               probe.src=imageUrl+(imageUrl.includes('?')?'&':'?')+'decode=1';
               await done;
             }
-            return {matchCount:document.querySelectorAll('.champ-match').length,crestCount:crests.length,visibleCount:visible.length,styles,imageUrl,assetOk,assetStatus,assetType,imageDecoded,naturalWidth,naturalHeight};
+            return {matchCount:document.querySelectorAll('.champ-match').length,crestCount:crests.length,visibleCount:visible.length,styles,imageUrl,assetOk,assetStatus,imageDecoded,naturalWidth,naturalHeight};
           });
           fs.writeFileSync('qa-prod-v8/result.json',JSON.stringify({result,errors},null,2));
           await page.screenshot({path:'qa-prod-v8/partidos-mobile.png',fullPage:true});
@@ -98,10 +98,10 @@ jobs:
           console.log(JSON.stringify({result,errors},null,2));
           if(result.matchCount!==3) throw new Error(`Expected 3 Fecha I Grupo A matches, got ${result.matchCount}`);
           if(result.crestCount!==6||result.visibleCount!==6) throw new Error(`Expected 6 visible crests, got ${result.visibleCount}/${result.crestCount}`);
-          if(!result.styles.every(x=>x.bg.includes('anfa-chepica-2026-crests-v2.webp'))) throw new Error('Not all crests use v2 real asset');
+          if(!result.styles.every(x=>x.bg.includes('anfa-chepica-2026-crests-v4.webp'))) throw new Error('Not all crests use v4 real asset');
           if(!result.styles.every(x=>x.w>=49&&x.h>=49)) throw new Error('Crest dimensions invalid');
-          if(!result.assetOk) throw new Error(`Crest asset fetch failed: status=${result.assetStatus} type=${result.assetType}`);
-          if(!result.imageDecoded||result.naturalWidth!==512||result.naturalHeight!==384) throw new Error(`Crest image did not decode as 512x384 WebP: ${result.naturalWidth}x${result.naturalHeight}`);
+          if(!result.assetOk) throw new Error(`Crest asset fetch failed: status=${result.assetStatus}`);
+          if(!result.imageDecoded||result.naturalWidth!==224||result.naturalHeight!==168) throw new Error(`Crest image did not decode as 224x168 WebP: ${result.naturalWidth}x${result.naturalHeight}`);
           NODE
           node check-prod.mjs
 
