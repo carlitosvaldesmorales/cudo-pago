@@ -3,12 +3,21 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
   headers: { 'content-type': 'application/json; charset=utf-8' }
 });
 
+const WEBHOOK_URL = 'https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/webhook/telegram';
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === '/health') {
       return json({ ok: true, service: 'sports-event-bus', version: 'v1' });
+    }
+
+    // Temporary one-shot bootstrap. It uses Cloudflare secrets internally,
+    // exposes none of them, and only registers the fixed webhook URL above.
+    if (url.pathname === '/bootstrap/telegram' && request.method === 'GET') {
+      const result = await configureTelegramWebhook(env);
+      return json(result, result.ok ? 200 : 500);
     }
 
     if (url.pathname === '/webhook/telegram' && request.method === 'POST') {
@@ -26,38 +35,45 @@ export default {
     }
 
     return json({ ok: false, error: 'not_found' }, 404);
-  },
-
-  // Cloudflare invokes this internally. No secret leaves Cloudflare and no public
-  // bootstrap/admin endpoint is required. The operation is idempotent.
-  async scheduled(controller, env) {
-    if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
-      throw new Error('Telegram secrets are not configured');
-    }
-
-    const webhookUrl = 'https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/webhook/telegram';
-    const setResult = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'setWebhook', {
-      url: webhookUrl,
-      secret_token: env.TELEGRAM_WEBHOOK_SECRET,
-      allowed_updates: ['message', 'edited_message', 'callback_query'],
-      drop_pending_updates: true
-    });
-    if (!setResult.ok) throw new Error('Telegram setWebhook failed');
-
-    const info = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'getWebhookInfo');
-    if (!info.ok || info.result?.url !== webhookUrl) {
-      throw new Error('Telegram webhook verification failed');
-    }
-
-    console.log(JSON.stringify({
-      event: 'telegram.webhook.configured',
-      webhook_url: info.result.url,
-      pending_update_count: info.result.pending_update_count ?? null,
-      last_error_message: info.result.last_error_message ?? null,
-      cron: controller.cron
-    }));
   }
 };
+
+async function configureTelegramWebhook(env) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
+    return { ok: false, error: 'telegram_secrets_missing' };
+  }
+
+  const setResult = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'setWebhook', {
+    url: WEBHOOK_URL,
+    secret_token: env.TELEGRAM_WEBHOOK_SECRET,
+    allowed_updates: ['message', 'edited_message', 'callback_query'],
+    drop_pending_updates: true
+  });
+
+  if (!setResult.ok) {
+    return {
+      ok: false,
+      error: 'setWebhook_failed',
+      telegram_error_code: setResult.error_code ?? null,
+      telegram_description: setResult.description ?? null
+    };
+  }
+
+  const info = await telegramApi(env.TELEGRAM_BOT_TOKEN, 'getWebhookInfo');
+  if (!info.ok) {
+    return { ok: false, error: 'getWebhookInfo_failed' };
+  }
+
+  const r = info.result ?? {};
+  return {
+    ok: r.url === WEBHOOK_URL,
+    configured: r.url === WEBHOOK_URL,
+    webhook_url: r.url || null,
+    pending_update_count: r.pending_update_count ?? null,
+    last_error_message: r.last_error_message ?? null,
+    allowed_updates: r.allowed_updates ?? null
+  };
+}
 
 function authorized(request, env) {
   const secret = request.headers.get('x-telegram-bot-api-secret-token');
