@@ -19,13 +19,27 @@ export default {
 
       const update = await request.json();
       const normalized = normalizeTelegramUpdate(update);
-      // Persistence/routing is intentionally left behind the contract boundary.
+
+      if (normalized.payload.chat_id && env.TELEGRAM_BOT_TOKEN) {
+        await sendTelegramMessage(env.TELEGRAM_BOT_TOKEN, normalized.payload.chat_id,
+          'CUDO Sports Event Bus conectado ✅\nEvento recibido: ' + normalized.event_id);
+      }
+
       return json({ ok: true, accepted: true, event: normalized });
     }
 
     return json({ ok: false, error: 'not_found' }, 404);
   }
 };
+
+async function sendTelegramMessage(token, chatId, text) {
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text })
+  });
+  if (!response.ok) throw new Error(`Telegram sendMessage failed: ${response.status}`);
+}
 
 function normalizeTelegramUpdate(update) {
   const message = update.message ?? update.edited_message ?? null;
