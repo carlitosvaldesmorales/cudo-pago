@@ -24,7 +24,7 @@ jobs:
           for i in $(seq 1 50); do
             if curl -LfsS "$PAGE" -o /tmp/cudo-page.html \
               && grep -q '20260909-logos02' /tmp/cudo-page.html \
-              && grep -q '../media/clubes/union-orilla.png' /tmp/cudo-page.html; then
+              && grep -q '../media/clubes/union-orilla-web.png' /tmp/cudo-page.html; then
               exit 0
             fi
             sleep 6
@@ -43,21 +43,31 @@ jobs:
           CHROME_BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || command -v chromium)"
           test -n "$CHROME_BIN"
           echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
-      - name: Validar transporte de los 11 PNG individuales
+      - name: Validar fuente oficial y derivado web CUDO
         shell: bash
         run: |
           set -euo pipefail
           files=(
             juventud-chepica.png santa-elena-la-ruda.png independiente.png
-            union-orilla.png san-juan.png penarol-la-mina.png huracan.png
+            union-orilla.png union-orilla-web.png san-juan.png penarol-la-mina.png huracan.png
             san-agustin.png san-ramon.png las-palmeras.png las-cruces.png
           )
           for f in "${files[@]}"; do
             curl -LfsS "https://cudo.cl/preview-v8/media/clubes/$f?qa=${GITHUB_SHA}" -o "qa-prod-v8/http/$f"
             file "qa-prod-v8/http/$f" | grep -q 'PNG image data'
           done
-          sha256sum qa-prod-v8/http/union-orilla.png > qa-prod-v8/http/union-orilla.sha256
-          grep -q '^2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53 ' qa-prod-v8/http/union-orilla.sha256
+          sha256sum qa-prod-v8/http/union-orilla.png > qa-prod-v8/http/union-orilla-source.sha256
+          grep -q '^2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53 ' qa-prod-v8/http/union-orilla-source.sha256
+          python - <<'PY'
+          from PIL import Image
+          src=Image.open('qa-prod-v8/http/union-orilla.png').convert('RGBA')
+          web=Image.open('qa-prod-v8/http/union-orilla-web.png').convert('RGBA')
+          assert src.size == (512,512)
+          assert web.size == (512,512)
+          assert web.getchannel('A').getextrema()[0] == 0, 'Derivado web sin transparencia real'
+          assert web.getbbox() is not None, 'Derivado web vacío'
+          print('source bbox', src.getbbox(), 'web bbox', web.getbbox(), 'web alpha', web.getchannel('A').getextrema())
+          PY
       - name: QA visual Clubes móvil y escritorio
         shell: bash
         run: |
@@ -65,7 +75,7 @@ jobs:
           import {chromium} from 'playwright';
           import fs from 'node:fs';
           const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN});
-          const report={source:'https://cudo.cl/preview-v8/equipos/',expectedCudoSha256:'2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53',viewports:{}};
+          const report={source:'https://cudo.cl/preview-v8/equipos/',officialSourceSha256:'2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53',expectedCudoAsset:'../media/clubes/union-orilla-web.png',viewports:{}};
           for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
             const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});
             const warnings=[];page.on('console',m=>{if(m.type()==='error')warnings.push(m.text())});page.on('pageerror',e=>warnings.push(e.message));
@@ -75,7 +85,7 @@ jobs:
             if(clubs.length!==11) throw new Error(`${vp.name}: se esperaban 11 clubes y hay ${clubs.length}`);
             for(const c of clubs){if(!c.complete||!c.naturalWidth||!c.src?.includes('../media/clubes/'))throw new Error(`${vp.name}: escudo inválido ${c.name}`)}
             const cudo=clubs.find(c=>c.name==='Unión Orilla');
-            if(!cudo||!cudo.src.endsWith('/union-orilla.png'))throw new Error(`${vp.name}: Unión Orilla no usa union-orilla.png`);
+            if(!cudo||!cudo.src.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: Unión Orilla no usa union-orilla-web.png`);
             await page.screenshot({path:`qa-prod-v8/clubes-${vp.name}.png`,fullPage:true});
             await page.locator('.club-card').filter({hasText:'Unión Orilla'}).first().screenshot({path:`qa-prod-v8/logos/cudo-${vp.name}.png`});
             report.viewports[vp.name]={clubs,cudo,warnings};
@@ -89,12 +99,14 @@ jobs:
         shell: bash
         run: |
           cat > qa-prod-v8/CERTIFICADO.txt <<EOF
-          CUDO V8 — CERTIFICACIÓN PRODUCCIÓN CLUBES
+          CUDO V8 — CERTIFICACIÓN TÉCNICA PRODUCCIÓN CLUBES
           Sitio: https://cudo.cl/preview-v8/equipos/
           Commit QA: ${GITHUB_SHA}
-          Estado: CONFORME
-          CUDO / Unión Orilla SHA-256 publicado:
+          Estado técnico: CONFORME
+          Fuente oficial CUDO SHA-256:
           2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53
+          Presentación web: union-orilla-web.png generado determinísticamente desde la fuente oficial por tools/prepare-cudo-crest.py
+          Estado visual humano: PENDIENTE DE APROBACIÓN
           Evidencia: clubes-mobile.png, clubes-desktop.png, logos/cudo-mobile.png, logos/cudo-desktop.png, visual-report.json
           EOF
       - name: Publicar evidencia certificable
