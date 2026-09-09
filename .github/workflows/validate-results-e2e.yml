@@ -44,7 +44,7 @@ jobs:
           const x=require('/tmp/api.json');
           const m=(x.results||[]).find(r=>r.match_id==='A-F2-M2');
           if(!m) throw new Error('fecha2_not_in_public_api');
-          if(!(m.series||[]).length) throw new Error('fecha2_has_no_series');
+          if((m.series||[]).length!==4) throw new Error(`fecha2_series_count_${(m.series||[]).length}`);
           console.log(JSON.stringify({match_id:m.match_id,series:m.series},null,2));
           NODE
       - name: Validate CUDO page consumes live Sports Bus API
@@ -53,6 +53,9 @@ jobs:
           set -euo pipefail
           curl -fsS 'https://cudo.cl/preview-v8/shared/championship.js' -o /tmp/champ.js
           curl -fsS 'https://cudo.cl/preview-v8/shared/standings.js' -o /tmp/standings.js
-          grep -q 'cudo-sports-event-bus.carlos-valdes-morales.workers.dev/api/v1/series-results' /tmp/champ.js
-          grep -q 'cudo-sports-event-bus.carlos-valdes-morales.workers.dev/api/v1/series-results' /tmp/standings.js
+          for f in /tmp/champ.js /tmp/standings.js; do
+            grep -q 'cudo-sports-event-bus.carlos-valdes-morales.workers.dev' "$f"
+            grep -q '/api/v1/series-results' "$f"
+            grep -q "cache:'no-store'" "$f"
+          done
           echo 'page_live_api_binding=OK'
