@@ -3,7 +3,7 @@
 ## Alcance
 Certificación visual y técnica de la publicación de los escudos individuales en **Clubes V8**, con foco bloqueante en el escudo oficial de **Unión Orilla / C.U.D.O.**
 
-## Sitio a certificar
+## Sitio certificado
 https://cudo.cl/preview-v8/equipos/
 
 ## Estado histórico
@@ -24,7 +24,7 @@ La certificación visual anterior fue **RECHAZADA POR EL USUARIO** el 2026-09-09
 - Artifact anterior: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34383695251/artifacts/10116876064
 - Resultado humano: **RECHAZADO**.
 
-## Evidencia nueva de la corrección de raíz
+## Evidencia final aprobada
 - Run QA producción: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34393372257
 - Resultado del workflow: **SUCCESS**.
 - Artifact nueva evidencia: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34393372257/artifacts/10120566083
@@ -35,11 +35,18 @@ La certificación visual anterior fue **RECHAZADA POR EL USUARIO** el 2026-09-09
 - QA Playwright móvil: **SUCCESS**.
 - QA Playwright escritorio: **SUCCESS**.
 
-## Estado actual
+## Aprobación humana
+- Fecha: **2026-09-09**
+- Aprobador: **usuario responsable del proyecto CUDO**
+- Evidencia de aprobación: respuesta explícita en conversación: **“Ahí si está muy bien”**.
+- Resultado visual: **APROBADO**.
+
+## Estado final
 - Fuente oficial: **CONFORME**
 - Corrección de presentación: **PUBLICADA EN MAIN Y CUDO.CL**
-- Certificación técnica nueva: **CONFORME**
-- Certificación visual humana: **PENDIENTE DE APROBACIÓN DEL CLUB**
+- Certificación técnica: **CONFORME**
+- Certificación visual humana: **APROBADA**
+- LOGOS-02: **CERRADO**
 
 ## Regla de cierre
-LOGOS-02 permanece **ABIERTO** hasta que el usuario/club revise la nueva evidencia o el sitio publicado y apruebe explícitamente la presentación visual del escudo CUDO.
+Este paquete sólo puede reabrirse por una nueva observación visual explícita del club o por una regresión detectada automáticamente.
