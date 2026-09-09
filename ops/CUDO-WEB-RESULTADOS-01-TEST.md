@@ -34,6 +34,31 @@ Un administrador/member de CUDO NO debe navegar ni visualizar partidos de otros 
 
 Un `SUPER_ADMIN` asociado a Unión Orilla mantiene por defecto este mismo menú acotado al club. Las funciones globales de administración, si se requieren, deben existir en un flujo administrativo separado y explícito; no se mezclan con `Mis partidos`.
 
+## Regla persistente de rotulado local/visita
+En el botón de cada fecha se muestra siempre el partido completo respetando el orden oficial del fixture:
+
+`Fecha · LOCAL vs VISITA`
+
+Por lo tanto, el club asociado a la cuenta aparece:
+- primero cuando es local;
+- segundo cuando es visita.
+
+Ejemplos CUDO:
+- `Fecha I · Santa Elena La Ruda vs Unión Orilla` → CUDO visita.
+- `Fecha II · Unión Orilla vs San Juan` → CUDO local.
+
+No usar el formato ambiguo `Fecha · vs Rival` porque oculta la condición local/visita.
+
+Implementación persistente:
+- `sports-bus/worker/fixture-label.js`
+- `sports-bus/worker/series-entry.js`
+- `sports-bus/tests/fixture-label.test.mjs`
+- `.github/workflows/validate-sports-bus-ux.yml`
+
+Evidencia:
+- UX gate: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34409396904 — **SUCCESS**.
+- Deploy: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34409396917 — **SUCCESS**.
+
 ## Incidente de identidad detectado 2026-09-09
 El primer intento del menú acotado tenía un error de modelo: la cuenta del administrador estaba registrada con `reporters.club_id='CUDO'`, pero el fixture y la tabla `teams` usan como identificador canónico `team_id='UNION-ORILLA'`.
 
@@ -91,6 +116,8 @@ Flujo de botones:
 - Migración captura: `sports-bus/migrations/0005_series_reporting.sql`
 - Migración identidad canónica: `sports-bus/migrations/0006_canonical_reporter_club.sql`
 - Captura Telegram: `sports-bus/worker/series-entry.js`
+- Rotulado local/visita: `sports-bus/worker/fixture-label.js`
+- Gate UX local/visita: `.github/workflows/validate-sports-bus-ux.yml`
 - Ingreso/compatibilidad de autenticación: `sports-bus/cors-entry.js`
 - Diagnóstico: `.github/workflows/diagnose-sports-bus.yml`
 - API verificada: `/api/v1/series-results`
@@ -115,11 +142,12 @@ Flujo de botones:
 - API live VERIFIED: **CONFORME**
 - Web conectada al API live: **MATERIALIZADA**
 - Menú acotado por cuenta/club: **DESPLEGADO**
+- Orden local/visita en botones de fecha: **MATERIALIZADO Y GATEADO**
 - Identidad canónica reportero ↔ fixture: **CORREGIDA Y GATEADA**
 - Transporte Telegram: **RECUPERADO Y DIAGNÓSTICO TÉCNICO CONFORME**
 - Cola pendiente Telegram: **0**
 - Datos ficticios insertados: **NO**
-- Prueba humana del menú después de recuperación: **PENDIENTE**
+- Prueba humana del menú después de recuperación: **CONFORME**
 - Prueba humana Fecha II end-to-end con marcador real: **PENDIENTE**
 - RESULTADOS-01: **ABIERTO HASTA PRUEBA END-TO-END**
 
