@@ -38,7 +38,7 @@ jobs:
           test "$(jq -r '.senior.points.win' "$R")" = "3"
           test "$(jq -r '.senior.points.draw' "$R")" = "1"
           test "$(jq -r '.tie_breaker.status' "$R")" = "GAP"
-      - name: Esperar publicación TABLA-01
+      - name: Esperar publicación TABLA-01B
         shell: bash
         run: |
           set -euo pipefail
@@ -46,13 +46,13 @@ jobs:
           for i in $(seq 1 50); do
             if curl -LfsS "$PAGE" -o /tmp/partidos.html \
               && grep -q 'standings.css?v=20260909-tabla01' /tmp/partidos.html \
-              && grep -q 'standings.js?v=20260909-tabla01' /tmp/partidos.html \
+              && grep -q 'standings.js?v=20260909-tabla01b' /tmp/partidos.html \
               && grep -q 'id="champStandings"' /tmp/partidos.html; then
               exit 0
             fi
             sleep 6
           done
-          echo 'TABLA-01 no apareció en producción dentro de la ventana de espera.' >&2
+          echo 'TABLA-01B no apareció en producción dentro de la ventana de espera.' >&2
           exit 1
       - name: Node 20
         uses: actions/setup-node@v4
@@ -79,7 +79,7 @@ jobs:
           const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN});
           const report={source:'https://cudo.cl/preview-v8/partidos/',expected,viewports:{}};
           const readTable=async(card)=>{
-            const rows=await card.locator('tbody tr').evaluateAll(rs=>rs.map(r=>{const c=[...r.querySelectorAll('td')].map(x=>x.textContent.trim());return {rank:+c[0],name:c[1],played:+c[2],points:+c[c.length-1],cells:c}}));
+            const rows=await card.locator('tbody tr').evaluateAll(rs=>rs.map(r=>{const c=[...r.querySelectorAll('td')].map(x=>x.textContent.trim());return {rank:+c[0],name:c[1],played:+c[2],points:+c[3],cells:c}}));
             return Object.fromEntries(rows.map(r=>[r.name,r]));
           };
           for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
@@ -88,7 +88,10 @@ jobs:
             await page.goto(`https://cudo.cl/preview-v8/partidos/?qa=${Date.now()}`,{waitUntil:'networkidle',timeout:90000});
             await page.locator('#champStandings .stand-card').first().waitFor({state:'visible'});
             if(await page.locator('#champStandings .stand-card').count()!==2)throw new Error(`${vp.name}: deben existir dos tablas separadas`);
-            const vpReport={groups:{},pageErrors};
+            const headers=await page.locator('#champStandings .stand-card').evaluateAll(cards=>cards.map(c=>[...c.querySelectorAll('thead th')].map(x=>x.textContent.trim()).join('|')));
+            if(headers[0]!=='Pos.|Club|PJ|PTS|3ª|2ª|1ª')throw new Error(`${vp.name}: orden Tabla General incorrecto: ${headers[0]}`);
+            if(headers[1]!=='Pos.|Club|PJ|PTS|G|E|P')throw new Error(`${vp.name}: orden Tabla Senior incorrecto: ${headers[1]}`);
+            const vpReport={groups:{},pageErrors,headers};
             for(const group of ['A','B']){
               await page.locator(`[data-stand-group="${group}"]`).click();
               await page.waitForFunction(g=>document.querySelector('#standGroupLabel')?.textContent.trim()===`Grupo ${g}`,group);
@@ -98,9 +101,9 @@ jobs:
               for(const [name,pts] of Object.entries(expected[group].general)){if(!general[name]||general[name].points!==pts)throw new Error(`${vp.name} Grupo ${group} General ${name}: esperado ${pts}, recibido ${general[name]?.points}`)}
               for(const [name,pts] of Object.entries(expected[group].senior)){if(!senior[name]||senior[name].points!==pts)throw new Error(`${vp.name} Grupo ${group} Senior ${name}: esperado ${pts}, recibido ${senior[name]?.points}`)}
               if(group==='A'){
-                if(general['Peñarol La Mina'].cells.slice(3,7).join('|')!=='2|3|4|9')throw new Error(`${vp.name}: desglose Peñarol General incorrecto`);
-                if(general['Unión Orilla'].cells.slice(3,7).join('|')!=='0|0|4|4')throw new Error(`${vp.name}: desglose CUDO General incorrecto`);
-                if(senior['Unión Orilla'].cells.slice(3,7).join('|')!=='1|0|0|3')throw new Error(`${vp.name}: Senior CUDO incorrecto`);
+                if(general['Peñarol La Mina'].cells.slice(3,7).join('|')!=='9|2|3|4')throw new Error(`${vp.name}: desglose Peñarol General incorrecto`);
+                if(general['Unión Orilla'].cells.slice(3,7).join('|')!=='4|0|0|4')throw new Error(`${vp.name}: desglose CUDO General incorrecto`);
+                if(senior['Unión Orilla'].cells.slice(3,7).join('|')!=='3|1|0|0')throw new Error(`${vp.name}: Senior CUDO incorrecto`);
               }
               if(group==='B'){
                 if(general['Las Cruces'].rank!==1||general['Huracán'].rank!==1)throw new Error(`${vp.name}: empate General Grupo B no comparte posición 1`);
@@ -128,10 +131,12 @@ jobs:
         shell: bash
         run: |
           cat > qa-standings/CERTIFICADO.txt <<EOF
-          CUDO V8 — TABLA-01 ANFA CHÉPICA 2026
+          CUDO V8 — TABLA-01B ANFA CHÉPICA 2026
           Sitio: https://cudo.cl/preview-v8/partidos/#champStandings
           Commit QA: ${GITHUB_SHA}
           Estado técnico: CONFORME
+          Orden visual General: Pos. | Club | PJ | PTS | 3ª | 2ª | 1ª
+          Orden visual Senior: Pos. | Club | PJ | PTS | G | E | P
           Tabla General: Tercera 2/1/0 + Segunda 3/1/0 + Primera 4/2/0 = 9 pts máximos
           Tabla Senior independiente: 3/1/0
           Grupo A y Grupo B: VALIDADO
