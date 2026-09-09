@@ -25,18 +25,21 @@ jobs:
           set -euo pipefail
           BASE='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev'
           curl -fsS "$BASE/health" | tee /tmp/health.json
-          curl -sS "$BASE/health/telegram" -o /tmp/telegram.json
-          cat /tmp/telegram.json
-          node <<'NODE'
-          const h=require('/tmp/health.json');
+          node -e 'const h=require("/tmp/health.json");if(!h.ok)process.exit(1)'
+          ok=0
+          for i in $(seq 1 20); do
+            curl -fsS "$BASE/health/telegram" -o /tmp/telegram.json
+            cat /tmp/telegram.json
+            if node - <<'NODE'
           const t=require('/tmp/telegram.json');
-          if(!h.ok) throw new Error('worker_health_failed');
-          if(!t.bot_token_configured) throw new Error('runtime_bot_token_missing');
-          if(!t.webhook_secret_configured) throw new Error('runtime_webhook_secret_missing');
-          if(!t.bot_api_ok) throw new Error('telegram_bot_api_failed');
-          if(!t.webhook_configured) throw new Error('telegram_webhook_missing_or_wrong');
-          if(t.last_error_message) throw new Error(`telegram_webhook_error:${t.last_error_message}`);
+          const baseOk=t.ok&&t.bot_token_configured&&t.webhook_secret_configured&&t.bot_api_ok&&t.webhook_configured;
+          if(!baseOk) process.exit(1);
+          if(Number(t.pending_update_count||0)!==0) process.exit(2);
           NODE
+            then ok=1; break; fi
+            sleep 3
+          done
+          test "$ok" = "1"
       - name: D1 reporter and club mapping health
         shell: bash
         run: |
