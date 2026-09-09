@@ -2,7 +2,7 @@
 const FIXTURE='../data/championship-fixture.json';
 const RESULTS='../data/anfa-chepica-2026-series-results.json';
 const RULES='../data/anfa-chepica-2026-standings-rules.json';
-const V='20260909-tabla01';
+const V='20260909-tabla01b';
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 const slugMap={
   'JUVENTUD DE CHEPICA':'juventud-chepica.png','SANTA ELENA LA RUDA':'santa-elena-la-ruda.png','INDEPENDIENTE':'independiente.png',
@@ -51,8 +51,8 @@ function build(fixture,resultDoc,rules,group){
   }
   return {general:rankRows([...general.values()]),senior:rankRows([...senior.values()])};
 }
-function generalTable(rows){return `<div class="stand-card"><div class="stand-card-head"><div><span class="stand-kicker">Tercera + Segunda + Primera</span><h3>Tabla General</h3></div><strong>9 pts máx. por jornada</strong></div><div class="stand-scroll"><table class="stand-table"><thead><tr><th>Pos.</th><th>Club</th><th>PJ</th><th>3ª</th><th>2ª</th><th>1ª</th><th>PTS</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="stand-rank">${r.rank}</td><td><div class="stand-club">${crest(r.name)}<span>${esc(r.name)}</span></div></td><td>${r.played}</td><td>${r.breakdown.TERCERA}</td><td>${r.breakdown.SEGUNDA}</td><td>${r.breakdown.PRIMERA}</td><td class="stand-points">${r.points}</td></tr>`).join('')}</tbody></table></div><div class="stand-rule">Tercera: 2/1/0 · Segunda: 3/1/0 · Primera: 4/2/0</div></div>`}
-function seniorTable(rows){return `<div class="stand-card"><div class="stand-card-head"><div><span class="stand-kicker">Competencia independiente</span><h3>Tabla Senior</h3></div><strong>3 pts por triunfo</strong></div><div class="stand-scroll"><table class="stand-table"><thead><tr><th>Pos.</th><th>Club</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>PTS</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="stand-rank">${r.rank}</td><td><div class="stand-club">${crest(r.name)}<span>${esc(r.name)}</span></div></td><td>${r.played}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td class="stand-points">${r.points}</td></tr>`).join('')}</tbody></table></div><div class="stand-rule">Senior: triunfo 3 pts · empate 1 pt · derrota 0 pts</div></div>`}
+function generalTable(rows){return `<div class="stand-card"><div class="stand-card-head"><div><span class="stand-kicker">Tercera + Segunda + Primera</span><h3>Tabla General</h3></div><strong>9 pts máx. por jornada</strong></div><div class="stand-scroll"><table class="stand-table"><thead><tr><th>Pos.</th><th>Club</th><th>PJ</th><th>PTS</th><th>3ª</th><th>2ª</th><th>1ª</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="stand-rank">${r.rank}</td><td><div class="stand-club">${crest(r.name)}<span>${esc(r.name)}</span></div></td><td>${r.played}</td><td class="stand-points">${r.points}</td><td>${r.breakdown.TERCERA}</td><td>${r.breakdown.SEGUNDA}</td><td>${r.breakdown.PRIMERA}</td></tr>`).join('')}</tbody></table></div><div class="stand-rule">Tercera: 2/1/0 · Segunda: 3/1/0 · Primera: 4/2/0</div></div>`}
+function seniorTable(rows){return `<div class="stand-card"><div class="stand-card-head"><div><span class="stand-kicker">Competencia independiente</span><h3>Tabla Senior</h3></div><strong>3 pts por triunfo</strong></div><div class="stand-scroll"><table class="stand-table"><thead><tr><th>Pos.</th><th>Club</th><th>PJ</th><th>PTS</th><th>G</th><th>E</th><th>P</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="stand-rank">${r.rank}</td><td><div class="stand-club">${crest(r.name)}<span>${esc(r.name)}</span></div></td><td>${r.played}</td><td class="stand-points">${r.points}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td></tr>`).join('')}</tbody></table></div><div class="stand-rule">Senior: triunfo 3 pts · empate 1 pt · derrota 0 pts</div></div>`}
 async function boot(){
   const root=document.getElementById('champStandings'); if(!root)return;
   try{
