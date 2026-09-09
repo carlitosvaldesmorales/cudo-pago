@@ -19,16 +19,27 @@ La certificación visual anterior fue **RECHAZADA POR EL USUARIO** el 2026-09-09
 - `preview-v8/equipos/index.html` referencia `union-orilla-web.png` sólo para Unión Orilla.
 - Regla de control visual persistente: `docs/VISUAL_CHANGE_CONTROL.md`.
 
-## Evidencia previa
-- Run técnico anterior: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34383695251
+## Evidencia previa rechazada
+- Run anterior: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34383695251
 - Artifact anterior: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34383695251/artifacts/10116876064
-- Resultado humano de esa evidencia: **RECHAZADO**.
+- Resultado humano: **RECHAZADO**.
+
+## Evidencia nueva de la corrección de raíz
+- Run QA producción: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34393372257
+- Resultado del workflow: **SUCCESS**.
+- Artifact nueva evidencia: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34393372257/artifacts/10120566083
+- Artifact: `cudo-v8-certificacion-clubes-90`
+- SHA-256 artifact ZIP: `350a7e1f45a9706bde25f78b34327d15ffea6494d19f78dbf5bf83cd09349c20`
+- QA fuente oficial CUDO: **SUCCESS**.
+- QA derivado web con transparencia: **SUCCESS**.
+- QA Playwright móvil: **SUCCESS**.
+- QA Playwright escritorio: **SUCCESS**.
 
 ## Estado actual
 - Fuente oficial: **CONFORME**
-- Corrección de presentación: **PUBLICADA EN MAIN / EN QA DE PRODUCCIÓN**
-- Certificación técnica de la nueva presentación: **PENDIENTE DE NUEVO RUN VERDE**
+- Corrección de presentación: **PUBLICADA EN MAIN Y CUDO.CL**
+- Certificación técnica nueva: **CONFORME**
 - Certificación visual humana: **PENDIENTE DE APROBACIÓN DEL CLUB**
 
 ## Regla de cierre
-LOGOS-02 permanece **ABIERTO** hasta que la nueva publicación en `cudo.cl` tenga QA técnico verde, evidencia móvil/escritorio nueva y aprobación visual explícita del usuario/club.
+LOGOS-02 permanece **ABIERTO** hasta que el usuario/club revise la nueva evidencia o el sitio publicado y apruebe explícitamente la presentación visual del escudo CUDO.
