@@ -20,7 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Preparar evidencia
-        run: mkdir -p qa-standings/screens
+        run: |
+          mkdir -p qa-standings/screens
+          echo 'Evidencia TABLA-01' > qa-standings/README.txt
       - name: Validar reglas persistidas
         shell: bash
         run: |
@@ -90,6 +92,7 @@ jobs:
             for(const group of ['A','B']){
               await page.locator(`[data-stand-group="${group}"]`).click();
               await page.waitForFunction(g=>document.querySelector('#standGroupLabel')?.textContent.trim()===`Grupo ${g}`,group);
+              await page.waitForFunction(()=>[...document.querySelectorAll('#standTables img.stand-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
               const cards=page.locator('#standTables .stand-card');
               const general=await readTable(cards.nth(0)),senior=await readTable(cards.nth(1));
               for(const [name,pts] of Object.entries(expected[group].general)){if(!general[name]||general[name].points!==pts)throw new Error(`${vp.name} Grupo ${group} General ${name}: esperado ${pts}, recibido ${general[name]?.points}`)}
@@ -103,16 +106,17 @@ jobs:
                 if(general['Las Cruces'].rank!==1||general['Huracán'].rank!==1)throw new Error(`${vp.name}: empate General Grupo B no comparte posición 1`);
                 if(senior['Huracán'].rank!==2||senior['Las Palmeras'].rank!==2)throw new Error(`${vp.name}: empate Senior Grupo B no comparte posición 2`);
               }
-              const imgs=await page.locator('#standTables img.stand-crest').evaluateAll(is=>is.map(i=>({src:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0})));
-              if(imgs.some(i=>!i.ok))throw new Error(`${vp.name} Grupo ${group}: existe escudo no cargado`);
               vpReport.groups[group]={general,senior};
             }
             await page.locator('[data-stand-group="A"]').click();
+            await page.waitForFunction(()=>[...document.querySelectorAll('#standTables img.stand-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
             const cudoSrc=await page.locator('#standTables .stand-card').first().locator('tr',{hasText:'Unión Orilla'}).locator('img.stand-crest').getAttribute('src');
             if(!cudoSrc?.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: Tabla General CUDO no usa derivado web aprobado`);
             await page.locator('#champStandings').screenshot({path:`qa-standings/screens/tablas-${vp.name}-grupoA.png`});
             await page.locator('[data-stand-group="B"]').click();
+            await page.waitForFunction(()=>[...document.querySelectorAll('#standTables img.stand-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
             await page.locator('#champStandings').screenshot({path:`qa-standings/screens/tablas-${vp.name}-grupoB.png`});
+            if(pageErrors.length)throw new Error(`${vp.name}: page errors ${pageErrors.join(' | ')}`);
             report.viewports[vp.name]=vpReport;
             await page.close();
           }
