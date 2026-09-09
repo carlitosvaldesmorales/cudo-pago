@@ -22,7 +22,7 @@ jobs:
       - name: Preparar evidencia
         run: |
           mkdir -p qa-standings/screens
-          echo 'Evidencia TABLA-01' > qa-standings/README.txt
+          echo 'Evidencia TABLA-01C' > qa-standings/README.txt
       - name: Validar reglas persistidas
         shell: bash
         run: |
@@ -38,22 +38,33 @@ jobs:
           test "$(jq -r '.senior.points.win' "$R")" = "3"
           test "$(jq -r '.senior.points.draw' "$R")" = "1"
           test "$(jq -r '.tie_breaker.status' "$R")" = "GAP"
-      - name: Esperar publicación TABLA-01B
+      - name: Esperar publicación TABLA-01C
         shell: bash
         run: |
           set -euo pipefail
           PAGE="https://cudo.cl/preview-v8/partidos/?qa=${GITHUB_SHA}"
           for i in $(seq 1 50); do
             if curl -LfsS "$PAGE" -o /tmp/partidos.html \
-              && grep -q 'standings.css?v=20260909-tabla01' /tmp/partidos.html \
-              && grep -q 'standings.js?v=20260909-tabla01b' /tmp/partidos.html \
+              && grep -q 'standings.css?v=20260909-tabla01c' /tmp/partidos.html \
+              && grep -q 'standings.js?v=20260909-tabla01c' /tmp/partidos.html \
               && grep -q 'id="champStandings"' /tmp/partidos.html; then
               exit 0
             fi
             sleep 6
           done
-          echo 'TABLA-01B no apareció en producción dentro de la ventana de espera.' >&2
+          echo 'TABLA-01C no apareció en producción dentro de la ventana de espera.' >&2
           exit 1
+      - name: Validar renderer público exacto
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -LfsS "https://cudo.cl/preview-v8/shared/standings.js?v=20260909-tabla01c&qa=${GITHUB_SHA}" -o /tmp/standings-public.js
+          curl -LfsS "https://cudo.cl/preview-v8/shared/standings.css?v=20260909-tabla01c&qa=${GITHUB_SHA}" -o /tmp/standings-public.css
+          grep -Fq '<th>PJ</th><th>PTS</th><th>3ª</th><th>2ª</th><th>1ª</th>' /tmp/standings-public.js
+          grep -Fq '<th>PJ</th><th>PTS</th><th>G</th><th>E</th><th>P</th>' /tmp/standings-public.js
+          grep -Fq '.stand-table th:nth-child(4),.stand-table td:nth-child(4){width:52px}' /tmp/standings-public.css
+          cp /tmp/standings-public.js qa-standings/standings-public.js
+          cp /tmp/standings-public.css qa-standings/standings-public.css
       - name: Node 20
         uses: actions/setup-node@v4
         with:
@@ -91,6 +102,17 @@ jobs:
             const headers=await page.locator('#champStandings .stand-card').evaluateAll(cards=>cards.map(c=>[...c.querySelectorAll('thead th')].map(x=>x.textContent.trim()).join('|')));
             if(headers[0]!=='Pos.|Club|PJ|PTS|3ª|2ª|1ª')throw new Error(`${vp.name}: orden Tabla General incorrecto: ${headers[0]}`);
             if(headers[1]!=='Pos.|Club|PJ|PTS|G|E|P')throw new Error(`${vp.name}: orden Tabla Senior incorrecto: ${headers[1]}`);
+            if(vp.name==='mobile'){
+              const card=page.locator('#standTables .stand-card').first();
+              const scroller=card.locator('.stand-scroll');
+              await scroller.evaluate(el=>el.scrollLeft=0);
+              const pj=await card.locator('thead th').nth(2).boundingBox();
+              const pts=await card.locator('thead th').nth(3).boundingBox();
+              const cardBox=await card.boundingBox();
+              if(!pj||!pts||!cardBox)throw new Error('mobile: no se pudo medir PJ/PTS');
+              if(!(pts.x>pj.x))throw new Error(`mobile: PTS no está después de PJ: PJ=${pj.x}, PTS=${pts.x}`);
+              if(pts.x+pts.width>cardBox.x+cardBox.width+1)throw new Error(`mobile: PTS no queda visible sin scroll horizontal`);
+            }
             const vpReport={groups:{},pageErrors,headers};
             for(const group of ['A','B']){
               await page.locator(`[data-stand-group="${group}"]`).click();
@@ -113,11 +135,13 @@ jobs:
             }
             await page.locator('[data-stand-group="A"]').click();
             await page.waitForFunction(()=>[...document.querySelectorAll('#standTables img.stand-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
+            await page.locator('#standTables .stand-scroll').evaluateAll(els=>els.forEach(el=>el.scrollLeft=0));
             const cudoSrc=await page.locator('#standTables .stand-card').first().locator('tr',{hasText:'Unión Orilla'}).locator('img.stand-crest').getAttribute('src');
             if(!cudoSrc?.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: Tabla General CUDO no usa derivado web aprobado`);
             await page.locator('#champStandings').screenshot({path:`qa-standings/screens/tablas-${vp.name}-grupoA.png`});
             await page.locator('[data-stand-group="B"]').click();
             await page.waitForFunction(()=>[...document.querySelectorAll('#standTables img.stand-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
+            await page.locator('#standTables .stand-scroll').evaluateAll(els=>els.forEach(el=>el.scrollLeft=0));
             await page.locator('#champStandings').screenshot({path:`qa-standings/screens/tablas-${vp.name}-grupoB.png`});
             if(pageErrors.length)throw new Error(`${vp.name}: page errors ${pageErrors.join(' | ')}`);
             report.viewports[vp.name]=vpReport;
@@ -131,17 +155,19 @@ jobs:
         shell: bash
         run: |
           cat > qa-standings/CERTIFICADO.txt <<EOF
-          CUDO V8 — TABLA-01B ANFA CHÉPICA 2026
+          CUDO V8 — TABLA-01C ANFA CHÉPICA 2026
           Sitio: https://cudo.cl/preview-v8/partidos/#champStandings
           Commit QA: ${GITHUB_SHA}
           Estado técnico: CONFORME
-          Orden visual General: Pos. | Club | PJ | PTS | 3ª | 2ª | 1ª
-          Orden visual Senior: Pos. | Club | PJ | PTS | G | E | P
+          Renderer público exacto: VALIDADO
+          Orden General: Pos. | Club | PJ | PTS | 3ª | 2ª | 1ª
+          Orden Senior: Pos. | Club | PJ | PTS | G | E | P
+          Móvil: PJ y PTS visibles juntos sin scroll horizontal; detalle queda después
           Tabla General: Tercera 2/1/0 + Segunda 3/1/0 + Primera 4/2/0 = 9 pts máximos
           Tabla Senior independiente: 3/1/0
           Grupo A y Grupo B: VALIDADO
           Desempates: GAP; posiciones compartidas cuando hay igualdad de puntos
-          Evidencia: screens/tablas-mobile-grupoA.png, screens/tablas-mobile-grupoB.png, screens/tablas-desktop-grupoA.png, screens/tablas-desktop-grupoB.png, standings-report.json
+          Evidencia: standings-public.js, standings-public.css, screens y standings-report.json
           EOF
       - name: Publicar evidencia certificable
         if: always()
