@@ -20,6 +20,13 @@ Competencia independiente:
 - empata 1,
 - pierde 0.
 
+## Prioridad visual aprobada por el usuario
+El usuario indicó que el total debe leerse antes que el detalle. La disposición persistida queda:
+- Tabla General: `Pos. | Club | PJ | PTS | 3ª | 2ª | 1ª`
+- Tabla Senior: `Pos. | Club | PJ | PTS | G | E | P`
+
+Regla: los puntos totales van inmediatamente después de partidos jugados; el desglose viene después.
+
 ## Criterio de desempate
 Estado: **GAP**.
 No existe criterio oficial documentado en las fuentes disponibles. No se usa diferencia de goles, goles a favor ni enfrentamiento directo por inferencia. Cuando hay igualdad de puntos se muestra posición compartida provisional.
@@ -57,24 +64,26 @@ Posición compartida 3: San Agustín, Las Palmeras y San Ramón — 0 pts.
 Posición compartida 2: Huracán y Las Palmeras — 1 pt.
 Posición compartida 4: San Agustín y San Ramón — 0 pts.
 
-## Evidencia técnica
+## Evidencia técnica vigente
 - Sitio: https://cudo.cl/preview-v8/partidos/#champStandings
-- Run QA exitoso: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34402925899
-- Artifact: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34402925899/artifacts/10124182362
-- Artifact: `cudo-v8-tabla-anfa-2`
-- SHA-256 artifact ZIP: `48be7d1e02cec11f8890f99e9b3f54c6b420696da058ab8707d7b34333aa0091`
+- Run QA exitoso: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34403652845
+- Artifact: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34403652845/artifacts/10124448085
+- Artifact: `cudo-v8-tabla-anfa-5`
+- SHA-256 artifact ZIP: `4bb0bde1e01d458cd1b60b37037742c8bcb23700ae5b25d9b69edafb39425e81`
 - QA reglas: SUCCESS
 - QA cálculo Grupo A/B: SUCCESS
 - QA Tabla General/Senior separadas: SUCCESS
+- QA orden General `PJ | PTS | 3ª | 2ª | 1ª`: SUCCESS
+- QA orden Senior `PJ | PTS | G | E | P`: SUCCESS
 - QA CUDO con activo web aprobado: SUCCESS
 - QA móvil/escritorio y capturas: SUCCESS
 
 ## Estado
 - Materialización: **CONFORME**
 - Cálculo: **CONFORME**
-- QA técnico: **CONFORME**
-- Certificación visual humana: **PENDIENTE**
-- TABLA-01: **ABIERTO HASTA APROBACIÓN VISUAL**
+- Refinamiento de prioridad de columnas: **PUBLICADO Y QA CONFORME**
+- Certificación visual humana de la versión refinada: **PENDIENTE**
+- TABLA-01: **ABIERTO HASTA APROBACIÓN VISUAL FINAL**
 
 ## Regla de cierre
-TABLA-01 se cierra cuando el usuario/club revise la tabla publicada y apruebe explícitamente su presentación. Si se define posteriormente un criterio oficial de desempate, se registra como nueva versión de reglas y se recalculan las posiciones.
+TABLA-01 se cierra cuando el usuario/club revise la tabla refinada publicada y apruebe explícitamente su presentación. Si se define posteriormente un criterio oficial de desempate, se registra como nueva versión de reglas y se recalculan las posiciones.
