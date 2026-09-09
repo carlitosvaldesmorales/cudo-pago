@@ -40,15 +40,40 @@ El primer intento del menú acotado tenía un error de modelo: la cuenta del adm
 Consecuencia: el menú intentaba buscar `teams.team_id='CUDO'`, no encontraba el club y no podía resolver Grupo A ni los partidos de Unión Orilla.
 
 Corrección de raíz:
-- migración `0006_canonicalize_cudo_club_id.sql` convierte reporteros históricos `CUDO → UNION-ORILLA`;
+- migración `sports-bus/migrations/0006_canonical_reporter_club.sql` convierte reporteros históricos `CUDO → UNION-ORILLA` y evita que el alias vuelva a quedar persistido;
 - el gate de despliegue exige `legacy_cudo_reporters=0`;
 - exige al menos un reportero `UNION-ORILLA`;
 - exige que `teams.UNION-ORILLA` exista en Grupo A;
 - el menú `Mis partidos` usa el identificador canónico del fixture, no un alias de presentación.
 
-Deploy de la corrección: run 36
-https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34407416086
-Estado: SUCCESS.
+Evidencia posterior: el diagnóstico remoto confirma `legacy_cudo_reporters=0`, un administrador verificado `UNION-ORILLA`, el equipo canónico en Grupo A y 5 partidos del club.
+
+## Incidente Telegram 401 detectado y corregido 2026-09-09
+Síntoma: `CUDODeportesBot` dejó de responder. El Worker seguía vivo, D1 seguía accesible, el token del bot estaba configurado y Telegram tenía el webhook correcto, pero existían 6 updates pendientes y Telegram reportaba `Wrong response from the webhook: 401 Unauthorized`.
+
+Causa raíz: coexistían dos validaciones distintas del mismo `secret_token`:
+- el Worker original valida el SHA-256 hexadecimal derivado de `TELEGRAM_WEBHOOK_SECRET`;
+- el flujo nuevo por series comparaba el encabezado recibido directamente contra el secreto bruto.
+
+Telegram enviaba correctamente el secreto derivado registrado, pero `series-entry.js` lo rechazaba antes de llegar a la validación original. Resultado: HTTP 401 para `/mispartidos`, callbacks y mensajes del flujo nuevo.
+
+Corrección de raíz:
+1. `sports-bus/cors-entry.js` reutiliza el mismo algoritmo de secreto seguro del Worker original;
+2. la reconciliación del webhook registra siempre el secreto SHA-256 derivado, nunca el secreto bruto;
+3. la petición entregada al handler de series se normaliza internamente sólo después de validar correctamente el secreto derivado;
+4. el request original permanece intacto para el Worker original;
+5. el deploy ejecuta una reconciliación idempotente del webhook y valida el runtime de Telegram;
+6. existe `GET /health/telegram` para certificar configuración, Bot API, webhook y cola pendiente sin exponer secretos;
+7. `.github/workflows/diagnose-sports-bus.yml` espera a que la cola pendiente llegue a cero y valida además identidad/alcance en D1.
+
+Evidencia de recuperación:
+- Deploy/auth fix: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34408360157 — **SUCCESS**.
+- Diagnóstico posterior: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34408468127 — **SUCCESS**.
+- La cola Telegram drenó `6 → 6 → 4 → 0`.
+- `CUDODeportesBot`: Bot API OK, webhook configurado, token runtime presente, secret runtime presente.
+- D1: `UNION-ORILLA`, Grupo A, administrador verificado activo, 5 partidos del club.
+
+Regla persistente: no considerar Telegram operativo sólo porque `/health` del Worker responda. El gate real de transporte debe verificar Bot API + webhook + autenticación compatible + `pending_update_count=0`.
 
 ## Flujo materializado
 `Telegram → Sports Event Bus → D1 → /api/v1/series-results → Partidos V8 → Tabla General / Tabla Senior`
@@ -64,8 +89,10 @@ Flujo de botones:
 
 ## Persistencia y control
 - Migración captura: `sports-bus/migrations/0005_series_reporting.sql`
-- Migración identidad canónica: `sports-bus/migrations/0006_canonicalize_cudo_club_id.sql`
+- Migración identidad canónica: `sports-bus/migrations/0006_canonical_reporter_club.sql`
 - Captura Telegram: `sports-bus/worker/series-entry.js`
+- Ingreso/compatibilidad de autenticación: `sports-bus/cors-entry.js`
+- Diagnóstico: `.github/workflows/diagnose-sports-bus.yml`
 - API verificada: `/api/v1/series-results`
 - Reporte/auditoría: `series_reports`, `events`, `permission_audit`
 - Sesión de entrada: `telegram_series_sessions`
@@ -83,28 +110,17 @@ Flujo de botones:
 - La Tabla General sólo suma una jornada cuando existen Tercera + Segunda + Primera verificadas para el partido.
 - Senior se recalcula independientemente cuando existe Senior verificada.
 
-## Evidencia técnica vigente
-Deploy Sports Event Bus run 36:
-https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34407416086
-
-Validaciones:
-- migraciones D1 aplicadas: SUCCESS
-- identidad `CUDO → UNION-ORILLA`: SUCCESS
-- reporteros legacy con `club_id=CUDO`: 0 requerido por gate
-- equipo `UNION-ORILLA` en Grupo A: requerido por gate
-- 25 partidos + 5 libres: SUCCESS
-- 20 resultados por serie Fecha I: SUCCESS
-- `/api/v1/series-results`: SUCCESS
-- Worker desplegado: SUCCESS
-
-## Estado
+## Estado técnico vigente
 - Backend series-aware: **CONFORME**
 - API live VERIFIED: **CONFORME**
 - Web conectada al API live: **MATERIALIZADA**
 - Menú acotado por cuenta/club: **DESPLEGADO**
 - Identidad canónica reportero ↔ fixture: **CORREGIDA Y GATEADA**
+- Transporte Telegram: **RECUPERADO Y DIAGNÓSTICO TÉCNICO CONFORME**
+- Cola pendiente Telegram: **0**
 - Datos ficticios insertados: **NO**
-- Prueba humana Fecha II: **PENDIENTE**
+- Prueba humana del menú después de recuperación: **PENDIENTE**
+- Prueba humana Fecha II end-to-end con marcador real: **PENDIENTE**
 - RESULTADOS-01: **ABIERTO HASTA PRUEBA END-TO-END**
 
 ## Criterio de cierre
