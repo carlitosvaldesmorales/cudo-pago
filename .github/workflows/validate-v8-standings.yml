@@ -1,0 +1,144 @@
+name: CUDO V8 - certificar tablas ANFA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'preview-v8/partidos/**'
+      - 'preview-v8/shared/standings.js'
+      - 'preview-v8/shared/standings.css'
+      - 'preview-v8/data/anfa-chepica-2026-series-results.json'
+      - 'preview-v8/data/anfa-chepica-2026-standings-rules.json'
+      - 'preview-v8/data/championship-fixture.json'
+      - '.github/workflows/validate-v8-standings.yml'
+permissions:
+  contents: read
+jobs:
+  standings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar evidencia
+        run: mkdir -p qa-standings/screens
+      - name: Validar reglas persistidas
+        shell: bash
+        run: |
+          set -euo pipefail
+          R=preview-v8/data/anfa-chepica-2026-standings-rules.json
+          test "$(jq -r '.general.maximum_points_per_matchday' "$R")" = "9"
+          test "$(jq -r '.general.points.TERCERA.win' "$R")" = "2"
+          test "$(jq -r '.general.points.TERCERA.draw' "$R")" = "1"
+          test "$(jq -r '.general.points.SEGUNDA.win' "$R")" = "3"
+          test "$(jq -r '.general.points.SEGUNDA.draw' "$R")" = "1"
+          test "$(jq -r '.general.points.PRIMERA.win' "$R")" = "4"
+          test "$(jq -r '.general.points.PRIMERA.draw' "$R")" = "2"
+          test "$(jq -r '.senior.points.win' "$R")" = "3"
+          test "$(jq -r '.senior.points.draw' "$R")" = "1"
+          test "$(jq -r '.tie_breaker.status' "$R")" = "GAP"
+      - name: Esperar publicación TABLA-01
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAGE="https://cudo.cl/preview-v8/partidos/?qa=${GITHUB_SHA}"
+          for i in $(seq 1 50); do
+            if curl -LfsS "$PAGE" -o /tmp/partidos.html \
+              && grep -q 'standings.css?v=20260909-tabla01' /tmp/partidos.html \
+              && grep -q 'standings.js?v=20260909-tabla01' /tmp/partidos.html \
+              && grep -q 'id="champStandings"' /tmp/partidos.html; then
+              exit 0
+            fi
+            sleep 6
+          done
+          echo 'TABLA-01 no apareció en producción dentro de la ventana de espera.' >&2
+          exit 1
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Instalar Playwright sin apt
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0
+          CHROME_BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || command -v chromium)"
+          test -n "$CHROME_BIN"
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: QA cálculo y visual móvil/escritorio
+        shell: bash
+        run: |
+          cat > check-standings.mjs <<'NODE'
+          import {chromium} from 'playwright';
+          import fs from 'node:fs';
+          const expected={
+            A:{general:{'Peñarol La Mina':9,'Juventud de Chépica':7,'Santa Elena La Ruda':5,'Unión Orilla':4,'San Juan':2,'Independiente':0},senior:{'Unión Orilla':3,'Peñarol La Mina':3,'Juventud de Chépica':3,'Santa Elena La Ruda':0,'Independiente':0,'San Juan':0}},
+            B:{general:{'Las Cruces':9,'Huracán':9,'San Agustín':0,'Las Palmeras':0,'San Ramón':0},senior:{'Las Cruces':3,'Huracán':1,'Las Palmeras':1,'San Agustín':0,'San Ramón':0}}
+          };
+          const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN});
+          const report={source:'https://cudo.cl/preview-v8/partidos/',expected,viewports:{}};
+          const readTable=async(card)=>{
+            const rows=await card.locator('tbody tr').evaluateAll(rs=>rs.map(r=>{const c=[...r.querySelectorAll('td')].map(x=>x.textContent.trim());return {rank:+c[0],name:c[1],played:+c[2],points:+c[c.length-1],cells:c}}));
+            return Object.fromEntries(rows.map(r=>[r.name,r]));
+          };
+          for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
+            const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});
+            const pageErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));
+            await page.goto(`https://cudo.cl/preview-v8/partidos/?qa=${Date.now()}`,{waitUntil:'networkidle',timeout:90000});
+            await page.locator('#champStandings .stand-card').first().waitFor({state:'visible'});
+            if(await page.locator('#champStandings .stand-card').count()!==2)throw new Error(`${vp.name}: deben existir dos tablas separadas`);
+            const vpReport={groups:{},pageErrors};
+            for(const group of ['A','B']){
+              await page.locator(`[data-stand-group="${group}"]`).click();
+              await page.waitForFunction(g=>document.querySelector('#standGroupLabel')?.textContent.trim()===`Grupo ${g}`,group);
+              const cards=page.locator('#standTables .stand-card');
+              const general=await readTable(cards.nth(0)),senior=await readTable(cards.nth(1));
+              for(const [name,pts] of Object.entries(expected[group].general)){if(!general[name]||general[name].points!==pts)throw new Error(`${vp.name} Grupo ${group} General ${name}: esperado ${pts}, recibido ${general[name]?.points}`)}
+              for(const [name,pts] of Object.entries(expected[group].senior)){if(!senior[name]||senior[name].points!==pts)throw new Error(`${vp.name} Grupo ${group} Senior ${name}: esperado ${pts}, recibido ${senior[name]?.points}`)}
+              if(group==='A'){
+                if(general['Peñarol La Mina'].cells.slice(3,7).join('|')!=='2|3|4|9')throw new Error(`${vp.name}: desglose Peñarol General incorrecto`);
+                if(general['Unión Orilla'].cells.slice(3,7).join('|')!=='0|0|4|4')throw new Error(`${vp.name}: desglose CUDO General incorrecto`);
+                if(senior['Unión Orilla'].cells.slice(3,7).join('|')!=='1|0|0|3')throw new Error(`${vp.name}: Senior CUDO incorrecto`);
+              }
+              if(group==='B'){
+                if(general['Las Cruces'].rank!==1||general['Huracán'].rank!==1)throw new Error(`${vp.name}: empate General Grupo B no comparte posición 1`);
+                if(senior['Huracán'].rank!==2||senior['Las Palmeras'].rank!==2)throw new Error(`${vp.name}: empate Senior Grupo B no comparte posición 2`);
+              }
+              const imgs=await page.locator('#standTables img.stand-crest').evaluateAll(is=>is.map(i=>({src:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0})));
+              if(imgs.some(i=>!i.ok))throw new Error(`${vp.name} Grupo ${group}: existe escudo no cargado`);
+              vpReport.groups[group]={general,senior};
+            }
+            await page.locator('[data-stand-group="A"]').click();
+            const cudoSrc=await page.locator('#standTables .stand-card').first().locator('tr',{hasText:'Unión Orilla'}).locator('img.stand-crest').getAttribute('src');
+            if(!cudoSrc?.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: Tabla General CUDO no usa derivado web aprobado`);
+            await page.locator('#champStandings').screenshot({path:`qa-standings/screens/tablas-${vp.name}-grupoA.png`});
+            await page.locator('[data-stand-group="B"]').click();
+            await page.locator('#champStandings').screenshot({path:`qa-standings/screens/tablas-${vp.name}-grupoB.png`});
+            report.viewports[vp.name]=vpReport;
+            await page.close();
+          }
+          fs.writeFileSync('qa-standings/standings-report.json',JSON.stringify(report,null,2));
+          await browser.close();
+          NODE
+          node check-standings.mjs
+      - name: Generar certificado
+        shell: bash
+        run: |
+          cat > qa-standings/CERTIFICADO.txt <<EOF
+          CUDO V8 — TABLA-01 ANFA CHÉPICA 2026
+          Sitio: https://cudo.cl/preview-v8/partidos/#champStandings
+          Commit QA: ${GITHUB_SHA}
+          Estado técnico: CONFORME
+          Tabla General: Tercera 2/1/0 + Segunda 3/1/0 + Primera 4/2/0 = 9 pts máximos
+          Tabla Senior independiente: 3/1/0
+          Grupo A y Grupo B: VALIDADO
+          Desempates: GAP; posiciones compartidas cuando hay igualdad de puntos
+          Evidencia: screens/tablas-mobile-grupoA.png, screens/tablas-mobile-grupoB.png, screens/tablas-desktop-grupoA.png, screens/tablas-desktop-grupoB.png, standings-report.json
+          EOF
+      - name: Publicar evidencia certificable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-v8-tabla-anfa-${{ github.run_number }}
+          path: qa-standings/
+          if-no-files-found: error
+          retention-days: 30
