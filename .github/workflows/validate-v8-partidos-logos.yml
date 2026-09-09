@@ -78,7 +78,7 @@ jobs:
             const html=await page.content();
             if(html.includes('championship-crests.css')||html.includes('crest-loader.js')) throw new Error(`${vp.name}: dependencia legacy presente`);
             const countText=(await page.locator('#champCount').textContent())||'';
-            if(!countText.includes('25 partidos')||!countText.includes('20 con resultados oficiales')) throw new Error(`${vp.name}: conteo campeonato inesperado: ${countText}`);
+            if(!countText.includes('25 partidos')||!countText.includes('5 con resultados oficiales')) throw new Error(`${vp.name}: conteo campeonato inesperado: ${countText}`);
             const seen=new Set();
             const inspect=async()=>{
               const rows=await page.locator('img.champ-crest').evaluateAll(imgs=>imgs.map(i=>({src:i.getAttribute('src'),w:i.naturalWidth,h:i.naturalHeight,complete:i.complete})));
@@ -127,8 +127,9 @@ jobs:
           Sistema legacy de sprites: RETIRADO DE PARTIDOS
           11 identidades individuales: VALIDADO
           CUDO en Partidos: union-orilla-web.png VALIDADO
-          Fecha I Grupo A: 3 partidos / 12 filas de serie VALIDADO
-          Fecha I Grupo B: 2 partidos / 8 filas de serie VALIDADO
+          Fecha I: 5 enfrentamientos con resultados oficiales / 20 filas de serie VALIDADO
+          Grupo A: 3 partidos / 12 filas de serie VALIDADO
+          Grupo B: 2 partidos / 8 filas de serie VALIDADO
           Evidencia: screens/, visual-report.json
           EOF
       - name: Publicar evidencia certificable
