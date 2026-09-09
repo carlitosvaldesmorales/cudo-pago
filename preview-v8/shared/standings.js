@@ -2,7 +2,7 @@
 const FIXTURE='../data/championship-fixture.json';
 const RESULTS='../data/anfa-chepica-2026-series-results.json';
 const RULES='../data/anfa-chepica-2026-standings-rules.json';
-const V='20260909-tabla01b';
+const V='20260909-tabla01c';
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 const slugMap={
   'JUVENTUD DE CHEPICA':'juventud-chepica.png','SANTA ELENA LA RUDA':'santa-elena-la-ruda.png','INDEPENDIENTE':'independiente.png',
