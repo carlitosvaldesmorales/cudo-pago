@@ -26,7 +26,7 @@ jobs:
           PAGE="https://cudo.cl/preview-v8/partidos/?qa=${GITHUB_SHA}"
           for i in $(seq 1 50); do
             if curl -LfsS "$PAGE" -o /tmp/partidos.html \
-              && grep -q 'championship.js?v=20260909-logos03' /tmp/partidos.html \
+              && grep -q 'championship.js?v=20260909-logos03b' /tmp/partidos.html \
               && grep -q 'championship.css?v=20260909-logos03' /tmp/partidos.html \
               && ! grep -q 'championship-crests.css' /tmp/partidos.html \
               && ! grep -q 'crest-loader.js' /tmp/partidos.html; then
@@ -81,6 +81,7 @@ jobs:
             if(!countText.includes('25 partidos')||!countText.includes('5 con resultados oficiales')) throw new Error(`${vp.name}: conteo campeonato inesperado: ${countText}`);
             const seen=new Set();
             const inspect=async()=>{
+              await page.waitForFunction(()=>[...document.querySelectorAll('img.champ-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
               const rows=await page.locator('img.champ-crest').evaluateAll(imgs=>imgs.map(i=>({src:i.getAttribute('src'),w:i.naturalWidth,h:i.naturalHeight,complete:i.complete})));
               for(const x of rows){if(!x.complete||!x.w||!x.h)throw new Error(`${vp.name}: escudo no cargado ${x.src}`); if(!x.src?.includes('../media/clubes/'))throw new Error(`${vp.name}: ruta no individual ${x.src}`); seen.add(x.src.split('/').pop());}
               if(await page.locator('.champ-crest-fallback').count()) throw new Error(`${vp.name}: apareció fallback de escudo`);
@@ -89,7 +90,6 @@ jobs:
               await page.locator(`.champ-date-btn[data-round="${r}"]`).click();
               for(const g of ['A','B']){
                 await page.locator(`.champ-group-btn[data-group="${g}"]`).click();
-                await page.waitForTimeout(80);
                 await inspect();
               }
             }
