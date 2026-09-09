@@ -35,14 +35,14 @@ jobs:
           NODE
       - name: Apply D1 migrations
         run: npx wrangler d1 migrations apply cudo-sports-event-bus --remote
-      - name: Validate fixture and series materialization
+      - name: Validate fixture, series and canonical club identity
         shell: bash
         run: |
           set -euo pipefail
-          SQL="SELECT (SELECT COUNT(*) FROM matches WHERE competition_id='ANFA-CHEPICA-2026') matches_count,(SELECT COUNT(*) FROM byes WHERE competition_id='ANFA-CHEPICA-2026') byes_count,(SELECT COUNT(*) FROM teams) teams_count,(SELECT COUNT(*) FROM match_series_results WHERE validation_status='VERIFIED') series_count,(SELECT COUNT(DISTINCT match_id) FROM match_series_results) result_matches,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='series_reports') series_reports_table,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='telegram_series_sessions') sessions_table;"
+          SQL="SELECT (SELECT COUNT(*) FROM matches WHERE competition_id='ANFA-CHEPICA-2026') matches_count,(SELECT COUNT(*) FROM byes WHERE competition_id='ANFA-CHEPICA-2026') byes_count,(SELECT COUNT(*) FROM teams) teams_count,(SELECT COUNT(*) FROM match_series_results WHERE validation_status='VERIFIED') series_count,(SELECT COUNT(DISTINCT match_id) FROM match_series_results) result_matches,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='series_reports') series_reports_table,(SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='telegram_series_sessions') sessions_table,(SELECT COUNT(*) FROM reporters WHERE club_id='CUDO') legacy_cudo_reporters,(SELECT COUNT(*) FROM reporters WHERE club_id='UNION-ORILLA') union_orilla_reporters,(SELECT COUNT(*) FROM teams WHERE team_id='UNION-ORILLA' AND group_id='A') union_orilla_team;"
           npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "$SQL" > /tmp/materialized.json
           cat /tmp/materialized.json
-          node -e 'const x=JSON.parse(require("fs").readFileSync("/tmp/materialized.json","utf8"));const r=x[0]?.results?.[0];if(!r||r.matches_count!==25||r.byes_count!==5||r.teams_count<11||r.series_count!==20||r.result_matches!==5||r.series_reports_table!==1||r.sessions_table!==1){console.error(r);process.exit(1)}'
+          node -e 'const x=JSON.parse(require("fs").readFileSync("/tmp/materialized.json","utf8"));const r=x[0]?.results?.[0];if(!r||r.matches_count!==25||r.byes_count!==5||r.teams_count<11||r.series_count!==20||r.result_matches!==5||r.series_reports_table!==1||r.sessions_table!==1||r.legacy_cudo_reporters!==0||r.union_orilla_reporters<1||r.union_orilla_team!==1){console.error(r);process.exit(1)}'
       - name: Deploy Worker
         run: npx wrangler deploy --keep-vars
       - name: Validate public API
