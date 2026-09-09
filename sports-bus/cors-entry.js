@@ -69,12 +69,44 @@ async function telegramRuntimeHealth(env) {
   }
 }
 
+async function reconcileTelegramWebhook(request, env) {
+  if (request.headers.get('X-CUDO-Repair') !== 'reconcile-webhook') {
+    return new Response(JSON.stringify({ok:false,error:'forbidden'}),{status:403,headers:{'content-type':'application/json; charset=utf-8'}});
+  }
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
+    return new Response(JSON.stringify({ok:false,error:'telegram_runtime_secrets_missing'}),{status:503,headers:{'content-type':'application/json; charset=utf-8'}});
+  }
+  if (!/^[A-Za-z0-9_-]{1,256}$/.test(env.TELEGRAM_WEBHOOK_SECRET)) {
+    return new Response(JSON.stringify({ok:false,error:'telegram_webhook_secret_invalid_format'}),{status:500,headers:{'content-type':'application/json; charset=utf-8'}});
+  }
+  const origin = new URL(request.url).origin;
+  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/setWebhook`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({
+      url:`${origin}/webhook/telegram`,
+      secret_token:env.TELEGRAM_WEBHOOK_SECRET,
+      allowed_updates:['message','callback_query'],
+      drop_pending_updates:false
+    })
+  });
+  const data = await response.json();
+  return new Response(JSON.stringify({ok:!!data?.ok,description:data?.description||null}),{
+    status:data?.ok?200:502,
+    headers:{'content-type':'application/json; charset=utf-8'}
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === '/health/telegram' && request.method === 'GET') {
       return telegramRuntimeHealth(env);
+    }
+
+    if (url.pathname === '/ops/telegram/reconcile' && request.method === 'POST') {
+      return reconcileTelegramWebhook(request, env);
     }
 
     if (isPublicApi(request) && request.method === 'OPTIONS') {
