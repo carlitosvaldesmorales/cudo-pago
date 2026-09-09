@@ -1,0 +1,26 @@
+{
+  "competition_id": "ANFA-CHEPICA-2026",
+  "schema": 1,
+  "source": "Reglas de puntuación definidas por CUDO el 2026-09-09",
+  "general": {
+    "name": "Tabla General",
+    "included_series": ["TERCERA", "SEGUNDA", "PRIMERA"],
+    "maximum_points_per_matchday": 9,
+    "points": {
+      "TERCERA": {"win": 2, "draw": 1, "loss": 0},
+      "SEGUNDA": {"win": 3, "draw": 1, "loss": 0},
+      "PRIMERA": {"win": 4, "draw": 2, "loss": 0}
+    }
+  },
+  "senior": {
+    "name": "Tabla Senior",
+    "included_series": ["SENIOR"],
+    "points": {"win": 3, "draw": 1, "loss": 0}
+  },
+  "tie_breaker": {
+    "status": "GAP",
+    "rule": null,
+    "display_policy": "SHARED_RANK_WHEN_POINTS_EQUAL",
+    "note": "No se inventa un criterio de desempate. Los clubes con los mismos puntos comparten posición provisional hasta disponer del reglamento oficial."
+  }
+}
