@@ -102,8 +102,10 @@ jobs:
             if(await page.locator('.champ-series-row').count()!==12)throw new Error(`${vp.name}: Fecha I Grupo A debe mostrar 12 filas de serie`);
             const cudo=page.locator('.champ-match-card').filter({hasText:'Unión Orilla'}).first();
             await cudo.waitFor({state:'visible'});
-            const cudoSrc=await cudo.locator('img.champ-crest').first().getAttribute('src');
-            if(!cudoSrc?.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: CUDO no usa derivado web aprobado`);
+            const cudoLogo=cudo.locator('img[alt*="Unión Orilla"]');
+            if(await cudoLogo.count()!==1)throw new Error(`${vp.name}: no se encontró exactamente un escudo de Unión Orilla en su partido`);
+            const cudoSrc=await cudoLogo.getAttribute('src');
+            if(!cudoSrc?.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: CUDO no usa derivado web aprobado: ${cudoSrc}`);
             await page.screenshot({path:`qa-partidos-logos/screens/partidos-${vp.name}-fecha1-grupoA.png`,fullPage:true});
             await cudo.screenshot({path:`qa-partidos-logos/screens/cudo-${vp.name}-partidos.png`});
             await page.locator('.champ-group-btn[data-group="B"]').click();
