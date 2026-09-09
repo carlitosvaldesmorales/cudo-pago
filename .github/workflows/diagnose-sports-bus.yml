@@ -1,0 +1,71 @@
+name: Diagnose Sports Event Bus
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/sports-event-bus-v1]
+    paths: ['.github/workflows/diagnose-sports-bus.yml']
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
+      - name: Install Wrangler
+        run: npm install --no-save wrangler@latest
+      - name: Worker health
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev'
+          curl -fsS "$BASE/health" | tee /tmp/health.json
+          node -e 'const x=require("/tmp/health.json"); if(!x.ok) process.exit(1)'
+      - name: Telegram bot and webhook health
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TELEGRAM_BOT_TOKEN"
+          curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" -o /tmp/getme.json
+          curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" -o /tmp/webhook.json
+          node <<'NODE'
+          const fs=require('fs');
+          const me=JSON.parse(fs.readFileSync('/tmp/getme.json','utf8'));
+          const wh=JSON.parse(fs.readFileSync('/tmp/webhook.json','utf8'));
+          if(!me.ok || !wh.ok){console.error('telegram_api_not_ok');process.exit(1)}
+          const r=wh.result||{};
+          console.log(JSON.stringify({
+            bot_ok:true,
+            bot_username:me.result?.username||null,
+            webhook_url:r.url||null,
+            has_custom_certificate:!!r.has_custom_certificate,
+            pending_update_count:r.pending_update_count||0,
+            last_error_date:r.last_error_date||null,
+            last_error_message:r.last_error_message||null,
+            allowed_updates:r.allowed_updates||null
+          },null,2));
+          if(!String(r.url||'').includes('/webhook/telegram')) process.exit(2);
+          NODE
+      - name: D1 reporter and club mapping health
+        shell: bash
+        run: |
+          set -euo pipefail
+          SQL="SELECT club_id,role,trust_level,active,COUNT(*) AS n FROM reporters GROUP BY club_id,role,trust_level,active ORDER BY club_id,role; SELECT team_id,canonical_name,group_id FROM teams WHERE team_id IN ('CUDO','UNION-ORILLA') ORDER BY team_id; SELECT COUNT(*) AS cudo_matches FROM matches WHERE home_id='UNION-ORILLA' OR away_id='UNION-ORILLA';"
+          npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "$SQL" > /tmp/d1.json
+          cat /tmp/d1.json
+          node <<'NODE'
+          const fs=require('fs'); const x=JSON.parse(fs.readFileSync('/tmp/d1.json','utf8'));
+          const sets=x.flatMap(v=>Array.isArray(v.results)?[v.results]:[]);
+          const rows=sets.flat();
+          const legacy=rows.find(r=>r.club_id==='CUDO' && r.active===1);
+          const canonical=rows.find(r=>r.team_id==='UNION-ORILLA');
+          const matches=rows.find(r=>Object.prototype.hasOwnProperty.call(r,'cudo_matches'));
+          console.log(JSON.stringify({legacy_reporter_club_detected:!!legacy,canonical_team_detected:!!canonical,cudo_fixture_matches:matches?.cudo_matches??null},null,2));
+          if(!canonical || Number(matches?.cudo_matches||0)<1) process.exit(3);
+          NODE
