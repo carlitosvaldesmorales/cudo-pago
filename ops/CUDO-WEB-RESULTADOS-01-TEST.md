@@ -120,6 +120,7 @@ Flujo de botones:
 - Gate UX local/visita: `.github/workflows/validate-sports-bus-ux.yml`
 - Ingreso/compatibilidad de autenticación: `sports-bus/cors-entry.js`
 - Diagnóstico: `.github/workflows/diagnose-sports-bus.yml`
+- Validación E2E de resultados: `.github/workflows/validate-results-e2e.yml`
 - API verificada: `/api/v1/series-results`
 - Reporte/auditoría: `series_reports`, `events`, `permission_audit`
 - Sesión de entrada: `telegram_series_sessions`
@@ -132,24 +133,49 @@ Flujo de botones:
 - Si informan marcadores distintos: CONFLICT y no se publica hasta resolución administrativa.
 
 ## Consumo web
-- `preview-v8/shared/championship.js` consume resultados VERIFIED desde Sports Event Bus con fallback al snapshot.
-- `preview-v8/shared/standings.js` recalcula tablas desde la misma API VERIFIED con fallback seguro.
+- `preview-v8/shared/championship.js` consume resultados VERIFIED desde Sports Event Bus con `cache: no-store` y fallback al snapshot.
+- `preview-v8/shared/standings.js` recalcula tablas desde la misma API VERIFIED con `cache: no-store` y fallback seguro.
 - La Tabla General sólo suma una jornada cuando existen Tercera + Segunda + Primera verificadas para el partido.
 - Senior se recalcula independientemente cuando existe Senior verificada.
+- No se requiere commit, edición de JSON ni despliegue de GitHub Pages para publicar un nuevo resultado VERIFIED.
+- La página obtiene los datos al cargar/recargar; todavía no existe actualización push dentro de una pestaña que ya esté abierta.
+
+## Prueba humana real Fecha II — 2026-09-09
+El administrador de CUDO ingresó los cuatro resultados reales de `A-F2-M2` mediante Telegram.
+
+D1 y API pública confirmaron:
+- Tercera: Unión Orilla 2–3 San Juan — `VERIFIED` — `TELEGRAM_SUPER_ADMIN`
+- Segunda: Unión Orilla 1–0 San Juan — `VERIFIED` — `TELEGRAM_SUPER_ADMIN`
+- Senior: Unión Orilla 0–0 San Juan — `VERIFIED` — `TELEGRAM_SUPER_ADMIN`
+- Primera: Unión Orilla 3–0 San Juan — `VERIFIED` — `TELEGRAM_SUPER_ADMIN`
+
+Validación E2E vigente:
+https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34410129633 — **SUCCESS**.
+
+El gate comprueba:
+1. D1 contiene resultados VERIFIED de Fecha II.
+2. `/api/v1/series-results` expone las cuatro series de `A-F2-M2`.
+3. Los JS servidos por `cudo.cl` consumen el Sports Event Bus live y solicitan datos sin caché.
+
+## Efecto esperado en tablas con este partido
+Tabla General de este partido: Tercera 0 pts CUDO / 2 pts San Juan + Segunda 3/0 + Primera 4/0 = **7 pts Unión Orilla y 2 pts San Juan**.
+Tabla Senior de este partido: empate = **1 punto para cada club**.
 
 ## Estado técnico vigente
 - Backend series-aware: **CONFORME**
 - API live VERIFIED: **CONFORME**
-- Web conectada al API live: **MATERIALIZADA**
-- Menú acotado por cuenta/club: **DESPLEGADO**
+- Web conectada al API live: **CONFORME**
+- Menú acotado por cuenta/club: **CONFORME**
 - Orden local/visita en botones de fecha: **MATERIALIZADO Y GATEADO**
 - Identidad canónica reportero ↔ fixture: **CORREGIDA Y GATEADA**
 - Transporte Telegram: **RECUPERADO Y DIAGNÓSTICO TÉCNICO CONFORME**
 - Cola pendiente Telegram: **0**
 - Datos ficticios insertados: **NO**
 - Prueba humana del menú después de recuperación: **CONFORME**
-- Prueba humana Fecha II end-to-end con marcador real: **PENDIENTE**
-- RESULTADOS-01: **ABIERTO HASTA PRUEBA END-TO-END**
+- Prueba humana Fecha II con cuatro series reales: **COMPLETADA**
+- D1 → API → binding web live: **E2E CONFORME**
+- Verificación visual humana de Fecha II/tabla en la página después de recarga: **PENDIENTE**
+- RESULTADOS-01: **ABIERTO SÓLO HASTA VERIFICACIÓN VISUAL DE LA PÁGINA**
 
 ## Criterio de cierre
-Se cierra RESULTADOS-01 sólo después de que el administrador de CUDO entre por `Mis partidos`, vea únicamente su fixture, seleccione Fecha II, ingrese al menos un resultado real por serie y éste se valide en D1/API/web. Para la Tabla General se deben verificar las tres series Tercera + Segunda + Primera; para Senior basta su serie independiente.
+RESULTADOS-01 se cierra cuando el usuario recargue Partidos V8 y confirme visualmente que Fecha II muestra los cuatro resultados anteriores y que Tabla General/Senior reflejan automáticamente el cálculo correspondiente. No se requiere ninguna intervención manual adicional en GitHub para esa publicación.
