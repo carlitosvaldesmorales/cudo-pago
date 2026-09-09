@@ -24,6 +24,12 @@ function corsHeaders(request) {
   };
 }
 
+async function deriveTelegramSafeSecret(source) {
+  const bytes = new TextEncoder().encode(source);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function telegramRuntimeHealth(env) {
   const tokenConfigured = !!env.TELEGRAM_BOT_TOKEN;
   const secretConfigured = !!env.TELEGRAM_WEBHOOK_SECRET;
@@ -76,16 +82,14 @@ async function reconcileTelegramWebhook(request, env) {
   if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_WEBHOOK_SECRET) {
     return new Response(JSON.stringify({ok:false,error:'telegram_runtime_secrets_missing'}),{status:503,headers:{'content-type':'application/json; charset=utf-8'}});
   }
-  if (!/^[A-Za-z0-9_-]{1,256}$/.test(env.TELEGRAM_WEBHOOK_SECRET)) {
-    return new Response(JSON.stringify({ok:false,error:'telegram_webhook_secret_invalid_format'}),{status:500,headers:{'content-type':'application/json; charset=utf-8'}});
-  }
+  const safeSecret = await deriveTelegramSafeSecret(env.TELEGRAM_WEBHOOK_SECRET);
   const origin = new URL(request.url).origin;
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/setWebhook`,{
     method:'POST',
     headers:{'content-type':'application/json'},
     body:JSON.stringify({
       url:`${origin}/webhook/telegram`,
-      secret_token:env.TELEGRAM_WEBHOOK_SECRET,
+      secret_token:safeSecret,
       allowed_updates:['message','callback_query'],
       drop_pending_updates:false
     })
@@ -95,6 +99,19 @@ async function reconcileTelegramWebhook(request, env) {
     status:data?.ok?200:502,
     headers:{'content-type':'application/json; charset=utf-8'}
   });
+}
+
+async function seriesHandlerRequest(request, env) {
+  const clone = request.clone();
+  const url = new URL(clone.url);
+  if (url.pathname !== '/webhook/telegram' || clone.method !== 'POST' || !env.TELEGRAM_WEBHOOK_SECRET) return clone;
+  const presented = clone.headers.get('x-telegram-bot-api-secret-token');
+  if (!presented) return clone;
+  const expected = await deriveTelegramSafeSecret(env.TELEGRAM_WEBHOOK_SECRET);
+  if (presented !== expected) return clone;
+  const headers = new Headers(clone.headers);
+  headers.set('x-telegram-bot-api-secret-token', env.TELEGRAM_WEBHOOK_SECRET);
+  return new Request(clone,{headers});
 }
 
 export default {
@@ -116,7 +133,7 @@ export default {
         : new Response(null, { status: 403 });
     }
 
-    const intercepted = await handleSeriesRequest(request.clone(), env, ctx);
+    const intercepted = await handleSeriesRequest(await seriesHandlerRequest(request, env), env, ctx);
     const response = intercepted || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
