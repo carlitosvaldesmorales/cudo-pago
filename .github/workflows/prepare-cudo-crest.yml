@@ -1,0 +1,54 @@
+name: CUDO V8 - preparar escudo web CUDO
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'preview-v8/media/clubes/union-orilla.png'
+      - 'tools/prepare-cudo-crest.py'
+      - '.github/workflows/prepare-cudo-crest.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Pillow
+        run: pip install pillow==11.3.0
+      - name: Generar derivado web sin fondo rectangular
+        run: python tools/prepare-cudo-crest.py
+      - name: Validar derivado
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f preview-v8/media/clubes/union-orilla-web.png
+          file preview-v8/media/clubes/union-orilla-web.png | grep -q 'PNG image data'
+          python - <<'PY'
+          from PIL import Image
+          p='preview-v8/media/clubes/union-orilla-web.png'
+          im=Image.open(p).convert('RGBA')
+          a=im.getchannel('A')
+          assert a.getextrema()[0] == 0, 'El derivado no tiene transparencia'
+          assert im.getbbox() is not None, 'Derivado vacío'
+          print('alpha', a.getextrema(), 'bbox', im.getbbox())
+          PY
+      - name: Publicar derivado en main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add preview-v8/media/clubes/union-orilla-web.png
+          if git diff --cached --quiet; then
+            echo 'Sin cambios en derivado.'
+            exit 0
+          fi
+          git commit -m 'assets(v8): publish cleaned CUDO web crest derivative'
+          git push origin HEAD:main
