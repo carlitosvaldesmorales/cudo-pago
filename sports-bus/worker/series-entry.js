@@ -1,3 +1,5 @@
+import { fixtureLabel } from './fixture-label.js';
+
 const SERIES = ['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
 const SERIES_LABEL = {TERCERA:'Tercera',SEGUNDA:'Segunda',SENIOR:'Senior',PRIMERA:'Primera'};
 
@@ -210,10 +212,9 @@ async function showMyDates(env, chatId, reporter, team) {
   const byeRounds = new Set((byes.results ?? []).map(x=>Number(x.round_no)));
   const rows = [];
   for (const m of matches.results ?? []) {
-    const rival = m.home_id === reporter.club_id ? m.away_name : m.home_name;
-    rows.push([{text:`${m.round_label} · vs ${rival}`,callback_data:`rs:date:${m.round_no}`}]);
+    rows.push([{text:fixtureLabel(m),callback_data:`rs:date:${m.round_no}`}]);
   }
-  for (const roundNo of byeRounds) rows.push([{text:`Fecha ${roundNo} · Libre`,callback_data:`rs:date:${roundNo}`}]);
+  for (const roundNo of byeRounds) rows.push([{text:`Fecha ${roundNo} · ${team.canonical_name} · Libre`,callback_data:`rs:date:${roundNo}`}]);
   rows.sort((a,b)=>Number(a[0].callback_data.split(':').pop())-Number(b[0].callback_data.split(':').pop()));
   rows.push([{text:'Cancelar',callback_data:'rs:cancel'}]);
   await send(env, chatId,
