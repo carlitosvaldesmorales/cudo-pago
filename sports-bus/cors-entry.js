@@ -1,4 +1,5 @@
 import worker from './worker/index.js';
+import { handleSeriesRequest } from './worker/series-entry.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://cudo.cl',
@@ -32,7 +33,8 @@ export default {
         : new Response(null, { status: 403 });
     }
 
-    const response = await worker.fetch(request, env, ctx);
+    const intercepted = await handleSeriesRequest(request.clone(), env, ctx);
+    const response = intercepted || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
     const cors = corsHeaders(request);
