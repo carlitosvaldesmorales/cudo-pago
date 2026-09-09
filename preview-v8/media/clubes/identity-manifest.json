@@ -1,11 +1,21 @@
 {
-  "schema": 1,
+  "schema": 2,
   "rule": "VALIDACION_TECNICA_NO_EQUIVALE_A_VALIDACION_IDENTIDAD",
   "assets": {
     "union-orilla.png": {
       "club": "Unión Orilla / C.U.D.O.",
+      "role": "FUENTE_OFICIAL_IMMUTABLE",
       "status": "CONFORME_FUENTE_OFICIAL_CLUB",
       "sha256": "2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53",
+      "blocking": true
+    },
+    "union-orilla-web.png": {
+      "club": "Unión Orilla / C.U.D.O.",
+      "role": "DERIVADO_WEB_DETERMINISTICO",
+      "source": "union-orilla.png",
+      "generator": "tools/prepare-cudo-crest.py",
+      "purpose": "Eliminar únicamente el fondo blanco conectado al borde y ajustar encuadre para presentación web, sin redibujar ni alterar la identidad oficial.",
+      "status": "PENDIENTE_CERTIFICACION_HUMANA",
       "blocking": true
     },
     "juventud-chepica.png": {"status":"CONFORME","sha256":"ec30740406a7ddba5fbfdd1a76ea752821c94cae9c220230826095b14c320aba"},
