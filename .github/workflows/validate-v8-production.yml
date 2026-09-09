@@ -43,6 +43,11 @@ jobs:
           CHROME_BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || command -v chromium)"
           test -n "$CHROME_BIN"
           echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar Pillow para validar transparencia
+        run: pip install pillow==11.3.0
       - name: Validar fuente oficial y derivado web CUDO
         shell: bash
         run: |
