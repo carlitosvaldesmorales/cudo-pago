@@ -29,9 +29,10 @@ jobs:
           done
           echo 'La publicación actual de Clubes no apareció dentro de la ventana de espera.' >&2
           exit 1
-      - uses: actions/setup-node@v4
+      - name: Node 20 compatible con QA V8 existente
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '20'
       - name: Instalar Playwright open source
         run: |
           npm install --no-save playwright@1.55.0
@@ -40,12 +41,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p qa-prod-v8/http qa-prod-v8/logos
           files=(
             juventud-chepica.png santa-elena-la-ruda.png independiente.png
             union-orilla.png san-juan.png penarol-la-mina.png huracan.png
             san-agustin.png san-ramon.png las-palmeras.png las-cruces.png
           )
-          mkdir -p qa-prod-v8/http
           for f in "${files[@]}"; do
             curl -LfsS "https://cudo.cl/preview-v8/media/clubes/$f?qa=${GITHUB_SHA}" -o "qa-prod-v8/http/$f"
             file "qa-prod-v8/http/$f" | grep -q 'PNG image data'
@@ -55,7 +56,6 @@ jobs:
       - name: QA visual Clubes móvil y escritorio
         shell: bash
         run: |
-          mkdir -p qa-prod-v8/logos
           cat > check-prod.mjs <<'NODE'
           import {chromium} from 'playwright';
           import fs from 'node:fs';
@@ -72,8 +72,7 @@ jobs:
             const cudo=clubs.find(c=>c.name==='Unión Orilla');
             if(!cudo||!cudo.src.endsWith('/union-orilla.png'))throw new Error(`${vp.name}: Unión Orilla no usa union-orilla.png`);
             await page.screenshot({path:`qa-prod-v8/clubes-${vp.name}.png`,fullPage:true});
-            const card=page.locator('.club-card').filter({hasText:'Unión Orilla'}).first();
-            await card.screenshot({path:`qa-prod-v8/logos/cudo-${vp.name}.png`});
+            await page.locator('.club-card').filter({hasText:'Unión Orilla'}).first().screenshot({path:`qa-prod-v8/logos/cudo-${vp.name}.png`});
             report.viewports[vp.name]={clubs,cudo,errors};
             if(errors.length)throw new Error(`${vp.name}: ${errors.join(' | ')}`);
             await page.close();
@@ -83,7 +82,6 @@ jobs:
           NODE
           node check-prod.mjs
       - name: Generar certificado legible
-        if: success()
         shell: bash
         run: |
           cat > qa-prod-v8/CERTIFICADO.txt <<EOF
@@ -93,7 +91,7 @@ jobs:
           Estado: CONFORME
           CUDO / Unión Orilla SHA-256 publicado:
           2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53
-          Evidencia incluida: clubes-mobile.png, clubes-desktop.png, logos/cudo-mobile.png, logos/cudo-desktop.png, visual-report.json
+          Evidencia: clubes-mobile.png, clubes-desktop.png, logos/cudo-mobile.png, logos/cudo-desktop.png, visual-report.json
           EOF
       - name: Publicar evidencia certificable
         if: always()
