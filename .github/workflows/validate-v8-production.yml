@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Preparar carpeta de evidencia
+        run: mkdir -p qa-prod-v8/http qa-prod-v8/logos
       - name: Esperar publicación actual de Clubes
         shell: bash
         run: |
@@ -33,15 +35,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Instalar Playwright open source
+      - name: Instalar Playwright sin tocar apt
+        shell: bash
         run: |
+          set -euo pipefail
           npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
+          CHROME_BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || command -v chromium)"
+          test -n "$CHROME_BIN"
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
       - name: Validar transporte de los 11 PNG individuales
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p qa-prod-v8/http qa-prod-v8/logos
           files=(
             juventud-chepica.png santa-elena-la-ruda.png independiente.png
             union-orilla.png san-juan.png penarol-la-mina.png huracan.png
@@ -59,7 +64,7 @@ jobs:
           cat > check-prod.mjs <<'NODE'
           import {chromium} from 'playwright';
           import fs from 'node:fs';
-          const browser=await chromium.launch({headless:true});
+          const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN});
           const report={source:'https://cudo.cl/preview-v8/equipos/',expectedCudoSha256:'2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53',viewports:{}};
           for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
             const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});
