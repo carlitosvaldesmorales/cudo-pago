@@ -1,0 +1,141 @@
+name: CUDO V8 - certificar logos Partidos
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'preview-v8/partidos/**'
+      - 'preview-v8/shared/championship.js'
+      - 'preview-v8/shared/championship.css'
+      - 'preview-v8/media/clubes/**'
+      - '.github/workflows/validate-v8-partidos-logos.yml'
+permissions:
+  contents: read
+jobs:
+  partidos-logos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar evidencia
+        run: mkdir -p qa-partidos-logos/http qa-partidos-logos/screens
+      - name: Esperar publicación LOGOS-03
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAGE="https://cudo.cl/preview-v8/partidos/?qa=${GITHUB_SHA}"
+          for i in $(seq 1 50); do
+            if curl -LfsS "$PAGE" -o /tmp/partidos.html \
+              && grep -q 'championship.js?v=20260909-logos03' /tmp/partidos.html \
+              && grep -q 'championship.css?v=20260909-logos03' /tmp/partidos.html \
+              && ! grep -q 'championship-crests.css' /tmp/partidos.html \
+              && ! grep -q 'crest-loader.js' /tmp/partidos.html; then
+              exit 0
+            fi
+            sleep 6
+          done
+          echo 'LOGOS-03 no apareció en producción dentro de la ventana de espera.' >&2
+          exit 1
+      - name: Validar transporte de activos individuales
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            juventud-chepica.png santa-elena-la-ruda.png independiente.png
+            union-orilla-web.png san-juan.png penarol-la-mina.png huracan.png
+            san-agustin.png san-ramon.png las-palmeras.png las-cruces.png
+          )
+          for f in "${files[@]}"; do
+            curl -LfsS "https://cudo.cl/preview-v8/media/clubes/$f?qa=${GITHUB_SHA}" -o "qa-partidos-logos/http/$f"
+            file "qa-partidos-logos/http/$f" | grep -q 'PNG image data'
+          done
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Instalar Playwright sin apt
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0
+          CHROME_BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser || command -v chromium)"
+          test -n "$CHROME_BIN"
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+      - name: QA funcional y visual Partidos
+        shell: bash
+        run: |
+          cat > check-partidos.mjs <<'NODE'
+          import {chromium} from 'playwright';
+          import fs from 'node:fs';
+          const expected=new Set(['juventud-chepica.png','santa-elena-la-ruda.png','independiente.png','union-orilla-web.png','san-juan.png','penarol-la-mina.png','huracan.png','san-agustin.png','san-ramon.png','las-palmeras.png','las-cruces.png']);
+          const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_BIN});
+          const report={source:'https://cudo.cl/preview-v8/partidos/',viewports:{}};
+          for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
+            const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});
+            const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+            await page.goto(`https://cudo.cl/preview-v8/partidos/?qa=${Date.now()}`,{waitUntil:'networkidle',timeout:90000});
+            await page.locator('.champ-match-card').first().waitFor({state:'visible'});
+            const html=await page.content();
+            if(html.includes('championship-crests.css')||html.includes('crest-loader.js')) throw new Error(`${vp.name}: dependencia legacy presente`);
+            const countText=(await page.locator('#champCount').textContent())||'';
+            if(!countText.includes('25 partidos')||!countText.includes('20 con resultados oficiales')) throw new Error(`${vp.name}: conteo campeonato inesperado: ${countText}`);
+            const seen=new Set();
+            const inspect=async()=>{
+              const rows=await page.locator('img.champ-crest').evaluateAll(imgs=>imgs.map(i=>({src:i.getAttribute('src'),w:i.naturalWidth,h:i.naturalHeight,complete:i.complete})));
+              for(const x of rows){if(!x.complete||!x.w||!x.h)throw new Error(`${vp.name}: escudo no cargado ${x.src}`); if(!x.src?.includes('../media/clubes/'))throw new Error(`${vp.name}: ruta no individual ${x.src}`); seen.add(x.src.split('/').pop());}
+              if(await page.locator('.champ-crest-fallback').count()) throw new Error(`${vp.name}: apareció fallback de escudo`);
+            };
+            for(let r=1;r<=5;r++){
+              await page.locator(`.champ-date-btn[data-round="${r}"]`).click();
+              for(const g of ['A','B']){
+                await page.locator(`.champ-group-btn[data-group="${g}"]`).click();
+                await page.waitForTimeout(80);
+                await inspect();
+              }
+            }
+            const missing=[...expected].filter(x=>!seen.has(x));
+            const extra=[...seen].filter(x=>!expected.has(x));
+            if(missing.length||extra.length)throw new Error(`${vp.name}: set de escudos incorrecto missing=${missing} extra=${extra}`);
+            await page.locator('.champ-date-btn[data-round="1"]').click();
+            await page.locator('.champ-group-btn[data-group="A"]').click();
+            if(await page.locator('.champ-match-card').count()!==3)throw new Error(`${vp.name}: Fecha I Grupo A debe tener 3 partidos`);
+            if(await page.locator('.champ-series-row').count()!==12)throw new Error(`${vp.name}: Fecha I Grupo A debe mostrar 12 filas de serie`);
+            const cudo=page.locator('.champ-match-card').filter({hasText:'Unión Orilla'}).first();
+            await cudo.waitFor({state:'visible'});
+            const cudoSrc=await cudo.locator('img.champ-crest').first().getAttribute('src');
+            if(!cudoSrc?.endsWith('/union-orilla-web.png'))throw new Error(`${vp.name}: CUDO no usa derivado web aprobado`);
+            await page.screenshot({path:`qa-partidos-logos/screens/partidos-${vp.name}-fecha1-grupoA.png`,fullPage:true});
+            await cudo.screenshot({path:`qa-partidos-logos/screens/cudo-${vp.name}-partidos.png`});
+            await page.locator('.champ-group-btn[data-group="B"]').click();
+            if(await page.locator('.champ-match-card').count()!==2)throw new Error(`${vp.name}: Fecha I Grupo B debe tener 2 partidos`);
+            if(await page.locator('.champ-series-row').count()!==8)throw new Error(`${vp.name}: Fecha I Grupo B debe mostrar 8 filas de serie`);
+            report.viewports[vp.name]={seen:[...seen].sort(),countText,cudoSrc,errors};
+            await page.close();
+          }
+          fs.writeFileSync('qa-partidos-logos/visual-report.json',JSON.stringify(report,null,2));
+          await browser.close();
+          NODE
+          node check-partidos.mjs
+      - name: Generar certificado
+        shell: bash
+        run: |
+          cat > qa-partidos-logos/CERTIFICADO.txt <<EOF
+          CUDO V8 — LOGOS-03/04/05 PARTIDOS
+          Sitio: https://cudo.cl/preview-v8/partidos/
+          Commit QA: ${GITHUB_SHA}
+          Estado técnico: CONFORME
+          Sistema legacy de sprites: RETIRADO DE PARTIDOS
+          11 identidades individuales: VALIDADO
+          CUDO en Partidos: union-orilla-web.png VALIDADO
+          Fecha I Grupo A: 3 partidos / 12 filas de serie VALIDADO
+          Fecha I Grupo B: 2 partidos / 8 filas de serie VALIDADO
+          Evidencia: screens/, visual-report.json
+          EOF
+      - name: Publicar evidencia certificable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-v8-logos-partidos-${{ github.run_number }}
+          path: qa-partidos-logos/
+          if-no-files-found: error
+          retention-days: 30
