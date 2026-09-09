@@ -21,11 +21,25 @@ Competencia independiente:
 - pierde 0.
 
 ## Prioridad visual aprobada por el usuario
-El usuario indicó que el total debe leerse antes que el detalle. La disposición persistida queda:
+El total debe leerse antes que el detalle:
 - Tabla General: `Pos. | Club | PJ | PTS | 3ª | 2ª | 1ª`
 - Tabla Senior: `Pos. | Club | PJ | PTS | G | E | P`
 
-Regla: los puntos totales van inmediatamente después de partidos jugados; el desglose viene después.
+Regla: `PTS` va inmediatamente después de `PJ`. En móvil, `PJ` y `PTS` deben quedar visibles juntos en la posición inicial de la tabla, sin que el usuario tenga que desplazar horizontalmente para descubrir el total. El desglose queda después y puede continuar hacia la derecha.
+
+## Incidente de certificación 2026-09-09
+La evidencia del usuario mostró que la versión visible en su iPhone seguía presentando el orden anterior `PJ | 3ª | 2ª | 1ª | PTS`, pese a que el QA previo había declarado conforme el cambio.
+
+Causa de control: el QA anterior validaba el orden del DOM, pero no certificaba suficientemente que el renderer público exacto y la prioridad visual crítica (`PJ` + `PTS`) fueran visibles juntos en el viewport móvil inicial.
+
+Corrección de raíz materializada:
+1. cache-busting nuevo `20260909-tabla01c` para CSS y JS;
+2. layout móvil con ancho explícito de columnas para que `PJ` y `PTS` queden juntos y visibles antes del detalle;
+3. el workflow descarga y valida el `standings.js` y `standings.css` servidos realmente por `cudo.cl`;
+4. Playwright mide `PJ` y `PTS` en móvil y falla si `PTS` no queda a la derecha de `PJ` y dentro de la tarjeta sin scroll;
+5. capturas se toman con scroll horizontal en posición inicial.
+
+La certificación run `34403652845` queda **SUPERADA / NO VÁLIDA COMO CERTIFICACIÓN VISUAL FINAL** para este requisito específico.
 
 ## Criterio de desempate
 Estado: **GAP**.
@@ -64,26 +78,27 @@ Posición compartida 3: San Agustín, Las Palmeras y San Ramón — 0 pts.
 Posición compartida 2: Huracán y Las Palmeras — 1 pt.
 Posición compartida 4: San Agustín y San Ramón — 0 pts.
 
-## Evidencia técnica vigente
+## Evidencia técnica vigente — TABLA-01C
 - Sitio: https://cudo.cl/preview-v8/partidos/#champStandings
-- Run QA exitoso: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34403652845
-- Artifact: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34403652845/artifacts/10124448085
-- Artifact: `cudo-v8-tabla-anfa-5`
-- SHA-256 artifact ZIP: `4bb0bde1e01d458cd1b60b37037742c8bcb23700ae5b25d9b69edafb39425e81`
+- Run QA exitoso: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34404397437
+- Artifact: https://github.com/carlitosvaldesmorales/cudo-pago/actions/runs/34404397437/artifacts/10124743984
+- Artifact: `cudo-v8-tabla-anfa-9`
+- SHA-256 artifact ZIP: `4559f40d11a7dc4d35339758bb5cc5c07a8284676fa1c322a068aba9df9c408f`
+- Renderer público exacto de `cudo.cl`: SUCCESS
 - QA reglas: SUCCESS
 - QA cálculo Grupo A/B: SUCCESS
 - QA Tabla General/Senior separadas: SUCCESS
 - QA orden General `PJ | PTS | 3ª | 2ª | 1ª`: SUCCESS
 - QA orden Senior `PJ | PTS | G | E | P`: SUCCESS
-- QA CUDO con activo web aprobado: SUCCESS
+- QA móvil `PJ + PTS` visibles juntos sin scroll: SUCCESS
 - QA móvil/escritorio y capturas: SUCCESS
 
 ## Estado
 - Materialización: **CONFORME**
 - Cálculo: **CONFORME**
-- Refinamiento de prioridad de columnas: **PUBLICADO Y QA CONFORME**
-- Certificación visual humana de la versión refinada: **PENDIENTE**
+- Prioridad de columnas: **PUBLICADA Y QA CONFORME**
+- Certificación visual humana TABLA-01C: **PENDIENTE**
 - TABLA-01: **ABIERTO HASTA APROBACIÓN VISUAL FINAL**
 
 ## Regla de cierre
-TABLA-01 se cierra cuando el usuario/club revise la tabla refinada publicada y apruebe explícitamente su presentación. Si se define posteriormente un criterio oficial de desempate, se registra como nueva versión de reglas y se recalculan las posiciones.
+TABLA-01 se cierra cuando el usuario/club revise la versión TABLA-01C publicada y apruebe explícitamente su presentación. Si se define posteriormente un criterio oficial de desempate, se registra como nueva versión de reglas y se recalculan las posiciones.
