@@ -1,0 +1,22 @@
+name: Validate Sports Bus Telegram UX
+on:
+  push:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/worker/fixture-label.js'
+      - 'sports-bus/worker/series-entry.js'
+      - 'sports-bus/tests/fixture-label.test.mjs'
+      - '.github/workflows/validate-sports-bus-ux.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate fixture label order
+        run: node sports-bus/tests/fixture-label.test.mjs
