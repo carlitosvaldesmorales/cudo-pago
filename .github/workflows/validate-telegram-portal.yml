@@ -20,6 +20,7 @@ jobs:
         run: |
           node --check sports-bus/cors-entry.js
           node --check sports-bus/worker/portal-entry.js
+          node --check sports-bus/worker/club-admin-series-entry.js
           node --check sports-bus/worker/series-entry.js
       - name: Validate enrollment migration contract
         shell: bash
@@ -34,8 +35,10 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "handlePortalRequest" sports-bus/cors-entry.js
+          grep -q "handleClubAdminSeriesScore" sports-bus/cors-entry.js
           grep -q "FÚTBOL CHÉPICA" sports-bus/worker/portal-entry.js
           grep -q "Solicitar acceso" sports-bus/worker/portal-entry.js
           grep -q "APPROVE_CLUB_ADMIN" sports-bus/worker/portal-entry.js
           grep -q "REJECT_CLUB_ADMIN" sports-bus/worker/portal-entry.js
-          grep -q "CLUB_ADMIN" sports-bus/worker/portal-entry.js
+          grep -q "TELEGRAM_CLUB_ADMIN" sports-bus/worker/club-admin-series-entry.js
+          grep -q "verified_club_admin_direct" sports-bus/worker/club-admin-series-entry.js
