@@ -4,6 +4,7 @@ on:
     branches: [feature/telegram-portal-01]
     paths:
       - 'sports-bus/**'
+      - '.github/workflows/deploy-sports-bus.yml'
       - '.github/workflows/validate-telegram-portal.yml'
   workflow_dispatch:
 permissions:
@@ -22,15 +23,27 @@ jobs:
           node --check sports-bus/worker/portal-entry.js
           node --check sports-bus/worker/club-admin-series-entry.js
           node --check sports-bus/worker/series-entry.js
+      - name: Apply all migrations to clean SQLite database
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB=/tmp/cudo-portal-test.db
+          rm -f "$DB"
+          for f in $(find sports-bus/migrations -maxdepth 1 -name '*.sql' | sort); do
+            echo "Applying $f"
+            sqlite3 "$DB" < "$f"
+          done
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='access_requests') THEN 1 ELSE 0 END;" | grep -qx 1
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='reporters') THEN 1 ELSE 0 END;" | grep -qx 1
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='match_series_results') THEN 1 ELSE 0 END;" | grep -qx 1
       - name: Validate enrollment migration contract
         shell: bash
         run: |
           set -euo pipefail
-          test -f sports-bus/migrations/0007_telegram_access_requests.sql
           grep -q 'CREATE TABLE IF NOT EXISTS access_requests' sports-bus/migrations/0007_telegram_access_requests.sql
           grep -q "status IN ('PENDING','APPROVED','REJECTED','CANCELLED')" sports-bus/migrations/0007_telegram_access_requests.sql
           grep -q 'idx_access_requests_one_pending' sports-bus/migrations/0007_telegram_access_requests.sql
-      - name: Validate portal routing contract
+      - name: Validate portal and RBAC routing contract
         shell: bash
         run: |
           set -euo pipefail
@@ -42,3 +55,11 @@ jobs:
           grep -q "REJECT_CLUB_ADMIN" sports-bus/worker/portal-entry.js
           grep -q "TELEGRAM_CLUB_ADMIN" sports-bus/worker/club-admin-series-entry.js
           grep -q "verified_club_admin_direct" sports-bus/worker/club-admin-series-entry.js
+      - name: Validate deploy gate supports data growth
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'r.series_count<20' .github/workflows/deploy-sports-bus.yml
+          grep -q 'r.result_matches<5' .github/workflows/deploy-sports-bus.yml
+          grep -q 'r.access_requests_table!==1' .github/workflows/deploy-sports-bus.yml
+          grep -q 's.results.length<5' .github/workflows/deploy-sports-bus.yml
