@@ -1,5 +1,7 @@
 import worker from './worker/index.js';
 import { handleSeriesRequest } from './worker/series-entry.js';
+import { handlePortalRequest } from './worker/portal-entry.js';
+import { handleClubAdminSeriesScore } from './worker/club-admin-series-entry.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://cudo.cl',
@@ -101,7 +103,7 @@ async function reconcileTelegramWebhook(request, env) {
   });
 }
 
-async function seriesHandlerRequest(request, env) {
+async function telegramHandlerRequest(request, env) {
   const clone = request.clone();
   const url = new URL(clone.url);
   if (url.pathname !== '/webhook/telegram' || clone.method !== 'POST' || !env.TELEGRAM_WEBHOOK_SECRET) return clone;
@@ -133,8 +135,11 @@ export default {
         : new Response(null, { status: 403 });
     }
 
-    const intercepted = await handleSeriesRequest(await seriesHandlerRequest(request, env), env, ctx);
-    const response = intercepted || await worker.fetch(request, env, ctx);
+    const telegramRequest = await telegramHandlerRequest(request, env);
+    const portal = await handlePortalRequest(telegramRequest.clone(), env, ctx);
+    const clubAdminScore = portal ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
+    const series = (portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
+    const response = portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
     const cors = corsHeaders(request);
