@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "rule": "VALIDACION_TECNICA_NO_EQUIVALE_A_VALIDACION_IDENTIDAD",
+  "assets": {
+    "union-orilla.png": {
+      "club": "Unión Orilla / C.U.D.O.",
+      "status": "CONFORME_FUENTE_OFICIAL_CLUB",
+      "sha256": "2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53",
+      "blocking": true
+    },
+    "juventud-chepica.png": {"status":"CONFORME","sha256":"ec30740406a7ddba5fbfdd1a76ea752821c94cae9c220230826095b14c320aba"},
+    "santa-elena-la-ruda.png": {"status":"PROVISIONAL_FUENTE_ASOCIACION","sha256":"2cf8a012bf9755fb1716177df708db6cd7d37895d56e844ef3c271255ac0d19b"},
+    "independiente.png": {"status":"CONFORME","sha256":"057470ccf8909e427bcca98c952ed3bb78da4f2bfe62712a61fd3c8933861ec3"},
+    "san-juan.png": {"status":"PROVISIONAL_FUENTE_ASOCIACION","sha256":"60bffff00411e07b97189a9a60552cab6d0110ccaf73d23164a24fef21a69fa2"},
+    "penarol-la-mina.png": {"status":"CONFORME","sha256":"4f7fec440fdf1dcece9d85e0f6e94e22cf0c22ad62edb08b37e33f0529f145f9"},
+    "huracan.png": {"status":"CONFORME","sha256":"e9a778c861c682609deb379d3eecfc51764873ae8d8b9dfa8f6604bbfc60818e"},
+    "san-agustin.png": {"status":"CONFORME","sha256":"cdfa4a1c49c93f817489c25bc1b20b016b5a09e93ca92ea34cc6570411ab5a43"},
+    "san-ramon.png": {"status":"CONFORME","sha256":"c1d4b24a43d7f5b1e2d6a5c4822218e1a5030cd85a6eb01c1369c0a835cd19f9"},
+    "las-palmeras.png": {"status":"CONFORME","sha256":"7d6ae6a3f6ff5342140a8776a0eb485fadf60e7f6298090b62160ca1a7e6d9bf"},
+    "las-cruces.png": {"status":"CONFORME","sha256":"6a55b6ec3adb197a959559ff982ea868ead78e527a9291df132879c50e950ae3"}
+  }
+}
