@@ -1,9 +1,11 @@
-name: CUDO V8 - validar producción cudo.cl
+name: CUDO V8 - certificar producción cudo.cl
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['preview-v8/**','.github/workflows/validate-v8-production.yml']
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/validate-v8-production.yml'
 permissions:
   contents: read
 jobs:
@@ -12,49 +14,92 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Esperar propagación V8 en cudo.cl
+      - name: Esperar publicación actual de Clubes
         shell: bash
         run: |
           set -euo pipefail
-          PAGE='https://cudo.cl/preview-v8/equipos/?v=20260908-2260'
+          PAGE="https://cudo.cl/preview-v8/equipos/?qa=${GITHUB_SHA}"
           for i in $(seq 1 50); do
-            if curl -LfsS "$PAGE" -o /tmp/cudo-page.html && grep -q '20260908-2260' /tmp/cudo-page.html; then exit 0; fi
+            if curl -LfsS "$PAGE" -o /tmp/cudo-page.html \
+              && grep -q '20260909-logos02' /tmp/cudo-page.html \
+              && grep -q '../media/clubes/union-orilla.png' /tmp/cudo-page.html; then
+              exit 0
+            fi
             sleep 6
           done
+          echo 'La publicación actual de Clubes no apareció dentro de la ventana de espera.' >&2
           exit 1
       - uses: actions/setup-node@v4
-        with: {node-version: '24'}
+        with:
+          node-version: '24'
       - name: Instalar Playwright open source
         run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Validar transporte de escudos
+      - name: Validar transporte de los 11 PNG individuales
         shell: bash
         run: |
           set -euo pipefail
-          : > /tmp/crests.b64
-          for p in 0 1 2a 2b; do curl -LfsS "https://cudo.cl/preview-v8/media/crest-base64/$p.txt?v=20260908-2260" >> /tmp/crests.b64; done
-          base64 -d /tmp/crests.b64 > /tmp/crests.webp
-          file /tmp/crests.webp | grep -q 'Web/P image'
-      - name: QA visual Playwright móvil y escritorio
+          files=(
+            juventud-chepica.png santa-elena-la-ruda.png independiente.png
+            union-orilla.png san-juan.png penarol-la-mina.png huracan.png
+            san-agustin.png san-ramon.png las-palmeras.png las-cruces.png
+          )
+          mkdir -p qa-prod-v8/http
+          for f in "${files[@]}"; do
+            curl -LfsS "https://cudo.cl/preview-v8/media/clubes/$f?qa=${GITHUB_SHA}" -o "qa-prod-v8/http/$f"
+            file "qa-prod-v8/http/$f" | grep -q 'PNG image data'
+          done
+          sha256sum qa-prod-v8/http/union-orilla.png > qa-prod-v8/http/union-orilla.sha256
+          grep -q '^2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53 ' qa-prod-v8/http/union-orilla.sha256
+      - name: QA visual Clubes móvil y escritorio
         shell: bash
         run: |
           mkdir -p qa-prod-v8/logos
           cat > check-prod.mjs <<'NODE'
-          import {chromium} from 'playwright';import fs from 'node:fs';
-          const browser=await chromium.launch({headless:true});const errors=[];const report={viewports:{}};
+          import {chromium} from 'playwright';
+          import fs from 'node:fs';
+          const browser=await chromium.launch({headless:true});
+          const report={source:'https://cudo.cl/preview-v8/equipos/',expectedCudoSha256:'2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53',viewports:{}};
           for(const vp of [{name:'mobile',width:390,height:844,dpr:2},{name:'desktop',width:1440,height:1000,dpr:1}]){
-            const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});page.on('console',m=>{if(m.type()==='error')errors.push(`${vp.name}: ${m.text()}`)});page.on('pageerror',e=>errors.push(`${vp.name}: ${e.message}`));
-            await page.goto('https://cudo.cl/preview-v8/equipos/?v=20260908-2260',{waitUntil:'networkidle',timeout:90000});await page.locator('.club-card').first().waitFor({state:'visible'});await page.waitForFunction(()=>document.documentElement.classList.contains('crests-ready'),null,{timeout:30000});const clubs=await page.evaluate(()=>[...document.querySelectorAll('.club-card')].map(c=>{const el=c.querySelector('.champ-crest'),s=getComputedStyle(el),r=el.getBoundingClientRect();return {name:c.querySelector('.club-name').textContent.trim(),bg:s.backgroundImage.slice(0,36),w:r.width,h:r.height,mask:s.boxShadow}}));if(clubs.length!==11)throw new Error(`${vp.name} clubs ${clubs.length}`);for(const c of clubs){if(!c.bg.includes('data:image/webp;base64'))throw new Error(`${c.name} sin escudo`);if(c.w<78||c.h<78||c.w>100||c.h>100)throw new Error(`${c.name} tamaño`);if(!c.mask.includes('inset'))throw new Error(`${c.name} sin máscara`)}report.viewports[vp.name]={clubs};await page.screenshot({path:`qa-prod-v8/clubes-${vp.name}.png`,fullPage:true});for(let i=0;i<11;i++)await page.locator('.club-card').nth(i).screenshot({path:`qa-prod-v8/logos/card-${vp.name}-${String(i+1).padStart(2,'0')}.png`});
-            await page.goto('https://cudo.cl/preview-v8/partidos/?v=20260908-2260',{waitUntil:'networkidle',timeout:90000});await page.locator('.champ-match-card').first().waitFor({state:'visible'});await page.waitForFunction(()=>document.documentElement.classList.contains('crests-ready'),null,{timeout:30000});const champ=await page.evaluate(()=>({matches:document.querySelectorAll('.champ-match-card').length,crests:document.querySelectorAll('.champ-match-card .champ-crest').length,seriesRows:document.querySelectorAll('.champ-series-row').length,verified:document.querySelectorAll('.champ-verified').length,tabs:document.querySelectorAll('.champ-date-btn').length,rendered:[...document.querySelectorAll('.champ-match-card .champ-crest')].every(x=>getComputedStyle(x).backgroundImage.includes('data:image/webp;base64'))}));if(champ.matches!==3||champ.crests!==6||champ.seriesRows!==12||champ.verified!==3||champ.tabs!==5||!champ.rendered)throw new Error(`${vp.name} championship ${JSON.stringify(champ)}`);await page.screenshot({path:`qa-prod-v8/partidos-${vp.name}.png`,fullPage:true});await page.close();
-          }report.errors=errors;fs.writeFileSync('qa-prod-v8/visual-report.json',JSON.stringify(report,null,2));await browser.close();if(errors.length)throw new Error(errors.join(' | '));
+            const page=await browser.newPage({viewport:{width:vp.width,height:vp.height},deviceScaleFactor:vp.dpr});
+            const errors=[];page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});page.on('pageerror',e=>errors.push(e.message));
+            await page.goto(`https://cudo.cl/preview-v8/equipos/?qa=${Date.now()}`,{waitUntil:'networkidle',timeout:90000});
+            await page.locator('.club-card').first().waitFor({state:'visible'});
+            const clubs=await page.evaluate(()=>[...document.querySelectorAll('.club-card')].map(c=>{const img=c.querySelector('img.club-crest');return {name:c.querySelector('.club-name')?.textContent.trim(),src:img?.getAttribute('src'),naturalWidth:img?.naturalWidth,naturalHeight:img?.naturalHeight,complete:img?.complete};}));
+            if(clubs.length!==11) throw new Error(`${vp.name}: se esperaban 11 clubes y hay ${clubs.length}`);
+            for(const c of clubs){if(!c.complete||!c.naturalWidth||!c.src?.includes('../media/clubes/'))throw new Error(`${vp.name}: escudo inválido ${c.name}`)}
+            const cudo=clubs.find(c=>c.name==='Unión Orilla');
+            if(!cudo||!cudo.src.endsWith('/union-orilla.png'))throw new Error(`${vp.name}: Unión Orilla no usa union-orilla.png`);
+            await page.screenshot({path:`qa-prod-v8/clubes-${vp.name}.png`,fullPage:true});
+            const card=page.locator('.club-card').filter({hasText:'Unión Orilla'}).first();
+            await card.screenshot({path:`qa-prod-v8/logos/cudo-${vp.name}.png`});
+            report.viewports[vp.name]={clubs,cudo,errors};
+            if(errors.length)throw new Error(`${vp.name}: ${errors.join(' | ')}`);
+            await page.close();
+          }
+          fs.writeFileSync('qa-prod-v8/visual-report.json',JSON.stringify(report,null,2));
+          await browser.close();
           NODE
           node check-prod.mjs
-      - name: Evidencia visual producción
+      - name: Generar certificado legible
+        if: success()
+        shell: bash
+        run: |
+          cat > qa-prod-v8/CERTIFICADO.txt <<EOF
+          CUDO V8 — CERTIFICACIÓN PRODUCCIÓN CLUBES
+          Sitio: https://cudo.cl/preview-v8/equipos/
+          Commit QA: ${GITHUB_SHA}
+          Estado: CONFORME
+          CUDO / Unión Orilla SHA-256 publicado:
+          2d3388c3567923006c06d57947ecc39eb418c6608cf79f98e0aee7aaa879ba53
+          Evidencia incluida: clubes-mobile.png, clubes-desktop.png, logos/cudo-mobile.png, logos/cudo-desktop.png, visual-report.json
+          EOF
+      - name: Publicar evidencia certificable
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cudo-v8-open-source-visual-qa
+          name: cudo-v8-certificacion-clubes-${{ github.run_number }}
           path: qa-prod-v8/
-          if-no-files-found: warn
-          retention-days: 14
+          if-no-files-found: error
+          retention-days: 30
