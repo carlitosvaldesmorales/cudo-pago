@@ -1,0 +1,41 @@
+name: Validate Telegram Portal 01
+on:
+  push:
+    branches: [feature/telegram-portal-01]
+    paths:
+      - 'sports-bus/**'
+      - '.github/workflows/validate-telegram-portal.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax check Worker modules
+        run: |
+          node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/portal-entry.js
+          node --check sports-bus/worker/series-entry.js
+      - name: Validate enrollment migration contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f sports-bus/migrations/0007_telegram_access_requests.sql
+          grep -q 'CREATE TABLE IF NOT EXISTS access_requests' sports-bus/migrations/0007_telegram_access_requests.sql
+          grep -q "status IN ('PENDING','APPROVED','REJECTED','CANCELLED')" sports-bus/migrations/0007_telegram_access_requests.sql
+          grep -q 'idx_access_requests_one_pending' sports-bus/migrations/0007_telegram_access_requests.sql
+      - name: Validate portal routing contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "handlePortalRequest" sports-bus/cors-entry.js
+          grep -q "FÚTBOL CHÉPICA" sports-bus/worker/portal-entry.js
+          grep -q "Solicitar acceso" sports-bus/worker/portal-entry.js
+          grep -q "APPROVE_CLUB_ADMIN" sports-bus/worker/portal-entry.js
+          grep -q "REJECT_CLUB_ADMIN" sports-bus/worker/portal-entry.js
+          grep -q "CLUB_ADMIN" sports-bus/worker/portal-entry.js
