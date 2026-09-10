@@ -1,0 +1,33 @@
+name: Validate Public Championship Runtime
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'qa/web/public-championship-runtime-harness.mjs'
+      - '.github/workflows/validate-public-championship-runtime.yml'
+      - 'ops/PUBLIC-CHAMPIONSHIP-WEB-01.md'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'qa/web/public-championship-runtime-harness.mjs'
+      - '.github/workflows/validate-public-championship-runtime.yml'
+      - 'ops/PUBLIC-CHAMPIONSHIP-WEB-01.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify deployed public championship contract
+        run: node qa/web/public-championship-runtime-harness.mjs
