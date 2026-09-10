@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-09
 Gate: G2 de `FUTBOL-CHEPICA-MULTICLUB-01`
-Estado actual: MATERIALIZADO + QA AUTOMATIZADO PASS / E2E TELEGRAM REAL PENDIENTE
+Estado actual: **DESPLEGADO EN PRODUCCIÓN + QA AUTOMATIZADO PASS / E2E TELEGRAM REAL PENDIENTE**
 
 ## Contrato
 
@@ -81,26 +81,44 @@ Ejecuta el mismo `sports-bus/cors-entry.js` con Telegram simulado y D1 efímero 
 - rechazo por el dirigente del club visitante;
 - regresión completa de G1.
 
-Evidencia técnica actual: workflow `Validate Public Result Submission`, run `34422510562`, SUCCESS completo para G2 + regresión G1 + API VERIFIED-only.
+Evidencia previa a integración:
 
-## Gate de despliegue
+- `Validate Public Result Submission` run `34422705667`: SUCCESS completo.
+- PR #9: checks `Validate Public Result Submission` y `Validate Telegram QA Harness`: SUCCESS.
+- merge a `feature/sports-event-bus-v1`: `718e63d400796a25c1eeb0999175537ad7848887`.
+- QA recurrente posterior al merge, run `34422788096`: SUCCESS.
 
-El workflow de despliegue exige ahora:
+## Producción
 
-- existencia de `public_result_submissions`;
-- existencia de `telegram_public_result_sessions`;
-- cero estados inválidos en aportes;
-- toda serie devuelta por la API pública con `validation_status=VERIFIED`.
+Deploy Sports Event Bus run `34422788118` (#48): **SUCCESS**.
+
+La migración `0008_public_result_submissions.sql` fue aplicada a D1 remoto y el gate remoto confirmó:
+
+- `matches_count=25`
+- `byes_count=5`
+- `teams_count=11`
+- `series_count=24`
+- `result_matches=6`
+- `public_result_submissions_table=1`
+- `public_result_sessions_table=1`
+- `invalid_public_submission_status=0`
+- `invalid_series=0`
+
+El despliegue no creó aportes públicos ni marcadores sintéticos en producción. La fuente deportiva continuó con 24 series VERIFIED en 6 partidos.
+
+Worker desplegado: versión `79454728-c85b-4ce1-adf3-27994bbdc911`.
+
+El webhook respondió `Webhook is already set`; `/health`, `/health/telegram`, `/api/v1/matches` y `/api/v1/series-results` pasaron el gate. La validación final exige que todas las series expuestas por la API pública tengan `validation_status=VERIFIED`.
 
 ## Primer bloqueante humano residual
 
-Después del deploy productivo falta falsar únicamente lo que CI no puede certificar: entrega/render en un cliente Telegram autenticado y operación entre identidades reales.
+La infraestructura, lógica, persistencia, RBAC y regresión están validadas. El primer punto que CI no puede certificar es **la entrega/render en un cliente Telegram realmente autenticado**.
 
 Prueba segura mínima sin contaminar resultado oficial:
 
 1. una cuenta pública real entra a `Público → Informar resultado`;
 2. navega hasta una serie sin resultado oficial;
-3. valida que Telegram llegue a `Escribe el marcador...`;
+3. valida que Telegram llegue a `Escribe el marcador LOCAL-VISITA...`;
 4. pulsa `Cancelar` sin enviar marcador.
 
 Para cerrar G2 E2E completo se necesita posteriormente **un resultado real aún no registrado**, informado desde una cuenta pública y aprobado/rechazado por un dirigente autorizado. No se usarán marcadores ficticios en D1 productivo.
