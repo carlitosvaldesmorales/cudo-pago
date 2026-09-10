@@ -189,7 +189,7 @@ async function run() {
 
   resetOutbound();
   result = await callback(QA.SUPER, 'tp:leaders');
-  assert.equal(result.handled, 'global_admin_menu');
+  assert.equal(result.handled, 'public_result_admin_dashboard');
   m = lastMessage(QA.SUPER.id);
   assert.match(m.text, /ADMIN GLOBAL/);
   assert.ok(buttonTexts(m).some(x => x.startsWith('👥 Dirigentes')));
@@ -217,7 +217,7 @@ async function run() {
 
   resetOutbound();
   result = await callback(QA.USER, 'tp:leaders');
-  assert.equal(result.handled, 'portal_leaders');
+  assert.equal(result.handled, 'public_result_admin_dashboard');
   assert.match(lastMessage(QA.USER.id).text, /Administrador del club/);
 
   result = await callback(QA.USER, 'tp:mymatches');
@@ -292,7 +292,7 @@ async function run() {
 
   resetOutbound();
   result = await callback(QA.USER, 'tp:leaders');
-  assert.equal(result.handled, 'portal_leaders');
+  assert.equal(result.handled, 'public_result_admin_dashboard');
   assert.match(lastMessage(QA.USER.id).text, /Administrador del club/);
   console.log('PASS reactivate + role restoration + idempotence');
 

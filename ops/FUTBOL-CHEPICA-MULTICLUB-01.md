@@ -20,8 +20,8 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 
 | Gate | Alcance | Estado 2026-09-09 |
 |---|---|---|
-| G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | EN IMPLEMENTACIÓN — DIRIGENTES-LIFECYCLE-01 |
-| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | GAP |
+| G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | **PASS E2E REAL** — enrollment/RBAC/suspensión/reactivación comprobados; revocación/idempotencia/auditoría cubiertos por QA |
+| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **MATERIALIZADO + QA PASS** — E2E Telegram real pendiente |
 | G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | GAP |
 | G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | GAP |
 | G5 | Gobierno y marca: recuperación/segundo global admin + identidad neutral visible | GAP |
@@ -33,9 +33,12 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 - PENDING → aprobación por SUPER_ADMIN.
 - Usuario aprobado convertido a CLUB_ADMIN del club solicitado.
 - RBAC de partidos por `club_id` validado visualmente con Unión Orilla.
+- Lifecycle real: ACTIVO → SUSPENDIDO → acceso administrativo bloqueado → REACTIVADO → acceso restaurado.
 - Resultados VERIFIED son la única fuente pública de resultados.
 - Auditoría `permission_audit` ya existe.
 - `reporters` ya dispone de `club_id`, `role`, `trust_level` y `active`.
+- QA recurrente `TELEGRAM-QA-HARNESS-01` cubre enrollment, RBAC, score directo de CLUB_ADMIN, suspensión, callbacks viejos, reactivación, revocación e idempotencia.
+- G2 dispone de QA específico que prueba `SUBMITTED` aislado, revisión por club participante, aprobación/rechazo, idempotencia y publicación sólo tras VERIFIED.
 
 ## Patrón obligatorio para nuevas entidades
 
@@ -78,8 +81,8 @@ CLUB (ej. Unión Orilla / CUDO)
 
 ## Próximo orden de ejecución
 
-1. Cerrar G1 con `DIRIGENTES-LIFECYCLE-01` y prueba E2E real.
-2. Materializar G2 sin contaminar resultados oficiales.
+1. **G1 cerrado.** Mantener su QA como regresión obligatoria.
+2. **G2:** integrar/desplegar y cerrar E2E real sin contaminar la fuente de verdad.
 3. Diseñar y materializar G3 antes de escalar carga de resultados.
 4. Incorporar un segundo club real para falsar el supuesto multi-club.
 5. Cerrar gobierno/recuperación e identidad neutral visible.
