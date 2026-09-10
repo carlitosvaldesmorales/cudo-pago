@@ -2,6 +2,7 @@ import worker from './telegram-migration-entry.js';
 import { handlePublicResultsTableView } from './worker/public-results-table-view.js';
 import { handleResultGovernanceUxRequest } from './worker/result-governance-ux-entry.js';
 import { handleResultCorrectionFlow } from './worker/result-correction-flow-entry.js';
+import { handleResultGovernanceScopeRequest } from './worker/result-governance-scope-entry.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 const PRIMARY_WEBHOOK_PATH = '/webhook/telegram';
@@ -138,6 +139,11 @@ export default {
     // governance UX and before the legacy core so retries cannot duplicate prompts.
     const correctionFlow = await handleResultCorrectionFlow(request.clone(), env);
     if (correctionFlow) return correctionFlow;
+
+    // Scope the normal governance list away from the isolated QA fixture and
+    // expose /correccionesqa only to the global administrator.
+    const governanceScope = await handleResultGovernanceScopeRequest(request.clone(), env);
+    if (governanceScope) return governanceScope;
 
     const governanceUx = await handleResultGovernanceUxRequest(request.clone(), env);
     if (governanceUx) return governanceUx;
