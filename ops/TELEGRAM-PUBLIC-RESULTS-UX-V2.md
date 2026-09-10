@@ -1,7 +1,7 @@
 # TELEGRAM-PUBLIC-RESULTS-UX-V2
 
 Fecha: 2026-09-10
-Estado: **IMPLEMENTADO EN RAMA / QA AUTOMATIZADO PASS / PENDIENTE DEPLOY + E2E VISUAL**
+Estado: **PRODUCCIÓN PASS / BLOQUEADO EN E2E VISUAL iOS**
 
 ## Problema observado
 
@@ -112,7 +112,11 @@ Demuestra:
 - un webhook secret inválido se rechaza antes de efectos laterales;
 - ningún request de QA puede salir a hosts arbitrarios.
 
-Workflow `Validate Telegram QA Harness` run #32: **SUCCESS**.
+PR #17 pasó los tres gates antes del merge:
+
+- Validate Telegram QA Harness: PASS;
+- Validate Result Governance: PASS;
+- Validate Public Result Submission: PASS.
 
 También continúan PASS:
 
@@ -120,6 +124,65 @@ También continúan PASS:
 - native menu;
 - blue/green migration;
 - aislamiento de caché entre bots.
+
+## Evidencia de producción
+
+PR #17 fue fusionado a `feature/sports-event-bus-v1` con merge `9f06a71c841322229c40fe386f1146f46482cddf`.
+
+### Deploy #56
+
+El Worker V2 sí se desplegó, pero el workflow falló después en el reconcile del bot primario. La versión desplegada fue `0fabe79a-40e0-45ad-be7b-2ac26d3366f6` y la validación D1 previa pasó con:
+
+- 25 partidos;
+- 5 byes;
+- 11 equipos;
+- 24 series VERIFIED;
+- 6 partidos con resultados;
+- estados/versiones inválidos = 0;
+- `missing_current_version = 0`.
+
+El reconcile primario devolvió HTTP 502 durante los intentos. Ese hecho NO demuestra por sí solo una causa de Telegram porque el workflow antiguo ocultaba el cuerpo de la respuesta al usar `curl -f`.
+
+### Corrección operativa del deploy
+
+PR #18 cambió el patrón a **health-first / reconcile-on-drift**:
+
+1. consultar health;
+2. si el estado deseado ya está sano, no ejecutar escrituras Bot API;
+3. reconciliar sólo si health demuestra drift de configuración;
+4. si se reconcilia y falla, imprimir HTTP status + response body;
+5. para el bot destino, exigir además `public_results_ux_version=2`.
+
+Esto evita ejecutar `setWebhook`, `setChatMenuButton`, `setMyCommands` y `setMyName` en cada despliegue sin necesidad.
+
+### Deploy #57
+
+Deploy #57, run `34434511684`, terminó **SUCCESS completo**.
+
+El primer health del bot primario devolvió HTTP 200:
+
+- `bot_id = 8209002627`;
+- `bot_username = CUDODeportesBot`;
+- `bot_name = Fútbol Chépica`;
+- webhook/menu/default commands = PASS;
+- `pending_update_count = 0`.
+
+Por estar sano, el pipeline registró explícitamente: `Primary Telegram configuration already healthy; no Bot API writes required.`
+
+El bot destino también devolvió HTTP 200 en el primer intento:
+
+- `bot_id = 8979834638`;
+- `bot_username = FutbolChepicaBot`;
+- `bot_name = Fútbol Chépica`;
+- webhook/menu/default commands = PASS;
+- `public_results_ux_version = 2`;
+- `pending_update_count = 0`;
+- `last_error_date = null`;
+- `last_error_message = null`.
+
+El pipeline registró: `Destination Telegram configuration already healthy; no Bot API writes required.` y finalmente `Destination bot is healthy on shared Worker/D1 and public_results_ux_version=2 is live.`
+
+Los datos deportivos volvieron a validar sin regresión antes del deploy.
 
 ## Gates
 
@@ -142,10 +205,12 @@ También continúan PASS:
 
 ### U3 — Producción
 
-- [ ] merge a `feature/sports-event-bus-v1`;
-- [ ] deploy Worker SUCCESS;
-- [ ] `/health/telegram-next` conserva runtime PASS y expone `public_results_ux_version=2`;
-- [ ] datos deportivos sin regresión.
+- [x] merge a `feature/sports-event-bus-v1`;
+- [x] deploy Worker SUCCESS (#57);
+- [x] `/health/telegram-next` runtime PASS;
+- [x] `public_results_ux_version = 2`;
+- [x] datos deportivos sin regresión;
+- [x] bot primario conservado sano como rollback.
 
 ### U4 — E2E humano
 
@@ -155,6 +220,8 @@ También continúan PASS:
 - [ ] abrir un partido y comprobar tarjeta de 4 series;
 - [ ] validar en iOS que el flujo se siente navegable.
 
-## Primer bloqueo esperado
+## Primer bloqueo actual
 
-Después de U3, el siguiente gate requiere una pantalla Telegram real. La automatización puede demostrar consultas, callbacks y datos, pero no certificar por sí sola la legibilidad final en Telegram iOS.
+U1, U2 y U3 están cerrados con código, QA y runtime productivo.
+
+El primer bloqueo real ahora es visual/humano: la automatización puede demostrar consultas, callbacks, seguridad y contrato desplegado, pero no puede certificar cómo se percibe finalmente la interacción en Telegram iOS.
