@@ -1,0 +1,50 @@
+name: Validate G4 Second Club Readiness
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/portal-entry.js'
+      - 'sports-bus/worker/series-entry.js'
+      - 'sports-bus/worker/club-admin-series-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/g4-second-club-readiness-harness.mjs'
+      - '.github/workflows/validate-g4-second-club-readiness.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/portal-entry.js'
+      - 'sports-bus/worker/series-entry.js'
+      - 'sports-bus/worker/club-admin-series-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/g4-second-club-readiness-harness.mjs'
+      - '.github/workflows/validate-g4-second-club-readiness.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: node --check qa/telegram/g4-second-club-readiness-harness.mjs
+      - name: Validate second-club readiness
+        run: |
+          set -euo pipefail
+          node qa/telegram/g4-second-club-readiness-harness.mjs | tee /tmp/g4.log
+          grep -q 'PASS two independent Telegram identities enrolled to distinct clubs' /tmp/g4.log
+          grep -q 'PASS club associations remain isolated by Telegram identity' /tmp/g4.log
+          grep -q 'PASS second club reaches its scoped match surface without technical provisioning' /tmp/g4.log
+          grep -q 'PASS cross-club crafted match callback is denied by backend scope' /tmp/g4.log
+          grep -q 'PASS second club can create an official result for its own match with audit evidence' /tmp/g4.log
+          grep -q 'PASS out-of-scope club cannot mutate another club result' /tmp/g4.log
+          grep -q 'PASS registered-results view remains club-scoped' /tmp/g4.log
+          grep -q 'G4 TECHNICAL READINESS: PASS' /tmp/g4.log
+          grep -q 'RESULT: PASS' /tmp/g4.log
