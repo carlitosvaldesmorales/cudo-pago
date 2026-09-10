@@ -54,7 +54,7 @@ jobs:
       - name: Pull independent Apache-2.0 models
         run: |
           ollama pull qwen2.5:1.5b
-          ollama pull granite3.1-dense:2b
+          ollama pull granite3.3:2b
           ollama list
 
       - name: Run Sage + Pixel grounded V3 review
