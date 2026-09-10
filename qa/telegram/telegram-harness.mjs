@@ -229,7 +229,21 @@ async function run() {
   assert.ok(scoped.length > 0);
   console.log(`PASS club scope: ${scoped.length} matches visible`);
 
-  const firstMatch = scoped[0];
+  // G1 must prove the direct-entry contract on a genuinely unregistered series.
+  // Using an already-official series here would now correctly exercise G3's overwrite guard instead.
+  const firstMatch = await one(`
+    SELECT m.match_id,m.round_no,m.home_id,m.away_id
+    FROM matches m
+    WHERE m.competition_id='ANFA-CHEPICA-2026'
+      AND (m.home_id='UNION-ORILLA' OR m.away_id='UNION-ORILLA')
+      AND NOT EXISTS (
+        SELECT 1 FROM match_series_results r
+        WHERE r.match_id=m.match_id AND r.series_code IN ('TERCERA','SEGUNDA')
+      )
+    ORDER BY m.round_no,m.match_id
+    LIMIT 1
+  `);
+  assert.ok(firstMatch, 'Expected at least one scoped match with unregistered TERCERA/SEGUNDA series for G1 QA');
   resetOutbound();
   await callback(QA.USER, `rs:date:${firstMatch.round_no}`);
   await callback(QA.USER, `rs:match:${firstMatch.match_id}`);
