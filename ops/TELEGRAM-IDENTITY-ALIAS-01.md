@@ -1,102 +1,70 @@
 # TELEGRAM-IDENTITY-ALIAS-01
 
 Fecha: 2026-09-09
-Estado: **READINESS + PRECHECK PRODUCCIÓN PASS / BLOQUEADO EN FRAGMENT: disponibilidad + costo + asignación autenticada**
+Estado: **READINESS + PRECHECK PRODUCCIÓN PASS / FRAGMENT NO ES CHECKER DE USERNAME BÁSICO / BLOQUEO ACTUAL: disponibilidad collectible real o alternativa de bot nuevo**
 
 ## Objetivo
 
-Eliminar la exposición pública de `@CUDODeportesBot` sin crear un bot nuevo, sin cambiar token, sin perder chats y sin reconstruir RBAC ni asociaciones por `telegram_user_id`.
+Eliminar la exposición pública de `@CUDODeportesBot` con el menor costo y riesgo posible, sin asumir que Fragment sirve para comprobar si un username básico está libre.
 
 ## Evidencia fabricante
 
-1. Telegram documenta que los bots pueden recibir usernames collectible de Fragment, incluso sin sufijo `bot`.
-2. Los usernames collectible activos resuelven al mismo peer/bot; el primero de los usernames activos es el principal visible.
-3. `bots.reorderUsernames` permite ordenar los usernames activos del bot.
-4. `toggleBotUsernameIsActive` permite activar/desactivar usernames de un bot editable.
-5. Bot API 9.3 agregó específicamente la posibilidad de que un bot desactive su username principal si tiene otros usernames activos comprados en Fragment.
-6. El Bot API HTTP no expone un método `setMyUsername`; la operación de usernames múltiples pertenece a la capa propietaria/MTProto/Fragment y requiere actuar como dueño del bot, no sólo con el bot token.
+1. Telegram distingue usernames básicos/editables de usernames collectible de Fragment.
+2. Los collectible pueden asignarse a bots, activarse y reordenarse; el primero activo se presenta como principal.
+3. Bot API 9.3 permite a bots desactivar su username principal cuando tienen usernames adicionales activos comprados en Fragment.
+4. `bots.reorderUsernames` y `bots.toggleUsername` operan sobre usernames Fragment asociados a un bot.
+5. Telegram dispone de validadores separados para usernames básicos (`account.checkUsername`, `channels.checkUsername`; `bots.checkUsername` en el flujo de managed bots), con estados distintos como `USERNAME_OCCUPIED` y `USERNAME_PURCHASE_AVAILABLE`.
+6. Por tanto, un resultado `Unavailable / Not for sale` en Fragment NO prueba que un username básico esté ocupado. Sólo demuestra que ese texto no está disponible como collectible comprable/listado en ese contexto de Fragment.
+7. Los usernames básicos de bots normalmente deben terminar en `bot`; los collectible asignados a bots pueden no llevar ese sufijo.
 
-### Nota sobre documentación histórica
+## Falsación realizada por el usuario
 
-La página general de Fragment todavía contiene texto histórico que dice que un username básico no se puede desactivar. La documentación bot-específica más nueva (Bot API 9.3 y TDLib actual) sí permite desactivar el username editable/principal de un bot cuando existe otro username activo. Para bots se toma como autoridad la regla posterior y específica, y se exige E2E después del cambio.
+El 2026-09-09 se probó en Fragment una cadena arbitraria (`Jsjsjs.hsjs`). Fragment devolvió `Unavailable / Unknown / Not for sale` y normalizó el punto a `_` en el resultado. Telegram no admite `.` en usernames básicos, sólo letras, números y `_`.
 
-## Evidencia comunidad
+Conclusión: **la caja de búsqueda de Fragment no debe usarse como fuente de verdad para decidir si un username básico de Telegram está libre.**
 
-- Un maintainer/contributor de TDLib aclaró que los usernames activos apuntan al mismo usuario/peer y pueden usarse de forma intercambiable.
-- Experiencias de usuarios reportan que un username adquirido en Fragment se agrega como username adicional y puede ordenarse; también existen reportes de caché/propagación al asignarlo.
-- Existen reportes comunitarios de phishing que imita Fragment. Regla operacional: usar exclusivamente `https://fragment.com` iniciado manualmente, nunca enlaces enviados por terceros, bots o mini apps no verificadas.
+La prueba anterior de `FutbolChepica` en Fragment se reclasifica así:
 
-La comunidad se usa como evidencia secundaria; no se usa para fijar precio ni disponibilidad.
+- `@FutbolChepica` como **collectible comprable en Fragment**: no ofrecido en esa consulta (`Unavailable / Not for sale`).
+- `@FutbolChepica` como **username básico Telegram**: estado NO DETERMINADO por esa consulta.
+- Como username básico de bot, además, no cumple el patrón normal de sufijo `bot`; sólo sería útil para el bot actual mediante collectible u otra excepción administrada por Telegram.
 
-## Patrón elegido
+## Patrón collectible válido
 
 ```text
-BOT ACTUAL
+MISMO BOT
 bot_id = MISMO
 bot_token = MISMO
 chats = MISMOS
-telegram_user_id de usuarios = MISMOS
+usuarios = MISMOS
         │
-        ├── editable/basic: @CUDODeportesBot (hoy activo)
-        └── collectible: @FutbolChepica (candidato, NO confirmado)
+        ├── username básico actual: @CUDODeportesBot
+        └── collectible comprado/asignado: @FutbolChepica
                          │
-                         ├─ adquirir/asignar en Fragment
                          ├─ activar
                          ├─ ordenar primero
-                         └─ desactivar @CUDODeportesBot
+                         └─ desactivar username principal anterior
 ```
 
-Esto NO es un reverse proxy. Telegram resuelve `@username` y `t.me/...` dentro de su propia capa de identidad antes de que el webhook llegue al Worker. Cloudflare/DNS no puede reemplazar esa resolución.
-
-## Orden de candidatos
-
-Prioridad de marca, no disponibilidad confirmada:
-
-1. `@FutbolChepica`
-2. `@FutbolChepicaBot`
-3. `@FutbolChepicaCL`
-
-Los usernames collectible para bots pueden no usar sufijo `bot`, por lo que el candidato 1 es el de menor costo cognitivo si Fragment lo ofrece a un costo aceptable.
-
-La ausencia de resultados en buscadores públicos NO se considera prueba de disponibilidad.
+Esto no es reverse proxy: Telegram resuelve `@username` y `t.me/...` dentro de su propia capa de identidad antes del webhook.
 
 ## Readiness del repositorio
 
-### Links de invitación
-
-El flujo de invitaciones no tiene `@CUDODeportesBot` fijado. Antes de construir `t.me/...`, consulta `getMe` y usa el username que Telegram devuelve. Por tanto las invitaciones nuevas seguirán el username principal que Telegram exponga después del cambio.
-
-### Health
-
-`/health/telegram` expone dinámicamente `bot_id`, `bot_username` y `bot_name`. No exige que el username sea `CUDODeportesBot`.
-
-### Gate de identidad
-
-Antes y después del alias deben mantenerse iguales:
-
-- `bot_id`
-- mismo token operativo (no exponerlo en logs ni documentación)
-- webhook
-- Worker
-- D1
-- roles y asociaciones `telegram_user_id`
-- chats existentes
-
-Debe cambiar únicamente la superficie de username principal/activo.
+- Las invitaciones no fijan `@CUDODeportesBot`; consultan `getMe` y generan `t.me/${username}` dinámicamente.
+- `/health/telegram` expone `bot_id`, `bot_username` y `bot_name` de forma dinámica.
+- El username actual no está usado como condición de autorización.
 
 ## PRECHECK PRODUCCIÓN — PASS
 
-PR #15 fue validado por los tres gates existentes:
+PR #15 pasó:
 
 - `Validate Telegram QA Harness` run `34429964842` = SUCCESS.
 - `Validate Public Result Submission` run `34429964985` = SUCCESS.
 - `Validate Result Governance` run `34429964864` = SUCCESS.
 
-PR #15 fue integrado en `feature/sports-event-bus-v1` con merge `f7f5ab8263f17e17bac240de251b6c36a0d2aa26`.
+Deploy #54, run `34430004547`, terminó SUCCESS. Worker version: `af21194c-d5a6-47f7-bb8a-e3b04d15c4a9`.
 
-Deploy #54, run `34430004547`, terminó SUCCESS completo. Worker version: `af21194c-d5a6-47f7-bb8a-e3b04d15c4a9`.
-
-Baseline de identidad capturado desde `/health/telegram`:
+Baseline de identidad:
 
 ```text
 bot_id = 8209002627
@@ -109,7 +77,7 @@ default_commands_configured = true
 pending_update_count = 0
 ```
 
-Baseline funcional/deportivo durante el mismo deploy:
+Baseline funcional/deportivo:
 
 ```text
 matches = 25
@@ -124,63 +92,31 @@ missing_current_version = 0
 invalid_series = 0
 ```
 
-Este `bot_id` es el identificador que debe permanecer igual después del cutover collectible.
+## Árbol de decisión corregido
 
-## Plan de cutover
+### Ruta A — collectible en el mismo bot
 
-### PRECHECK
+Sólo procede si encontramos/adquirimos un collectible de marca aceptable a costo razonable. Mantiene `bot_id=8209002627`, token, chats y usuarios.
 
-1. Capturar `bot_id`, username actual, nombre visible, webhook y estado del menú desde `/health/telegram`. **HECHO**.
-2. Confirmar que producción mantiene fixture/resultados/roles. **HECHO**.
-3. Ver disponibilidad y precio REAL del candidato en Fragment autenticado. **BLOQUEO ACTUAL**.
-4. No comprar/asignar si el costo no cierra.
+### Ruta B — username básico de un bot nuevo
 
-### CUTOVER HUMANO / FRAGMENT
+Un candidato como `@FutbolChepicaBot` debe comprobarse con una fuente de verdad de Telegram para bots (BotFather o mecanismo equivalente autorizado), no con Fragment. Si está disponible, crear un bot nuevo es gratuito pero cambia `bot_id`, token y exige que usuarios inicien conversación con la nueva identidad.
 
-1. Entrar manualmente a `fragment.com` con la cuenta dueña del bot y wallet compatible.
-2. Adquirir o disponer del username collectible seleccionado.
-3. Asignarlo al mismo bot `Fútbol Chépica`.
-4. Activar el collectible.
-5. Ordenarlo como primer username activo.
-6. Desactivar `@CUDODeportesBot` usando la capacidad actual de Telegram para bots con username adicional activo.
+### Ruta C — conservar username técnico actual
 
-### VALIDACIÓN POST
+Mantener `@CUDODeportesBot` y usar nombre visible `Fútbol Chépica`. Costo cero y sin migración, pero conserva fricción de marca en el enlace público.
 
-1. `/health/telegram`: `bot_id` debe seguir siendo `8209002627`, `ok=true`, nombre `Fútbol Chépica`.
-2. `getMe`/health debe reflejar el username principal que Telegram exponga tras el cambio; se valida en runtime en vez de asumir su representación exacta.
-3. `t.me/<nuevo>` debe abrir el chat existente del mismo bot.
-4. Búsqueda global por el nuevo username debe encontrar el mismo bot.
-5. `@CUDODeportesBot` debe quedar no activo/no visible públicamente; validar desde un cliente real.
-6. Menú nativo y comandos por rol deben seguir funcionando.
-7. Una invitación nueva debe generar `t.me/<username actual>?start=...` dinámicamente.
-8. Fixture/resultados y RBAC no deben cambiar.
+## Próximo bloqueo real
 
-## Rollback
+Para decidir entre A y B falta una comprobación autoritativa que esta automatización no puede hacer con el token del bot actual:
 
-Si el alias produce un problema de UX/propagación:
+1. si existe un collectible de marca aceptable realmente comprable en Fragment y su costo;
+2. o si `@FutbolChepicaBot` está disponible como username básico de un bot, validado por BotFather/Telegram.
 
-1. Reactivar el username editable anterior mientras el dueño conserve control.
-2. Ordenarlo nuevamente como principal.
-3. Desactivar el collectible si corresponde.
-4. Revalidar `/health/telegram`, webhook y menú.
-
-No cambiar token ni bot_id durante rollback.
-
-## Primer bloqueo real
-
-No se puede cerrar desde CI ni con el Bot API del Worker:
-
-- disponibilidad real del collectible candidato;
-- precio/fee vigente para adquirirlo y/o habilitarlo para bot;
-- conexión de cuenta Telegram propietaria + wallet;
-- autorización de una eventual transacción TON;
-- asignación del collectible al bot.
-
-Fragment devuelve su información comercial/propietaria dentro del flujo autenticado y el precio no debe inferirse desde foros históricos. Ese es el punto de intervención humana.
+No inferir disponibilidad desde buscadores, t.me, Fragment `Unavailable` ni foros.
 
 ## Regla de seguridad
 
-- Abrir `fragment.com` escribiendo la dirección manualmente.
-- No usar enlaces recibidos por DM.
+- Abrir Fragment manualmente sólo desde `https://fragment.com`.
 - No entregar seed phrase, private key ni bot token.
-- Ninguna captura de QA debe incluir secretos de wallet/token.
+- No comprar ni crear recursos hasta cerrar la comparación de costo/riesgo.
