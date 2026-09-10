@@ -22,8 +22,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
 
 jobs:
   validate:
@@ -36,34 +34,15 @@ jobs:
       - name: Syntax
         run: node --check qa/telegram/dirigentes-enrollment-harness.mjs
       - name: Validate Telegram dirigente enrollment
-        id: enrollment
-        shell: bash
         run: |
-          set +e
-          node qa/telegram/dirigentes-enrollment-harness.mjs 2>&1 | tee /tmp/dirigentes-enrollment.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -eq 0 ]; then
-            grep -q 'PASS public identity discovers Público + Dirigentes entrypoints' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS enrollment binds one pending request to one real club' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS duplicate pending request is prevented' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS CLUB_ADMIN cannot approve another enrollment' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS SUPER_ADMIN reviews and approves enrollment' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS approval materializes Telegram identity -> CLUB_ADMIN -> club association' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS enrolled dirigente reaches its scoped admin surface' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'PASS approval replay is idempotent' /tmp/dirigentes-enrollment.log || status=1
-            grep -q 'RESULT: PASS' /tmp/dirigentes-enrollment.log || status=1
-          fi
-          exit "$status"
-      - name: Publish failure diagnostic to PR
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          {
-            echo '### Enrollment CI diagnostic'
-            echo '```text'
-            tail -n 80 /tmp/dirigentes-enrollment.log
-            echo '```'
-          } > /tmp/diagnostic.md
-          gh pr comment "$PR_NUMBER" --body-file /tmp/diagnostic.md
+          set -euo pipefail
+          node qa/telegram/dirigentes-enrollment-harness.mjs | tee /tmp/dirigentes-enrollment.log
+          grep -q 'PASS public identity discovers Público + Dirigentes entrypoints' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS enrollment binds one pending request to one real club' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS duplicate pending request is prevented' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS CLUB_ADMIN cannot approve another enrollment' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS SUPER_ADMIN reviews and approves enrollment' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS approval materializes Telegram identity -> CLUB_ADMIN -> club association' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS enrolled dirigente reaches its scoped admin surface' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS approval replay is idempotent' /tmp/dirigentes-enrollment.log
+          grep -q 'RESULT: PASS' /tmp/dirigentes-enrollment.log
