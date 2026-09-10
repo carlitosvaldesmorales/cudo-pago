@@ -37,11 +37,6 @@ jobs:
           rm -f "$DB"
           for f in $(find sports-bus/migrations -maxdepth 1 -name '*.sql' | sort); do sqlite3 "$DB" < "$f"; done
           sqlite3 "$DB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('public_result_submissions','telegram_public_result_sessions');" | grep -qx 2
-      - name: Run G1 regression harness
-        run: |
-          set -euo pipefail
-          node qa/telegram/telegram-harness.mjs | tee /tmp/g1.log
-          grep -q 'RESULT: PASS' /tmp/g1.log
       - name: Run G2 public-result harness
         run: |
           set -euo pipefail
@@ -52,6 +47,11 @@ jobs:
           grep -q 'PASS authorized approval -> VERIFIED -> public API + supersede peers' /tmp/g2.log
           grep -q 'PASS approval idempotence' /tmp/g2.log
           grep -q 'PASS participating away CLUB_ADMIN can reject without touching public SSOT' /tmp/g2.log
+      - name: Run G1 regression harness
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-harness.mjs | tee /tmp/g1.log
+          grep -q 'RESULT: PASS' /tmp/g1.log
       - name: Verify public API remains VERIFIED-only
         run: |
           set -euo pipefail
