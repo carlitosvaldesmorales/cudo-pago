@@ -79,7 +79,7 @@ const assessmentSchema = {
     problem_code: { type: 'string', enum: ['MESSAGE_ACCUMULATION', 'PRIMARY_PATH_COMPLEXITY'] },
     resolution: { type: 'string', enum: ['ADDRESSED', 'PARTIAL', 'NOT_ADDRESSED'] },
     residual_risk: { type: 'string', enum: ['NONE', 'P3', 'P2', 'P1'] },
-    reason: { type: 'string', minLength: 10 },
+    reason: { type: 'string', minLength: 10, maxLength: 420 },
     evidence_refs: { type: 'array', minItems: 1, maxItems: 5, items: { type: 'string', enum: Object.keys(catalog) } }
   }
 };
@@ -140,6 +140,7 @@ Rules:
 - V3 human iOS acceptance is explicitly pending. human_gate_required MUST be true.
 - Judge whether the candidate addresses the demonstrated V2 problem, not whether the entire product is perfect.
 - Do not claim that editMessageText sends another message or that V3 lacks a mechanism to avoid a new panel on the normal path; that would contradict V3-MESSAGE-MODE.
+- Keep each reason to at most 2 short sentences. Do not repeat yourself.
 `;
 
 const agents = [
@@ -158,7 +159,7 @@ function callOllama(payload, name) {
 const reviews = [];
 for (const agent of agents) {
   const prompt = `OPEN-SOURCE GROUNDED UX REVIEWER\nUse the Istara role excerpt as methodology, but the verified catalog below is the only product evidence.\n\nISTARA PERSONA:\n${readPersona(agent.persona)}\n\nFOCUS:\n${agent.focus}\n${common}`;
-  const raw = callOllama({ model: agent.model, prompt, stream: false, format: schema, keep_alive: 0, options: { temperature: 0, seed: agent.name === 'Sage' ? 5301 : 7301, num_ctx: 4096, num_predict: 650 } }, agent.name);
+  const raw = callOllama({ model: agent.model, prompt, stream: false, format: schema, keep_alive: 0, options: { temperature: 0, seed: agent.name === 'Sage' ? 5301 : 7301, num_ctx: 4096, num_predict: 420 } }, agent.name);
   fs.writeFileSync(path.join(outDir, `${agent.name.toLowerCase()}-raw.json`), JSON.stringify(raw, null, 2));
   const parsed = JSON.parse(raw.response);
   assertGrounded(parsed, agent.name);
