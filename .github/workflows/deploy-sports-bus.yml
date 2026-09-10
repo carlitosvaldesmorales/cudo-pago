@@ -50,15 +50,19 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev"
+          RECONCILED=0
           for i in $(seq 1 20); do
             if curl -fsS -X POST -H 'X-CUDO-Repair: reconcile-webhook' "$BASE/ops/telegram/reconcile" -o /tmp/reconcile.json; then
               cat /tmp/reconcile.json
-              node -e 'const x=require("/tmp/reconcile.json");if(!x.ok||!x.webhook||!x.native_menu||!x.default_commands)process.exit(1)'
-              break
+              if node -e 'const x=require("/tmp/reconcile.json");if(!x.ok||!x.webhook||!x.native_menu||!x.default_commands)process.exit(1)'; then
+                RECONCILED=1
+                break
+              fi
             fi
+            echo "Waiting for new Worker reconcile contract (attempt $i/20)..."
             sleep 3
           done
-          test -s /tmp/reconcile.json
+          test "$RECONCILED" -eq 1
       - name: Validate public API and Telegram runtime
         shell: bash
         run: |
