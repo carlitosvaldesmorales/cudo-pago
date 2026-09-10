@@ -58,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
           ollama pull qwen2.5:1.5b
-          ollama pull smollm2:1.7b
+          ollama pull granite3.1-dense:2b
           ollama list
 
       - name: Run Sage + Pixel independent validation
