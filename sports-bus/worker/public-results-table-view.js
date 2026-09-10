@@ -1,7 +1,6 @@
 const COMPETITION_ID = 'ANFA-CHEPICA-2026';
 const SERIES = ['TERCERA', 'SEGUNDA', 'SENIOR', 'PRIMERA'];
 const SERIES_LABEL = { TERCERA: '3ª', SEGUNDA: '2ª', SENIOR: 'S', PRIMERA: '1ª' };
-const COPY_CONTROL_GUTTER = '\u00A0'.repeat(5);
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -109,7 +108,12 @@ function buildText(rounds) {
     for (const match of round.matches) {
       const group = match.group_id ? `${escapeHtml(match.group_id)} · ` : '';
       out.push(`🏟 ${group}<b>${escapeHtml(match.home_name)} — ${escapeHtml(match.away_name)}</b>`);
-      out.push(`<pre>${scoreGrid(match.scores)}</pre>`);
+      // Telegram distingue <code> (código inline de ancho fijo) de <pre>
+      // (bloque preformateado). El cliente iOS muestra el control </> en <pre>.
+      // Conservamos la matriz monoespaciada usando dos líneas de <code>, evitando
+      // el bloque que ensucia visualmente la tarjeta con ese control nativo.
+      const [top, bottom] = scoreGrid(match.scores);
+      out.push(`<code>${top}</code>\n<code>${bottom}</code>`);
     }
   }
   out.push('', '✅ Marcadores verificados');
@@ -121,12 +125,9 @@ function scoreGrid(scores) {
     const row = scores.get(code);
     return row ? `${row.home}–${row.away}` : '—';
   };
-  // Telegram iOS overlays its copy/code control in the top-right corner of
-  // every <pre> block. Reserve a fixed monospace gutter so the control never
-  // covers the SEGUNDA score while keeping the visual matrix unchanged.
-  const top = `${SERIES_LABEL.TERCERA.padEnd(3)} ${value('TERCERA').padEnd(5)}  ${SERIES_LABEL.SEGUNDA.padEnd(3)} ${value('SEGUNDA')}${COPY_CONTROL_GUTTER}`;
+  const top = `${SERIES_LABEL.TERCERA.padEnd(3)} ${value('TERCERA').padEnd(5)}  ${SERIES_LABEL.SEGUNDA.padEnd(3)} ${value('SEGUNDA')}`;
   const bottom = `${SERIES_LABEL.SENIOR.padEnd(3)} ${value('SENIOR').padEnd(5)}  ${SERIES_LABEL.PRIMERA.padEnd(3)} ${value('PRIMERA')}`;
-  return `${top}\n${bottom}`;
+  return [top, bottom];
 }
 
 async function render(env, message, text, replyMarkup) {
