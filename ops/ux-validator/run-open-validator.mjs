@@ -73,15 +73,15 @@ const reportSchema = {
         required: ['severity', 'evidence', 'impact', 'recommendation'],
         properties: {
           severity: { type: 'string', enum: ['P0', 'P1', 'P2', 'P3'] },
-          evidence: { type: 'string' },
-          impact: { type: 'string' },
-          recommendation: { type: 'string' }
+          evidence: { type: 'string', minLength: 8 },
+          impact: { type: 'string', minLength: 8 },
+          recommendation: { type: 'string', minLength: 8 }
         }
       }
     },
-    what_to_preserve: { type: 'array', maxItems: 2, items: { type: 'string' } },
-    redesign_principles: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string' } },
-    unknowns: { type: 'array', maxItems: 2, items: { type: 'string' } }
+    what_to_preserve: { type: 'array', maxItems: 2, items: { type: 'string', minLength: 8 } },
+    redesign_principles: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 8 } },
+    unknowns: { type: 'array', maxItems: 2, items: { type: 'string', minLength: 8 } }
   }
 };
 
@@ -94,6 +94,25 @@ function deriveJudgement(findings) {
   const highest = severityOrder.find(s => severities.includes(s)) || 'P3';
   if (highest === 'P0' || highest === 'P1') return { highest_severity: highest, verdict: 'REJECT' };
   return { highest_severity: highest, verdict: 'CONDITIONAL' };
+}
+
+function assertReportQuality(parsed, agentName) {
+  const strings = [
+    ...(parsed.findings || []).flatMap(f => [f.evidence, f.impact, f.recommendation]),
+    ...(parsed.what_to_preserve || []),
+    ...(parsed.redesign_principles || []),
+    ...(parsed.unknowns || [])
+  ].filter(v => typeof v === 'string').map(v => v.trim());
+
+  const placeholder = /^(?:[EIRPU]\d+|P\d+)(?:\s*(?:→|->|:|\/)\s*(?:[EIRPU]\d+|P\d+))*[.!]?$/i;
+  const bad = strings.find(s => placeholder.test(s));
+  if (bad) throw new Error(`${agentName} returned placeholder/non-evidence content: ${bad}`);
+
+  for (const finding of parsed.findings || []) {
+    if (!/[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(finding.evidence || '')) {
+      throw new Error(`${agentName} evidence has no meaningful text: ${finding.evidence}`);
+    }
+  }
 }
 
 const metrics = deterministicMetrics(source);
@@ -113,6 +132,7 @@ OUTPUT DISCIPLINE:
 - Confidence is integer 0-100.
 - Each evidence/impact/recommendation field max 25 words. Each list item max 18 words.
 - Evidence must point to supplied code, metrics or human E2E evidence. Do not invent user behavior.
+- Never emit placeholders such as E1, I1, R1, P1, U1 or template labels as content.
 - No preamble, no markdown, no extra keys.
 `;
 
@@ -126,7 +146,7 @@ const agents = [
   {
     name: 'Pixel',
     istaraAgent: 'istara-ui-audit',
-    model: 'smollm2:1.7b',
+    model: 'granite3.1-dense:2b',
     focus: 'Heuristic UI audit: status, language, consistency, recognition, control, hierarchy, accessibility, unnecessary information.'
   }
 ];
@@ -175,6 +195,7 @@ function runAgent(agent) {
     throw new Error(`${agent.name} returned invalid JSON: ${String(body.response || '').slice(0, 4000)}`);
   }
 
+  assertReportQuality(parsed, agent.name);
   parsed.confidence = Math.max(0, Math.min(100, Number(parsed.confidence) || 0));
   const derived = deriveJudgement(parsed.findings);
   parsed.highest_severity = derived.highest_severity;
@@ -205,6 +226,7 @@ const result = {
   methodology: {
     orchestrator: 'local deterministic runner',
     verdict_policy: 'models identify issue findings; runner derives severity verdicts and final consensus',
+    quality_policy: 'placeholder/template content fails the workflow',
     external_agent_framework: 'Istara personas pinned by workflow commit',
     runtime: 'Ollama local CPU',
     models: agents.map(a => a.model),
