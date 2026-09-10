@@ -1,0 +1,44 @@
+name: Validate Club Admin Result Governance
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/club-admin-series-entry.js'
+      - 'qa/telegram/club-admin-conflict-governance-harness.mjs'
+      - '.github/workflows/validate-club-admin-result-governance.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/club-admin-series-entry.js'
+      - 'qa/telegram/club-admin-conflict-governance-harness.mjs'
+      - '.github/workflows/validate-club-admin-result-governance.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/club-admin-series-entry.js
+          node --check qa/telegram/club-admin-conflict-governance-harness.mjs
+      - name: Validate club admin conflict governance
+        run: |
+          set -euo pipefail
+          node qa/telegram/club-admin-conflict-governance-harness.mjs | tee /tmp/club-admin-conflict.log
+          grep -q 'PASS first CLUB_ADMIN report can publish a first official result' /tmp/club-admin-conflict.log
+          grep -q 'PASS matching opposing CLUB_ADMIN report corroborates without rewriting' /tmp/club-admin-conflict.log
+          grep -q 'PASS conflicting CLUB_ADMIN report preserves the official score and marks DISPUTED' /tmp/club-admin-conflict.log
+          grep -q 'PASS conflicting evidence, actor and immutable governance version are retained' /tmp/club-admin-conflict.log
+          grep -q 'PASS SUPER_ADMIN receives a conflict notification' /tmp/club-admin-conflict.log
+          grep -q 'RESULT: PASS' /tmp/club-admin-conflict.log
