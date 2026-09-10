@@ -1,7 +1,7 @@
 # TELEGRAM-BOT-MIGRATION-01
 
 Fecha: 2026-09-10
-Estado: **BLUE/GREEN MATERIALIZADO / BLOQUEADO EN CREACIÓN DEL BOT DESTINO + CARGA SEGURA DEL TOKEN**
+Estado: **BLUE/GREEN DESPLEGADO / M1-M3 PASS / BLOQUEADO EN E2E HUMANO DEL BOT DESTINO**
 
 ## Decisión
 
@@ -11,7 +11,7 @@ La migración NO duplica el backend:
 
 ```text
 BOT ACTUAL                     BOT DESTINO
-@CUDODeportesBot               @FutbolChepicaBot (objetivo, disponibilidad pendiente)
+@CUDODeportesBot               @FutbolChepicaBot
       │                               │
 /webhook/telegram              /webhook/telegram-next
       └──────────────┬────────────────┘
@@ -27,7 +27,7 @@ BOT ACTUAL                     BOT DESTINO
 ## Evidencia fabricante Telegram
 
 - Un bot normal se crea con `@BotFather` usando `/newbot`.
-- El username de un bot normal debe tener 5–32 caracteres, usar letras latinas, números o `_`, y terminar en `bot`.
+- El username de un bot normal debe terminar en `bot`.
 - El token generado por BotFather controla completamente al bot y debe tratarse como contraseña.
 - Cada bot puede configurar su propio webhook HTTPS con `setWebhook` y un `secret_token`.
 - Un bot nuevo no puede iniciar conversaciones con usuarios; cada usuario debe abrirlo o enviarle un mensaje al menos una vez.
@@ -38,24 +38,24 @@ Se usa blue/green porque hoy el costo técnico es bajo y permite rollback inmedi
 
 1. Mantener bot actual operativo.
 2. Crear bot destino.
-3. Guardar su token como secreto `TELEGRAM_BOT_TOKEN_NEXT` en Cloudflare; nunca pegarlo en chat, GitHub ni archivos.
-4. Desplegar/re-ejecutar pipeline.
-5. Pipeline detecta automáticamente el slot destino, configura:
+3. Guardar su token como secreto `TELEGRAM_BOT_TOKEN_NEXT` en Cloudflare.
+4. Pipeline detecta automáticamente el slot destino y configura:
    - webhook `/webhook/telegram-next`;
    - nombre visible `Fútbol Chépica`;
-   - Menu nativo;
+   - menú nativo;
    - comandos públicos.
-6. Validar health del bot destino.
-7. Usuario SUPER_ADMIN abre el bot nuevo con `/start` o `/inicio`.
+5. Validar health del bot destino.
+6. Comparar `bot_id` con el bot actual.
+7. SUPER_ADMIN inicia chat con bot destino.
 8. Validar que conserva el mismo rol porque RBAC se basa en `telegram_user_id`, compartiendo D1.
 9. Probar navegación y una acción no destructiva.
 10. Recién después anunciar/migrar usuarios y retirar el webhook del bot antiguo.
 
 ## Aislamiento crítico de menús
 
-El menú nativo por chat se cacheaba sólo por `telegram_user_id`. En una convivencia de dos bots eso podría producir un falso positivo de sincronización.
+El menú nativo por chat se cacheaba sólo por `telegram_user_id`. En convivencia de dos bots eso podía producir un falso positivo de sincronización.
 
-Se agrega `telegram_menu_state_next`, utilizado únicamente por el bot destino mediante un wrapper de D1. Así:
+Se agregó `telegram_menu_state_next`, utilizado únicamente por el bot destino mediante un wrapper de D1:
 
 ```text
 usuario 123
@@ -72,43 +72,77 @@ Entrada de producción durante la migración:
 - `sports-bus/telegram-migration-entry.js`
 - core existente: `sports-bus/cors-entry.js`
 
-El wrapper sólo intercepta tres rutas del bot destino:
+El wrapper intercepta sólo tres rutas del bot destino:
 
 - `POST /webhook/telegram-next`
 - `POST /ops/telegram-next/reconcile`
 - `GET /health/telegram-next`
 
-Todo lo demás continúa por el core existente sin cambios.
-
 El slot destino usa:
 
-- `TELEGRAM_BOT_TOKEN_NEXT` — secreto nuevo, obligatorio para activar el slot.
-- `TELEGRAM_WEBHOOK_SECRET` actual como raíz; el secreto de webhook destino se deriva internamente con un namespace `:next` y luego SHA-256, por lo que no hay que gestionar un segundo secreto humano.
+- `TELEGRAM_BOT_TOKEN_NEXT` — secreto del nuevo bot.
+- `TELEGRAM_WEBHOOK_SECRET` actual como raíz; el secreto de webhook destino se deriva internamente con namespace `:next` y SHA-256.
 
 ## Seguridad
 
-- No pegar token de BotFather en ChatGPT.
-- No guardar token en archivos, commits ni variables públicas.
-- Guardarlo directamente como secreto de Cloudflare Worker con nombre `TELEGRAM_BOT_TOKEN_NEXT`.
+- Token de BotFather no se guarda en Git ni se comparte por chat.
+- Se carga como secreto de Cloudflare Worker.
 - El bot actual permanece como rollback hasta cerrar E2E.
-- `drop_pending_updates=false`; no se descartan updates silenciosamente durante reconcile.
+- `drop_pending_updates=false`.
 
-## QA requerido antes de merge
+## QA
 
-`qa/telegram/telegram-bot-migration-harness.mjs` debe demostrar:
+La rama de migración agregó `qa/telegram/telegram-bot-migration-harness.mjs` y quedó integrada mediante PR #16.
+
+El QA demuestra:
 
 - tabla de menú destino independiente;
-- webhook destino reutiliza la misma lógica core;
+- webhook destino reutiliza el mismo core;
 - respuestas del bot destino usan sólo su token;
-- identidad/RBAC siguen en el mismo D1;
+- RBAC sigue en el mismo D1;
 - menú destino idempotente;
-- bot actual y bot destino mantienen cachés independientes;
+- bot actual y destino tienen caché independiente;
 - reconcile configura `/webhook/telegram-next`;
 - health destino expone ID, username, nombre y estados;
 - bot actual permanece intacto;
-- sin token destino el slot queda dormido y no realiza llamadas de red.
+- sin token destino el slot queda dormido.
 
-Además G1/G2/G3 y el QA de menú existente deben seguir pasando.
+G1/G2/G3 y el QA de menú existente también permanecen PASS.
+
+## Evidencia producción
+
+### Deploy inicial con slot dormido
+
+Deploy #55 aplicó `0011_telegram_next_menu_state.sql`, conservó 25 partidos, 5 byes, 11 equipos, 24 series VERIFIED y 6 partidos con resultados. El slot destino quedó dormido mientras faltaba `TELEGRAM_BOT_TOKEN_NEXT`.
+
+### Activación del bot destino
+
+Después de crear `@FutbolChepicaBot` y cargar `TELEGRAM_BOT_TOKEN_NEXT` en Cloudflare, se re-ejecutó el job de deploy #55.
+
+Resultado: **SUCCESS completo**.
+
+Bot actual:
+
+- `bot_id = 8209002627`
+- `bot_username = CUDODeportesBot`
+- `bot_name = Fútbol Chépica`
+- webhook actual = PASS
+- menú/comandos = PASS
+
+Bot destino:
+
+- `bot_id = 8979834638`
+- `bot_username = FutbolChepicaBot`
+- `bot_name = Fútbol Chépica`
+- `bot_username_shape_ok = true`
+- webhook `/webhook/telegram-next` = PASS
+- menú nativo = PASS
+- comandos públicos `inicio`, `publico`, `dirigentes` = PASS
+- `pending_update_count = 0`
+- `last_error_date = null`
+- `last_error_message = null`
+
+Los bot IDs son distintos, como corresponde a una migración de identidad, y ambos operan contra el mismo Worker/D1.
 
 ## Gates de cutover
 
@@ -118,28 +152,27 @@ Además G1/G2/G3 y el QA de menú existente deben seguir pasando.
 - [x] estado de menú separado
 - [x] health/reconcile destino
 - [x] deploy opcional y no bloqueante sin token
-- [ ] CI completo PASS
-- [ ] deploy productivo con slot dormido PASS
+- [x] CI completo PASS
+- [x] deploy productivo con slot dormido PASS
 
 ### M2 — Identidad destino
 
-- [ ] Crear bot en `@BotFather`.
-- [ ] Preferencia: `@FutbolChepicaBot` si BotFather confirma disponibilidad.
-- [ ] Si no está disponible, elegir variante antes de crear; no improvisar una marca larga sin revisar.
-- [ ] Guardar token en Cloudflare como `TELEGRAM_BOT_TOKEN_NEXT`.
+- [x] Crear bot en `@BotFather`.
+- [x] Username `@FutbolChepicaBot` creado.
+- [x] Token guardado en Cloudflare como `TELEGRAM_BOT_TOKEN_NEXT`.
 
 ### M3 — Runtime destino
 
-- [ ] reconcile destino PASS
-- [ ] `/health/telegram-next` = PASS
-- [ ] bot_id destino distinto del bot actual
-- [ ] nombre visible = `Fútbol Chépica`
-- [ ] webhook = `/webhook/telegram-next`
-- [ ] menú/comandos = PASS
+- [x] reconcile destino PASS
+- [x] `/health/telegram-next` = PASS
+- [x] bot_id destino distinto del bot actual
+- [x] nombre visible = `Fútbol Chépica`
+- [x] webhook = `/webhook/telegram-next`
+- [x] menú/comandos = PASS
 
 ### M4 — E2E humano
 
-- [ ] SUPER_ADMIN inicia chat con bot destino.
+- [ ] SUPER_ADMIN inicia chat con `@FutbolChepicaBot`.
 - [ ] El sistema reconoce el mismo `telegram_user_id` y muestra rol SUPER_ADMIN.
 - [ ] Menú global correcto.
 - [ ] Vista pública correcta.
@@ -154,18 +187,16 @@ Además G1/G2/G3 y el QA de menú existente deben seguir pasando.
 - [ ] Retirar webhook antiguo sólo después de validar adopción.
 - [ ] Conservar rollback documentado hasta cierre.
 
-## Primer bloqueo humano
+## Bloqueo humano actual
 
-El código puede llegar hasta M1 sin intervención.
+El código, infraestructura y runtime llegaron hasta M3 sin intervención adicional.
 
-Para M2 hace falta una acción que sólo puede hacer el propietario en Telegram:
+El siguiente gate sólo puede cerrarlo una identidad Telegram real:
 
-1. abrir `@BotFather`;
-2. ejecutar `/newbot`;
-3. nombre visible: `Fútbol Chépica`;
-4. intentar username `FutbolChepicaBot`;
-5. si BotFather lo acepta, crear el bot;
-6. NO enviar el token por chat;
-7. cargarlo directamente en Cloudflare Worker como secreto `TELEGRAM_BOT_TOKEN_NEXT`.
+1. abrir `@FutbolChepicaBot`;
+2. enviar `/start` o `/inicio`;
+3. confirmar que la misma cuenta SUPER_ADMIN abre **FÚTBOL CHÉPICA · ADMIN GLOBAL**;
+4. abrir el menú nativo y comprobar comandos globales;
+5. abrir `Vista pública` o `/publico` sin ejecutar acciones destructivas.
 
-Hasta ese punto el bot actual sigue operativo y no se modifica ningún dato deportivo.
+El bot actual `@CUDODeportesBot` sigue operativo como rollback y no debe retirarse hasta cerrar este E2E.
