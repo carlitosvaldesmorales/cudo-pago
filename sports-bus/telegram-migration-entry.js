@@ -1,6 +1,7 @@
 import coreWorker from './cors-entry.js';
 import { PUBLIC_NATIVE_COMMANDS } from './worker/telegram-native-menu-entry.js';
 import { handlePublicResultsUxV2 } from './worker/public-results-ux-v2.js';
+import { handlePublicResultsUxV3 } from './worker/public-results-ux-v3.js';
 
 const TARGET_BOT_NAME = 'Fútbol Chépica';
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
@@ -34,7 +35,7 @@ function nextRuntimeEnv(env) {
     ? `${env.TELEGRAM_WEBHOOK_SECRET}:next`
     : null;
   runtime.DB = nextMenuDb(env.DB);
-  runtime.TELEGRAM_PUBLIC_UX_VERSION = '2';
+  runtime.TELEGRAM_PUBLIC_UX_VERSION = '3';
   return runtime;
 }
 
@@ -212,8 +213,12 @@ export default {
         });
       }
 
-      const publicUx = await handlePublicResultsUxV2(request.clone(), runtime);
-      if (publicUx) return publicUx;
+      const publicUxV3 = await handlePublicResultsUxV3(request.clone(), runtime);
+      if (publicUxV3) return publicUxV3;
+
+      // Keep V2 callbacks alive for historical messages already present in Telegram.
+      const publicUxV2 = await handlePublicResultsUxV2(request.clone(), runtime);
+      if (publicUxV2) return publicUxV2;
 
       const rewritten = await rewriteWebhookRequest(request);
       return coreWorker.fetch(rewritten, runtime, ctx);
