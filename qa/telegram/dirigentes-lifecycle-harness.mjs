@@ -130,12 +130,16 @@ async function run() {
   telegramCalls.length = 0;
   payload = await invoke(callbackUpdate('900001', 'tp:admins'));
   assert.equal(payload.handled, 'club_admin_list');
-  assert.match(lastMessageTo('900001').text, /Dirigente QA/);
+  const listView = lastMessageTo('900001');
+  assert.match(listView.text, /1 registro\(s\)/);
+  const listButtons = listView.reply_markup.inline_keyboard.flat();
+  assert.ok(listButtons.some(x => /Club QA · Dirigente QA/.test(x.text) && x.callback_data === 'tp:admin:900002'));
 
   telegramCalls.length = 0;
   payload = await invoke(callbackUpdate('900001', 'tp:admin:900002'));
   assert.equal(payload.handled, 'club_admin_detail');
   const detail = lastMessageTo('900001');
+  assert.match(detail.text, /Nombre: Dirigente QA/);
   assert.match(detail.text, /Estado: ✅ ACTIVO/);
   assert.ok(detail.reply_markup.inline_keyboard.flat().some(x => x.callback_data === 'tp:admin-suspend:900002'));
 
@@ -203,7 +207,7 @@ async function run() {
   // 5) A crafted callback cannot target another SUPER_ADMIN.
   const protectedGlobalBefore = await reporter('900003');
   payload = await invoke(callbackUpdate('900001', 'tp:admin-suspend:900003'));
-  assert.equal(payload.handled, 'club_admin_target_missing');
+  assert.equal(payload.handled, 'club_admin_not_found');
   const protectedGlobalAfter = await reporter('900003');
   assert.equal(protectedGlobalAfter.role, protectedGlobalBefore.role);
   assert.equal(protectedGlobalAfter.active, protectedGlobalBefore.active);
