@@ -22,7 +22,7 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 |---|---|---|
 | G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | **PASS E2E REAL** — enrollment/RBAC/suspensión/reactivación comprobados; revocación/idempotencia/auditoría cubiertos por QA |
 | G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **DESPLEGADO + QA PASS** — E2E Telegram real diferido: actualmente no hay una segunda identidad pública disponible para falsarlo sin mezclar roles |
-| G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | **MATERIALIZADO + QA PASS** — despliegue y gate humano seguro pendientes |
+| G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | **DESPLEGADO + QA PASS** — gate humano seguro de navegación pendiente; mutación real se difiere hasta existir un caso legítimo |
 | G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | GAP |
 | G5 | Gobierno y marca: recuperación/segundo global admin + identidad neutral visible | GAP |
 
@@ -44,6 +44,12 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 - G3 detectó y cerró técnicamente un riesgo real: los handlers administrativos anteriores podían volver a ejecutar un UPSERT sobre una serie ya oficial.
 - G3 agrega historia inmutable `match_series_result_versions`, estados `VERIFIED / DISPUTED / ANNULLED`, versionado y bloqueo del overwrite silencioso incluso para SUPER_ADMIN.
 - `Validate Result Governance` run `34424510189` pasó G3 + regresión G2 + regresión G1 + migraciones + contratos de despliegue en conjunto.
+- PR #10 pasó también los tres checks de PR: G3, G2 y harness Telegram G1.
+- G3 fue desplegado por `Deploy Sports Event Bus` run `34424861780` (#49), con migración `0009_result_governance.sql` aplicada remotamente.
+- Gate remoto G3: `invalid_governance_status=0`, `invalid_result_versions=0`, `missing_current_version=0`.
+- El despliegue G3 mantuvo 24 series VERIFIED / 6 partidos; no alteró la fuente deportiva con datos de QA.
+- Worker productivo G3: versión `4c4452fb-3964-4994-abf8-f589a6740bb1`.
+- QA recurrente posterior al merge: `Validate Telegram QA Harness` run `34424861804`, SUCCESS.
 
 ## Patrón obligatorio para nuevas entidades
 
@@ -88,7 +94,7 @@ CLUB (ej. Unión Orilla / CUDO)
 
 1. **G1 cerrado.** Mantener su QA como regresión obligatoria.
 2. **G2 desplegado y técnicamente validado.** E2E público queda diferido hasta disponer de una segunda identidad real o de un caso real que permita falsarlo sin contaminar producción.
-3. **G3 materializado y QA PASS.** Integrar, desplegar y ejecutar sólo el gate humano seguro de navegación/cancelación; una mutación real se validará cuando exista un caso legítimo.
+3. **G3 desplegado y técnicamente validado.** Ejecutar únicamente el gate humano seguro de navegación/cancelación con la cuenta SUPER_ADMIN actual. Una mutación real se validará cuando exista un caso legítimo.
 4. Incorporar un segundo club real para falsar G4 sin intervención técnica del equipo CUDO.
 5. Cerrar G5: gobierno/recuperación e identidad neutral visible.
 
