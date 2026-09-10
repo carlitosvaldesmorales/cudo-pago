@@ -74,7 +74,7 @@ export async function handleClubAdminSeriesScore(request, env) {
       env.DB.prepare('DELETE FROM telegram_series_sessions WHERE telegram_user_id=?').bind(actorId)
     ]);
 
-    await send(env,chatId,`${match.home_name} ${home}-${away} ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n✅ Resultado oficial registrado por administrador de ${reporter.club_id}.`);
+    await send(env,chatId,`${match.home_name} ${home}-${away} ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n✅ Resultado VERIFICADO y oficial registrado por administrador de ${reporter.club_id}.`);
     await showSeriesMenu(env,chatId,match);
     return json({ok:true,handled:'club_admin_series_verified',match_id:match.match_id,series_code:seriesCode,status:'VERIFIED',outcome:'FIRST_OFFICIAL'});
   }
