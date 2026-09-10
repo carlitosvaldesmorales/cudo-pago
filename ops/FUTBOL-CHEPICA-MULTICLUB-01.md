@@ -23,7 +23,7 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 | G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | **PASS E2E REAL + QA** — enrollment/RBAC/suspensión/reactivación comprobados; revocación/idempotencia/auditoría cubiertos por QA ejecutable |
 | G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **DESPLEGADO + QA PASS** — E2E Telegram real diferido hasta disponer de una segunda identidad pública o un caso real legítimo |
 | G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | **DESPLEGADO + QA PASS + NAVEGACIÓN HUMANA SEGURA PASS** — mutación real diferida hasta existir un caso legítimo |
-| G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | GAP |
+| G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | **READINESS TÉCNICO PASS / E2E REAL GAP** — CI demuestra enrollment multi-club, aislamiento por `club_id`, operación propia, bloqueo cross-club y auditoría; falta una identidad/dirigente real de otro club en producción |
 | G5 | Gobierno y marca: recuperación/segundo global admin + identidad neutral visible | PARCIAL — identidad visible Fútbol Chépica y bot destino validados; recuperación/segundo global admin sigue GAP |
 
 ## Evidencia heredada ya validada
@@ -52,7 +52,9 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 - Worker productivo G3: versión `4c4452fb-3964-4994-abf8-f589a6740bb1`.
 - QA recurrente posterior al merge: `Validate Telegram QA Harness` run `34424861804`, SUCCESS.
 - 2026-09-10: validación humana segura de G3 PASS en el bot productivo `Fútbol Chépica`: `/correcciones` mostró lista de resultados, se abrió un resultado oficial real y el detalle renderizó versión, estado, marcador y acciones de SUPER_ADMIN sin ejecutar ninguna mutación.
-- La validación humana G3 dejó un hallazgo UX separado: la lista es ambigua porque no muestra clubes y expone nomenclatura técnica (`VERIFIED`, `v1`). No reabre el contrato funcional.
+- La validación humana G3 dejó un hallazgo UX separado: la lista era ambigua porque no mostraba clubes y exponía nomenclatura técnica (`VERIFIED`, `v1`). La mejora posterior consolidó un partido por botón y retiró esos términos de la navegación principal; no reabre el contrato funcional.
+- 2026-09-10: el enrollment de dirigentes quedó convertido en contrato CI E2E: identidad pública → solicitud PENDING → revisión SUPER_ADMIN → `CLUB_ADMIN + club_id + VERIFIED + active=1`, con rechazo de aprobación por otro CLUB_ADMIN e idempotencia de reintentos.
+- 2026-09-10: `Validate G4 Second Club Readiness` demuestra en D1 efímero y usando el router real que dos identidades independientes pueden quedar asociadas a clubes distintos, que un segundo club opera su superficie sin provisión técnica, que callbacks cross-club son rechazados por backend, que puede crear un primer resultado oficial propio con auditoría y que otro club no puede mutarlo.
 
 ## Patrón obligatorio para nuevas entidades
 
@@ -98,9 +100,9 @@ CLUB (ej. Unión Orilla / CUDO)
 1. **G1 cerrado funcionalmente.** Mantener QA como regresión obligatoria; E2E adicional con segunda cuenta no bloquea.
 2. **G2 desplegado y técnicamente validado.** E2E público queda diferido hasta disponer de una segunda identidad real o de un caso real que permita falsarlo sin contaminar producción.
 3. **G3 navegación humana segura cerrada.** Una mutación real se validará sólo cuando exista una corrección, disputa o anulación legítima.
-4. **Corregir UX de gobierno de resultados** como mejora independiente: hacer identificables los clubes en la lista, traducir estados técnicos y jerarquizar acciones de riesgo.
-5. Incorporar un segundo club real para falsar G4 sin intervención técnica del equipo CUDO.
-6. Cerrar el GAP restante de G5: segundo SUPER_ADMIN / recuperación de control.
+4. **UX de gobierno de resultados corregida como mejora independiente.** Mantener regresión; UAT visual adicional no bloquea la arquitectura.
+5. **G4 readiness técnico cerrado.** Siguiente bloqueo real: incorporar una identidad/dirigente de un segundo club real y dejar que haga el enrollment normal desde Telegram, sin provisión técnica manual. Sólo entonces puede declararse E2E REAL.
+6. Tras G4 real, cerrar el GAP restante de G5: segundo SUPER_ADMIN / recuperación de control. No diseñar ni otorgar privilegios globales por inferencia.
 
 ## Regla de evidencia
 
