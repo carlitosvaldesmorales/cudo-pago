@@ -1,7 +1,7 @@
 # TELEGRAM-IDENTITY-ALIAS-01
 
 Fecha: 2026-09-09
-Estado: **READINESS MATERIALIZADA / BLOQUEADO EN FRAGMENT: disponibilidad + costo + asignación autenticada**
+Estado: **READINESS + PRECHECK PRODUCCIÓN PASS / BLOQUEADO EN FRAGMENT: disponibilidad + costo + asignación autenticada**
 
 ## Objetivo
 
@@ -13,7 +13,7 @@ Eliminar la exposición pública de `@CUDODeportesBot` sin crear un bot nuevo, s
 2. Los usernames collectible activos resuelven al mismo peer/bot; el primero de los usernames activos es el principal visible.
 3. `bots.reorderUsernames` permite ordenar los usernames activos del bot.
 4. `toggleBotUsernameIsActive` permite activar/desactivar usernames de un bot editable.
-5. Bot API 9.3 (2025-12-31) agregó específicamente la posibilidad de que un bot desactive su username principal si tiene otros usernames activos comprados en Fragment.
+5. Bot API 9.3 agregó específicamente la posibilidad de que un bot desactive su username principal si tiene otros usernames activos comprados en Fragment.
 6. El Bot API HTTP no expone un método `setMyUsername`; la operación de usernames múltiples pertenece a la capa propietaria/MTProto/Fragment y requiere actuar como dueño del bot, no sólo con el bot token.
 
 ### Nota sobre documentación histórica
@@ -24,7 +24,7 @@ La página general de Fragment todavía contiene texto histórico que dice que u
 
 - Un maintainer/contributor de TDLib aclaró que los usernames activos apuntan al mismo usuario/peer y pueden usarse de forma intercambiable.
 - Experiencias de usuarios reportan que un username adquirido en Fragment se agrega como username adicional y puede ordenarse; también existen reportes de caché/propagación al asignarlo.
-- Hay abundantes reportes de phishing que imita Fragment. Regla operacional: usar exclusivamente `https://fragment.com` iniciado manualmente, nunca enlaces enviados por terceros, bots o mini apps no verificadas.
+- Existen reportes comunitarios de phishing que imita Fragment. Regla operacional: usar exclusivamente `https://fragment.com` iniciado manualmente, nunca enlaces enviados por terceros, bots o mini apps no verificadas.
 
 La comunidad se usa como evidencia secundaria; no se usa para fijar precio ni disponibilidad.
 
@@ -68,7 +68,7 @@ El flujo de invitaciones no tiene `@CUDODeportesBot` fijado. Antes de construir 
 
 ### Health
 
-`/health/telegram` ya exponía `bot_username` dinámicamente y no exige que sea `CUDODeportesBot`. Se agrega `bot_id` para tener una evidencia estable antes/después de la operación.
+`/health/telegram` expone dinámicamente `bot_id`, `bot_username` y `bot_name`. No exige que el username sea `CUDODeportesBot`.
 
 ### Gate de identidad
 
@@ -84,13 +84,55 @@ Antes y después del alias deben mantenerse iguales:
 
 Debe cambiar únicamente la superficie de username principal/activo.
 
+## PRECHECK PRODUCCIÓN — PASS
+
+PR #15 fue validado por los tres gates existentes:
+
+- `Validate Telegram QA Harness` run `34429964842` = SUCCESS.
+- `Validate Public Result Submission` run `34429964985` = SUCCESS.
+- `Validate Result Governance` run `34429964864` = SUCCESS.
+
+PR #15 fue integrado en `feature/sports-event-bus-v1` con merge `f7f5ab8263f17e17bac240de251b6c36a0d2aa26`.
+
+Deploy #54, run `34430004547`, terminó SUCCESS completo. Worker version: `af21194c-d5a6-47f7-bb8a-e3b04d15c4a9`.
+
+Baseline de identidad capturado desde `/health/telegram`:
+
+```text
+bot_id = 8209002627
+bot_username = CUDODeportesBot
+bot_name = Fútbol Chépica
+bot_api_ok = true
+webhook_configured = true
+native_menu_configured = true
+default_commands_configured = true
+pending_update_count = 0
+```
+
+Baseline funcional/deportivo durante el mismo deploy:
+
+```text
+matches = 25
+byes = 5
+teams = 11
+VERIFIED series = 24
+matches con resultados = 6
+invalid_public_submission_status = 0
+invalid_governance_status = 0
+invalid_result_versions = 0
+missing_current_version = 0
+invalid_series = 0
+```
+
+Este `bot_id` es el identificador que debe permanecer igual después del cutover collectible.
+
 ## Plan de cutover
 
 ### PRECHECK
 
-1. Capturar `bot_id`, username actual, nombre visible, webhook y estado del menú desde `/health/telegram`.
-2. Confirmar que producción mantiene fixture/resultados/roles.
-3. Ver disponibilidad y precio REAL del candidato en Fragment autenticado.
+1. Capturar `bot_id`, username actual, nombre visible, webhook y estado del menú desde `/health/telegram`. **HECHO**.
+2. Confirmar que producción mantiene fixture/resultados/roles. **HECHO**.
+3. Ver disponibilidad y precio REAL del candidato en Fragment autenticado. **BLOQUEO ACTUAL**.
 4. No comprar/asignar si el costo no cierra.
 
 ### CUTOVER HUMANO / FRAGMENT
@@ -104,7 +146,7 @@ Debe cambiar únicamente la superficie de username principal/activo.
 
 ### VALIDACIÓN POST
 
-1. `/health/telegram`: mismo `bot_id`, `ok=true`, nombre `Fútbol Chépica`.
+1. `/health/telegram`: `bot_id` debe seguir siendo `8209002627`, `ok=true`, nombre `Fútbol Chépica`.
 2. `getMe`/health debe reflejar el username principal que Telegram exponga tras el cambio; se valida en runtime en vez de asumir su representación exacta.
 3. `t.me/<nuevo>` debe abrir el chat existente del mismo bot.
 4. Búsqueda global por el nuevo username debe encontrar el mismo bot.
