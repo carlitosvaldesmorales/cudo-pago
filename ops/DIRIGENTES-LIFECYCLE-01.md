@@ -1,8 +1,8 @@
 # DIRIGENTES-LIFECYCLE-01
 
-Fecha: 2026-09-09
-Branch: `feature/futbol-chepica-multiclub-01`
-Estado: MATERIALIZADO EN BRANCH / PENDIENTE CI Y E2E
+Fecha: 2026-09-10
+Branch activa: `feature/sports-event-bus-v1`
+Estado: **MATERIALIZADO + QA TÉCNICO PASS / E2E HUMANO DIFERIDO**
 
 ## Objetivo
 
@@ -89,6 +89,30 @@ Cada transición efectiva escribe `permission_audit` con:
 
 Además se escribe `events` con payload que conserva la identidad objetivo y estado anterior relevante.
 
+## QA técnico ejecutable
+
+PR #25 incorporó:
+
+- `qa/telegram/dirigentes-lifecycle-harness.mjs`
+- `.github/workflows/validate-dirigentes-lifecycle.yml`
+
+El harness aplica las migraciones reales sobre SQLite/D1 adapter y prueba comportamiento, no sólo presencia de texto en código.
+
+Resultado CI del 2026-09-10: **PASS**.
+
+Queda demostrado automáticamente:
+
+- SUPER_ADMIN puede listar e inspeccionar CLUB_ADMIN;
+- suspensión conserva identidad, club, rol y trust, pero deja `active=0`;
+- reactivación restaura `active=1` con el mismo vínculo;
+- revocación exige confirmación y conserva la identidad, cambiando a REPORTER/PROVISIONAL y `club_id=NULL`;
+- cada transición efectiva deja `permission_audit` y `events`;
+- repetir una transición no duplica el cambio ni la auditoría;
+- un callback construido manualmente no puede modificar otro SUPER_ADMIN;
+- un actor no global no puede modificar dirigentes.
+
+PR #25 fue fusionado a la rama activa con merge `979793787d5c2c15378aabe2386f9c5ea934f196`.
+
 ## UX esperada
 
 El SUPER_ADMIN recibe un menú extendido:
@@ -105,18 +129,16 @@ El SUPER_ADMIN recibe un menú extendido:
 
 `👥 Dirigentes` lista CLUB_ADMIN activos y suspendidos. El detalle expone sólo las acciones válidas para el estado actual y exige confirmación antes de revocar.
 
-## Prueba E2E requerida para cerrar G1
+## E2E humano pendiente — diferido, no bloquea otros frentes
 
-Usar una cuenta real CLUB_ADMIN ya aprobada (actualmente existe una de Unión Orilla):
+Sigue pendiente comprobar con una cuenta real CLUB_ADMIN en Telegram:
 
-1. SUPER_ADMIN abre `Dirigentes` y visualiza la cuenta.
-2. Suspende la cuenta.
-3. Desde la cuenta suspendida intentar entrar a `🔐 Dirigentes` y a un callback viejo de resultados: ambos deben quedar sin privilegio administrativo.
-4. SUPER_ADMIN reactiva la cuenta.
-5. La cuenta recupera el portal del club.
-6. Revocar sólo si se acepta que luego sea necesario volver a solicitar/aprobar acceso. Si no se desea alterar al dirigente piloto, la revocación se valida con una segunda identidad de prueba controlada.
+1. entrar al bot nuevo y recuperar automáticamente el rol existente;
+2. suspender la cuenta y comprobar desde esa misma cuenta que pierde privilegios administrativos;
+3. reactivar y comprobar que recupera el portal del club;
+4. validar revocación sólo con una identidad de prueba que sea seguro degradar.
 
-Hasta completar esta prueba, G1 no se marca E2E VALIDADO.
+Carlos indicó el 2026-09-10 que esa segunda cuenta no está disponible en este momento. Por tanto este E2E queda **DIFERIDO** y no debe usarse como bloqueo artificial para continuar otros módulos. Tampoco se marca como PASS hasta realizarlo.
 
 ## GAP deliberadamente postergado
 
