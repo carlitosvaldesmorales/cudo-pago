@@ -1,0 +1,58 @@
+name: Validate Telegram QA Harness
+on:
+  push:
+    branches:
+      - feature/telegram-qa-harness-01
+      - feature/sports-event-bus-v1
+    paths:
+      - 'qa/telegram/**'
+      - 'sports-bus/**'
+      - '.github/workflows/validate-telegram-qa-harness.yml'
+      - 'ops/TELEGRAM-QA-HARNESS-01.md'
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'qa/telegram/**'
+      - 'sports-bus/**'
+      - '.github/workflows/validate-telegram-qa-harness.yml'
+      - 'ops/TELEGRAM-QA-HARNESS-01.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax check harness and Worker
+        run: |
+          set -euo pipefail
+          node --check qa/telegram/d1-sqlite-adapter.mjs
+          node --check qa/telegram/telegram-harness.mjs
+          node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/portal-entry.js
+          node --check sports-bus/worker/dirigentes-lifecycle-entry.js
+          node --check sports-bus/worker/dirigentes-suspended-guard-entry.js
+          node --check sports-bus/worker/series-entry.js
+          node --check sports-bus/worker/club-admin-series-entry.js
+      - name: Run simulated Telegram E2E against real Worker routing
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-harness.mjs | tee /tmp/telegram-qa.log
+          grep -q 'RESULT: PASS' /tmp/telegram-qa.log
+          grep -q 'PASS enrollment idempotence' /tmp/telegram-qa.log
+          grep -q 'PASS club scope:' /tmp/telegram-qa.log
+          grep -q 'PASS CLUB_ADMIN direct VERIFIED result' /tmp/telegram-qa.log
+          grep -q 'PASS suspend + session invalidation + idempotence' /tmp/telegram-qa.log
+          grep -q 'PASS suspended guard + stale callback denial' /tmp/telegram-qa.log
+          grep -q 'PASS reactivate + role restoration + idempotence' /tmp/telegram-qa.log
+          grep -q 'PASS revoke preserves identity + audit + idempotence' /tmp/telegram-qa.log
+      - name: Prove QA cannot call arbitrary network hosts
+        run: |
+          set -euo pipefail
+          grep -q 'QA harness blocked unexpected network call' qa/telegram/telegram-harness.mjs
+          grep -q "api.telegram.org/botqa-token-never-sent" qa/telegram/telegram-harness.mjs
