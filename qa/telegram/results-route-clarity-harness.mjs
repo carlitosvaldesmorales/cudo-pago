@@ -99,14 +99,15 @@ async function run() {
   assert.match(destination.text, /FECHA I/);
   assert.match(destination.text, /Unión Orilla — San Juan/);
   assert.match(destination.text, /Santa Elena La Ruda — Unión Orilla/);
-  assert.match(destination.text, /<pre>3ª\s+2–3\s+2ª\s+1–0\u00A0{5}\nS\s+0–0\s+1ª\s+3–0<\/pre>/);
+  assert.match(destination.text, /<code>3ª\s+2–3\s+2ª\s+1–0<\/code>\n<code>S\s+0–0\s+1ª\s+3–0<\/code>/);
+  assert.doesNotMatch(destination.text, /<pre>/);
   assert.doesNotMatch(destination.text, /RESULTADOS REGISTRADOS/);
   const callbacks = (destination.reply_markup?.inline_keyboard || []).flat().map(x => x.callback_data);
   assert.deepEqual(callbacks, ['p3:search', 'p3:public']);
   assert.equal(calls.filter(x => x.slot === 'primary').length, 0);
   console.log('PASS destination /resultados shows every verified match across dates');
-  console.log('PASS score matrix uses Telegram HTML preformatted monospace alignment');
-  console.log('PASS score matrix reserves top-right gutter for Telegram iOS copy control');
+  console.log('PASS score matrix uses inline fixed-width code and no preformatted block');
+  console.log('PASS primary view avoids Telegram pre-block copy control');
   console.log('PASS primary view has no per-match drilldown buttons');
 
   reset();
