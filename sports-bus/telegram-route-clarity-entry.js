@@ -3,6 +3,7 @@ import { handlePublicResultsTableView } from './worker/public-results-table-view
 import { handleResultGovernanceUxRequest } from './worker/result-governance-ux-entry.js';
 import { handleResultCorrectionFlow } from './worker/result-correction-flow-entry.js';
 import { handleResultGovernanceScopeRequest } from './worker/result-governance-scope-entry.js';
+import { handlePublicResultGovernanceStatus } from './worker/public-result-governance-status-entry.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 const PRIMARY_WEBHOOK_PATH = '/webhook/telegram';
@@ -147,6 +148,12 @@ export default {
 
     const governanceUx = await handleResultGovernanceUxRequest(request.clone(), env);
     if (governanceUx) return governanceUx;
+
+    // Public contribution screens must respect the same governance state as the
+    // public SSOT: only VERIFIED is official. DISPUTED/ANNULLED are never rendered
+    // as official scores and cannot be replaced from the public contribution flow.
+    const publicGovernanceStatus = await handlePublicResultGovernanceStatus(request.clone(), env);
+    if (publicGovernanceStatus) return publicGovernanceStatus;
 
     const normalized = await normalizeDestinationResultsCommand(request);
     const allResults = await handlePublicResultsTableView(normalized.clone(), env);
