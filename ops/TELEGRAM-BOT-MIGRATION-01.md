@@ -1,7 +1,7 @@
 # TELEGRAM-BOT-MIGRATION-01
 
 Fecha: 2026-09-10
-Estado: **BLUE/GREEN DESPLEGADO / M1-M3 PASS / M4 SUPER_ADMIN PASS / PENDIENTE VISTA PÚBLICA + SEGUNDA CUENTA**
+Estado: **BLUE/GREEN DESPLEGADO / M1-M3 PASS / M4 SUPER_ADMIN + VISTA PÚBLICA PASS / SEGUNDA CUENTA E2E DIFERIDA**
 
 ## Decisión
 
@@ -48,7 +48,7 @@ Se usa blue/green porque hoy el costo técnico es bajo y permite rollback inmedi
 6. Comparar `bot_id` con el bot actual.
 7. SUPER_ADMIN inicia chat con bot destino.
 8. Validar que conserva el mismo rol porque RBAC se basa en `telegram_user_id`, compartiendo D1.
-9. Probar navegación y una acción no destructiva.
+9. Probar navegación pública y administrativa no destructiva.
 10. Recién después anunciar/migrar usuarios y retirar el webhook del bot antiguo.
 
 ## Aislamiento crítico de menús
@@ -87,7 +87,7 @@ El slot destino usa:
 
 - Token de BotFather no se guarda en Git ni se comparte por chat.
 - Se carga como secreto de Cloudflare Worker.
-- El bot actual permanece como rollback hasta cerrar E2E.
+- El bot actual permanece como rollback hasta cerrar cutover.
 - `drop_pending_updates=false`.
 
 ## QA
@@ -137,7 +137,7 @@ Bot destino:
 - `bot_username_shape_ok = true`
 - webhook `/webhook/telegram-next` = PASS
 - menú nativo = PASS
-- comandos públicos `inicio`, `publico`, `dirigentes` = PASS
+- comandos públicos = PASS
 - `pending_update_count = 0`
 - `last_error_date = null`
 - `last_error_message = null`
@@ -153,10 +153,23 @@ Captura humana del 2026-09-10 confirma en el bot nuevo:
 - `/inicio` reconoce inmediatamente la identidad existente como `ADMIN GLOBAL`;
 - no solicita recrear rol ni volver a enrolarse;
 - panel global muestra solicitudes, resultados por revisar y dirigentes activos;
-- botones globales disponibles: Solicitudes, Resultados pendientes, Dirigentes, Correcciones y disputas, Resultados registrados y Vista pública;
-- botón nativo `Menú` visible.
+- menú nativo visible;
+- `/correcciones` abre gobierno de resultados y permite navegación segura sin mutar datos.
 
 Esto valida que el mismo `telegram_user_id` recupera su RBAC desde el D1 compartido al entrar por el bot nuevo.
+
+### E2E visual iOS — Vista pública
+
+Captura humana del 2026-09-10 confirma en `@FutbolChepicaBot` que `/publico` abre correctamente:
+
+- encabezado `🌐 FÚTBOL CHÉPICA · PÚBLICO`;
+- texto de orientación para consulta/aporte;
+- `⚽ Resultados verificados`;
+- `📝 Informar resultado`;
+- `🔎 Mis aportes`;
+- `🏠 Inicio`.
+
+La vista pública queda **PASS visual/funcional**. No se ejecutó ningún aporte ni mutación durante esta prueba.
 
 ## Gates de cutover
 
@@ -189,8 +202,10 @@ Esto valida que el mismo `telegram_user_id` recupera su RBAC desde el D1 compart
 - [x] SUPER_ADMIN inicia chat con `@FutbolChepicaBot`.
 - [x] El sistema reconoce el mismo `telegram_user_id` y muestra rol SUPER_ADMIN.
 - [x] Menú global correcto.
-- [ ] Vista pública correcta.
-- [ ] Segunda cuenta/dirigente migra al iniciar chat; no requiere recrear rol.
+- [x] Vista pública correcta.
+- [ ] Segunda cuenta/dirigente migra al iniciar chat; no requiere recrear rol. **DIFERIDO** hasta que esa cuenta vuelva a estar disponible.
+
+La comprobación diferida no debe bloquear mejoras no destructivas ni otros módulos. Sí debe completarse antes de retirar definitivamente el bot antiguo.
 
 ### M5 — Cutover
 
@@ -198,16 +213,13 @@ Esto valida que el mismo `telegram_user_id` recupera su RBAC desde el D1 compart
 - [ ] Enlaces/QR/publicaciones apuntan al nuevo username.
 - [ ] Ventana corta de convivencia.
 - [ ] Bot antiguo comunica migración, sin aceptar nuevas altas si se decide congelarlo.
-- [ ] Retirar webhook antiguo sólo después de validar adopción.
+- [ ] Retirar webhook antiguo sólo después de validar adopción y completar la segunda cuenta.
 - [ ] Conservar rollback documentado hasta cierre.
 
-## Bloqueo humano actual
+## Bloqueo humano residual
 
-La identidad SUPER_ADMIN ya pasó E2E visual en el bot destino.
+No existe bloqueo humano para seguir desarrollando el sistema: la segunda cuenta queda formalmente **diferida**.
 
-Quedan dos comprobaciones humanas antes de cutover:
+El bloqueo para **retiro definitivo del bot antiguo** sí permanece: cuando vuelva a estar disponible la cuenta CLUB_ADMIN ya aprobada de Unión Orilla, debe abrir `@FutbolChepicaBot` y ejecutar `/inicio`; debe recuperar el rol existente sin nueva solicitud.
 
-1. En `@FutbolChepicaBot`, abrir `Vista pública` o `/publico` y confirmar que la navegación pública responde correctamente.
-2. Desde la segunda cuenta que ya es `CLUB_ADMIN` de Unión Orilla, abrir `@FutbolChepicaBot` y enviar `/inicio`; debe recuperar automáticamente el rol existente y mostrar el portal del club sin una nueva solicitud.
-
-El bot actual `@CUDODeportesBot` sigue operativo como rollback y todavía no debe retirarse.
+Hasta entonces `@CUDODeportesBot` permanece operativo como rollback.
