@@ -1,7 +1,7 @@
 # TELEGRAM-NATIVE-MENU-01
 
 Fecha: 2026-09-09
-Estado: MATERIALIZADO + QA PASS / DESPLIEGUE Y E2E VISUAL PENDIENTES
+Estado: **DESPLEGADO + QA PASS / E2E VISUAL iOS PENDIENTE**
 
 ## Objetivo
 
@@ -66,7 +66,7 @@ La tabla `telegram_menu_state` sólo cachea qué menú ya fue sincronizado. No e
 
 ## Reconcile y health
 
-`/ops/telegram/reconcile` ahora reconcilia en conjunto:
+`/ops/telegram/reconcile` reconcilia en conjunto:
 
 1. webhook;
 2. menú nativo por defecto (`commands`);
@@ -93,22 +93,56 @@ Prueba con Worker real + D1 SQLite efímero + transporte Telegram simulado:
 - perfil SUPER_ADMIN;
 - comando directo de solicitudes;
 - reconcile de menú por defecto;
-- contrato de health.
+- contrato de health;
+- regresión G1.
 
-También se mantiene el harness anterior de G1 como regresión obligatoria.
+Evidencia previa al PR:
 
-Evidencia previa al PR: `Validate Telegram QA Harness` run `34425934868` = SUCCESS.
+- `Validate Telegram QA Harness` run `34425972389` = SUCCESS.
+- PR #11: checks G1/G2/G3 + menú nativo = SUCCESS.
+
+## Evidencia de producción
+
+PR #11 fue integrado en `feature/sports-event-bus-v1`.
+
+El primer deploy del menú, run `34426083821` (#50), alcanzó a:
+
+- aplicar `0010_telegram_native_menu.sql` en D1;
+- validar la nueva tabla `telegram_menu_state`;
+- conservar 25 partidos, 5 byes, 11 clubes, 24 series VERIFIED y 6 partidos con resultados;
+- desplegar el Worker versión `a6d51384-d023-4e7b-a124-47eab6460d63`.
+
+Ese run falló después del deploy porque el primer request de reconcile recibió temporalmente el contrato del Worker anterior. No fue un fallo de Telegram ni de datos: era una carrera de propagación del runtime.
+
+PR #12 corrigió el gate para reintentar hasta observar explícitamente el contrato nuevo. El deploy siguiente, run `34426261859` (#51), terminó **SUCCESS** completo.
+
+Evidencia del run #51:
+
+- D1: `0010_telegram_native_menu.sql` ya aplicado; no había migraciones pendientes.
+- `telegram_menu_state_table = 1`.
+- 25 partidos, 5 byes, 11 equipos.
+- 24 series `VERIFIED` en 6 partidos; no se modificaron datos deportivos.
+- `invalid_public_submission_status = 0`.
+- `invalid_governance_status = 0`.
+- `invalid_result_versions = 0`.
+- `missing_current_version = 0`.
+- reconcile runtime: `webhook=true`, `native_menu=true`, `default_commands=true`.
+- `/health/telegram`: `ok=true`, `native_menu_configured=true`, `default_commands_configured=true`, `pending_update_count=0`.
+- comandos públicos por defecto observados: `inicio`, `publico`, `dirigentes`.
+- Worker versión desplegada: `3cd81e43-50e5-4558-a75a-325f5c3f0ed1`.
 
 ## Gate humano residual
 
-Después del despliegue, el único punto no falsable desde CI es cómo lo renderiza el cliente Telegram real del usuario.
+El único punto no falsable desde CI/runtime es cómo lo renderiza el cliente Telegram real en iOS y si el perfil por chat aparece correctamente al usuario real.
 
 Prueba mínima segura:
 
 1. abrir el chat con el bot en Telegram iOS;
-2. confirmar que junto al campo de escritura aparece `Menu`/`Menú`;
-3. tocarlo;
-4. con la cuenta SUPER_ADMIN comprobar que muestra los comandos globales y no los de CLUB_ADMIN/PUBLIC;
-5. tocar `/inicio` y comprobar que abre el panel global.
+2. enviar `/inicio` una vez para forzar la sincronización del perfil real del chat;
+3. confirmar que junto al campo de escritura aparece `Menu`/`Menú`;
+4. tocarlo;
+5. con la cuenta SUPER_ADMIN comprobar que muestra: `/inicio`, `/solicitudes`, `/dirigentes`, `/pendientes`, `/correcciones`, `/resultados`;
+6. comprobar que NO aparece `/mispartidos` en ese menú global;
+7. tocar `/inicio` y comprobar que abre el panel global.
 
 No requiere modificar resultados ni dirigentes.
