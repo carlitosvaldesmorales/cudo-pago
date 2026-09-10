@@ -77,8 +77,7 @@ const evidenceCatalog = {
 
 const problemEvidence = {
   MESSAGE_ACCUMULATION: ['C-MESSAGE-MODE', 'E2E-PANELS', 'E2E-COGNITIVE'],
-  PRIMARY_RESULT_DEPTH: ['C-LATEST-DEPTH', 'E2E-COGNITIVE'],
-  HOME_DECISION_LOAD: ['C-HOME-CHOICES', 'E2E-COGNITIVE']
+  PRIMARY_PATH_COMPLEXITY: ['C-HOME-CHOICES', 'C-LATEST-DEPTH', 'C-DATE-DEPTH', 'E2E-COGNITIVE']
 };
 
 const assessmentItem = {
@@ -89,7 +88,7 @@ const assessmentItem = {
     severity: { type: 'string', enum: ['P1', 'P2', 'P3', 'NONE'] },
     interpretation: { type: 'string', minLength: 8 },
     recommendation: { type: 'string', minLength: 8 },
-    evidence_refs: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', enum: Object.keys(evidenceCatalog) } }
+    evidence_refs: { type: 'array', minItems: 1, maxItems: 4, items: { type: 'string', enum: Object.keys(evidenceCatalog) } }
   }
 };
 
@@ -98,7 +97,7 @@ const reportSchema = {
   required: ['confidence', 'assessments', 'what_to_preserve', 'redesign_principles', 'unknowns'],
   properties: {
     confidence: { type: 'integer', minimum: 0, maximum: 100 },
-    assessments: { type: 'array', minItems: 3, maxItems: 3, items: assessmentItem },
+    assessments: { type: 'array', minItems: 2, maxItems: 2, items: assessmentItem },
     what_to_preserve: { type: 'array', minItems: 1, maxItems: 2, items: { type: 'string', minLength: 8 } },
     redesign_principles: { type: 'array', minItems: 1, maxItems: 3, items: { type: 'string', minLength: 8 } },
     unknowns: { type: 'array', maxItems: 2, items: { type: 'string', minLength: 8 } }
@@ -131,14 +130,13 @@ const catalogText = Object.entries(evidenceCatalog).map(([id, fact]) => `${id}: 
 const commonTask = `
 PRODUCT: Fútbol Chépica public football-results flow in Telegram iOS.
 PRIMARY JOB: a casual supporter wants the latest verified result with minimal effort; older results remain discoverable.
-ROLE BOUNDARY: factual acceptance is NOT yours. Human E2E and deterministic code facts are source of truth. You only assess three pre-grounded UX problem candidates and propose remediation principles.
+ROLE BOUNDARY: factual acceptance is NOT yours. Human E2E and deterministic code facts are source of truth. You only assess two pre-grounded UX problem candidates and propose remediation principles.
 
 VERIFIED EVIDENCE CATALOG:\n${catalogText}
 
 CANDIDATES AND ALLOWED EVIDENCE:
 - MESSAGE_ACCUMULATION -> ${problemEvidence.MESSAGE_ACCUMULATION.join(', ')}
-- PRIMARY_RESULT_DEPTH -> ${problemEvidence.PRIMARY_RESULT_DEPTH.join(', ')}
-- HOME_DECISION_LOAD -> ${problemEvidence.HOME_DECISION_LOAD.join(', ')}
+- PRIMARY_PATH_COMPLEXITY -> ${problemEvidence.PRIMARY_PATH_COMPLEXITY.join(', ')}
 
 KNOWN CONTRADICTION GUARDS:
 - There IS an instruction after entering the date picker: “Elige una fecha para ver sus partidos.”
@@ -148,11 +146,10 @@ Never claim those elements are absent.
 
 OUTPUT:
 - Exactly one assessment for each problem_code, no duplicates.
-- Severity NONE is allowed if the cited fact does not constitute a meaningful problem by itself.
+- Severity NONE is allowed if the cited facts do not constitute a meaningful problem by themselves.
 - evidence_refs may use ONLY the allowed IDs for that problem_code.
 - Do not invent screens, user behavior, visual states, colors, borders, empty panels, tutorials, dropdowns, or labels not supported by the catalog.
-- User-facing recommendations must remain natural Spanish/Telegram-compatible in principle; do not prescribe English labels.
-- Recommendations are hypotheses, not implementation decisions.
+- Recommendations must remain conceptual hypotheses; do not prescribe English labels.
 `;
 
 const agents = [
@@ -182,7 +179,7 @@ function runAgent(agent) {
   const prompt = `OPEN-SOURCE GROUNDED UX ADVISOR\nYou are not the implementer and cannot create evidence. Apply the pinned Istara role only to the verified catalog.\n\nISTARA PERSONA EXCERPT:\n${readPersona(agent.istaraAgent)}\n\nFOCUS:\n${agent.focus}\n${commonTask}`;
   const body = callOllama({
     model: agent.model, prompt, stream: false, format: reportSchema, keep_alive: 0,
-    options: { temperature: 0, seed: agent.name === 'Sage' ? 4201 : 9917, num_ctx: 4096, num_predict: 900 }
+    options: { temperature: 0, seed: agent.name === 'Sage' ? 4201 : 9917, num_ctx: 4096, num_predict: 800 }
   }, agent.name);
   fs.writeFileSync(path.join(outDir, `${agent.name.toLowerCase()}-raw.json`), JSON.stringify(body, null, 2));
   let parsed;
@@ -203,7 +200,6 @@ for (const agent of agents) {
   console.log(`${agent.name} grounded report accepted.`);
 }
 
-// Acceptance is evidence-owned, not LLM-owned.
 const acceptanceDecision = facts.uxRejectedObserved ? 'REJECT' : 'GAP';
 if (acceptanceDecision === 'GAP') throw new Error('No explicit human UX acceptance decision exists.');
 
@@ -212,7 +208,7 @@ const result = {
   methodology: {
     acceptance_owner: 'human E2E evidence',
     fact_owner: 'deterministic source inspection + recorded E2E evidence',
-    advisor_role: 'open-source LLMs may assess only pre-grounded candidates; they cannot decide acceptance or invent evidence',
+    advisor_role: 'open-source LLMs assess only pre-grounded candidates; they cannot decide acceptance or invent evidence',
     external_agent_framework: 'Istara personas pinned by workflow commit',
     runtime: 'Ollama local CPU',
     models: agents.map(a => a.model),
