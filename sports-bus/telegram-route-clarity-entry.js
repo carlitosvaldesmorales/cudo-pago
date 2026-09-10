@@ -5,6 +5,7 @@ import { handleResultCorrectionFlow } from './worker/result-correction-flow-entr
 import { handleResultGovernanceScopeRequest } from './worker/result-governance-scope-entry.js';
 import { handlePublicResultGovernanceStatus } from './worker/public-result-governance-status-entry.js';
 import { handlePublicChampionshipRequest } from './worker/public-championship-entry.js';
+import { handlePlatformTenancyRequest } from './worker/platform-tenancy-entry.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 const PRIMARY_WEBHOOK_PATH = '/webhook/telegram';
@@ -122,6 +123,11 @@ async function normalizeDestinationResultsCommand(request) {
 
 export default {
   async fetch(request, env, ctx) {
+    // La jerarquía pública Fútbol Chépica -> clubes/tenants es independiente
+    // de Telegram y se resuelve antes de cualquier webhook o compatibilidad legacy.
+    const platformTenancy = await handlePlatformTenancyRequest(request.clone(), env);
+    if (platformTenancy) return platformTenancy;
+
     // Public web read model is deliberately separated from Telegram. It projects
     // only governed public data and never exposes actor/audit/source internals.
     const publicChampionship = await handlePublicChampionshipRequest(request.clone(), env);

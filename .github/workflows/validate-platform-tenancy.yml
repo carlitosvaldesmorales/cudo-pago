@@ -1,0 +1,52 @@
+name: Validate Fútbol Chépica Platform Tenancy
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/migrations/0014_platform_tenancy.sql'
+      - 'sports-bus/worker/platform-tenancy-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/web/platform-tenancy-harness.mjs'
+      - '.github/workflows/validate-platform-tenancy.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/futbol-chepica-platform-tenancy-01
+    paths:
+      - 'sports-bus/migrations/0014_platform_tenancy.sql'
+      - 'sports-bus/worker/platform-tenancy-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/web/platform-tenancy-harness.mjs'
+      - '.github/workflows/validate-platform-tenancy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/platform-tenancy-entry.js
+          node --check sports-bus/telegram-route-clarity-entry.js
+          node --check qa/web/platform-tenancy-harness.mjs
+      - name: Validate platform and tenant contracts
+        run: |
+          set -euo pipefail
+          node qa/web/platform-tenancy-harness.mjs | tee /tmp/platform-tenancy.log
+          grep -q 'PASS Fútbol Chépica exists as platform root and owns ANFA Chépica 2026' /tmp/platform-tenancy.log
+          grep -q 'PASS 11 championship clubs materialize as unique logical tenants' /tmp/platform-tenancy.log
+          grep -q 'PASS CUDO tenant maps to UNION-ORILLA without duplicating sporting identity' /tmp/platform-tenancy.log
+          grep -q 'PASS tenant match projections are club-scoped and preserve governed series privacy' /tmp/platform-tenancy.log
+          grep -q 'PASS declared domains remain inactive until external verification' /tmp/platform-tenancy.log
+          grep -q 'PASS verified host binding resolves PLATFORM or TENANT context without code forks' /tmp/platform-tenancy.log
+          grep -q 'PASS unbound hosts/origins are not trusted' /tmp/platform-tenancy.log
+          grep -q 'RESULT: PASS' /tmp/platform-tenancy.log
