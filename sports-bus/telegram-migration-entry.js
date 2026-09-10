@@ -1,5 +1,6 @@
 import coreWorker from './cors-entry.js';
 import { PUBLIC_NATIVE_COMMANDS } from './worker/telegram-native-menu-entry.js';
+import { handlePublicResultsUxV2 } from './worker/public-results-ux-v2.js';
 
 const TARGET_BOT_NAME = 'Fútbol Chépica';
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
@@ -33,6 +34,7 @@ function nextRuntimeEnv(env) {
     ? `${env.TELEGRAM_WEBHOOK_SECRET}:next`
     : null;
   runtime.DB = nextMenuDb(env.DB);
+  runtime.TELEGRAM_PUBLIC_UX_VERSION = '2';
   return runtime;
 }
 
@@ -68,6 +70,7 @@ async function telegramNextRuntimeHealth(env) {
       webhook_configured: false,
       native_menu_configured: false,
       default_commands_configured: false,
+      public_results_ux_version: runtime.TELEGRAM_PUBLIC_UX_VERSION,
       error: 'telegram_next_bot_token_missing'
     }), { status: 503, headers: { 'content-type': 'application/json; charset=utf-8' } });
   }
@@ -113,6 +116,7 @@ async function telegramNextRuntimeHealth(env) {
       native_menu_configured: nativeMenuOk,
       default_commands_configured: defaultCommandsOk,
       default_commands: commandNames,
+      public_results_ux_version: runtime.TELEGRAM_PUBLIC_UX_VERSION,
       pending_update_count: Number(info.pending_update_count || 0),
       last_error_date: info.last_error_date || null,
       last_error_message: info.last_error_message || null
@@ -129,6 +133,7 @@ async function telegramNextRuntimeHealth(env) {
       webhook_configured: false,
       native_menu_configured: false,
       default_commands_configured: false,
+      public_results_ux_version: runtime.TELEGRAM_PUBLIC_UX_VERSION,
       error: 'telegram_next_health_check_failed'
     }), { status: 503, headers: { 'content-type': 'application/json; charset=utf-8' } });
   }
@@ -178,6 +183,7 @@ async function reconcileTelegramNext(request, env) {
     native_menu: !!menu?.ok,
     default_commands: !!commands?.ok,
     bot_name: !!name?.ok,
+    public_results_ux_version: runtime.TELEGRAM_PUBLIC_UX_VERSION,
     description: webhook?.description || null
   }), {
     status: ok ? 200 : 502,
@@ -205,6 +211,10 @@ export default {
           headers: { 'content-type': 'application/json; charset=utf-8' }
         });
       }
+
+      const publicUx = await handlePublicResultsUxV2(request.clone(), runtime);
+      if (publicUx) return publicUx;
+
       const rewritten = await rewriteWebhookRequest(request);
       return coreWorker.fetch(rewritten, runtime, ctx);
     }
