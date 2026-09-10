@@ -4,6 +4,7 @@ import { handleResultGovernanceUxRequest } from './worker/result-governance-ux-e
 import { handleResultCorrectionFlow } from './worker/result-correction-flow-entry.js';
 import { handleResultGovernanceScopeRequest } from './worker/result-governance-scope-entry.js';
 import { handlePublicResultGovernanceStatus } from './worker/public-result-governance-status-entry.js';
+import { handlePublicChampionshipRequest } from './worker/public-championship-entry.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 const PRIMARY_WEBHOOK_PATH = '/webhook/telegram';
@@ -36,16 +37,11 @@ async function releaseCorrectionSessionForCommand(request, env) {
   const supplied = request.headers.get('x-telegram-bot-api-secret-token');
   if (supplied !== expected) return false;
 
-  // A Telegram command is an explicit navigation intent. It must never be
-  // consumed as the score/reason text of a pending correction. Releasing the
-  // session here lets the normal command router continue with the same update.
   try {
     await env.DB.prepare('DELETE FROM telegram_result_governance_sessions WHERE telegram_user_id=?')
       .bind(String(message.from.id)).run();
     return true;
   } catch {
-    // Do not block unrelated Telegram commands if the session store is
-    // temporarily unavailable; downstream handlers keep their normal behavior.
     return false;
   }
 }
@@ -108,9 +104,6 @@ async function normalizeDestinationResultsCommand(request) {
     return request;
   }
 
-  // On the destination bot, /resultados means the public results view.
-  // The administrative registry remains available from the explicit
-  // "Resultados registrados" button inside the dirigente/admin portal.
   const normalized = {
     ...update,
     callback_query: {
@@ -129,29 +122,25 @@ async function normalizeDestinationResultsCommand(request) {
 
 export default {
   async fetch(request, env, ctx) {
-    // Commands are navigation. Never let a stale correction session trap a
-    // user by interpreting /correcciones, /start, /menu, etc. as free text.
+    // Public web read model is deliberately separated from Telegram. It projects
+    // only governed public data and never exposes actor/audit/source internals.
+    const publicChampionship = await handlePublicChampionshipRequest(request.clone(), env);
+    if (publicChampionship) return publicChampionship;
+
     await releaseCorrectionSessionForCommand(request, env);
 
     const legacyBlocked = await blockLegacyMatchResultCommand(request, env);
     if (legacyBlocked) return legacyBlocked;
 
-    // Correction is a governed mutation flow. Handle it before the read-only
-    // governance UX and before the legacy core so retries cannot duplicate prompts.
     const correctionFlow = await handleResultCorrectionFlow(request.clone(), env);
     if (correctionFlow) return correctionFlow;
 
-    // Scope the normal governance list away from the isolated QA fixture and
-    // expose /correccionesqa only to the global administrator.
     const governanceScope = await handleResultGovernanceScopeRequest(request.clone(), env);
     if (governanceScope) return governanceScope;
 
     const governanceUx = await handleResultGovernanceUxRequest(request.clone(), env);
     if (governanceUx) return governanceUx;
 
-    // Public contribution screens must respect the same governance state as the
-    // public SSOT: only VERIFIED is official. DISPUTED/ANNULLED are never rendered
-    // as official scores and cannot be replaced from the public contribution flow.
     const publicGovernanceStatus = await handlePublicResultGovernanceStatus(request.clone(), env);
     if (publicGovernanceStatus) return publicGovernanceStatus;
 
