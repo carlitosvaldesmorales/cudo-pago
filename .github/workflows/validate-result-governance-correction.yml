@@ -7,11 +7,14 @@ on:
     paths:
       - 'sports-bus/worker/result-correction-flow-entry.js'
       - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'sports-bus/worker/result-governance-scope-entry.js'
       - 'sports-bus/telegram-route-clarity-entry.js'
       - 'sports-bus/migrations/0012_result_governance_correction_flow.sql'
+      - 'sports-bus/migrations/0013_result_governance_live_qa_fixture.sql'
       - 'qa/telegram/result-governance-correction-harness.mjs'
       - 'qa/telegram/result-correction-command-escape-harness.mjs'
       - 'qa/telegram/result-correction-html-render-harness.mjs'
+      - 'qa/telegram/result-governance-live-qa-scope-harness.mjs'
       - '.github/workflows/validate-result-governance-correction.yml'
   push:
     branches:
@@ -19,11 +22,14 @@ on:
     paths:
       - 'sports-bus/worker/result-correction-flow-entry.js'
       - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'sports-bus/worker/result-governance-scope-entry.js'
       - 'sports-bus/telegram-route-clarity-entry.js'
       - 'sports-bus/migrations/0012_result_governance_correction_flow.sql'
+      - 'sports-bus/migrations/0013_result_governance_live_qa_fixture.sql'
       - 'qa/telegram/result-governance-correction-harness.mjs'
       - 'qa/telegram/result-correction-command-escape-harness.mjs'
       - 'qa/telegram/result-correction-html-render-harness.mjs'
+      - 'qa/telegram/result-governance-live-qa-scope-harness.mjs'
       - '.github/workflows/validate-result-governance-correction.yml'
 
 permissions:
@@ -42,10 +48,12 @@ jobs:
           set -euo pipefail
           node --check sports-bus/worker/result-correction-flow-entry.js
           node --check sports-bus/worker/result-governance-ux-entry.js
+          node --check sports-bus/worker/result-governance-scope-entry.js
           node --check sports-bus/telegram-route-clarity-entry.js
           node --check qa/telegram/result-governance-correction-harness.mjs
           node --check qa/telegram/result-correction-command-escape-harness.mjs
           node --check qa/telegram/result-correction-html-render-harness.mjs
+          node --check qa/telegram/result-governance-live-qa-scope-harness.mjs
       - name: Validate correction governance
         run: |
           set -euo pipefail
@@ -72,3 +80,10 @@ jobs:
           grep -q 'PASS confirmation prompt renders with Telegram HTML parse mode' /tmp/result-correction-html-render.log
           grep -q 'PASS user-provided reason is escaped before HTML rendering' /tmp/result-correction-html-render.log
           grep -q 'RESULT: PASS' /tmp/result-correction-html-render.log
+      - name: Validate isolated live QA fixture
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-governance-live-qa-scope-harness.mjs | tee /tmp/result-governance-live-qa.log
+          grep -q 'PASS live QA fixture exists outside ANFA competition' /tmp/result-governance-live-qa.log
+          grep -q 'PASS QA fixture cannot satisfy ANFA public results scope' /tmp/result-governance-live-qa.log
+          grep -q 'RESULT: PASS' /tmp/result-governance-live-qa.log
