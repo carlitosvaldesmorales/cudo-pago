@@ -1,5 +1,6 @@
 import worker from './telegram-migration-entry.js';
 import { handlePublicResultsTableView } from './worker/public-results-table-view.js';
+import { handleResultGovernanceUxRequest } from './worker/result-governance-ux-entry.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 const PRIMARY_WEBHOOK_PATH = '/webhook/telegram';
@@ -91,6 +92,9 @@ export default {
   async fetch(request, env, ctx) {
     const legacyBlocked = await blockLegacyMatchResultCommand(request, env);
     if (legacyBlocked) return legacyBlocked;
+
+    const governanceUx = await handleResultGovernanceUxRequest(request.clone(), env);
+    if (governanceUx) return governanceUx;
 
     const normalized = await normalizeDestinationResultsCommand(request);
     const allResults = await handlePublicResultsTableView(normalized.clone(), env);
