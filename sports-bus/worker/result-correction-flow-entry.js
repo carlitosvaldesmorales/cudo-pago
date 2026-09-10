@@ -45,7 +45,7 @@ async function present(token,chatId,callback,text,replyMarkup){
 }
 
 async function sendText(token,chatId,text,replyMarkup){
-  const body={chat_id:chatId,text};
+  const body={chat_id:chatId,text,parse_mode:'HTML'};
   if(replyMarkup) body.reply_markup=replyMarkup;
   return telegram(token,'sendMessage',body);
 }
@@ -129,7 +129,7 @@ async function notifyStakeholders(env,token,row,actorId,reason){
     if(id===String(actorId)||seen.has(id)) continue;
     seen.add(id);
     try{
-      await sendText(token,id,`✏️ Resultado oficial corregido\n\n${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name}\n${SERIES_LABEL[row.series_code]||row.series_code}\nMotivo: ${reason}`);
+      await sendText(token,id,`✏️ Resultado oficial corregido\n\n${esc(row.home_name)} ${row.home_score}-${row.away_score} ${esc(row.away_name)}\n${SERIES_LABEL[row.series_code]||esc(row.series_code)}\nMotivo: ${esc(reason)}`);
     }catch{}
   }
 }
