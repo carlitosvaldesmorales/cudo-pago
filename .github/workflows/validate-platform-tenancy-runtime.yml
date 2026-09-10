@@ -1,12 +1,6 @@
 name: Validate Fútbol Chépica Platform Runtime
 
 on:
-  pull_request:
-    branches:
-      - feature/sports-event-bus-v1
-    paths:
-      - 'qa/web/platform-tenancy-runtime-harness.mjs'
-      - '.github/workflows/validate-platform-tenancy-runtime.yml'
   push:
     branches:
       - feature/sports-event-bus-v1
@@ -15,6 +9,9 @@ on:
     paths:
       - 'qa/web/platform-tenancy-runtime-harness.mjs'
       - '.github/workflows/validate-platform-tenancy-runtime.yml'
+      - 'sports-bus/migrations/0015_futbol_chepica_domain_declared.sql'
+      - 'sports-bus/worker/platform-tenancy-entry.js'
+  workflow_dispatch:
 
 permissions:
   contents: read
