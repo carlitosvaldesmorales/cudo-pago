@@ -1,7 +1,7 @@
 # TELEGRAM-NATIVE-MENU-01
 
 Fecha: 2026-09-09
-Estado: **MENÚ NATIVO DESPLEGADO + QA PASS + E2E VISUAL iOS PASS**
+Estado: **MENÚ NATIVO DESPLEGADO + QA PASS + E2E VISUAL iOS PASS / BRANDING RUNTIME PASS + E2E VISUAL PENDIENTE**
 
 ## Objetivo
 
@@ -98,11 +98,11 @@ No apareció `/mispartidos`, como corresponde al perfil global.
 
 El panel visible detrás del menú también mostró la superficie ADMIN GLOBAL con solicitudes, resultados pendientes y dirigentes activos. Por tanto el gate humano del menú nativo queda cerrado.
 
-## GAP de presentación detectado por la misma evidencia
+## TELEGRAM-BRAND-NAME-01
 
-La cabecera del chat todavía muestra **CUDO Bot**, mientras la superficie funcional ya se presenta como **Fútbol Chépica**.
+La captura del E2E anterior detectó que la cabecera seguía mostrando **CUDO Bot** mientras la superficie funcional ya se presenta como **Fútbol Chépica**.
 
-Se abre `TELEGRAM-BRAND-NAME-01` con el siguiente contrato:
+Contrato:
 
 - nombre visible objetivo: `Fútbol Chépica`;
 - conservar por ahora el username técnico `@CUDODeportesBot`;
@@ -110,3 +110,44 @@ Se abre `TELEGRAM-BRAND-NAME-01` con el siguiente contrato:
 - comprobarlo mediante `getMyName` en `/health/telegram`;
 - gate de deploy: `bot_name_configured=true` y `bot_name='Fútbol Chépica'`;
 - no modificar datos deportivos, roles ni permisos.
+
+### Implementación y QA
+
+- PR #13 implementó `setMyName`, `getMyName`, health y gates de QA/deploy.
+- PR #13 fue integrado con merge `d649f6c52ba6b8449039be1f35188ce400f5af0c`.
+- Los checks de Telegram, aporte público y gobierno de resultados terminaron SUCCESS antes del merge.
+- Deploy #52 demostró que Telegram aceptó el cambio (`bot_name=true`), pero el health inmediato alcanzó temporalmente el contrato anterior por propagación del Worker.
+- PR #14 agregó espera explícita hasta observar el contrato nuevo de health, sin modificar código funcional ni datos.
+- PR #14 fue integrado con merge `62701b86d639d1f182ba6545d26df4427988a3aa`.
+
+### Producción — RUNTIME PASS
+
+Deploy #53, run `34427165020`, terminó **SUCCESS** completo.
+
+Evidencia del run:
+
+- Worker desplegado: versión `078935c7-9ce2-4a84-a986-58052ab13585`.
+- Reconcile: `webhook=true`, `native_menu=true`, `default_commands=true`, `bot_name=true`.
+- `/health/telegram`: `ok=true`.
+- `bot_username='CUDODeportesBot'` se conserva como identificador técnico.
+- `bot_name='Fútbol Chépica'`.
+- `bot_name_configured=true`.
+- `webhook_configured=true`.
+- `native_menu_configured=true`.
+- `default_commands_configured=true`.
+- `pending_update_count=0`.
+- Producción conserva 25 partidos, 5 byes, 11 equipos, 24 series VERIFIED y 6 partidos con resultados.
+- `invalid_public_submission_status=0`, `invalid_governance_status=0`, `invalid_result_versions=0`, `missing_current_version=0`, `invalid_series=0`.
+
+### Gate humano residual
+
+El runtime ya declara que Telegram tiene como nombre visible **Fútbol Chépica**. El único punto pendiente es comprobar cómo lo renderiza el cliente Telegram iOS real.
+
+Prueba segura:
+
+1. volver a la lista de chats o cerrar/reabrir el chat del bot;
+2. comprobar la cabecera;
+3. debe decir `Fútbol Chépica` en lugar de `CUDO Bot`;
+4. enviar una captura para cerrar el E2E visual de branding.
+
+No requiere modificar resultados, solicitudes ni dirigentes.
