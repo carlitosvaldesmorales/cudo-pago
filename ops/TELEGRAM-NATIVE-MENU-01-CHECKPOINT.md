@@ -1,0 +1,1 @@
+Checkpoint técnico previo a PR: QA automatizado de menú nativo y regresión anterior en verde. Próximo paso: PR → checks → merge → deploy → validación visual iOS.
