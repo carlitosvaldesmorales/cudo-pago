@@ -4,6 +4,7 @@ on:
     branches:
       - feature/telegram-qa-harness-01
       - feature/telegram-native-menu-01
+      - feature/telegram-brand-name-01
       - feature/sports-event-bus-v1
     paths:
       - 'qa/telegram/**'
@@ -65,8 +66,8 @@ jobs:
           grep -q 'PASS CLUB_ADMIN role-aware commands' /tmp/telegram-menu-qa.log
           grep -q 'PASS suspended admin automatically loses admin menu' /tmp/telegram-menu-qa.log
           grep -q 'PASS SUPER_ADMIN role-aware commands' /tmp/telegram-menu-qa.log
-          grep -q 'PASS deploy reconcile configures default native menu' /tmp/telegram-menu-qa.log
-          grep -q 'PASS native menu runtime health contract' /tmp/telegram-menu-qa.log
+          grep -q 'PASS deploy reconcile configures native menu and bot name' /tmp/telegram-menu-qa.log
+          grep -q 'PASS native menu and branding runtime health contract' /tmp/telegram-menu-qa.log
           grep -q 'RESULT: PASS' /tmp/telegram-menu-qa.log
       - name: Prove QA cannot call arbitrary network hosts
         run: |

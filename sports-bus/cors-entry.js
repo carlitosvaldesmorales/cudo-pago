@@ -8,6 +8,7 @@ import { handlePublicResultRequest } from './worker/public-result-entry.js';
 import { handleResultGovernanceRequest } from './worker/result-governance-entry.js';
 import { syncTelegramNativeMenu, handleTelegramNativeMenuCommand, PUBLIC_NATIVE_COMMANDS } from './worker/telegram-native-menu-entry.js';
 
+const TARGET_BOT_NAME = 'Fútbol Chépica';
 const ALLOWED_ORIGINS = new Set([
   'https://cudo.cl',
   'https://www.cudo.cl',
@@ -46,6 +47,7 @@ async function telegramRuntimeHealth(env) {
       bot_token_configured:false,
       webhook_secret_configured:secretConfigured,
       bot_api_ok:false,
+      bot_name_configured:false,
       webhook_configured:false,
       native_menu_configured:false,
       default_commands_configured:false,
@@ -53,13 +55,15 @@ async function telegramRuntimeHealth(env) {
     }),{status:503,headers:{'content-type':'application/json; charset=utf-8'}});
   }
   try {
-    const [meRes, whRes, menuRes, commandsRes] = await Promise.all([
+    const [meRes, nameRes, whRes, menuRes, commandsRes] = await Promise.all([
       fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getMe`),
+      fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getMyName`),
       fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getWebhookInfo`),
       fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getChatMenuButton`),
       fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getMyCommands`)
     ]);
     const me = await meRes.json();
+    const name = await nameRes.json();
     const wh = await whRes.json();
     const menu = await menuRes.json();
     const commands = await commandsRes.json();
@@ -68,13 +72,17 @@ async function telegramRuntimeHealth(env) {
     const commandNames = Array.isArray(commands?.result) ? commands.result.map(x=>x.command) : [];
     const defaultCommandsOk = PUBLIC_NATIVE_COMMANDS.every(x=>commandNames.includes(x.command));
     const nativeMenuOk = !!menu?.ok && menu?.result?.type === 'commands';
-    const ok = !!me?.ok && !!wh?.ok && secretConfigured && webhookUrl.endsWith('/webhook/telegram') && nativeMenuOk && defaultCommandsOk;
+    const botName = String(name?.result?.name || '');
+    const botNameOk = !!name?.ok && botName === TARGET_BOT_NAME;
+    const ok = !!me?.ok && !!wh?.ok && secretConfigured && webhookUrl.endsWith('/webhook/telegram') && nativeMenuOk && defaultCommandsOk && botNameOk;
     return new Response(JSON.stringify({
       ok,
       bot_token_configured:true,
       webhook_secret_configured:secretConfigured,
       bot_api_ok:!!me?.ok,
       bot_username:me?.result?.username || null,
+      bot_name:botName || null,
+      bot_name_configured:botNameOk,
       webhook_configured:!!wh?.ok && webhookUrl.endsWith('/webhook/telegram'),
       native_menu_configured:nativeMenuOk,
       default_commands_configured:defaultCommandsOk,
@@ -89,6 +97,7 @@ async function telegramRuntimeHealth(env) {
       bot_token_configured:true,
       webhook_secret_configured:secretConfigured,
       bot_api_ok:false,
+      bot_name_configured:false,
       webhook_configured:false,
       native_menu_configured:false,
       default_commands_configured:false,
@@ -109,7 +118,7 @@ async function reconcileTelegramWebhook(request, env) {
   const call = (method,body)=>fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`,{
     method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)
   }).then(r=>r.json());
-  const [webhook,menu,commands] = await Promise.all([
+  const [webhook,menu,commands,name] = await Promise.all([
     call('setWebhook',{
       url:`${origin}/webhook/telegram`,
       secret_token:safeSecret,
@@ -117,14 +126,16 @@ async function reconcileTelegramWebhook(request, env) {
       drop_pending_updates:false
     }),
     call('setChatMenuButton',{menu_button:{type:'commands'}}),
-    call('setMyCommands',{commands:PUBLIC_NATIVE_COMMANDS})
+    call('setMyCommands',{commands:PUBLIC_NATIVE_COMMANDS}),
+    call('setMyName',{name:TARGET_BOT_NAME})
   ]);
-  const ok=!!webhook?.ok&&!!menu?.ok&&!!commands?.ok;
+  const ok=!!webhook?.ok&&!!menu?.ok&&!!commands?.ok&&!!name?.ok;
   return new Response(JSON.stringify({
     ok,
     webhook:!!webhook?.ok,
     native_menu:!!menu?.ok,
     default_commands:!!commands?.ok,
+    bot_name:!!name?.ok,
     description:webhook?.description||null
   }),{
     status:ok?200:502,
