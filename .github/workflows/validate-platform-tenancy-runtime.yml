@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - feature/sports-event-bus-v1
-      - qa/futbol-chepica-platform-runtime-01
-      - feature/futbol-chepica-domain-declared-01
     paths:
       - 'qa/web/platform-tenancy-runtime-harness.mjs'
       - '.github/workflows/validate-platform-tenancy-runtime.yml'
