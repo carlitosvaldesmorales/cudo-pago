@@ -1,0 +1,44 @@
+name: Validate Dirigentes Lifecycle
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/worker/dirigentes-lifecycle-entry.js'
+      - 'sports-bus/worker/dirigentes-suspended-guard-entry.js'
+      - 'sports-bus/cors-entry.js'
+      - 'sports-bus/migrations/**'
+      - 'qa/telegram/dirigentes-lifecycle-harness.mjs'
+      - 'qa/telegram/d1-sqlite-adapter.mjs'
+      - '.github/workflows/validate-dirigentes-lifecycle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/dirigentes-lifecycle-entry.js
+          node --check sports-bus/worker/dirigentes-suspended-guard-entry.js
+          node --check qa/telegram/dirigentes-lifecycle-harness.mjs
+
+      - name: Validate lifecycle behavior
+        run: |
+          set -euo pipefail
+          node qa/telegram/dirigentes-lifecycle-harness.mjs | tee /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS list and detail expose CLUB_ADMIN lifecycle to SUPER_ADMIN' /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS suspend/reactivate/revoke transitions preserve identity and audit history' /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS repeated transitions are functionally idempotent' /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS crafted callbacks cannot mutate SUPER_ADMIN identities' /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS non-global identities cannot mutate dirigentes' /tmp/dirigentes-lifecycle.log
+          grep -q 'RESULT: PASS' /tmp/dirigentes-lifecycle.log
