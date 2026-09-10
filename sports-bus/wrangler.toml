@@ -1,5 +1,5 @@
 name = "cudo-sports-event-bus"
-main = "cors-entry.js"
+main = "telegram-migration-entry.js"
 compatibility_date = "2026-09-08"
 
 [observability]

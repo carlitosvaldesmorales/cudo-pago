@@ -5,6 +5,7 @@ on:
       - feature/telegram-qa-harness-01
       - feature/telegram-native-menu-01
       - feature/telegram-brand-name-01
+      - feature/telegram-bot-migration-01
       - feature/sports-event-bus-v1
     paths:
       - 'qa/telegram/**'
@@ -12,6 +13,7 @@ on:
       - '.github/workflows/validate-telegram-qa-harness.yml'
       - 'ops/TELEGRAM-QA-HARNESS-01.md'
       - 'ops/TELEGRAM-NATIVE-MENU-01.md'
+      - 'ops/TELEGRAM-BOT-MIGRATION-01.md'
   pull_request:
     branches:
       - feature/sports-event-bus-v1
@@ -21,6 +23,7 @@ on:
       - '.github/workflows/validate-telegram-qa-harness.yml'
       - 'ops/TELEGRAM-QA-HARNESS-01.md'
       - 'ops/TELEGRAM-NATIVE-MENU-01.md'
+      - 'ops/TELEGRAM-BOT-MIGRATION-01.md'
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +41,9 @@ jobs:
           node --check qa/telegram/d1-sqlite-adapter.mjs
           node --check qa/telegram/telegram-harness.mjs
           node --check qa/telegram/telegram-native-menu-harness.mjs
+          node --check qa/telegram/telegram-bot-migration-harness.mjs
           node --check sports-bus/cors-entry.js
+          node --check sports-bus/telegram-migration-entry.js
           node --check sports-bus/worker/telegram-native-menu-entry.js
           node --check sports-bus/worker/portal-entry.js
           node --check sports-bus/worker/dirigentes-lifecycle-entry.js
@@ -69,6 +74,19 @@ jobs:
           grep -q 'PASS deploy reconcile configures native menu and bot name' /tmp/telegram-menu-qa.log
           grep -q 'PASS native menu and branding runtime health contract' /tmp/telegram-menu-qa.log
           grep -q 'RESULT: PASS' /tmp/telegram-menu-qa.log
+      - name: Run blue green Telegram bot migration QA
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-bot-migration-harness.mjs | tee /tmp/telegram-migration-qa.log
+          grep -q 'PASS independent next-bot menu cache schema' /tmp/telegram-migration-qa.log
+          grep -q 'PASS next webhook reuses core logic, D1 identity and next token only' /tmp/telegram-migration-qa.log
+          grep -q 'PASS next-bot menu sync idempotence' /tmp/telegram-migration-qa.log
+          grep -q 'PASS primary and next menu caches are independent' /tmp/telegram-migration-qa.log
+          grep -q 'PASS next reconcile configures isolated webhook, menu and branding' /tmp/telegram-migration-qa.log
+          grep -q 'PASS next runtime health contract' /tmp/telegram-migration-qa.log
+          grep -q 'PASS primary bot remains untouched during blue green migration' /tmp/telegram-migration-qa.log
+          grep -q 'PASS migration slot stays safely dormant without next token' /tmp/telegram-migration-qa.log
+          grep -q 'RESULT: PASS' /tmp/telegram-migration-qa.log
       - name: Prove QA cannot call arbitrary network hosts
         run: |
           set -euo pipefail
@@ -76,3 +94,5 @@ jobs:
           grep -q "api.telegram.org/botqa-token-never-sent" qa/telegram/telegram-harness.mjs
           grep -q 'QA menu harness blocked unexpected network call' qa/telegram/telegram-native-menu-harness.mjs
           grep -q "api.telegram.org/botqa-menu-token" qa/telegram/telegram-native-menu-harness.mjs
+          grep -q 'QA migration harness blocked unexpected network call' qa/telegram/telegram-bot-migration-harness.mjs
+          grep -q "api.telegram.org/botqa-new-token" qa/telegram/telegram-bot-migration-harness.mjs
