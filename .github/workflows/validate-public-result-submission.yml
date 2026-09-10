@@ -1,0 +1,60 @@
+name: Validate Public Result Submission
+on:
+  push:
+    branches: [feature/public-result-submission-01]
+    paths:
+      - 'sports-bus/**'
+      - 'qa/telegram/**'
+      - '.github/workflows/validate-public-result-submission.yml'
+      - 'ops/PUBLIC-RESULT-SUBMISSION-01.md'
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/**'
+      - 'qa/telegram/**'
+      - '.github/workflows/validate-public-result-submission.yml'
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax check
+        run: |
+          set -euo pipefail
+          node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/public-result-entry.js
+          node --check qa/telegram/public-result-harness.mjs
+          node --check qa/telegram/telegram-harness.mjs
+      - name: Apply all migrations cleanly
+        run: |
+          set -euo pipefail
+          DB=/tmp/g2-schema.db
+          rm -f "$DB"
+          for f in $(find sports-bus/migrations -maxdepth 1 -name '*.sql' | sort); do sqlite3 "$DB" < "$f"; done
+          sqlite3 "$DB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('public_result_submissions','telegram_public_result_sessions');" | grep -qx 2
+      - name: Run G1 regression harness
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-harness.mjs | tee /tmp/g1.log
+          grep -q 'RESULT: PASS' /tmp/g1.log
+      - name: Run G2 public-result harness
+        run: |
+          set -euo pipefail
+          node qa/telegram/public-result-harness.mjs | tee /tmp/g2.log
+          grep -q 'RESULT: PASS' /tmp/g2.log
+          grep -q 'PASS SUBMITTED isolation + reviewer notifications' /tmp/g2.log
+          grep -q 'PASS non-participating club cannot review' /tmp/g2.log
+          grep -q 'PASS authorized approval -> VERIFIED -> public API + supersede peers' /tmp/g2.log
+          grep -q 'PASS approval idempotence' /tmp/g2.log
+          grep -q 'PASS participating away CLUB_ADMIN can reject without touching public SSOT' /tmp/g2.log
+      - name: Verify public API remains VERIFIED-only
+        run: |
+          set -euo pipefail
+          grep -q "WHERE r.validation_status='VERIFIED'" sports-bus/worker/series-entry.js
+          grep -q "status:'SUBMITTED'" sports-bus/worker/public-result-entry.js
+          grep -q "TELEGRAM_PUBLIC_APPROVED" sports-bus/worker/public-result-entry.js
