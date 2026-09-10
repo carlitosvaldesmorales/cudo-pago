@@ -68,12 +68,22 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev"
+          TELEGRAM_READY=0
+          for i in $(seq 1 20); do
+            if curl -fsS "$BASE/health/telegram" -o /tmp/telegram.json; then
+              cat /tmp/telegram.json
+              if node -e 'const t=require("/tmp/telegram.json");if(!t.ok||!t.bot_token_configured||!t.webhook_secret_configured||!t.bot_api_ok||!t.bot_name_configured||t.bot_name!=="Fútbol Chépica"||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured)process.exit(1)'; then
+                TELEGRAM_READY=1
+                break
+              fi
+            fi
+            echo "Waiting for new Telegram health contract (attempt $i/20)..."
+            sleep 3
+          done
+          test "$TELEGRAM_READY" -eq 1
           curl --fail --silent "$BASE/health" > /tmp/health.json
-          curl --fail --silent "$BASE/health/telegram" > /tmp/telegram.json
           curl --fail --silent "$BASE/api/v1/matches" > /tmp/matches.json
           curl --fail --silent "$BASE/api/v1/series-results" > /tmp/series.json
-          cat /tmp/telegram.json
           node -e 'const h=require("/tmp/health.json");if(!h.ok)process.exit(1)'
-          node -e 'const t=require("/tmp/telegram.json");if(!t.ok||!t.bot_token_configured||!t.webhook_secret_configured||!t.bot_api_ok||!t.bot_name_configured||t.bot_name!=="Fútbol Chépica"||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured)process.exit(1)'
           node -e 'const m=require("/tmp/matches.json");if(!m.ok||m.matches.filter(x=>x.competition_id==="ANFA-CHEPICA-2026").length!==25)process.exit(1)'
           node -e 'const s=require("/tmp/series.json");const rows=(s.results||[]).flatMap(m=>m.series||[]);if(!s.ok||s.results.length<5||rows.length<20||rows.some(x=>x.validation_status!=="VERIFIED"))process.exit(1)'
