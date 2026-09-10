@@ -1,0 +1,48 @@
+name: Validate Dirigentes Enrollment
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/portal-entry.js'
+      - 'sports-bus/worker/public-result-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/dirigentes-enrollment-harness.mjs'
+      - '.github/workflows/validate-dirigentes-enrollment.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/portal-entry.js'
+      - 'sports-bus/worker/public-result-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/dirigentes-enrollment-harness.mjs'
+      - '.github/workflows/validate-dirigentes-enrollment.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: node --check qa/telegram/dirigentes-enrollment-harness.mjs
+      - name: Validate Telegram dirigente enrollment
+        run: |
+          set -euo pipefail
+          node qa/telegram/dirigentes-enrollment-harness.mjs | tee /tmp/dirigentes-enrollment.log
+          grep -q 'PASS public identity discovers Público + Dirigentes entrypoints' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS enrollment binds one pending request to one real club' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS duplicate pending request is prevented' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS CLUB_ADMIN cannot approve another enrollment' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS SUPER_ADMIN reviews and approves enrollment' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS approval materializes Telegram identity -> CLUB_ADMIN -> club association' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS enrolled dirigente reaches its scoped admin surface' /tmp/dirigentes-enrollment.log
+          grep -q 'PASS approval replay is idempotent' /tmp/dirigentes-enrollment.log
+          grep -q 'RESULT: PASS' /tmp/dirigentes-enrollment.log
