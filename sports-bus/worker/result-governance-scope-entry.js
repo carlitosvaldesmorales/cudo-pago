@@ -114,5 +114,7 @@ export async function handleResultGovernanceScopeRequest(request,env){
     return json({ok:true,handled:`result_governance_qa_${outcome}`});
   }
   await showNormal(env,token,chatId,callback,reporter);
-  return json({ok:true,handled:'result_governance_scoped_list'});
+  // Preserve the existing routing contract for /correcciones while applying
+  // the additional QA exclusion internally.
+  return json({ok:true,handled:'result_governance_ux_list'});
 }
