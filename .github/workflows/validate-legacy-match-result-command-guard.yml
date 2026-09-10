@@ -1,0 +1,41 @@
+name: Validate Legacy Match Result Command Guard
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/**'
+      - 'qa/telegram/legacy-match-result-command-guard-harness.mjs'
+      - '.github/workflows/validate-legacy-match-result-command-guard.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/**'
+      - 'qa/telegram/legacy-match-result-command-guard-harness.mjs'
+      - '.github/workflows/validate-legacy-match-result-command-guard.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/telegram-route-clarity-entry.js
+          node --check qa/telegram/legacy-match-result-command-guard-harness.mjs
+      - name: Validate legacy command guard
+        run: |
+          set -euo pipefail
+          node qa/telegram/legacy-match-result-command-guard-harness.mjs | tee /tmp/legacy-result-guard.log
+          grep -q 'PASS primary bot blocks legacy match-level /resultado without mutation' /tmp/legacy-result-guard.log
+          grep -q 'PASS destination bot blocks legacy match-level /resultado without mutation' /tmp/legacy-result-guard.log
+          grep -q 'RESULT: PASS' /tmp/legacy-result-guard.log
