@@ -2,6 +2,7 @@ import worker from './worker/index.js';
 import { handleSeriesRequest } from './worker/series-entry.js';
 import { handlePortalRequest } from './worker/portal-entry.js';
 import { handleClubAdminSeriesScore } from './worker/club-admin-series-entry.js';
+import { handleDirigentesLifecycleRequest } from './worker/dirigentes-lifecycle-entry.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://cudo.cl',
@@ -136,10 +137,11 @@ export default {
     }
 
     const telegramRequest = await telegramHandlerRequest(request, env);
-    const portal = await handlePortalRequest(telegramRequest.clone(), env, ctx);
-    const clubAdminScore = portal ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
-    const series = (portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
-    const response = portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
+    const dirigentesLifecycle = await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
+    const portal = dirigentesLifecycle ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
+    const clubAdminScore = (dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
+    const series = (dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
+    const response = dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
     const cors = corsHeaders(request);
