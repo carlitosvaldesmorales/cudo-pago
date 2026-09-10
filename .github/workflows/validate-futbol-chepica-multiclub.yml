@@ -1,0 +1,91 @@
+name: Validate Futbol Chepica Multiclub 01
+on:
+  push:
+    branches: [feature/futbol-chepica-multiclub-01]
+    paths:
+      - 'sports-bus/**'
+      - 'ops/FUTBOL-CHEPICA-MULTICLUB-01.md'
+      - 'ops/DIRIGENTES-LIFECYCLE-01.md'
+      - '.github/workflows/validate-futbol-chepica-multiclub.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax check Worker modules
+        run: |
+          set -euo pipefail
+          node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/portal-entry.js
+          node --check sports-bus/worker/dirigentes-lifecycle-entry.js
+          node --check sports-bus/worker/club-admin-series-entry.js
+          node --check sports-bus/worker/series-entry.js
+
+      - name: Apply all migrations to clean SQLite database
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB=/tmp/futbol-chepica-multiclub.db
+          rm -f "$DB"
+          for f in $(find sports-bus/migrations -maxdepth 1 -name '*.sql' | sort); do
+            echo "Applying $f"
+            sqlite3 "$DB" < "$f"
+          done
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='reporters') THEN 1 ELSE 0 END;" | grep -qx 1
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='permission_audit') THEN 1 ELSE 0 END;" | grep -qx 1
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='telegram_series_sessions') THEN 1 ELSE 0 END;" | grep -qx 1
+
+      - name: Validate lifecycle routing contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "handleDirigentesLifecycleRequest" sports-bus/cors-entry.js
+          grep -q "dirigentesLifecycle = await handleDirigentesLifecycleRequest" sports-bus/cors-entry.js
+          grep -q "tp:admins" sports-bus/worker/dirigentes-lifecycle-entry.js
+          grep -q "SUSPEND_CLUB_ADMIN" sports-bus/worker/dirigentes-lifecycle-entry.js
+          grep -q "REACTIVATE_CLUB_ADMIN" sports-bus/worker/dirigentes-lifecycle-entry.js
+          grep -q "REVOKE_CLUB_ADMIN" sports-bus/worker/dirigentes-lifecycle-entry.js
+          grep -q "role='REPORTER',trust_level='PROVISIONAL',active=1" sports-bus/worker/dirigentes-lifecycle-entry.js
+          grep -q "DELETE FROM telegram_series_sessions" sports-bus/worker/dirigentes-lifecycle-entry.js
+
+      - name: Validate backend authorization remains enforced
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "reporter.active!==1" sports-bus/worker/club-admin-series-entry.js
+          grep -q "reporter.trust_level!=='VERIFIED'" sports-bus/worker/club-admin-series-entry.js
+          grep -q "reporter.role!=='CLUB_ADMIN'" sports-bus/worker/club-admin-series-entry.js
+          grep -q "reporter.active === 1" sports-bus/worker/series-entry.js
+          grep -q "\['SUPER_ADMIN','CLUB_ADMIN'\].includes(reporter.role)" sports-bus/worker/series-entry.js
+
+      - name: Validate lifecycle state model in clean DB
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB=/tmp/futbol-chepica-multiclub.db
+          NOW='2026-09-09T20:00:00.000Z'
+          sqlite3 "$DB" "INSERT OR REPLACE INTO reporters (telegram_user_id,display_name,username,club_id,role,trust_level,active,created_at,updated_at) VALUES ('999001','Test Dirigente',NULL,'UNION-ORILLA','CLUB_ADMIN','VERIFIED',1,'$NOW','$NOW');"
+          sqlite3 "$DB" "UPDATE reporters SET active=0 WHERE telegram_user_id='999001' AND role='CLUB_ADMIN' AND active=1;"
+          sqlite3 "$DB" "SELECT role||'|'||trust_level||'|'||active||'|'||club_id FROM reporters WHERE telegram_user_id='999001';" | grep -qx 'CLUB_ADMIN|VERIFIED|0|UNION-ORILLA'
+          sqlite3 "$DB" "UPDATE reporters SET active=1 WHERE telegram_user_id='999001' AND role='CLUB_ADMIN' AND active=0;"
+          sqlite3 "$DB" "SELECT role||'|'||trust_level||'|'||active||'|'||club_id FROM reporters WHERE telegram_user_id='999001';" | grep -qx 'CLUB_ADMIN|VERIFIED|1|UNION-ORILLA'
+          sqlite3 "$DB" "UPDATE reporters SET club_id=NULL,role='REPORTER',trust_level='PROVISIONAL',active=1 WHERE telegram_user_id='999001' AND role='CLUB_ADMIN';"
+          sqlite3 "$DB" "SELECT role||'|'||trust_level||'|'||active||'|'||COALESCE(club_id,'NULL') FROM reporters WHERE telegram_user_id='999001';" | grep -qx 'REPORTER|PROVISIONAL|1|NULL'
+
+      - name: Validate launch gate documents
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "G1" ops/FUTBOL-CHEPICA-MULTICLUB-01.md
+          grep -q "G2" ops/FUTBOL-CHEPICA-MULTICLUB-01.md
+          grep -q "G3" ops/FUTBOL-CHEPICA-MULTICLUB-01.md
+          grep -q "G4" ops/FUTBOL-CHEPICA-MULTICLUB-01.md
+          grep -q "G5" ops/FUTBOL-CHEPICA-MULTICLUB-01.md
+          grep -q "No se borra la fila de.*reporters" ops/DIRIGENTES-LIFECYCLE-01.md
