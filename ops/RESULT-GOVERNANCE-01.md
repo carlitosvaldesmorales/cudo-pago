@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-09
 Gate: G3 de `FUTBOL-CHEPICA-MULTICLUB-01`
-Estado: MATERIALIZADO + QA AUTOMATIZADO PASS / DESPLIEGUE Y E2E REAL PENDIENTES
+Estado: DESPLEGADO + QA AUTOMATIZADO PASS / GATE HUMANO SEGURO PENDIENTE
 
 ## Problema que cierra G3
 
@@ -31,7 +31,7 @@ ANNULLED
    └─ RESTORE  → VERIFIED
 ```
 
-La API pública ya filtra por `validation_status='VERIFIED'`; por lo tanto `DISPUTED` y `ANNULLED` dejan de publicarse y computarse sin eliminar su historia.
+La API pública filtra por `validation_status='VERIFIED'`; por lo tanto `DISPUTED` y `ANNULLED` dejan de publicarse y computarse sin eliminar su historia.
 
 ## Matriz de autorización
 
@@ -112,22 +112,34 @@ Prueba usando Worker real + D1 SQLite efímero + transporte Telegram simulado:
 - regresión completa G2;
 - regresión completa G1.
 
-Evidencia QA más reciente antes del PR: `Validate Result Governance` run `34424510189`, SUCCESS completo. G3, G2, G1, migraciones y contratos de despliegue pasaron juntos.
+Evidencia antes de integrar: `Validate Result Governance` run `34424510189`, SUCCESS. En PR #10 también pasaron `Validate Result Governance`, `Validate Public Result Submission` y `Validate Telegram QA Harness`.
 
-## Integridad de despliegue
+## Evidencia de despliegue productivo
 
-El deploy gate exige además:
+PR #10 fue integrado en `feature/sports-event-bus-v1` mediante merge commit `62442c139bcaa04267ea4da5a7db32ce443ccf4a`.
 
-- tabla `match_series_result_versions` existente;
-- tabla `telegram_result_governance_sessions` existente;
-- cero estados de gobierno inválidos;
-- cero versiones con estado/acción inválidos;
-- cada fila actual de `match_series_results` debe tener una versión histórica que coincida con su `governance_version`;
-- la API pública continúa entregando exclusivamente `VERIFIED`.
+`Deploy Sports Event Bus` run `34424861780` (#49): SUCCESS completo.
+
+- migración remota `0009_result_governance.sql`: aplicada correctamente;
+- `match_series_result_versions`: presente;
+- `telegram_result_governance_sessions`: presente;
+- `invalid_governance_status=0`;
+- `invalid_result_versions=0`;
+- `missing_current_version=0`;
+- fuente deportiva conservada en 24 series VERIFIED distribuidas en 6 partidos;
+- 25 partidos, 5 libres y 11 clubes en fixture;
+- webhook Telegram reconciliado: ya configurado;
+- `/health`, `/health/telegram`, `/api/v1/matches` y `/api/v1/series-results`: PASS;
+- API pública confirmó sólo filas `VERIFIED`;
+- Worker productivo: versión `4c4452fb-3964-4994-abf8-f589a6740bb1`.
+
+El QA recurrente posterior al merge (`Validate Telegram QA Harness` run `34424861804`) también terminó SUCCESS.
+
+No se introdujeron marcadores ni estados sintéticos en D1 productivo durante el despliegue.
 
 ## Gate humano residual seguro
 
-Después del despliegue no se debe fabricar una corrección ni una disputa sobre un resultado real sólo para probar.
+No se debe fabricar una corrección ni una disputa sobre un resultado real sólo para probar.
 
 La validación humana segura con la cuenta SUPER_ADMIN existente es:
 
