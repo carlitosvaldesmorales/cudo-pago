@@ -2,7 +2,7 @@
 
 Fecha: 2026-09-09
 Gate: G3 de `FUTBOL-CHEPICA-MULTICLUB-01`
-Estado: DESPLEGADO + QA AUTOMATIZADO PASS / GATE HUMANO SEGURO PENDIENTE
+Estado: DESPLEGADO + QA AUTOMATIZADO PASS + NAVEGACIÓN HUMANA SEGURA PASS / MUTACIÓN REAL DIFERIDA
 
 ## Problema que cierra G3
 
@@ -137,16 +137,26 @@ El QA recurrente posterior al merge (`Validate Telegram QA Harness` run `3442486
 
 No se introdujeron marcadores ni estados sintéticos en D1 productivo durante el despliegue.
 
-## Gate humano residual seguro
+## Validación humana segura — PASS 2026-09-10
 
-No se debe fabricar una corrección ni una disputa sobre un resultado real sólo para probar.
+Se validó visualmente en el bot productivo `Fútbol Chépica`, usando la identidad SUPER_ADMIN existente y sin ejecutar ninguna mutación:
 
-La validación humana segura con la cuenta SUPER_ADMIN existente es:
+1. `/correcciones` abrió la lista de resultados oficiales;
+2. la lista mostró resultados `v1` en estado publicable;
+3. se abrió un resultado real: Fecha I · Grupo A · Santa Elena La Ruda 1-0 Unión Orilla · Tercera;
+4. el detalle mostró `Estado: VERIFIED` y `Publicado y computable`;
+5. se renderizaron las acciones esperadas de SUPER_ADMIN: `Corregir marcador`, `Poner en disputa`, `Anular resultado` y `Ver historial`;
+6. no se pulsó ninguna acción destructiva ni se alteró D1.
 
-1. entrar a `🔐 Dirigentes`;
-2. confirmar que aparece `🛡️ Correcciones y disputas`;
-3. abrir un resultado oficial;
-4. comprobar que muestra versión, estado, marcador y acciones permitidas;
-5. opcionalmente pulsar `✏️ Corregir marcador` y luego `Cancelar`, sin escribir ningún marcador.
+Con esto el gate humano seguro de navegación/render de G3 queda PASS. Una mutación G3 E2E completa sigue deliberadamente diferida hasta existir una corrección, disputa o anulación legítima; no se fabricarán estados sobre resultados reales para probar.
 
-Una mutación G3 E2E completa se validará cuando exista una corrección, disputa o anulación legítima. Hasta entonces no se altera producción con estados ficticios.
+## Hallazgo UX observado
+
+La validación humana también mostró una fricción real que no afecta el contrato funcional:
+
+- la lista identifica cada resultado por fecha, serie, marcador y versión, pero no muestra los nombres de los clubes; varios ítems quedan visualmente ambiguos;
+- `VERIFIED` y `v1` exponen nomenclatura técnica al usuario operativo;
+- corregir, disputar y anular aparecen con el mismo peso visual aunque tengan riesgo distinto;
+- el detalle es funcional pero puede simplificarse para lectura rápida en móvil.
+
+Este hallazgo se trata como mejora UX independiente y no reabre G3 funcional.
