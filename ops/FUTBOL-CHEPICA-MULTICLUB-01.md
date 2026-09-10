@@ -1,0 +1,92 @@
+# FUTBOL-CHEPICA-MULTICLUB-01
+
+Fecha de decisión: 2026-09-09
+
+## Decisión arquitectónica
+
+Desde este hito, las capacidades transversales de campeonato se modelan conceptualmente como **Fútbol Chépica** y no como funciones internas de CUDO.
+
+- **Fútbol Chépica**: campeonato, clubes, fixture, resultados, tabla, dirigentes acreditados, incidencias y gobierno transversal.
+- **CUDO / Unión Orilla**: primer club/tenant piloto productivo y consumidor del núcleo común.
+- **cudo.cl**: conserva la identidad y contenido propio del Club Unión Deportivo Orilla.
+- **Worker + API + D1**: se mantienen físicamente sin renombrar mientras no exista una razón técnica para hacerlo.
+- **Telegram**: canal operacional multi-club. La identidad técnica del bot puede seguir temporalmente como CUDO Bot hasta el gate de marca/gobierno.
+
+Esta transición evita dos extremos: seguir acoplando funciones transversales a CUDO o hacer un lanzamiento público multi-club antes de demostrarlo con evidencia real.
+
+## Regla de lanzamiento
+
+Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gates. Los gates son binarios; no se usa un porcentaje agregado para compensar un bloqueo crítico.
+
+| Gate | Alcance | Estado 2026-09-09 |
+|---|---|---|
+| G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | EN IMPLEMENTACIÓN — DIRIGENTES-LIFECYCLE-01 |
+| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | GAP |
+| G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | GAP |
+| G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | GAP |
+| G5 | Gobierno y marca: recuperación/segundo global admin + identidad neutral visible | GAP |
+
+## Evidencia heredada ya validada
+
+- Portal Telegram con entrada Público / Dirigentes.
+- Solicitud de dirigente por club.
+- PENDING → aprobación por SUPER_ADMIN.
+- Usuario aprobado convertido a CLUB_ADMIN del club solicitado.
+- RBAC de partidos por `club_id` validado visualmente con Unión Orilla.
+- Resultados VERIFIED son la única fuente pública de resultados.
+- Auditoría `permission_audit` ya existe.
+- `reporters` ya dispone de `club_id`, `role`, `trust_level` y `active`.
+
+## Patrón obligatorio para nuevas entidades
+
+Antes de implementar una nueva capacidad se debe evaluar explícitamente:
+
+1. Cómo nace.
+2. Quién puede verla.
+3. Quién puede modificarla.
+4. Quién la aprueba.
+5. Qué ocurre si está mal.
+6. Qué ocurre si cambia.
+7. Cómo se suspende.
+8. Cómo se reactiva.
+9. Cómo se revoca/anula sin perder historia.
+10. Qué queda auditado.
+11. Cómo se recupera el estado.
+
+No todos los objetos usarán todos los estados, pero deben evaluarse antes de codificar el camino feliz.
+
+## Separación conceptual
+
+```text
+FÚTBOL CHÉPICA
+├── Campeonato
+├── Clubes
+├── Fixture / Fechas
+├── Resultados / Tabla
+├── Dirigentes acreditados
+├── Incidencias / correcciones
+└── Gobierno transversal
+
+CLUB (ej. Unión Orilla / CUDO)
+├── Historia
+├── Noticias propias
+├── Galería propia
+├── Estadio / infraestructura
+├── Socios
+└── Administración interna
+```
+
+## Próximo orden de ejecución
+
+1. Cerrar G1 con `DIRIGENTES-LIFECYCLE-01` y prueba E2E real.
+2. Materializar G2 sin contaminar resultados oficiales.
+3. Diseñar y materializar G3 antes de escalar carga de resultados.
+4. Incorporar un segundo club real para falsar el supuesto multi-club.
+5. Cerrar gobierno/recuperación e identidad neutral visible.
+
+## Regla de evidencia
+
+- **MATERIALIZADO** = existe en código/repositorio.
+- **VALIDADO** = CI/prueba técnica demuestra contrato esperado.
+- **E2E VALIDADO** = comportamiento comprobado por un usuario/identidad real en runtime.
+- Nunca usar "listo" o "cerrado" si sólo existe código sin prueba runtime.
