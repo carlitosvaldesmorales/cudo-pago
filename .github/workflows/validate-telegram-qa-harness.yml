@@ -3,12 +3,14 @@ on:
   push:
     branches:
       - feature/telegram-qa-harness-01
+      - feature/telegram-native-menu-01
       - feature/sports-event-bus-v1
     paths:
       - 'qa/telegram/**'
       - 'sports-bus/**'
       - '.github/workflows/validate-telegram-qa-harness.yml'
       - 'ops/TELEGRAM-QA-HARNESS-01.md'
+      - 'ops/TELEGRAM-NATIVE-MENU-01.md'
   pull_request:
     branches:
       - feature/sports-event-bus-v1
@@ -17,6 +19,7 @@ on:
       - 'sports-bus/**'
       - '.github/workflows/validate-telegram-qa-harness.yml'
       - 'ops/TELEGRAM-QA-HARNESS-01.md'
+      - 'ops/TELEGRAM-NATIVE-MENU-01.md'
   workflow_dispatch:
 permissions:
   contents: read
@@ -33,7 +36,9 @@ jobs:
           set -euo pipefail
           node --check qa/telegram/d1-sqlite-adapter.mjs
           node --check qa/telegram/telegram-harness.mjs
+          node --check qa/telegram/telegram-native-menu-harness.mjs
           node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/telegram-native-menu-entry.js
           node --check sports-bus/worker/portal-entry.js
           node --check sports-bus/worker/dirigentes-lifecycle-entry.js
           node --check sports-bus/worker/dirigentes-suspended-guard-entry.js
@@ -51,8 +56,22 @@ jobs:
           grep -q 'PASS suspended guard + stale callback denial' /tmp/telegram-qa.log
           grep -q 'PASS reactivate + role restoration + idempotence' /tmp/telegram-qa.log
           grep -q 'PASS revoke preserves identity + audit + idempotence' /tmp/telegram-qa.log
+      - name: Run Telegram native menu QA
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-native-menu-harness.mjs | tee /tmp/telegram-menu-qa.log
+          grep -q 'PASS public native menu profile' /tmp/telegram-menu-qa.log
+          grep -q 'PASS menu sync idempotence' /tmp/telegram-menu-qa.log
+          grep -q 'PASS CLUB_ADMIN role-aware commands' /tmp/telegram-menu-qa.log
+          grep -q 'PASS suspended admin automatically loses admin menu' /tmp/telegram-menu-qa.log
+          grep -q 'PASS SUPER_ADMIN role-aware commands' /tmp/telegram-menu-qa.log
+          grep -q 'PASS deploy reconcile configures default native menu' /tmp/telegram-menu-qa.log
+          grep -q 'PASS native menu runtime health contract' /tmp/telegram-menu-qa.log
+          grep -q 'RESULT: PASS' /tmp/telegram-menu-qa.log
       - name: Prove QA cannot call arbitrary network hosts
         run: |
           set -euo pipefail
           grep -q 'QA harness blocked unexpected network call' qa/telegram/telegram-harness.mjs
           grep -q "api.telegram.org/botqa-token-never-sent" qa/telegram/telegram-harness.mjs
+          grep -q 'QA menu harness blocked unexpected network call' qa/telegram/telegram-native-menu-harness.mjs
+          grep -q "api.telegram.org/botqa-menu-token" qa/telegram/telegram-native-menu-harness.mjs
