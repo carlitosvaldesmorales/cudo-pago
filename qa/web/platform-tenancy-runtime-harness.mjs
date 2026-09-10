@@ -4,7 +4,7 @@ const BASE = process.env.CUDO_SPORTS_BASE || 'https://cudo-sports-event-bus.carl
 
 async function get(pathname, { origin } = {}) {
   let lastError;
-  for (let attempt = 1; attempt <= 12; attempt += 1) {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
     try {
       const headers = origin ? { Origin: origin } : {};
       const response = await fetch(`${BASE}${pathname}`, { headers });
