@@ -1,7 +1,7 @@
 # TELEGRAM-BOT-MIGRATION-01
 
 Fecha: 2026-09-10
-Estado: **BLUE/GREEN DESPLEGADO / M1-M3 PASS / BLOQUEADO EN E2E HUMANO DEL BOT DESTINO**
+Estado: **BLUE/GREEN DESPLEGADO / M1-M3 PASS / M4 SUPER_ADMIN PASS / PENDIENTE VISTA PÚBLICA + SEGUNDA CUENTA**
 
 ## Decisión
 
@@ -144,6 +144,20 @@ Bot destino:
 
 Los bot IDs son distintos, como corresponde a una migración de identidad, y ambos operan contra el mismo Worker/D1.
 
+### E2E visual iOS — SUPER_ADMIN
+
+Captura humana del 2026-09-10 confirma en el bot nuevo:
+
+- encabezado visible `Fútbol Chépica`;
+- `/start` abre el portal del campeonato;
+- `/inicio` reconoce inmediatamente la identidad existente como `ADMIN GLOBAL`;
+- no solicita recrear rol ni volver a enrolarse;
+- panel global muestra solicitudes, resultados por revisar y dirigentes activos;
+- botones globales disponibles: Solicitudes, Resultados pendientes, Dirigentes, Correcciones y disputas, Resultados registrados y Vista pública;
+- botón nativo `Menú` visible.
+
+Esto valida que el mismo `telegram_user_id` recupera su RBAC desde el D1 compartido al entrar por el bot nuevo.
+
 ## Gates de cutover
 
 ### M1 — Readiness código
@@ -172,9 +186,9 @@ Los bot IDs son distintos, como corresponde a una migración de identidad, y amb
 
 ### M4 — E2E humano
 
-- [ ] SUPER_ADMIN inicia chat con `@FutbolChepicaBot`.
-- [ ] El sistema reconoce el mismo `telegram_user_id` y muestra rol SUPER_ADMIN.
-- [ ] Menú global correcto.
+- [x] SUPER_ADMIN inicia chat con `@FutbolChepicaBot`.
+- [x] El sistema reconoce el mismo `telegram_user_id` y muestra rol SUPER_ADMIN.
+- [x] Menú global correcto.
 - [ ] Vista pública correcta.
 - [ ] Segunda cuenta/dirigente migra al iniciar chat; no requiere recrear rol.
 
@@ -189,14 +203,11 @@ Los bot IDs son distintos, como corresponde a una migración de identidad, y amb
 
 ## Bloqueo humano actual
 
-El código, infraestructura y runtime llegaron hasta M3 sin intervención adicional.
+La identidad SUPER_ADMIN ya pasó E2E visual en el bot destino.
 
-El siguiente gate sólo puede cerrarlo una identidad Telegram real:
+Quedan dos comprobaciones humanas antes de cutover:
 
-1. abrir `@FutbolChepicaBot`;
-2. enviar `/start` o `/inicio`;
-3. confirmar que la misma cuenta SUPER_ADMIN abre **FÚTBOL CHÉPICA · ADMIN GLOBAL**;
-4. abrir el menú nativo y comprobar comandos globales;
-5. abrir `Vista pública` o `/publico` sin ejecutar acciones destructivas.
+1. En `@FutbolChepicaBot`, abrir `Vista pública` o `/publico` y confirmar que la navegación pública responde correctamente.
+2. Desde la segunda cuenta que ya es `CLUB_ADMIN` de Unión Orilla, abrir `@FutbolChepicaBot` y enviar `/inicio`; debe recuperar automáticamente el rol existente y mostrar el portal del club sin una nueva solicitud.
 
-El bot actual `@CUDODeportesBot` sigue operativo como rollback y no debe retirarse hasta cerrar este E2E.
+El bot actual `@CUDODeportesBot` sigue operativo como rollback y todavía no debe retirarse.
