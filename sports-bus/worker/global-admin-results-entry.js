@@ -4,12 +4,10 @@ const SCORE_RE = /^\s*\d{1,2}\s*[-:]\s*\d{1,2}\s*$/;
 const ANY_COMMAND_RE = /^\/[A-Za-z0-9_]+(?:@\w+)?(?:\s|$)/;
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8'}});
 
-// GLOBAL-ADMIN-RESULTS-01
-// SUPER_ADMIN is a PLATFORM role, not a club role. This handler intentionally owns
-// only the result-registration bridge that was broken by the old club_id requirement.
-// Existing /dirigentes and /inicio dashboards remain under their established handlers.
-// A global admin can register the FIRST official result for any match/series. Existing
-// governed results are never overwritten here; changes go through result governance.
+// GLOBAL-ADMIN-RESULTS-02
+// SUPER_ADMIN is a PLATFORM role, not a club role. It owns every result in the
+// competition scope: missing series can be registered and governed series can be
+// corrected, disputed, annulled/restored or audited from one global surface.
 export async function handleGlobalAdminResultsRequest(request, env) {
   const url = new URL(request.url);
   if (url.pathname !== '/webhook/telegram' || request.method !== 'POST') return null;
@@ -25,6 +23,7 @@ export async function handleGlobalAdminResultsRequest(request, env) {
   const text = String(message?.text || '').trim();
   const callbackData = String(callback?.data || '');
   const actorId = String(actor.id);
+  const leadersEntry = /^\/dirigentes(?:@\w+)?$/i.test(text) || callbackData === 'tp:leaders';
   const legacyBridge = /^\/mispartidos(?:@\w+)?$/i.test(text) || callbackData === 'tp:mymatches';
 
   let session = null;
@@ -32,9 +31,8 @@ export async function handleGlobalAdminResultsRequest(request, env) {
     session = await env.DB.prepare("SELECT * FROM telegram_series_sessions WHERE telegram_user_id=? AND state='AWAIT_GLOBAL_SCORE'").bind(actorId).first();
   }
   const scoreMessage = !!session && SCORE_RE.test(text);
-  const escapeCommand = !!session && ANY_COMMAND_RE.test(text) && !/^\/mispartidos(?:@\w+)?$/i.test(text);
-  const escapeLeaders = !!session && callbackData === 'tp:leaders';
-  const relevant = legacyBridge || callbackData.startsWith('ga:') || scoreMessage || escapeCommand || escapeLeaders;
+  const escapeCommand = !!session && ANY_COMMAND_RE.test(text) && !leadersEntry && !/^\/mispartidos(?:@\w+)?$/i.test(text);
+  const relevant = leadersEntry || legacyBridge || callbackData.startsWith('ga:') || scoreMessage || escapeCommand;
   if (!relevant) return null;
 
   const supplied = request.headers.get('X-Telegram-Bot-Api-Secret-Token');
@@ -44,15 +42,23 @@ export async function handleGlobalAdminResultsRequest(request, env) {
   const reporter = await env.DB.prepare('SELECT * FROM reporters WHERE telegram_user_id=?').bind(actorId).first();
   if (!isSuperAdmin(reporter)) return null;
 
-  // Leaving a staged global capture through another command/menu must not leave a stale score session.
-  if (escapeCommand || escapeLeaders) {
+  if (leadersEntry) {
+    await clearSession(env.DB, actorId);
+    if (callback) await answerCallback(env, callback.id, 'Administración global');
+    await showGlobalDashboard(env, chatId);
+    // Compatibility: existing QA/contracts expect this handled identity for the leaders dashboard.
+    return json({ok:true,handled:'public_result_admin_dashboard'});
+  }
+
+  // Leaving a staged global capture through another command must never preserve stale input.
+  if (escapeCommand) {
     await clearSession(env.DB, actorId);
     return null;
   }
 
   if (legacyBridge || callbackData === 'ga:dates') {
     await clearSession(env.DB, actorId);
-    if (callback) await answerCallback(env, callback.id, 'Registrar resultados');
+    if (callback) await answerCallback(env, callback.id, 'Administrar resultados');
     await showGlobalDates(env, chatId);
     return json({ok:true,handled:'global_admin_result_dates'});
   }
@@ -103,16 +109,29 @@ export async function handleGlobalAdminResultsRequest(request, env) {
       getMatch(env.DB, matchId),
       env.DB.prepare('SELECT home_score,away_score,validation_status FROM match_series_results WHERE match_id=? AND series_code=?').bind(matchId,seriesCode).first()
     ]);
-    await answerCallback(env, callback.id, 'Resultado ya gobernado');
+    await answerCallback(env, callback.id, 'Administrar resultado');
     if (!match || !current) return json({ok:true,handled:'global_admin_result_existing_missing'});
+
+    const actions=[];
+    if (current.validation_status === 'VERIFIED') {
+      actions.push([{text:'✏️ Corregir marcador',callback_data:`rg:correct:${matchId}:${seriesCode}`}]);
+      actions.push([{text:'⚠️ Poner en disputa',callback_data:`rg:dispute:${matchId}:${seriesCode}`}]);
+      actions.push([{text:'🚫 Anular resultado',callback_data:`rg:annul:${matchId}:${seriesCode}`}]);
+    } else if (current.validation_status === 'DISPUTED') {
+      actions.push([{text:'✅ Confirmar marcador actual',callback_data:`rg:confirm:${matchId}:${seriesCode}`}]);
+      actions.push([{text:'✏️ Corregir y resolver',callback_data:`rg:correct:${matchId}:${seriesCode}`}]);
+      actions.push([{text:'🚫 Anular resultado',callback_data:`rg:annul:${matchId}:${seriesCode}`}]);
+    } else if (current.validation_status === 'ANNULLED') {
+      actions.push([{text:'♻️ Restaurar resultado',callback_data:`rg:restore:${matchId}:${seriesCode}`}]);
+    }
+    actions.push([{text:'🕘 Ver historial',callback_data:`rg:h:${matchId}:${seriesCode}`}]);
+    actions.push([{text:'⬅️ Volver al partido',callback_data:`ga:match:${matchId}`}]);
+
     await send(env, chatId,
-      `🧾 RESULTADO EXISTENTE\n\n${match.home_name} ${current.home_score}-${current.away_score} ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\nEstado: ${statusLabel(current.validation_status)}\n\nEste flujo no sobrescribe resultados existentes. Para modificarlo usa Correcciones y disputas.`,
-      {inline_keyboard:[
-        [{text:'🛡️ Correcciones y disputas',callback_data:'rg:list'}],
-        [{text:'⬅️ Volver al partido',callback_data:`ga:match:${match.match_id}`}]
-      ]}
+      `🛡 ADMINISTRAR RESULTADO\n\n📅 ${match.round_label} · Grupo ${match.group_id}\n🏟️ ${match.home_name} ${current.home_score}-${current.away_score} ${match.away_name}\n🏆 ${SERIES_LABEL[seriesCode]}\nEstado: ${statusLabel(current.validation_status)}\n\nComo administrador global puedes gobernar este resultado desde aquí.`,
+      {inline_keyboard:actions}
     );
-    return json({ok:true,handled:'global_admin_result_existing_guard',match_id:matchId,series_code:seriesCode});
+    return json({ok:true,handled:'global_admin_result_manage_existing',match_id:matchId,series_code:seriesCode,status:current.validation_status});
   }
 
   const seriesCb = callbackData.match(/^ga:series:([A-Za-z0-9._:-]+):(TERCERA|SEGUNDA|SENIOR|PRIMERA)$/);
@@ -128,8 +147,8 @@ export async function handleGlobalAdminResultsRequest(request, env) {
       await clearSession(env.DB, actorId);
       await answerCallback(env, callback.id, 'Ya existe resultado');
       await send(env, chatId,
-        `🧾 Esa serie ya tiene un resultado gobernado: ${current.home_score}-${current.away_score} · ${statusLabel(current.validation_status)}.\n\nNo se abrió una captura nueva. Si debes cambiarlo, usa Correcciones y disputas.`,
-        {inline_keyboard:[[{text:'🛡️ Correcciones y disputas',callback_data:'rg:list'}],[{text:'⬅️ Volver',callback_data:`ga:match:${match.match_id}`}]]}
+        `🧾 Esa serie ya tiene un resultado gobernado: ${current.home_score}-${current.away_score} · ${statusLabel(current.validation_status)}.\n\nUsa la serie existente para administrarla.`,
+        {inline_keyboard:[[{text:'🛡 Administrar resultado',callback_data:`ga:official:${matchId}:${seriesCode}`}],[{text:'⬅️ Volver',callback_data:`ga:match:${match.match_id}`}]]}
       );
       return json({ok:true,handled:'global_admin_result_existing_guard',match_id:matchId,series_code:seriesCode});
     }
@@ -142,7 +161,7 @@ export async function handleGlobalAdminResultsRequest(request, env) {
     `).bind(actorId,String(chatId),matchId,seriesCode,now,now).run();
     await answerCallback(env, callback.id, SERIES_LABEL[seriesCode]);
     await send(env, chatId,
-      `📝 REGISTRAR RESULTADO OFICIAL\n\n${match.round_label} · Grupo ${match.group_id}\n${match.home_name} vs ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n\nEscribe el marcador LOCAL-VISITA.\nEjemplo: 2-1\n\n⚠️ Sólo úsalo para el primer resultado oficial de esta serie.`,
+      `📝 REGISTRAR RESULTADO OFICIAL\n\n${match.round_label} · Grupo ${match.group_id}\n${match.home_name} vs ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n\nEscribe el marcador LOCAL-VISITA.\nEjemplo: 2-1\n\nEste flujo crea el primer resultado oficial de la serie.`,
       {inline_keyboard:[[{text:'Cancelar',callback_data:'ga:cancel'}]]}
     );
     return json({ok:true,handled:'global_admin_result_wait_score',match_id:matchId,series_code:seriesCode});
@@ -160,8 +179,8 @@ export async function handleGlobalAdminResultsRequest(request, env) {
     if (current) {
       await clearSession(env.DB, actorId);
       await send(env, chatId,
-        `⚠️ Mientras completabas la captura apareció un resultado gobernado (${current.home_score}-${current.away_score} · ${statusLabel(current.validation_status)}).\n\nTu marcador NO se guardó. Usa Correcciones y disputas si corresponde.`,
-        {inline_keyboard:[[{text:'🛡️ Correcciones y disputas',callback_data:'rg:list'}],[{text:'🛡 Administración global',callback_data:'tp:leaders'}]]}
+        `⚠️ Mientras completabas la captura apareció un resultado gobernado (${current.home_score}-${current.away_score} · ${statusLabel(current.validation_status)}).\n\nTu marcador NO se guardó. Abre el resultado existente para administrarlo.`,
+        {inline_keyboard:[[{text:'🛡 Administrar resultado',callback_data:`ga:official:${match.match_id}:${session.series_code}`}],[{text:'🛡 Administración global',callback_data:'tp:leaders'}]]}
       );
       return json({ok:true,handled:'global_admin_result_race_existing'});
     }
@@ -212,7 +231,7 @@ export async function handleGlobalAdminResultsRequest(request, env) {
       const appeared = await env.DB.prepare('SELECT home_score,away_score,validation_status FROM match_series_results WHERE match_id=? AND series_code=?').bind(match.match_id,seriesCode).first();
       await clearSession(env.DB, actorId);
       if (appeared) {
-        await send(env, chatId, `⚠️ El resultado no se guardó porque esa serie ya tiene un resultado gobernado (${appeared.home_score}-${appeared.away_score}). Usa Correcciones y disputas.`);
+        await send(env, chatId, `⚠️ El resultado no se guardó porque esa serie ya tiene un resultado gobernado (${appeared.home_score}-${appeared.away_score}). Abre el resultado existente para administrarlo.`);
         return json({ok:true,handled:'global_admin_result_concurrency_guard'});
       }
       throw error;
@@ -221,7 +240,7 @@ export async function handleGlobalAdminResultsRequest(request, env) {
     await send(env, chatId,
       `✅ RESULTADO OFICIAL REGISTRADO\n\n${match.home_name} ${home}-${away} ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n\nQuedó registrado como primer resultado oficial con trazabilidad del administrador global.`,
       {inline_keyboard:[
-        [{text:'📝 Registrar otra serie',callback_data:`ga:match:${match.match_id}`}],
+        [{text:'📝 Administrar otra serie',callback_data:`ga:match:${match.match_id}`}],
         [{text:'🛡 Administración global',callback_data:'tp:leaders'}]
       ]}
     );
@@ -239,13 +258,15 @@ async function showGlobalDashboard(env, chatId) {
     env.DB.prepare("SELECT COUNT(*) AS n FROM reporters WHERE role='CLUB_ADMIN'").first()
   ]);
   await send(env, chatId,
-    `🛡 FÚTBOL CHÉPICA · DIRIGENTE GLOBAL\n\nSolicitudes de acceso: ${Number(access?.n||0)}\nResultados por revisar: ${Number(pending?.n||0)}\nDirigentes activos: ${Number(active?.n||0)}/${Number(total?.n||0)}`,
+    `🛡 FÚTBOL CHÉPICA · ADMIN GLOBAL\n\nSolicitudes de acceso: ${Number(access?.n||0)}\nResultados por revisar: ${Number(pending?.n||0)}\nDirigentes activos: ${Number(active?.n||0)}/${Number(total?.n||0)}`,
     {inline_keyboard:[
-      [{text:'⚽ Registrar resultados',callback_data:'ga:dates'}],
+      [{text:`🔔 Solicitudes acceso (${Number(access?.n||0)})`,callback_data:'tp:requests'}],
       [{text:`🟡 Resultados pendientes (${Number(pending?.n||0)})`,callback_data:'pr:pending'}],
+      [{text:`👥 Dirigentes (${Number(active?.n||0)}/${Number(total?.n||0)})`,callback_data:'tp:admins'}],
+      [{text:'⚽ Administrar todos los resultados',callback_data:'ga:dates'}],
       [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
       [{text:'🛡️ Correcciones y disputas',callback_data:'rg:list'}],
-      [{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]
+      [{text:'🏠 Inicio',callback_data:'tp:home'}]
     ]}
   );
 }
@@ -255,7 +276,7 @@ async function showGlobalDates(env, chatId) {
   const rows = (q.results || []).map(r=>[{text:`📅 ${r.round_label || 'Fecha '+r.round_no}`,callback_data:`ga:date:${r.round_no}`}]);
   rows.push([{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]);
   await send(env, chatId,
-    '⚽ REGISTRAR RESULTADOS · ADMIN GLOBAL\n\nPuedes trabajar sobre cualquier partido del campeonato. Selecciona una fecha:',
+    '⚽ ADMINISTRAR TODOS LOS RESULTADOS\n\nTienes alcance global sobre todos los partidos y las cuatro series del campeonato. Selecciona una fecha:',
     {inline_keyboard:rows}
   );
 }
@@ -271,7 +292,7 @@ async function showGlobalRound(env, chatId, roundNo) {
   const rows = matches.map(m=>[{text:`Grupo ${m.group_id} · ${m.home_name} — ${m.away_name}`,callback_data:`ga:match:${m.match_id}`}]);
   rows.push([{text:'⬅️ Volver a fechas',callback_data:'ga:dates'}]);
   await send(env, chatId,
-    matches.length ? `📅 FECHA ${roundNo}\n\nSelecciona un partido:` : `📅 FECHA ${roundNo}\n\nNo hay partidos cargados.`,
+    matches.length ? `📅 FECHA ${roundNo}\n\nSelecciona cualquier partido para administrar sus resultados:` : `📅 FECHA ${roundNo}\n\nNo hay partidos cargados.`,
     {inline_keyboard:rows}
   );
 }
@@ -286,7 +307,7 @@ async function showGlobalSeries(env, chatId, match) {
     return {text:`${icon} ${SERIES_LABEL[code]} · ${r.home_score}-${r.away_score}`,callback_data:`ga:official:${match.match_id}:${code}`};
   });
   await send(env, chatId,
-    `🏆 RESULTADOS DEL PARTIDO\n\n📅 ${match.round_label} · Grupo ${match.group_id}\n🏟️ ${match.home_name} — ${match.away_name}\n\n➕ registra sólo series sin resultado. Las series ya gobernadas se modifican desde Correcciones.`,
+    `🛡 ADMINISTRAR RESULTADOS DEL PARTIDO\n\n📅 ${match.round_label} · Grupo ${match.group_id}\n🏟️ ${match.home_name} — ${match.away_name}\n\n➕ Sin resultado: registrar.\n✅/⚠️/🚫 Con resultado: abrir y gobernar.`,
     {inline_keyboard:[
       [buttons[0],buttons[1]],
       [buttons[2],buttons[3]],

@@ -12,7 +12,7 @@ on:
   push:
     branches:
       - feature/sports-event-bus-v1
-      - fix/telegram-global-admin-results-01
+      - fix/telegram-global-admin-label-01
     paths:
       - 'sports-bus/worker/global-admin-results-entry.js'
       - 'sports-bus/cors-entry.js'
@@ -36,16 +36,17 @@ jobs:
           node --check sports-bus/worker/global-admin-results-entry.js
           node --check sports-bus/cors-entry.js
           node --check qa/telegram/global-admin-results-harness.mjs
-      - name: Validate global result registration contract
+      - name: Validate global all-results administration contract
         run: |
           set -euo pipefail
           node qa/telegram/global-admin-results-harness.mjs | tee /tmp/global-admin-results.log
-          grep -q 'PASS SUPER_ADMIN without club_id reaches global result registration through existing dashboard' /tmp/global-admin-results.log
-          grep -q 'PASS global date view exposes all matches instead of one club scope' /tmp/global-admin-results.log
-          grep -q 'PASS choosing a missing series stages capture without premature mutation' /tmp/global-admin-results.log
-          grep -q 'PASS command escape clears staged global capture without mutation' /tmp/global-admin-results.log
-          grep -q 'PASS first global official result is VERIFIED with actor, audit and null club scope' /tmp/global-admin-results.log
-          grep -q 'PASS existing governed result cannot be silently overwritten and redirects to governance' /tmp/global-admin-results.log
-          grep -q 'PASS legacy /mispartidos bridges SUPER_ADMIN to global registration' /tmp/global-admin-results.log
-          grep -q 'PASS CLUB_ADMIN remains on its existing club-scoped surface' /tmp/global-admin-results.log
+          grep -q 'PASS SUPER_ADMIN dashboard exposes Administrar todos los resultados and no club-scoped wording' /tmp/global-admin-results.log
+          grep -q 'PASS global result administration spans every match in the selected date' /tmp/global-admin-results.log
+          grep -q 'PASS missing series can be registered without premature mutation' /tmp/global-admin-results.log
+          grep -q 'PASS leaving staged capture clears it without mutation' /tmp/global-admin-results.log
+          grep -q 'PASS first official result is VERIFIED with SUPER_ADMIN actor and audit' /tmp/global-admin-results.log
+          grep -q 'PASS existing official result exposes correct/dispute/annul/history from the same global surface' /tmp/global-admin-results.log
+          grep -q 'PASS existing governed result cannot be silently overwritten' /tmp/global-admin-results.log
+          grep -q 'PASS legacy /mispartidos remains a compatibility bridge to global administration' /tmp/global-admin-results.log
+          grep -q 'PASS CLUB_ADMIN remains on its club-scoped surface' /tmp/global-admin-results.log
           grep -q 'RESULT: PASS' /tmp/global-admin-results.log
