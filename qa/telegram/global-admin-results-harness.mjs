@@ -80,18 +80,20 @@ try{
   assert.ok(candidates.length,'fixture must contain at least one series without governed result');
   const target=candidates[0];
 
+  // Existing global dashboard stays under the established handler. The formerly broken
+  // "Mis partidos de club" callback is now the compatibility bridge to PLATFORM-wide capture.
   reset();
-  let result=await message(SUPER,'/dirigentes');
-  assert.equal(result.handled,'global_admin_dashboard');
+  let result=await callback(SUPER,'tp:leaders');
+  assert.equal(result.handled,'public_result_admin_dashboard');
   let panel=last(SUPER.id);
-  assert.match(panel.text,/DIRIGENTE GLOBAL/);
-  assert.ok(buttons(panel).some(x=>x.callback_data==='ga:dates'&&/Registrar resultados/.test(x.text)));
+  assert.match(panel.text,/ADMIN GLOBAL/);
+  assert.ok(buttons(panel).some(x=>x.callback_data==='tp:mymatches'));
 
   reset();
-  result=await callback(SUPER,'ga:dates');
+  result=await callback(SUPER,'tp:mymatches');
   assert.equal(result.handled,'global_admin_result_dates');
   panel=last(SUPER.id);
-  assert.match(panel.text,/ADMIN GLOBAL/);
+  assert.match(panel.text,/REGISTRAR RESULTADOS · ADMIN GLOBAL/);
   assert.ok(buttons(panel).some(x=>x.callback_data===`ga:date:${target.round_no}`));
 
   reset();
@@ -120,6 +122,21 @@ try{
 
   const before=await env.DB.prepare('SELECT result_id FROM match_series_results WHERE match_id=? AND series_code=?').bind(target.match_id,target.series_code).first();
   assert.equal(before,null,'choosing a series must not create an official result before score submission');
+
+  // Escape through /dirigentes: pending score session must be cleared and the old dashboard must still work.
+  reset();
+  result=await message(SUPER,'/dirigentes');
+  assert.equal(result.handled,'public_result_admin_dashboard');
+  session=await env.DB.prepare('SELECT * FROM telegram_series_sessions WHERE telegram_user_id=?').bind(String(SUPER.id)).first();
+  assert.equal(session,null,'leaving staged global capture through a command must clear the pending session');
+  assert.equal(await env.DB.prepare('SELECT result_id FROM match_series_results WHERE match_id=? AND series_code=?').bind(target.match_id,target.series_code).first(),null);
+
+  // Re-enter the same empty series and execute one deterministic QA write in ephemeral D1.
+  await callback(SUPER,'tp:mymatches');
+  await callback(SUPER,`ga:date:${target.round_no}`);
+  await callback(SUPER,`ga:match:${target.match_id}`);
+  result=await callback(SUPER,`ga:series:${target.match_id}:${target.series_code}`);
+  assert.equal(result.handled,'global_admin_result_wait_score');
 
   reset();
   result=await message(SUPER,'1-0');
@@ -150,7 +167,7 @@ try{
   result=await callback(SUPER,`ga:series:${target.match_id}:${target.series_code}`);
   assert.equal(result.handled,'global_admin_result_existing_guard');
   panel=last(SUPER.id);
-  assert.match(panel.text,/no.*captura nueva|no se abrió una captura nueva/i);
+  assert.match(panel.text,/No se abrió una captura nueva/i);
   assert.ok(buttons(panel).some(x=>x.callback_data==='rg:list'));
   const unchanged=await env.DB.prepare('SELECT home_score,away_score,governance_version FROM match_series_results WHERE match_id=? AND series_code=?').bind(target.match_id,target.series_code).first();
   assert.deepEqual([Number(unchanged.home_score),Number(unchanged.away_score),Number(unchanged.governance_version)],[1,0,1]);
@@ -163,14 +180,14 @@ try{
 
   reset();
   result=await message(CLUB,'/dirigentes');
-  assert.notEqual(result.handled,'global_admin_dashboard','CLUB_ADMIN must not be intercepted by the platform-wide handler');
   assert.equal(result.handled,'public_result_admin_dashboard');
   panel=last(CLUB.id);
   assert.doesNotMatch(panel.text,/DIRIGENTE GLOBAL/);
 
-  console.log('PASS SUPER_ADMIN without club_id reaches Dirigente Global and Registrar resultados');
+  console.log('PASS SUPER_ADMIN without club_id reaches global result registration through existing dashboard');
   console.log('PASS global date view exposes all matches instead of one club scope');
   console.log('PASS choosing a missing series stages capture without premature mutation');
+  console.log('PASS command escape clears staged global capture without mutation');
   console.log('PASS first global official result is VERIFIED with actor, audit and null club scope');
   console.log('PASS existing governed result cannot be silently overwritten and redirects to governance');
   console.log('PASS legacy /mispartidos bridges SUPER_ADMIN to global registration');
