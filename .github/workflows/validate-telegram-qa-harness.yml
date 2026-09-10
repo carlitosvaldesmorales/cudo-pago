@@ -1,7 +1,17 @@
 name: Validate Telegram QA Harness
 on:
   push:
-    branches: [feature/telegram-qa-harness-01]
+    branches:
+      - feature/telegram-qa-harness-01
+      - feature/sports-event-bus-v1
+    paths:
+      - 'qa/telegram/**'
+      - 'sports-bus/**'
+      - '.github/workflows/validate-telegram-qa-harness.yml'
+      - 'ops/TELEGRAM-QA-HARNESS-01.md'
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
     paths:
       - 'qa/telegram/**'
       - 'sports-bus/**'
