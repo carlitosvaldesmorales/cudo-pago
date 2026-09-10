@@ -1,0 +1,66 @@
+name: Validate Dirigentes Suspended Guard
+on:
+  push:
+    branches: [feature/dirigentes-suspended-guard-01]
+    paths:
+      - 'sports-bus/**'
+      - '.github/workflows/validate-dirigentes-suspended-guard.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax check
+        run: |
+          set -euo pipefail
+          node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/dirigentes-suspended-guard-entry.js
+          node --check sports-bus/worker/dirigentes-lifecycle-entry.js
+          node --check sports-bus/worker/portal-entry.js
+          node --check sports-bus/worker/series-entry.js
+          node --check sports-bus/worker/club-admin-series-entry.js
+
+      - name: Validate suspended guard contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "reporter.role==='CLUB_ADMIN'&&reporter.active!==1" sports-bus/worker/dirigentes-suspended-guard-entry.js
+          grep -q "callbackData==='tp:req'" sports-bus/worker/dirigentes-suspended-guard-entry.js
+          grep -q "callbackData.startsWith('tp:reqclub:')" sports-bus/worker/dirigentes-suspended-guard-entry.js
+          grep -q "No puedes usar funciones administrativas ni generar una nueva solicitud" sports-bus/worker/dirigentes-suspended-guard-entry.js
+          grep -q "handleSuspendedDirigenteGuard" sports-bus/cors-entry.js
+
+      - name: Validate guard routing precedes lifecycle and portal
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('sports-bus/cors-entry.js','utf8');
+          const guard=s.indexOf('const suspendedGuard = await handleSuspendedDirigenteGuard');
+          const lifecycle=s.indexOf('const dirigentesLifecycle = suspendedGuard ? null : await handleDirigentesLifecycleRequest');
+          const portal=s.indexOf('const portal = (suspendedGuard || dirigentesLifecycle) ? null : await handlePortalRequest');
+          if(guard<0||lifecycle<0||portal<0||!(guard<lifecycle&&lifecycle<portal)) process.exit(1);
+          NODE
+
+      - name: Validate suspended users cannot publish through existing score flows
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "reporter.active!==1" sports-bus/worker/club-admin-series-entry.js
+          grep -q "reporter.active === 1" sports-bus/worker/series-entry.js
+
+      - name: Apply all migrations cleanly
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB=/tmp/guard.db
+          rm -f "$DB"
+          for f in $(find sports-bus/migrations -maxdepth 1 -name '*.sql' | sort); do sqlite3 "$DB" < "$f"; done
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='reporters') THEN 1 ELSE 0 END;" | grep -qx 1
+          sqlite3 "$DB" "SELECT CASE WHEN EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='access_requests') THEN 1 ELSE 0 END;" | grep -qx 1
