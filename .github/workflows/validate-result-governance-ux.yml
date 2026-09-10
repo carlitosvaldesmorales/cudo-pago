@@ -1,0 +1,46 @@
+name: Validate Result Governance UX
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/result-governance-ux-harness.mjs'
+      - '.github/workflows/validate-result-governance-ux.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/result-governance-ux-harness.mjs'
+      - '.github/workflows/validate-result-governance-ux.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/result-governance-ux-entry.js
+          node --check sports-bus/telegram-route-clarity-entry.js
+          node --check qa/telegram/result-governance-ux-harness.mjs
+      - name: Validate mobile governance UX
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-governance-ux-harness.mjs | tee /tmp/governance-ux.log
+          grep -q 'PASS governance list groups by match and identifies clubs' /tmp/governance-ux.log
+          grep -q 'PASS callback navigation reuses one Telegram message' /tmp/governance-ux.log
+          grep -q 'PASS detail hides technical state/version jargon' /tmp/governance-ux.log
+          grep -q 'PASS destructive action is visually distinguished' /tmp/governance-ux.log
+          grep -q 'RESULT: PASS' /tmp/governance-ux.log
