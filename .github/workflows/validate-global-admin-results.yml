@@ -40,9 +40,10 @@ jobs:
         run: |
           set -euo pipefail
           node qa/telegram/global-admin-results-harness.mjs | tee /tmp/global-admin-results.log
-          grep -q 'PASS SUPER_ADMIN without club_id reaches Dirigente Global and Registrar resultados' /tmp/global-admin-results.log
+          grep -q 'PASS SUPER_ADMIN without club_id reaches global result registration through existing dashboard' /tmp/global-admin-results.log
           grep -q 'PASS global date view exposes all matches instead of one club scope' /tmp/global-admin-results.log
           grep -q 'PASS choosing a missing series stages capture without premature mutation' /tmp/global-admin-results.log
+          grep -q 'PASS command escape clears staged global capture without mutation' /tmp/global-admin-results.log
           grep -q 'PASS first global official result is VERIFIED with actor, audit and null club scope' /tmp/global-admin-results.log
           grep -q 'PASS existing governed result cannot be silently overwritten and redirects to governance' /tmp/global-admin-results.log
           grep -q 'PASS legacy /mispartidos bridges SUPER_ADMIN to global registration' /tmp/global-admin-results.log
