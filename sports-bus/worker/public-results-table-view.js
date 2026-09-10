@@ -1,6 +1,7 @@
 const COMPETITION_ID = 'ANFA-CHEPICA-2026';
 const SERIES = ['TERCERA', 'SEGUNDA', 'SENIOR', 'PRIMERA'];
 const SERIES_LABEL = { TERCERA: '3ª', SEGUNDA: '2ª', SENIOR: 'S', PRIMERA: '1ª' };
+const COPY_CONTROL_GUTTER = '\u00A0'.repeat(5);
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -120,7 +121,12 @@ function scoreGrid(scores) {
     const row = scores.get(code);
     return row ? `${row.home}–${row.away}` : '—';
   };
-  return `${SERIES_LABEL.TERCERA.padEnd(3)} ${value('TERCERA').padEnd(5)}  ${SERIES_LABEL.SEGUNDA.padEnd(3)} ${value('SEGUNDA')}\n${SERIES_LABEL.SENIOR.padEnd(3)} ${value('SENIOR').padEnd(5)}  ${SERIES_LABEL.PRIMERA.padEnd(3)} ${value('PRIMERA')}`;
+  // Telegram iOS overlays its copy/code control in the top-right corner of
+  // every <pre> block. Reserve a fixed monospace gutter so the control never
+  // covers the SEGUNDA score while keeping the visual matrix unchanged.
+  const top = `${SERIES_LABEL.TERCERA.padEnd(3)} ${value('TERCERA').padEnd(5)}  ${SERIES_LABEL.SEGUNDA.padEnd(3)} ${value('SEGUNDA')}${COPY_CONTROL_GUTTER}`;
+  const bottom = `${SERIES_LABEL.SENIOR.padEnd(3)} ${value('SENIOR').padEnd(5)}  ${SERIES_LABEL.PRIMERA.padEnd(3)} ${value('PRIMERA')}`;
+  return `${top}\n${bottom}`;
 }
 
 async function render(env, message, text, replyMarkup) {
