@@ -5,6 +5,7 @@ on:
     branches: [feature/sports-event-bus-v1]
     paths:
       - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'sports-bus/worker/public-results-table-view.js'
       - 'sports-bus/wrangler.toml'
       - 'qa/telegram/results-route-clarity-harness.mjs'
       - '.github/workflows/validate-telegram-results-route-clarity.yml'
@@ -24,11 +25,14 @@ jobs:
       - name: Syntax
         run: |
           node --check sports-bus/telegram-route-clarity-entry.js
+          node --check sports-bus/worker/public-results-table-view.js
           node --check qa/telegram/results-route-clarity-harness.mjs
-      - name: Reproduce and validate exact route confusion
+      - name: Validate complete aligned public-results view
         run: |
           set -euo pipefail
           node qa/telegram/results-route-clarity-harness.mjs | tee /tmp/route-clarity.log
-          grep -q 'PASS destination /resultados opens compact public V3 results' /tmp/route-clarity.log
+          grep -q 'PASS destination /resultados shows every verified match across dates' /tmp/route-clarity.log
+          grep -q 'PASS score matrix uses Telegram HTML preformatted monospace alignment' /tmp/route-clarity.log
+          grep -q 'PASS primary view has no per-match drilldown buttons' /tmp/route-clarity.log
           grep -q 'PASS primary rollback bot keeps administrative /resultados behavior' /tmp/route-clarity.log
           grep -q 'RESULT: PASS' /tmp/route-clarity.log
