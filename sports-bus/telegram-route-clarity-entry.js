@@ -1,4 +1,5 @@
 import worker from './telegram-migration-entry.js';
+import { handlePublicResultsTableView } from './worker/public-results-table-view.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 
@@ -19,7 +20,7 @@ async function normalizeDestinationResultsCommand(request) {
     return request;
   }
 
-  // On the destination bot, /resultados means the public, compact results view.
+  // On the destination bot, /resultados means the public results view.
   // The administrative registry remains available from the explicit
   // "Resultados registrados" button inside the dirigente/admin portal.
   const normalized = {
@@ -41,6 +42,8 @@ async function normalizeDestinationResultsCommand(request) {
 export default {
   async fetch(request, env, ctx) {
     const normalized = await normalizeDestinationResultsCommand(request);
+    const allResults = await handlePublicResultsTableView(normalized.clone(), env);
+    if (allResults) return allResults;
     return worker.fetch(normalized, env, ctx);
   }
 };
