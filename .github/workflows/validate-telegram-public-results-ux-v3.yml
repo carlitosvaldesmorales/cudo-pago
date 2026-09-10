@@ -1,0 +1,34 @@
+name: Validate Telegram Public Results UX V3
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/worker/public-results-ux-v3.js'
+      - 'sports-bus/worker/public-results-ux-v2.js'
+      - 'sports-bus/telegram-migration-entry.js'
+      - 'qa/telegram/public-results-ux-v3-harness.mjs'
+      - 'qa/telegram/d1-sqlite-adapter.mjs'
+      - 'sports-bus/migrations/**'
+      - '.github/workflows/validate-telegram-public-results-ux-v3.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install QA sqlite runtime
+        run: npm install --no-save better-sqlite3@latest
+      - name: Validate V3 single-panel navigation, compatibility and security
+        run: node qa/telegram/public-results-ux-v3-harness.mjs
+      - name: Syntax-check Worker entrypoints
+        run: |
+          node --check sports-bus/worker/public-results-ux-v3.js
+          node --check sports-bus/telegram-migration-entry.js

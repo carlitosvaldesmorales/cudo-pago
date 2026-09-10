@@ -16,6 +16,7 @@ on:
       - 'ops/TELEGRAM-NATIVE-MENU-01.md'
       - 'ops/TELEGRAM-BOT-MIGRATION-01.md'
       - 'ops/TELEGRAM-PUBLIC-RESULTS-UX-V2.md'
+      - 'ops/ux-validator/**'
   pull_request:
     branches:
       - feature/sports-event-bus-v1
@@ -27,6 +28,7 @@ on:
       - 'ops/TELEGRAM-NATIVE-MENU-01.md'
       - 'ops/TELEGRAM-BOT-MIGRATION-01.md'
       - 'ops/TELEGRAM-PUBLIC-RESULTS-UX-V2.md'
+      - 'ops/ux-validator/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -46,9 +48,11 @@ jobs:
           node --check qa/telegram/telegram-native-menu-harness.mjs
           node --check qa/telegram/telegram-bot-migration-harness.mjs
           node --check qa/telegram/public-results-ux-v2-harness.mjs
+          node --check qa/telegram/public-results-ux-v3-harness.mjs
           node --check sports-bus/cors-entry.js
           node --check sports-bus/telegram-migration-entry.js
           node --check sports-bus/worker/public-results-ux-v2.js
+          node --check sports-bus/worker/public-results-ux-v3.js
           node --check sports-bus/worker/telegram-native-menu-entry.js
           node --check sports-bus/worker/portal-entry.js
           node --check sports-bus/worker/dirigentes-lifecycle-entry.js
@@ -92,19 +96,33 @@ jobs:
           grep -q 'PASS primary bot remains untouched during blue green migration' /tmp/telegram-migration-qa.log
           grep -q 'PASS migration slot stays safely dormant without next token' /tmp/telegram-migration-qa.log
           grep -q 'RESULT: PASS' /tmp/telegram-migration-qa.log
-      - name: Run destination public-results UX QA
+      - name: Run historical V2 public-results compatibility QA
         run: |
           set -euo pipefail
-          node qa/telegram/public-results-ux-v2-harness.mjs | tee /tmp/telegram-public-ux.log
-          grep -q 'PASS destination bot replaces long dump with progressive results home' /tmp/telegram-public-ux.log
-          grep -q 'PASS latest round is summarized as match choices' /tmp/telegram-public-ux.log
-          grep -q 'PASS match detail shows four series in one compact card' /tmp/telegram-public-ux.log
-          grep -q 'PASS club path exposes compact history navigation' /tmp/telegram-public-ux.log
-          grep -q 'PASS series path uses date drill-down' /tmp/telegram-public-ux.log
-          grep -q 'PASS series/date detail remains scan-friendly' /tmp/telegram-public-ux.log
-          grep -q 'PASS primary rollback bot keeps legacy public-results presentation' /tmp/telegram-public-ux.log
-          grep -q 'PASS public UX rejects invalid webhook secret before Telegram or D1 side effects' /tmp/telegram-public-ux.log
-          grep -q 'RESULT: PASS' /tmp/telegram-public-ux.log
+          node qa/telegram/public-results-ux-v2-harness.mjs | tee /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 home callback remains available on destination bot' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 latest callback remains compatible' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 match callback remains compatible' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 club callback remains compatible' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 series callback remains compatible' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 series/date callback remains compatible' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS primary rollback bot keeps legacy public-results presentation' /tmp/telegram-public-ux-v2.log
+          grep -q 'PASS historical V2 callbacks reject invalid webhook secret before side effects' /tmp/telegram-public-ux-v2.log
+          grep -q 'RESULT: PASS' /tmp/telegram-public-ux-v2.log
+      - name: Run active V3 destination public-results UX QA
+        run: |
+          set -euo pipefail
+          node qa/telegram/public-results-ux-v3-harness.mjs | tee /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS entry goes directly to latest round and edits the existing panel' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS match detail replaces the same panel with compact four-series score' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS secondary filters are hidden behind one explicit search action' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS return to Public also reuses the current panel' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS historical V2 callback namespace remains compatible' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS primary rollback bot remains untouched' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS destination runtime advertises UX contract version 3' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS exceptional edit failure has a functional sendMessage fallback' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS invalid webhook secret is rejected before Telegram or D1 side effects' /tmp/telegram-public-ux-v3.log
+          grep -q 'RESULT: PASS' /tmp/telegram-public-ux-v3.log
       - name: Prove QA cannot call arbitrary network hosts
         run: |
           set -euo pipefail
@@ -115,3 +133,4 @@ jobs:
           grep -q 'QA migration harness blocked unexpected network call' qa/telegram/telegram-bot-migration-harness.mjs
           grep -q "api.telegram.org/botqa-new-token" qa/telegram/telegram-bot-migration-harness.mjs
           grep -q 'QA public UX harness blocked unexpected network call' qa/telegram/public-results-ux-v2-harness.mjs
+          grep -q 'QA V3 harness blocked unexpected network call' qa/telegram/public-results-ux-v3-harness.mjs

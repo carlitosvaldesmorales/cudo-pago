@@ -125,7 +125,7 @@ jobs:
           NEXT_CONFIGURED=0
           NEXT_HEALTHY=0
           NEXT_DRIFT=0
-          V2_VISIBLE=0
+          V3_VISIBLE=0
 
           for i in $(seq 1 20); do
             CODE="$(curl -sS -o /tmp/telegram-next-pre.json -w '%{http_code}' "$BASE/health/telegram-next" || true)"
@@ -142,20 +142,20 @@ jobs:
               continue
             fi
 
-            if node -e 'const x=require("/tmp/telegram-next-pre.json");if(String(x.public_results_ux_version)!=="2")process.exit(1)' 2>/dev/null; then
-              V2_VISIBLE=1
+            if node -e 'const x=require("/tmp/telegram-next-pre.json");if(String(x.public_results_ux_version)!=="3")process.exit(1)' 2>/dev/null; then
+              V3_VISIBLE=1
             else
-              echo "Waiting for Worker contract public_results_ux_version=2."
+              echo "Waiting for Worker contract public_results_ux_version=3."
               sleep 3
               continue
             fi
 
-            if [ "$CODE" = "200" ] && node -e 'const t=require("/tmp/telegram-next-pre.json");if(!t.ok||t.slot!=="next"||!t.bot_token_configured||!t.webhook_secret_configured||!t.bot_api_ok||!t.bot_username_shape_ok||t.bot_name!=="Fútbol Chépica"||!t.bot_name_configured||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured||String(t.public_results_ux_version)!=="2")process.exit(1)'; then
+            if [ "$CODE" = "200" ] && node -e 'const t=require("/tmp/telegram-next-pre.json");if(!t.ok||t.slot!=="next"||!t.bot_token_configured||!t.webhook_secret_configured||!t.bot_api_ok||!t.bot_username_shape_ok||t.bot_name!=="Fútbol Chépica"||!t.bot_name_configured||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured||String(t.public_results_ux_version)!=="3")process.exit(1)'; then
               NEXT_HEALTHY=1
               break
             fi
 
-            if node -e 'const t=require("/tmp/telegram-next-pre.json");if(!(t.bot_token_configured&&t.webhook_secret_configured&&t.bot_api_ok&&String(t.public_results_ux_version)==="2"&&(!t.bot_name_configured||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured)))process.exit(1)' 2>/dev/null; then
+            if node -e 'const t=require("/tmp/telegram-next-pre.json");if(!(t.bot_token_configured&&t.webhook_secret_configured&&t.bot_api_ok&&String(t.public_results_ux_version)==="3"&&(!t.bot_name_configured||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured)))process.exit(1)' 2>/dev/null; then
               NEXT_DRIFT=1
               echo "Destination Telegram configuration drift proven by health contract."
               break
@@ -165,7 +165,7 @@ jobs:
           done
 
           test "$NEXT_CONFIGURED" -eq 1
-          test "$V2_VISIBLE" -eq 1
+          test "$V3_VISIBLE" -eq 1
 
           if [ "$NEXT_HEALTHY" -ne 1 ]; then
             if [ "$NEXT_DRIFT" -ne 1 ]; then
@@ -178,7 +178,7 @@ jobs:
               CODE="$(curl -sS -o /tmp/reconcile-next.json -w '%{http_code}' -X POST -H 'X-CUDO-Repair: reconcile-webhook' "$BASE/ops/telegram-next/reconcile" || true)"
               echo "Destination reconcile HTTP $CODE (attempt $i/20)"
               cat /tmp/reconcile-next.json || true
-              if [ "$CODE" = "200" ] && node -e 'const x=require("/tmp/reconcile-next.json");if(!x.ok||x.slot!=="next"||!x.webhook||!x.native_menu||!x.default_commands||!x.bot_name||String(x.public_results_ux_version)!=="2")process.exit(1)'; then
+              if [ "$CODE" = "200" ] && node -e 'const x=require("/tmp/reconcile-next.json");if(!x.ok||x.slot!=="next"||!x.webhook||!x.native_menu||!x.default_commands||!x.bot_name||String(x.public_results_ux_version)!=="3")process.exit(1)'; then
                 NEXT_RECONCILED=1
                 break
               fi
@@ -194,7 +194,7 @@ jobs:
             CODE="$(curl -sS -o /tmp/telegram-next.json -w '%{http_code}' "$BASE/health/telegram-next" || true)"
             echo "Destination health HTTP $CODE (validation attempt $i/20)"
             cat /tmp/telegram-next.json || true
-            if [ "$CODE" = "200" ] && node -e 'const t=require("/tmp/telegram-next.json");if(!t.ok||t.slot!=="next"||!t.bot_token_configured||!t.webhook_secret_configured||!t.bot_api_ok||!t.bot_username_shape_ok||t.bot_name!=="Fútbol Chépica"||!t.bot_name_configured||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured||String(t.public_results_ux_version)!=="2")process.exit(1)'; then
+            if [ "$CODE" = "200" ] && node -e 'const t=require("/tmp/telegram-next.json");if(!t.ok||t.slot!=="next"||!t.bot_token_configured||!t.webhook_secret_configured||!t.bot_api_ok||!t.bot_username_shape_ok||t.bot_name!=="Fútbol Chépica"||!t.bot_name_configured||!t.webhook_configured||!t.native_menu_configured||!t.default_commands_configured||String(t.public_results_ux_version)!=="3")process.exit(1)'; then
               NEXT_READY=1
               break
             fi
@@ -204,4 +204,4 @@ jobs:
 
           curl -fsS "$BASE/health/telegram" -o /tmp/telegram-primary.json
           node -e 'const a=require("/tmp/telegram-primary.json"),b=require("/tmp/telegram-next.json");if(!a.bot_id||!b.bot_id||String(a.bot_id)===String(b.bot_id)){console.error("Bot IDs must be distinct during migration",{primary:a.bot_id,next:b.bot_id});process.exit(1)}'
-          echo "Destination bot is healthy on shared Worker/D1 and public_results_ux_version=2 is live."
+          echo "Destination bot is healthy on shared Worker/D1 and public_results_ux_version=3 is live."
