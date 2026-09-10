@@ -1,0 +1,48 @@
+name: Validate Public Governance Status
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/public-result-governance-status-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/public-governance-status-harness.mjs'
+      - '.github/workflows/validate-public-governance-status.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/public-result-governance-status-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'qa/telegram/public-governance-status-harness.mjs'
+      - '.github/workflows/validate-public-governance-status.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/public-result-governance-status-entry.js
+          node --check sports-bus/telegram-route-clarity-entry.js
+          node --check qa/telegram/public-governance-status-harness.mjs
+      - name: Validate public governance status
+        run: |
+          set -euo pipefail
+          node qa/telegram/public-governance-status-harness.mjs | tee /tmp/public-governance-status.log
+          grep -q 'PASS VERIFIED is the only public state that exposes an official score' /tmp/public-governance-status.log
+          grep -q 'PASS DISPUTED renders status without leaking retained score as official' /tmp/public-governance-status.log
+          grep -q 'PASS stale public contribution callbacks cannot bypass a dispute' /tmp/public-governance-status.log
+          grep -q 'PASS in-flight public submission is cancelled if governance becomes non-publicable' /tmp/public-governance-status.log
+          grep -q 'PASS ANNULLED renders status without an official score' /tmp/public-governance-status.log
+          grep -q 'PASS QA fixture remains unreachable through public match callbacks' /tmp/public-governance-status.log
+          grep -q 'RESULT: PASS' /tmp/public-governance-status.log
