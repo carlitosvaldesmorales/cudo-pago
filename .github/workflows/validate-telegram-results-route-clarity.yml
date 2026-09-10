@@ -32,7 +32,8 @@ jobs:
           set -euo pipefail
           node qa/telegram/results-route-clarity-harness.mjs | tee /tmp/route-clarity.log
           grep -q 'PASS destination /resultados shows every verified match across dates' /tmp/route-clarity.log
-          grep -q 'PASS score matrix uses Telegram HTML preformatted monospace alignment' /tmp/route-clarity.log
+          grep -q 'PASS score matrix uses inline fixed-width code and no preformatted block' /tmp/route-clarity.log
+          grep -q 'PASS primary view avoids Telegram pre-block copy control' /tmp/route-clarity.log
           grep -q 'PASS primary view has no per-match drilldown buttons' /tmp/route-clarity.log
           grep -q 'PASS primary rollback bot keeps administrative /resultados behavior' /tmp/route-clarity.log
           grep -q 'RESULT: PASS' /tmp/route-clarity.log
