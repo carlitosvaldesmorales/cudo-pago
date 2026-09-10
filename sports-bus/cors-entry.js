@@ -6,6 +6,7 @@ import { handleDirigentesLifecycleRequest } from './worker/dirigentes-lifecycle-
 import { handleSuspendedDirigenteGuard } from './worker/dirigentes-suspended-guard-entry.js';
 import { handlePublicResultRequest } from './worker/public-result-entry.js';
 import { handleResultGovernanceRequest } from './worker/result-governance-entry.js';
+import { syncTelegramNativeMenu, handleTelegramNativeMenuCommand, PUBLIC_NATIVE_COMMANDS } from './worker/telegram-native-menu-entry.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://cudo.cl',
@@ -46,29 +47,42 @@ async function telegramRuntimeHealth(env) {
       webhook_secret_configured:secretConfigured,
       bot_api_ok:false,
       webhook_configured:false,
+      native_menu_configured:false,
+      default_commands_configured:false,
       error:'telegram_bot_token_missing'
     }),{status:503,headers:{'content-type':'application/json; charset=utf-8'}});
   }
   try {
-    const [meRes, whRes] = await Promise.all([
+    const [meRes, whRes, menuRes, commandsRes] = await Promise.all([
       fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getMe`),
-      fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getWebhookInfo`)
+      fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getWebhookInfo`),
+      fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getChatMenuButton`),
+      fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/getMyCommands`)
     ]);
     const me = await meRes.json();
     const wh = await whRes.json();
+    const menu = await menuRes.json();
+    const commands = await commandsRes.json();
     const info = wh?.result || {};
     const webhookUrl = String(info.url || '');
+    const commandNames = Array.isArray(commands?.result) ? commands.result.map(x=>x.command) : [];
+    const defaultCommandsOk = PUBLIC_NATIVE_COMMANDS.every(x=>commandNames.includes(x.command));
+    const nativeMenuOk = !!menu?.ok && menu?.result?.type === 'commands';
+    const ok = !!me?.ok && !!wh?.ok && secretConfigured && webhookUrl.endsWith('/webhook/telegram') && nativeMenuOk && defaultCommandsOk;
     return new Response(JSON.stringify({
-      ok:!!me?.ok && !!wh?.ok && secretConfigured && webhookUrl.endsWith('/webhook/telegram'),
+      ok,
       bot_token_configured:true,
       webhook_secret_configured:secretConfigured,
       bot_api_ok:!!me?.ok,
       bot_username:me?.result?.username || null,
       webhook_configured:!!wh?.ok && webhookUrl.endsWith('/webhook/telegram'),
+      native_menu_configured:nativeMenuOk,
+      default_commands_configured:defaultCommandsOk,
+      default_commands:commandNames,
       pending_update_count:Number(info.pending_update_count || 0),
       last_error_date:info.last_error_date || null,
       last_error_message:info.last_error_message || null
-    }),{status:200,headers:{'content-type':'application/json; charset=utf-8'}});
+    }),{status:ok?200:503,headers:{'content-type':'application/json; charset=utf-8'}});
   } catch (error) {
     return new Response(JSON.stringify({
       ok:false,
@@ -76,6 +90,8 @@ async function telegramRuntimeHealth(env) {
       webhook_secret_configured:secretConfigured,
       bot_api_ok:false,
       webhook_configured:false,
+      native_menu_configured:false,
+      default_commands_configured:false,
       error:'telegram_health_check_failed'
     }),{status:503,headers:{'content-type':'application/json; charset=utf-8'}});
   }
@@ -90,19 +106,28 @@ async function reconcileTelegramWebhook(request, env) {
   }
   const safeSecret = await deriveTelegramSafeSecret(env.TELEGRAM_WEBHOOK_SECRET);
   const origin = new URL(request.url).origin;
-  const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/setWebhook`,{
-    method:'POST',
-    headers:{'content-type':'application/json'},
-    body:JSON.stringify({
+  const call = (method,body)=>fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`,{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)
+  }).then(r=>r.json());
+  const [webhook,menu,commands] = await Promise.all([
+    call('setWebhook',{
       url:`${origin}/webhook/telegram`,
       secret_token:safeSecret,
       allowed_updates:['message','callback_query'],
       drop_pending_updates:false
-    })
-  });
-  const data = await response.json();
-  return new Response(JSON.stringify({ok:!!data?.ok,description:data?.description||null}),{
-    status:data?.ok?200:502,
+    }),
+    call('setChatMenuButton',{menu_button:{type:'commands'}}),
+    call('setMyCommands',{commands:PUBLIC_NATIVE_COMMANDS})
+  ]);
+  const ok=!!webhook?.ok&&!!menu?.ok&&!!commands?.ok;
+  return new Response(JSON.stringify({
+    ok,
+    webhook:!!webhook?.ok,
+    native_menu:!!menu?.ok,
+    default_commands:!!commands?.ok,
+    description:webhook?.description||null
+  }),{
+    status:ok?200:502,
     headers:{'content-type':'application/json; charset=utf-8'}
   });
 }
@@ -140,14 +165,16 @@ export default {
     }
 
     const telegramRequest = await telegramHandlerRequest(request, env);
+    await syncTelegramNativeMenu(telegramRequest.clone(), env, ctx);
     const suspendedGuard = await handleSuspendedDirigenteGuard(telegramRequest.clone(), env, ctx);
-    const resultGovernance = suspendedGuard ? null : await handleResultGovernanceRequest(telegramRequest.clone(), env, ctx);
-    const publicResult = (suspendedGuard || resultGovernance) ? null : await handlePublicResultRequest(telegramRequest.clone(), env, ctx);
-    const dirigentesLifecycle = (suspendedGuard || resultGovernance || publicResult) ? null : await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
-    const portal = (suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle) ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
-    const clubAdminScore = (suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
-    const series = (suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
-    const response = suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
+    const nativeMenu = suspendedGuard ? null : await handleTelegramNativeMenuCommand(telegramRequest.clone(), env, ctx);
+    const resultGovernance = (suspendedGuard || nativeMenu) ? null : await handleResultGovernanceRequest(telegramRequest.clone(), env, ctx);
+    const publicResult = (suspendedGuard || nativeMenu || resultGovernance) ? null : await handlePublicResultRequest(telegramRequest.clone(), env, ctx);
+    const dirigentesLifecycle = (suspendedGuard || nativeMenu || resultGovernance || publicResult) ? null : await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
+    const portal = (suspendedGuard || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle) ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
+    const clubAdminScore = (suspendedGuard || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
+    const series = (suspendedGuard || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
+    const response = suspendedGuard || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
     const cors = corsHeaders(request);
