@@ -1,7 +1,7 @@
 # TELEGRAM-QA-HARNESS-01
 
 Fecha: 2026-09-09
-Estado: MATERIALIZADO EN BRANCH / PENDIENTE CI
+Estado: QA AUTOMATIZADO PASS / PENDIENTE E2E HUMANO
 
 ## Objetivo
 
@@ -32,6 +32,18 @@ El transporte Telegram se intercepta en memoria: `sendMessage` y `answerCallback
 15. Un revocado puede volver a solicitar acceso, pero no reutilizar privilegios antiguos.
 16. Las transiciones de lifecycle quedan en `permission_audit`.
 
+## Evidencia CI
+
+Workflow: `Validate Telegram QA Harness`
+
+- Run `34421037365`: detectó una aserción incorrecta del propio harness al revisar el primer mensaje del bloque; el Worker sí había guardado el resultado `VERIFIED`. No fue fallo de producto.
+- Corrección commit `1363aa965b24453c986e5db91dc97a3ae8706f31`.
+- Run `34421116232`: `SUCCESS` completo.
+- Resultado del harness: `RESULT: PASS`.
+- Alcance comprobado en fixture QA: 11 clubes y 5 partidos visibles para Unión Orilla.
+
+El workflow queda configurado para ejecutarse también en `feature/sports-event-bus-v1` y en PR hacia esa rama cuando cambie `sports-bus/**` o el propio QA. Por tanto pasa a ser un gate recurrente, no una prueba de una sola vez.
+
 ## Datos de QA
 
 El harness usa únicamente identidades sintéticas `9900001+` y una base SQLite en memoria. El marcador `2-1` utilizado durante la prueba existe sólo en esa base efímera; jamás toca D1 remoto.
@@ -48,14 +60,10 @@ Este harness no puede certificar:
 
 Esos puntos forman el gate humano residual.
 
-## Regla de uso desde este hito
+## Primer bloqueante real
 
-Cambios posteriores en Telegram/RBAC/lifecycle deben ejecutar este harness antes de solicitar una prueba humana. La prueba manual se reserva para aquello que no puede falsarse en CI: entrega real, render visual y operación con identidad autenticada.
+El siguiente paso exige un cliente Telegram autenticado y dos identidades ya existentes:
 
-## Primer bloqueante esperado
-
-Cuando el CI quede PASS e integrado, el primer bloqueante será un E2E real mínimo desde Telegram:
-
-`SUPER_ADMIN → Dirigentes → suspender CLUB_ADMIN real/controlado → cuenta suspendida intenta entrar → reactivar → cuenta recupera acceso`.
+`SUPER_ADMIN → Dirigentes → suspender CLUB_ADMIN controlado → cuenta suspendida intenta entrar/usar callback viejo → SUPER_ADMIN reactiva → cuenta recupera acceso`.
 
 Hasta esa evidencia, G1 queda `QA AUTOMATIZADO PASS / E2E HUMANO PENDIENTE`.
