@@ -89,12 +89,12 @@ function lastSend(slot){return slotCalls(slot,'sendMessage').at(-1)?.body;}
 function buttonData(message){return (message?.reply_markup?.inline_keyboard||[]).flat().map(x=>x.callback_data).filter(Boolean);}
 
 async function run(){
-  console.log('TELEGRAM-PUBLIC-RESULTS-UX-V2');
+  console.log('TELEGRAM-PUBLIC-RESULTS-UX-V2-COMPAT');
   applyMigrations();
   await seedDateTwo();
 
   reset();
-  let response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'tp:public-results');
+  let response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'px:home');
   assert.equal(response.status,200);
   let payload=await response.json();
   assert.equal(payload.handled,'public_results_ux_home');
@@ -107,7 +107,7 @@ async function run(){
   assert.ok(homeButtons.includes('px:clubs'));
   assert.ok(homeButtons.includes('px:series'));
   assert.equal(slotCalls('primary','sendMessage').length,0);
-  console.log('PASS destination bot replaces long dump with progressive results home');
+  console.log('PASS historical V2 home callback remains available on destination bot');
 
   reset();
   response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'px:latest');
@@ -118,7 +118,7 @@ async function run(){
   assert.match(sent.text,/FECHA II/);
   const latestButtons=(sent.reply_markup?.inline_keyboard||[]).flat();
   assert.ok(latestButtons.some(x=>/Unión Orilla vs San Juan/.test(x.text)&&/4\/4/.test(x.text)));
-  console.log('PASS latest round is summarized as match choices');
+  console.log('PASS historical V2 latest callback remains compatible');
 
   reset();
   response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'px:m:2:UNION-ORILLA');
@@ -130,7 +130,7 @@ async function run(){
   assert.match(sent.text,/Senior\s+0 — 0/);
   assert.match(sent.text,/1ª\s+3 — 0/);
   assert.match(sent.text,/Resultados verificados/);
-  console.log('PASS match detail shows four series in one compact card');
+  console.log('PASS historical V2 match callback remains compatible');
 
   reset();
   response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'px:c:UNION-ORILLA');
@@ -139,7 +139,7 @@ async function run(){
   const clubButtons=(sent.reply_markup?.inline_keyboard||[]).flat().map(x=>x.text);
   assert.ok(clubButtons.some(x=>/Fecha II · vs San Juan/.test(x)));
   assert.ok(clubButtons.some(x=>/Fecha I · vs Santa Elena La Ruda/.test(x)));
-  console.log('PASS club path exposes compact history navigation');
+  console.log('PASS historical V2 club callback remains compatible');
 
   reset();
   response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'px:s:PRIMERA');
@@ -148,7 +148,7 @@ async function run(){
   const seriesButtons=buttonData(sent);
   assert.ok(seriesButtons.includes('px:sd:PRIMERA:2'));
   assert.ok(seriesButtons.includes('px:sd:PRIMERA:1'));
-  console.log('PASS series path uses date drill-down');
+  console.log('PASS historical V2 series callback remains compatible');
 
   reset();
   response=await callback('/webhook/telegram-next',`${env.TELEGRAM_WEBHOOK_SECRET}:next`,'px:sd:PRIMERA:2');
@@ -156,7 +156,7 @@ async function run(){
   sent=lastSend('next');
   assert.match(sent.text,/PRIMERA · FECHA II/);
   assert.match(sent.text,/Unión Orilla 3 — 0 San Juan/);
-  console.log('PASS series/date detail remains scan-friendly');
+  console.log('PASS historical V2 series/date callback remains compatible');
 
   reset();
   response=await callback('/webhook/telegram',env.TELEGRAM_WEBHOOK_SECRET,'tp:public-results');
@@ -177,10 +177,9 @@ async function run(){
   }),env,{});
   assert.equal(response.status,401);
   assert.equal(calls.length,0);
-  console.log('PASS public UX rejects invalid webhook secret before Telegram or D1 side effects');
+  console.log('PASS historical V2 callbacks reject invalid webhook secret before side effects');
 
   console.log('RESULT: PASS');
-  console.log('Human-only residual gate: visually validate progressive public results on @FutbolChepicaBot iOS.');
 }
 
 try{await run();}
