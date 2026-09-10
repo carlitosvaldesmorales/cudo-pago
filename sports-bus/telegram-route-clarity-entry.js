@@ -1,6 +1,7 @@
 import worker from './telegram-migration-entry.js';
 import { handlePublicResultsTableView } from './worker/public-results-table-view.js';
 import { handleResultGovernanceUxRequest } from './worker/result-governance-ux-entry.js';
+import { handleResultCorrectionFlow } from './worker/result-correction-flow-entry.js';
 
 const NEXT_WEBHOOK_PATH = '/webhook/telegram-next';
 const PRIMARY_WEBHOOK_PATH = '/webhook/telegram';
@@ -92,6 +93,11 @@ export default {
   async fetch(request, env, ctx) {
     const legacyBlocked = await blockLegacyMatchResultCommand(request, env);
     if (legacyBlocked) return legacyBlocked;
+
+    // Correction is a governed mutation flow. Handle it before the read-only
+    // governance UX and before the legacy core so retries cannot duplicate prompts.
+    const correctionFlow = await handleResultCorrectionFlow(request.clone(), env);
+    if (correctionFlow) return correctionFlow;
 
     const governanceUx = await handleResultGovernanceUxRequest(request.clone(), env);
     if (governanceUx) return governanceUx;
