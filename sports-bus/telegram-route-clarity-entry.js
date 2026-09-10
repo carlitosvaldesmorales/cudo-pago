@@ -12,6 +12,42 @@ async function deriveTelegramSafeSecret(source) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function releaseCorrectionSessionForCommand(request, env) {
+  const url = new URL(request.url);
+  if (![PRIMARY_WEBHOOK_PATH, NEXT_WEBHOOK_PATH].includes(url.pathname) || request.method !== 'POST' || !env.DB) return false;
+
+  let update;
+  try {
+    update = await request.clone().json();
+  } catch {
+    return false;
+  }
+
+  const message = update?.message;
+  const text = String(message?.text || '').trim();
+  if (!message?.from?.id || !/^\/[A-Za-z0-9_]+(?:@\w+)?(?:\s|$)/.test(text)) return false;
+
+  const rootSecret = env.TELEGRAM_WEBHOOK_SECRET;
+  if (!rootSecret) return false;
+  const secretSource = url.pathname === NEXT_WEBHOOK_PATH ? `${rootSecret}:next` : rootSecret;
+  const expected = await deriveTelegramSafeSecret(secretSource);
+  const supplied = request.headers.get('x-telegram-bot-api-secret-token');
+  if (supplied !== expected) return false;
+
+  // A Telegram command is an explicit navigation intent. It must never be
+  // consumed as the score/reason text of a pending correction. Releasing the
+  // session here lets the normal command router continue with the same update.
+  try {
+    await env.DB.prepare('DELETE FROM telegram_result_governance_sessions WHERE telegram_user_id=?')
+      .bind(String(message.from.id)).run();
+    return true;
+  } catch {
+    // Do not block unrelated Telegram commands if the session store is
+    // temporarily unavailable; downstream handlers keep their normal behavior.
+    return false;
+  }
+}
+
 async function blockLegacyMatchResultCommand(request, env) {
   const url = new URL(request.url);
   if (![PRIMARY_WEBHOOK_PATH, NEXT_WEBHOOK_PATH].includes(url.pathname) || request.method !== 'POST') return null;
@@ -91,6 +127,10 @@ async function normalizeDestinationResultsCommand(request) {
 
 export default {
   async fetch(request, env, ctx) {
+    // Commands are navigation. Never let a stale correction session trap a
+    // user by interpreting /correcciones, /start, /menu, etc. as free text.
+    await releaseCorrectionSessionForCommand(request, env);
+
     const legacyBlocked = await blockLegacyMatchResultCommand(request, env);
     if (legacyBlocked) return legacyBlocked;
 
