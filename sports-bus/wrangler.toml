@@ -1,5 +1,5 @@
 name = "cudo-sports-event-bus"
-main = "telegram-migration-entry.js"
+main = "telegram-route-clarity-entry.js"
 compatibility_date = "2026-09-08"
 
 [observability]
