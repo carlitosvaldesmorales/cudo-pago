@@ -6,6 +6,7 @@ on:
       - feature/telegram-native-menu-01
       - feature/telegram-brand-name-01
       - feature/telegram-bot-migration-01
+      - feature/telegram-public-ux-v2
       - feature/sports-event-bus-v1
     paths:
       - 'qa/telegram/**'
@@ -14,6 +15,7 @@ on:
       - 'ops/TELEGRAM-QA-HARNESS-01.md'
       - 'ops/TELEGRAM-NATIVE-MENU-01.md'
       - 'ops/TELEGRAM-BOT-MIGRATION-01.md'
+      - 'ops/TELEGRAM-PUBLIC-RESULTS-UX-V2.md'
   pull_request:
     branches:
       - feature/sports-event-bus-v1
@@ -24,6 +26,7 @@ on:
       - 'ops/TELEGRAM-QA-HARNESS-01.md'
       - 'ops/TELEGRAM-NATIVE-MENU-01.md'
       - 'ops/TELEGRAM-BOT-MIGRATION-01.md'
+      - 'ops/TELEGRAM-PUBLIC-RESULTS-UX-V2.md'
   workflow_dispatch:
 permissions:
   contents: read
@@ -42,8 +45,10 @@ jobs:
           node --check qa/telegram/telegram-harness.mjs
           node --check qa/telegram/telegram-native-menu-harness.mjs
           node --check qa/telegram/telegram-bot-migration-harness.mjs
+          node --check qa/telegram/public-results-ux-v2-harness.mjs
           node --check sports-bus/cors-entry.js
           node --check sports-bus/telegram-migration-entry.js
+          node --check sports-bus/worker/public-results-ux-v2.js
           node --check sports-bus/worker/telegram-native-menu-entry.js
           node --check sports-bus/worker/portal-entry.js
           node --check sports-bus/worker/dirigentes-lifecycle-entry.js
@@ -87,6 +92,19 @@ jobs:
           grep -q 'PASS primary bot remains untouched during blue green migration' /tmp/telegram-migration-qa.log
           grep -q 'PASS migration slot stays safely dormant without next token' /tmp/telegram-migration-qa.log
           grep -q 'RESULT: PASS' /tmp/telegram-migration-qa.log
+      - name: Run destination public-results UX QA
+        run: |
+          set -euo pipefail
+          node qa/telegram/public-results-ux-v2-harness.mjs | tee /tmp/telegram-public-ux.log
+          grep -q 'PASS destination bot replaces long dump with progressive results home' /tmp/telegram-public-ux.log
+          grep -q 'PASS latest round is summarized as match choices' /tmp/telegram-public-ux.log
+          grep -q 'PASS match detail shows four series in one compact card' /tmp/telegram-public-ux.log
+          grep -q 'PASS club path exposes compact history navigation' /tmp/telegram-public-ux.log
+          grep -q 'PASS series path uses date drill-down' /tmp/telegram-public-ux.log
+          grep -q 'PASS series/date detail remains scan-friendly' /tmp/telegram-public-ux.log
+          grep -q 'PASS primary rollback bot keeps legacy public-results presentation' /tmp/telegram-public-ux.log
+          grep -q 'PASS public UX rejects invalid webhook secret before Telegram or D1 side effects' /tmp/telegram-public-ux.log
+          grep -q 'RESULT: PASS' /tmp/telegram-public-ux.log
       - name: Prove QA cannot call arbitrary network hosts
         run: |
           set -euo pipefail
@@ -96,3 +114,4 @@ jobs:
           grep -q "api.telegram.org/botqa-menu-token" qa/telegram/telegram-native-menu-harness.mjs
           grep -q 'QA migration harness blocked unexpected network call' qa/telegram/telegram-bot-migration-harness.mjs
           grep -q "api.telegram.org/botqa-new-token" qa/telegram/telegram-bot-migration-harness.mjs
+          grep -q 'QA public UX harness blocked unexpected network call' qa/telegram/public-results-ux-v2-harness.mjs
