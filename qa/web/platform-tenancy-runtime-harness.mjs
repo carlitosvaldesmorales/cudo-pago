@@ -4,7 +4,7 @@ const BASE = process.env.CUDO_SPORTS_BASE || 'https://cudo-sports-event-bus.carl
 
 async function get(pathname, { origin } = {}) {
   let lastError;
-  for (let attempt = 1; attempt <= 12; attempt += 1) {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
     try {
       const headers = origin ? { Origin: origin } : {};
       const response = await fetch(`${BASE}${pathname}`, { headers });
@@ -29,6 +29,10 @@ assert.equal(platform.body.summary.clubs, 11);
 assert.equal(platform.body.summary.competitions, 1);
 assert.ok(platform.body.competitions.some(c => c.competition_id === 'ANFA-CHEPICA-2026'));
 assert.equal(platform.response.headers.get('access-control-allow-origin'), 'https://cudo.cl');
+assert.deepEqual(platform.body.platform.domain_bindings, [
+  { hostname: 'futbolchepica.cl', verification_status: 'DECLARED', active: false },
+  { hostname: 'www.futbolchepica.cl', verification_status: 'DECLARED', active: false }
+]);
 
 const clubs = await get('/api/v1/clubs');
 assert.equal(clubs.body.contract, 'platform-clubs-v1');
@@ -86,5 +90,6 @@ console.log('PASS 11 tenants are visible and CUDO maps to UNION-ORILLA');
 console.log('PASS CUDO and Santa Elena receive distinct club-scoped projections');
 console.log('PASS non-official series do not leak scores through tenant projection');
 console.log('PASS cudo.cl remains declared but inactive/unverified');
+console.log('PASS futbolchepica.cl is persisted as declared PLATFORM hostname and remains inactive/unverified');
 console.log('PASS Worker service context resolves to PLATFORM');
 console.log('RESULT: PASS');

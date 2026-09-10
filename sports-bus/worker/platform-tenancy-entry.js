@@ -131,6 +131,20 @@ async function declaredHostnames(db, tenantId) {
   }));
 }
 
+async function platformDomainBindings(db) {
+  const result = await db.prepare(`
+    SELECT hostname,verification_status,active
+    FROM web_host_bindings
+    WHERE platform_id=? AND scope='PLATFORM' AND tenant_id IS NULL
+    ORDER BY hostname
+  `).bind(PLATFORM_ID).all();
+  return (result.results || []).map(row => ({
+    hostname: row.hostname,
+    verification_status: row.verification_status,
+    active: Number(row.active) === 1
+  }));
+}
+
 async function publicCompetitionProjection(env) {
   const response = await handlePublicChampionshipRequest(
     new Request('https://internal.invalid/api/v1/public-championship'),
@@ -158,14 +172,15 @@ function tenantDto(row, hostnames = []) {
 async function platformResponse(env) {
   const platform = await getPlatform(env.DB);
   if (!platform) return { status: 404, body: { ok: false, error: 'platform_not_found' } };
-  const [clubs, competitionsResult] = await Promise.all([
+  const [clubs, competitionsResult, domainBindings] = await Promise.all([
     listTenants(env.DB),
     env.DB.prepare(`
       SELECT competition_id,name,season_id,phase
       FROM competitions
       WHERE platform_id=? AND active=1
       ORDER BY season_id DESC,competition_id
-    `).bind(PLATFORM_ID).all()
+    `).bind(PLATFORM_ID).all(),
+    platformDomainBindings(env.DB)
   ]);
   return {
     status: 200,
@@ -175,7 +190,8 @@ async function platformResponse(env) {
       platform: {
         platform_id: platform.platform_id,
         name: platform.canonical_name,
-        slug: platform.slug
+        slug: platform.slug,
+        domain_bindings: domainBindings
       },
       competitions: competitionsResult.results || [],
       clubs,

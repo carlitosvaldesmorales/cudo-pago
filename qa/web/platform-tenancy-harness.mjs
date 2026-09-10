@@ -48,6 +48,12 @@ try{
   assert.equal(cudoBinding?.verification_status,'DECLARED');
   assert.equal(Number(cudoBinding?.active),0,'declared domain must not be treated as DNS-verified');
 
+  const platformBinding=await db.prepare("SELECT scope,tenant_id,verification_status,active FROM web_host_bindings WHERE hostname='futbolchepica.cl'").first();
+  assert.equal(platformBinding?.scope,'PLATFORM');
+  assert.equal(platformBinding?.tenant_id,null);
+  assert.equal(platformBinding?.verification_status,'DECLARED');
+  assert.equal(Number(platformBinding?.active),0,'registered platform domain must remain inactive before DNS verification');
+
   const platform=await get('https://qa.invalid/api/v1/platform','https://cudo.cl');
   assert.equal(platform.response.status,200);
   assert.equal(platform.response.headers.get('access-control-allow-origin'),'https://cudo.cl');
@@ -58,6 +64,10 @@ try{
   assert.equal(platform.body.summary.competitions,1);
   assert.equal(platform.body.competitions[0].competition_id,'ANFA-CHEPICA-2026');
   assert.ok(platform.body.clubs.some(x=>x.tenant_id==='CUDO'&&x.club_id==='UNION-ORILLA'));
+  assert.deepEqual(platform.body.platform.domain_bindings,[
+    {hostname:'futbolchepica.cl',verification_status:'DECLARED',active:false},
+    {hostname:'www.futbolchepica.cl',verification_status:'DECLARED',active:false}
+  ]);
 
   const clubs=await get('https://qa.invalid/api/v1/clubs');
   assert.equal(clubs.body.contract,'platform-clubs-v1');
@@ -123,15 +133,12 @@ try{
   assert.equal(verifiedCudoContext.body.tenant.tenant_id,'CUDO');
   assert.equal(verifiedCudoContext.body.tenant.club_id,'UNION-ORILLA');
 
-  await db.prepare(`
-    INSERT INTO web_host_bindings(hostname,platform_id,tenant_id,scope,verification_status,active,created_at,updated_at)
-    VALUES ('futbolchepica.qa','FUTBOL-CHEPICA',NULL,'PLATFORM','VERIFIED',1,datetime('now'),datetime('now'))
-  `).run();
-  const platformHost=await get('https://futbolchepica.qa/api/v1/site-context','https://futbolchepica.qa');
+  await db.prepare("UPDATE web_host_bindings SET verification_status='VERIFIED',active=1 WHERE hostname='futbolchepica.cl'").run();
+  const platformHost=await get('https://futbolchepica.cl/api/v1/site-context','https://futbolchepica.cl');
   assert.equal(platformHost.body.context,'PLATFORM');
   assert.equal(platformHost.body.resolution,'VERIFIED_HOST');
   assert.equal(platformHost.body.platform.platform_id,'FUTBOL-CHEPICA');
-  assert.equal(platformHost.response.headers.get('access-control-allow-origin'),'https://futbolchepica.qa','verified host must become an allowed public web origin without code change');
+  assert.equal(platformHost.response.headers.get('access-control-allow-origin'),'https://futbolchepica.cl','verified host must become an allowed public web origin without code change');
 
   const badOrigin=await get('https://qa.invalid/api/v1/platform','https://unbound.example');
   assert.equal(badOrigin.response.headers.get('access-control-allow-origin'),null,'unbound origin must not receive CORS permission');
@@ -140,6 +147,7 @@ try{
   console.log('PASS 11 championship clubs materialize as unique logical tenants');
   console.log('PASS CUDO tenant maps to UNION-ORILLA without duplicating sporting identity');
   console.log('PASS tenant match projections are club-scoped and preserve governed series privacy');
+  console.log('PASS futbolchepica.cl is declared as PLATFORM but inactive until DNS verification');
   console.log('PASS declared domains remain inactive until external verification');
   console.log('PASS verified host binding resolves PLATFORM or TENANT context without code forks');
   console.log('PASS unbound hosts/origins are not trusted');

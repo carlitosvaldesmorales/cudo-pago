@@ -1,19 +1,15 @@
 name: Validate Fútbol Chépica Platform Runtime
 
 on:
-  pull_request:
-    branches:
-      - feature/sports-event-bus-v1
-    paths:
-      - 'qa/web/platform-tenancy-runtime-harness.mjs'
-      - '.github/workflows/validate-platform-tenancy-runtime.yml'
   push:
     branches:
       - feature/sports-event-bus-v1
-      - qa/futbol-chepica-platform-runtime-01
     paths:
       - 'qa/web/platform-tenancy-runtime-harness.mjs'
       - '.github/workflows/validate-platform-tenancy-runtime.yml'
+      - 'sports-bus/migrations/0015_futbol_chepica_domain_declared.sql'
+      - 'sports-bus/worker/platform-tenancy-entry.js'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,5 +31,6 @@ jobs:
           grep -q 'PASS CUDO and Santa Elena receive distinct club-scoped projections' /tmp/platform-runtime.log
           grep -q 'PASS non-official series do not leak scores through tenant projection' /tmp/platform-runtime.log
           grep -q 'PASS cudo.cl remains declared but inactive/unverified' /tmp/platform-runtime.log
+          grep -q 'PASS futbolchepica.cl is persisted as declared PLATFORM hostname and remains inactive/unverified' /tmp/platform-runtime.log
           grep -q 'PASS Worker service context resolves to PLATFORM' /tmp/platform-runtime.log
           grep -q 'RESULT: PASS' /tmp/platform-runtime.log

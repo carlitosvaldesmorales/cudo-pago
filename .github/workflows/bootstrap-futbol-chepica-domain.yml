@@ -1,0 +1,109 @@
+name: Bootstrap Fútbol Chépica Domain
+
+on:
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - '.github/workflows/bootstrap-futbol-chepica-domain.yml'
+      - 'sports-bus/migrations/0015_futbol_chepica_domain_declared.sql'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-zone:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DOMAIN: futbolchepica.cl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Discover or create Cloudflare zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+          API='https://api.cloudflare.com/client/v4'
+          curl -fsS -G "$API/zones" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data-urlencode "name=$DOMAIN" \
+            --data-urlencode "account.id=$CLOUDFLARE_ACCOUNT_ID" \
+            > /tmp/zone-list.json
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('/tmp/zone-list.json','utf8'));
+          if(!x.success){
+            console.error('BLOCKED CLOUDFLARE_ZONE_LIST',JSON.stringify(x.errors||[]));
+            process.exit(2);
+          }
+          NODE
+
+          ZONE_ID="$(node -e "const x=require('/tmp/zone-list.json');const z=(x.result||[]).find(v=>v.name===process.env.DOMAIN);process.stdout.write(z?.id||'')")"
+
+          if [ -z "$ZONE_ID" ]; then
+            node - <<'NODE' >/tmp/create-body.json
+          process.stdout.write(JSON.stringify({
+            name: process.env.DOMAIN,
+            account: { id: process.env.CLOUDFLARE_ACCOUNT_ID },
+            type: 'full'
+          }));
+          NODE
+
+            HTTP="$(curl -sS -o /tmp/zone-create.json -w '%{http_code}' \
+              -X POST "$API/zones" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/create-body.json)"
+
+            if [ "$HTTP" -lt 200 ] || [ "$HTTP" -ge 300 ]; then
+              node - <<'NODE'
+          const fs=require('fs');
+          let x={};try{x=JSON.parse(fs.readFileSync('/tmp/zone-create.json','utf8'))}catch{}
+          console.error('BLOCKED CLOUDFLARE_ZONE_CREATE',JSON.stringify(x.errors||[]));
+          NODE
+              exit 2
+            fi
+
+            node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('/tmp/zone-create.json','utf8'));
+          if(!x.success||!x.result?.id){
+            console.error('BLOCKED CLOUDFLARE_ZONE_CREATE',JSON.stringify(x.errors||[]));
+            process.exit(2);
+          }
+          NODE
+            cp /tmp/zone-create.json /tmp/zone.json
+          else
+            curl -fsS "$API/zones/$ZONE_ID" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H 'Content-Type: application/json' \
+              > /tmp/zone.json
+          fi
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const x=JSON.parse(fs.readFileSync('/tmp/zone.json','utf8'));
+          const z=x.result;
+          if(!x.success||!z?.id){
+            console.error('BLOCKED CLOUDFLARE_ZONE_READ',JSON.stringify(x.errors||[]));
+            process.exit(2);
+          }
+          console.log('DOMAIN_BOOTSTRAP: READY');
+          console.log(`DOMAIN: ${z.name}`);
+          console.log(`ZONE_ID: ${z.id}`);
+          console.log(`ZONE_STATUS: ${z.status}`);
+          const ns=Array.isArray(z.name_servers)?z.name_servers:[];
+          ns.forEach((value,index)=>console.log(`NAMESERVER_${index+1}: ${value}`));
+          if(!ns.length){
+            console.error('BLOCKED CLOUDFLARE_NAMESERVERS_MISSING');
+            process.exit(2);
+          }
+          if(z.status!=='active') console.log('NEXT_HUMAN_GATE: delegate NIC Chile nameservers to the values above');
+          NODE
