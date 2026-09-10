@@ -58,13 +58,13 @@ if (technicalRequired.some(x => !x)) {
 }
 
 const catalog = {
-  'V2-HUMAN': 'V2 fue rechazada en iOS: el usuario reportó mayor carga cognitiva y quedaron paneles anteriores visibles.',
-  'V3-MESSAGE-MODE': 'Todas las vistas V3 usan render(); render intenta editMessageText primero; no hay sendMessage directo en las vistas; sendMessage existe sólo como fallback de error.',
-  'V3-ENTRY': 'Al tocar Resultados verificados, V3 consulta latestRound y muestra directamente esa fecha; no presenta antes un selector fecha/club/serie.',
+  'V2-HUMAN': 'V2 fue rechazada en iOS: el usuario reportó mayor carga cognitiva y observó que cada navegación añadía otro panel al chat.',
+  'V3-MESSAGE-MODE': 'En el camino normal de V3 ninguna vista llama sendMessage directamente: todas llaman render(), que intenta editMessageText sobre el message_id existente. sendMessage sólo existe como recuperación excepcional si Telegram rechaza la edición.',
+  'V3-ENTRY': 'Al tocar Resultados verificados, V3 consulta latestRound y reemplaza el panel actual directamente por esa fecha; no muestra antes un selector fecha/club/serie.',
   'V3-SEARCH': 'Fecha, club y serie están detrás de una sola acción secundaria Otros resultados.',
   'V3-COUNT-NOISE': 'Un partido con 4 series completas no muestra 4/4; sólo aparece advertencia cuando el total verificado es distinto de 4.',
-  'V3-COMPAT': 'El router ejecuta V3 primero y conserva V2 para callbacks px:* históricos; el bot primario no cambia.',
-  'V3-HUMAN-GAP': 'Todavía no existe aceptación humana de V3 en iOS; ningún agente puede declararla.'
+  'V3-COMPAT': 'El router ejecuta V3 primero y conserva V2 sólo para callbacks px:* históricos; el bot primario no cambia.',
+  'V3-HUMAN-GAP': 'Todavía no existe aceptación humana de V3 en iOS. Esto impide certificar la experiencia final, pero no altera los hechos estructurales del código.'
 };
 
 const allowed = {
@@ -102,6 +102,15 @@ function assertGrounded(report, agent) {
     const okRefs = new Set(allowed[item.problem_code]);
     if (!item.evidence_refs.every(ref => okRefs.has(ref))) throw new Error(`${agent}: unrelated evidence for ${item.problem_code}`);
     if (/human (?:pass|accepted)|usuario (?:aceptó|aprobó)|e2e.*pass/i.test(item.reason)) throw new Error(`${agent}: invented V3 human acceptance`);
+    if (item.problem_code === 'MESSAGE_ACCUMULATION') {
+      if (/still (?:adds?|creates?|sends?) (?:new |multiple )?(?:messages?|panels?)/i.test(item.reason) || /no (?:clear )?mechanism to prevent/i.test(item.reason)) {
+        throw new Error(`${agent}: contradicted verified V3 edit-in-place mechanism`);
+      }
+      if (item.resolution === 'NOT_ADDRESSED') throw new Error(`${agent}: NOT_ADDRESSED contradicts the verified causal fix for message accumulation`);
+    }
+    if (item.problem_code === 'PRIMARY_PATH_COMPLEXITY' && item.resolution === 'NOT_ADDRESSED') {
+      throw new Error(`${agent}: NOT_ADDRESSED contradicts verified direct-latest and secondary-search structure`);
+    }
   }
   if (seen.size !== 2 || !report.human_gate_required) throw new Error(`${agent}: human residual gate must remain explicit`);
 }
@@ -118,16 +127,24 @@ Assess exactly two problem codes. Cite only allowed evidence:
 MESSAGE_ACCUMULATION -> ${allowed.MESSAGE_ACCUMULATION.join(', ')}
 PRIMARY_PATH_COMPLEXITY -> ${allowed.PRIMARY_PATH_COMPLEXITY.join(', ')}
 
+RESOLUTION RUBRIC — evaluate the causal mechanism, not final human acceptance:
+- ADDRESSED: the demonstrated V2 cause is structurally removed in the normal V3 path.
+- PARTIAL: the cause is materially reduced but a relevant structural source remains.
+- NOT_ADDRESSED: the demonstrated V2 cause remains substantially unchanged.
+- Human iOS confirmation is a separate final gate. Its absence MUST NOT by itself downgrade a verified structural fix to NOT_ADDRESSED.
+- For MESSAGE_ACCUMULATION, editing the same message_id on the normal path means V3 no longer creates a new panel at every step. Historical chat messages may remain visible, but that is not new accumulation caused by V3.
+- For PRIMARY_PATH_COMPLEXITY, compare V2's up-front selector with V3's direct latest-round entry and secondary search hub.
+
 Rules:
 - Do not invent screens, labels, user behavior, colors, gestures or test outcomes.
 - V3 human iOS acceptance is explicitly pending. human_gate_required MUST be true.
 - Judge whether the candidate addresses the demonstrated V2 problem, not whether the entire product is perfect.
-- PARTIAL is appropriate when the structural change addresses the mechanism but residual human confirmation remains.
+- Do not claim that editMessageText sends another message or that V3 lacks a mechanism to avoid a new panel on the normal path; that would contradict V3-MESSAGE-MODE.
 `;
 
 const agents = [
   { name: 'Sage', persona: 'istara-ux-eval', model: 'qwen2.5:1.5b', focus: 'Cognitive walkthrough, information architecture, decision burden and progressive disclosure.' },
-  { name: 'Pixel', persona: 'istara-ui-audit', model: 'granite3.1-dense:2b', focus: 'Interaction heuristics, clutter, user control, hierarchy and unnecessary actions.' }
+  { name: 'Pixel', persona: 'istara-ui-audit', model: 'granite3.3:2b', focus: 'Interaction heuristics, clutter, user control, hierarchy and unnecessary actions.' }
 ];
 
 function callOllama(payload, name) {
