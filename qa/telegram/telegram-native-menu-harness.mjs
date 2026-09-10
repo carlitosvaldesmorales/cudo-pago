@@ -9,6 +9,7 @@ import { PUBLIC_NATIVE_COMMANDS } from '../../sports-bus/worker/telegram-native-
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const repoRoot=path.resolve(__dirname,'../..');
 const migrationsDir=path.join(repoRoot,'sports-bus','migrations');
+const TARGET_BOT_NAME='Fútbol Chépica';
 
 const QA={
   USER:{id:9911001,first_name:'QA',last_name:'Usuario',username:'qa_public'},
@@ -27,7 +28,8 @@ globalThis.fetch=async(url,init={})=>{
   const body=init?.body?JSON.parse(String(init.body)):{};
   calls.push({method,body});
   let result=true;
-  if(method==='getMe') result={id:123456,is_bot:true,first_name:'QA',username:'qa_menu_bot'};
+  if(method==='getMe') result={id:123456,is_bot:true,first_name:TARGET_BOT_NAME,username:'qa_menu_bot'};
+  if(method==='getMyName') result={name:TARGET_BOT_NAME};
   if(method==='getWebhookInfo') result={url:'https://qa.invalid/webhook/telegram',pending_update_count:0};
   if(method==='getChatMenuButton') result={type:'commands'};
   if(method==='getMyCommands') result=PUBLIC_NATIVE_COMMANDS;
@@ -153,11 +155,14 @@ async function run(){
   assert.equal(reconcile.status,200);
   const reconcileJson=await reconcile.json();
   assert.equal(reconcileJson.ok,true);
+  assert.equal(reconcileJson.bot_name,true);
   assert.equal(apiCalls('setWebhook').length,1);
   assert.equal(apiCalls('setChatMenuButton').length,1);
   assert.equal(apiCalls('setMyCommands').length,1);
+  assert.equal(apiCalls('setMyName').length,1);
+  assert.equal(apiCalls('setMyName')[0].body.name,TARGET_BOT_NAME);
   assert.deepEqual(commandNames(apiCalls('setMyCommands')[0]),['inicio','publico','dirigentes']);
-  console.log('PASS deploy reconcile configures default native menu');
+  console.log('PASS deploy reconcile configures native menu and bot name');
 
   resetCalls();
   const health=await worker.fetch(new Request('https://qa.invalid/health/telegram'),env,{});
@@ -165,10 +170,12 @@ async function run(){
   const healthJson=await health.json();
   assert.equal(healthJson.native_menu_configured,true);
   assert.equal(healthJson.default_commands_configured,true);
-  console.log('PASS native menu runtime health contract');
+  assert.equal(healthJson.bot_name_configured,true);
+  assert.equal(healthJson.bot_name,TARGET_BOT_NAME);
+  console.log('PASS native menu and branding runtime health contract');
 
   console.log('RESULT: PASS');
-  console.log('Human-only residual gate: visual confirmation that Telegram iOS renders the Menu button and the role-specific command list.');
+  console.log('Human-only residual gate: visual confirmation that Telegram iOS renders the configured bot display name.');
 }
 
 try{await run();}
