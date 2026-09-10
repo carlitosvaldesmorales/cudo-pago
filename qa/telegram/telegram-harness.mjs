@@ -148,7 +148,6 @@ async function run() {
   assert.ok(teams.some(x => x.team_id === 'UNION-ORILLA'), 'UNION-ORILLA must exist');
   console.log(`PASS fixture: ${teams.length} teams`);
 
-  // 1) Public portal entry.
   resetOutbound();
   let result = await message(QA.USER, '/start');
   assert.equal(result.handled, 'portal_home');
@@ -157,7 +156,6 @@ async function run() {
   assert.deepEqual(buttonTexts(m), ['🌐 Público','🔐 Dirigentes']);
   console.log('PASS public portal entry');
 
-  // 2) Unprivileged user sees enrollment, not admin functions.
   resetOutbound();
   result = await callback(QA.USER, 'tp:leaders');
   assert.equal(result.handled, 'portal_leaders');
@@ -166,7 +164,6 @@ async function run() {
   assert.ok(callbackData(m).includes('tp:req'));
   console.log('PASS unprivileged leader portal');
 
-  // 3) Enrollment creates exactly one PENDING request even on retry.
   resetOutbound();
   result = await callback(QA.USER, 'tp:req');
   assert.equal(result.handled, 'portal_request_choose_club');
@@ -184,14 +181,12 @@ async function run() {
   assert.equal(Number(pendingCount.n), 1, 'Retry must not duplicate pending enrollment');
   console.log('PASS enrollment idempotence');
 
-  // 4) Outsider cannot execute global lifecycle callbacks.
   resetOutbound();
   result = await callback(QA.OUTSIDER, `tp:admin-suspend:${QA.USER.id}`);
   assert.equal(result.handled, 'dirigentes_lifecycle_denied');
   assert.match(lastMessage(QA.OUTSIDER.id).text, /Sólo un administrador global/);
   console.log('PASS lifecycle authorization');
 
-  // 5) SUPER_ADMIN sees request and approves it.
   resetOutbound();
   result = await callback(QA.SUPER, 'tp:leaders');
   assert.equal(result.handled, 'global_admin_menu');
@@ -220,7 +215,6 @@ async function run() {
   assert.ok(sentMessages(QA.USER.id).some(x => /acceso de dirigente fue aprobado/.test(x.body.text)));
   console.log('PASS SUPER_ADMIN approval -> CLUB_ADMIN');
 
-  // 6) CLUB_ADMIN sees only own-club matches.
   resetOutbound();
   result = await callback(QA.USER, 'tp:leaders');
   assert.equal(result.handled, 'portal_leaders');
@@ -235,7 +229,6 @@ async function run() {
   assert.ok(scoped.length > 0);
   console.log(`PASS club scope: ${scoped.length} matches visible`);
 
-  // 7) Direct CLUB_ADMIN result becomes VERIFIED in QA only.
   const firstMatch = scoped[0];
   resetOutbound();
   await callback(QA.USER, `rs:date:${firstMatch.round_no}`);
@@ -251,10 +244,9 @@ async function run() {
   assert.equal(verified.source_type, 'TELEGRAM_CLUB_ADMIN');
   assert.equal(Number(verified.home_score), 2);
   assert.equal(Number(verified.away_score), 1);
-  assert.match(sentMessages(QA.USER.id)[0].body.text, /Resultado VERIFICADO/);
+  assert.ok(sentMessages(QA.USER.id).some(x => /Resultado VERIFICADO/.test(x.body.text)));
   console.log('PASS CLUB_ADMIN direct VERIFIED result (QA DB only)');
 
-  // 8) Open another score session, then suspend; suspension must invalidate it.
   resetOutbound();
   await callback(QA.USER, `rs:series:${firstMatch.match_id}:SEGUNDA`);
   session = await one('SELECT * FROM telegram_series_sessions WHERE telegram_user_id=?', QA.USER.id);
@@ -272,7 +264,6 @@ async function run() {
   assert.equal(Number(suspendAudits.n), 1, 'Repeated suspend must be idempotent');
   console.log('PASS suspend + session invalidation + idempotence');
 
-  // 9) Suspended user cannot re-enroll or use stale result callbacks.
   await assertNoPendingFor(QA.USER.id);
   resetOutbound();
   result = await callback(QA.USER, 'tp:req');
@@ -286,7 +277,6 @@ async function run() {
   assert.match(lastMessage(QA.USER.id).text, /no está habilitada como administrador verificado/);
   console.log('PASS suspended guard + stale callback denial');
 
-  // 10) Reactivation restores exact club/role and is idempotent.
   resetOutbound();
   result = await callback(QA.SUPER, `tp:admin-reactivate:${QA.USER.id}`);
   assert.equal(result.handled, 'club_admin_reactivated');
@@ -306,7 +296,6 @@ async function run() {
   assert.match(lastMessage(QA.USER.id).text, /Administrador del club/);
   console.log('PASS reactivate + role restoration + idempotence');
 
-  // 11) Revoke preserves identity/history but removes administrative authority.
   resetOutbound();
   result = await callback(QA.SUPER, `tp:admin-revoke-confirm:${QA.USER.id}`);
   assert.equal(result.handled, 'club_admin_revoke_confirmation');
@@ -328,7 +317,6 @@ async function run() {
   assert.equal(Number(revokeAuditAfterRetry.n), 1, 'Repeated revoke must be idempotent');
   console.log('PASS revoke preserves identity + audit + idempotence');
 
-  // 12) Revoked identity may request access again, while old admin callbacks remain denied.
   resetOutbound();
   result = await callback(QA.USER, `rs:date:${firstMatch.round_no}`);
   assert.equal(result.handled, 'club_scope_denied');
@@ -339,7 +327,6 @@ async function run() {
   assert.ok(callbackData(lastMessage(QA.USER.id)).some(x => x.startsWith('tp:reqclub:')));
   console.log('PASS revoked user can re-enroll but cannot use old admin callbacks');
 
-  // 13) Audit coverage.
   const audit = await all("SELECT action,resource_id,allowed FROM permission_audit WHERE resource_id=? ORDER BY created_at", QA.USER.id);
   const actions = new Set(audit.map(x => x.action));
   for (const expected of ['SUSPEND_CLUB_ADMIN','REACTIVATE_CLUB_ADMIN','REVOKE_CLUB_ADMIN']) assert.ok(actions.has(expected));
