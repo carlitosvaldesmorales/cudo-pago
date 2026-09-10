@@ -1,7 +1,7 @@
 # PUBLIC-CHAMPIONSHIP-WEB-01
 
 Fecha: 2026-09-10
-Estado: **MATERIALIZADO + CI PASS / RUNTIME PENDIENTE DE MERGE-DEPLOY / UAT VISUAL DIFERIDA**
+Estado: **DESPLEGADO + CI PASS + RUNTIME PASS / UAT VISUAL DIFERIDA**
 
 ## Problema observado
 
@@ -66,7 +66,7 @@ Cada partido se presenta con las cuatro series. Sólo `OFFICIAL` muestra marcado
 
 Si la API no está disponible, `championship-fixture.json` sirve únicamente como snapshot del fixture: el fallback no reutiliza marcadores agregados ni inventa resultados por serie; todas las series quedan `PENDING` hasta recuperar el read model.
 
-## Evidencia automática
+## Evidencia automática de contrato
 
 `qa/web/public-championship-readmodel-harness.mjs` valida sobre D1 efímero con todas las migraciones:
 
@@ -80,8 +80,40 @@ Si la API no está disponible, `championship-fixture.json` sirve únicamente com
 
 Workflow: `Validate Public Championship Web`.
 
+## Evidencia de despliegue y runtime
+
+PR #36 fue integrado en `feature/sports-event-bus-v1` con merge SHA `8c3c4c13be10595170fee19f9763262ad8812b3b`.
+
+`Deploy Sports Event Bus` run `34521510639` (#71) terminó **SUCCESS** y desplegó Worker version `253e3bc2-8d86-4785-9fc0-77161f03c54b`.
+
+El gate remoto D1 del mismo deploy comprobó:
+
+- 25 partidos ANFA Chépica.
+- 5 libres.
+- 11 equipos.
+- 25 series `VERIFIED` distribuidas en 7 partidos con resultados.
+- 0 estados de gobierno inválidos.
+- 0 versiones inválidas.
+- 0 resultados sin su versión vigente.
+- 0 series fuera de Tercera/Segunda/Senior/Primera.
+
+El harness `qa/web/public-championship-runtime-harness.mjs`, ejecutado contra el Worker realmente desplegado por `Validate Public Championship Runtime` run `34521844017`, terminó **SUCCESS** y comprobó:
+
+- endpoint HTTPS `GET /api/v1/public-championship` operativo;
+- `contract = public-championship-v1`;
+- `competition_id = ANFA-CHEPICA-2026`;
+- 25 partidos / 5 libres;
+- resumen de series: `OFFICIAL=24`, `IN_REVIEW=0`, `ANNULLED=0`, `PENDING=76`;
+- fixture QA ausente;
+- campos internos de identidad/fuente ausentes;
+- CORS válido para `https://cudo.cl`.
+
+La diferencia entre 25 filas `VERIFIED` del gate D1 y 24 series públicas oficiales es intencionalmente observable: el fixture QA aislado posee una serie `VERIFIED`, pero la proyección pública la excluye por `competition_id`.
+
 ## Regla de evidencia
 
-- El PASS de CI valida el contrato y el renderer a nivel estático/determinista.
-- El endpoint sólo se considera **DESPLEGADO** después del merge a `feature/sports-event-bus-v1` y del deploy exitoso del Worker.
+- **MATERIALIZADO**: código y contrato existen en repositorio.
+- **VALIDADO**: CI determinista valida estados y privacidad.
+- **DESPLEGADO**: Worker productivo contiene el endpoint y D1 pasó gate remoto.
+- **RUNTIME PASS**: un runner externo consultó el endpoint productivo y validó su respuesta real.
 - La apariencia final en navegador/iPhone queda **DIFERIDA** mientras no haya disponibilidad del usuario para UAT visual; no bloquea el contrato de datos.
