@@ -6,13 +6,16 @@ on:
       - 'sports-bus/**'
       - 'qa/telegram/**'
       - '.github/workflows/validate-public-result-submission.yml'
+      - '.github/workflows/deploy-sports-bus.yml'
       - 'ops/PUBLIC-RESULT-SUBMISSION-01.md'
+      - 'ops/FUTBOL-CHEPICA-MULTICLUB-01.md'
   pull_request:
     branches: [feature/sports-event-bus-v1]
     paths:
       - 'sports-bus/**'
       - 'qa/telegram/**'
       - '.github/workflows/validate-public-result-submission.yml'
+      - '.github/workflows/deploy-sports-bus.yml'
 permissions:
   contents: read
 jobs:
@@ -52,9 +55,13 @@ jobs:
           set -euo pipefail
           node qa/telegram/telegram-harness.mjs | tee /tmp/g1.log
           grep -q 'RESULT: PASS' /tmp/g1.log
-      - name: Verify public API remains VERIFIED-only
+      - name: Verify public API and deploy gates
         run: |
           set -euo pipefail
           grep -q "WHERE r.validation_status='VERIFIED'" sports-bus/worker/series-entry.js
           grep -q "status:'SUBMITTED'" sports-bus/worker/public-result-entry.js
           grep -q "TELEGRAM_PUBLIC_APPROVED" sports-bus/worker/public-result-entry.js
+          grep -q "public_result_submissions_table" .github/workflows/deploy-sports-bus.yml
+          grep -q "public_result_sessions_table" .github/workflows/deploy-sports-bus.yml
+          grep -q "invalid_public_submission_status" .github/workflows/deploy-sports-bus.yml
+          grep -q 'rows.some(x=>x.validation_status!=="VERIFIED")' .github/workflows/deploy-sports-bus.yml
