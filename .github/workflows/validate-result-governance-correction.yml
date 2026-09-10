@@ -1,0 +1,53 @@
+name: Validate Result Governance Correction
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/result-correction-flow-entry.js'
+      - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'sports-bus/migrations/0012_result_governance_correction_flow.sql'
+      - 'qa/telegram/result-governance-correction-harness.mjs'
+      - '.github/workflows/validate-result-governance-correction.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/result-correction-flow-entry.js'
+      - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'sports-bus/migrations/0012_result_governance_correction_flow.sql'
+      - 'qa/telegram/result-governance-correction-harness.mjs'
+      - '.github/workflows/validate-result-governance-correction.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/result-correction-flow-entry.js
+          node --check sports-bus/worker/result-governance-ux-entry.js
+          node --check sports-bus/telegram-route-clarity-entry.js
+          node --check qa/telegram/result-governance-correction-harness.mjs
+      - name: Validate correction governance
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-governance-correction-harness.mjs | tee /tmp/result-governance-correction.log
+          grep -q 'PASS correction prompt edits one Telegram panel without technical version jargon' /tmp/result-governance-correction.log
+          grep -q 'PASS repeated correction callback does not duplicate the prompt' /tmp/result-governance-correction.log
+          grep -q 'PASS score and reason do not mutate before explicit confirmation' /tmp/result-governance-correction.log
+          grep -q 'PASS confirmed correction writes one immutable version with actor and human reason' /tmp/result-governance-correction.log
+          grep -q 'PASS repeated apply is idempotent' /tmp/result-governance-correction.log
+          grep -q 'PASS history exposes actor, event time and reason without technical status jargon' /tmp/result-governance-correction.log
+          grep -q 'RESULT: PASS' /tmp/result-governance-correction.log

@@ -19,6 +19,35 @@ function canSee(r,row){return isSuperAdmin(r)||(r?.role==='CLUB_ADMIN'&&r.club_i
 function statusIcon(status){return STATUS_ICON[status]||'•'}
 function statusLabel(status){return STATUS_LABEL[status]||status}
 
+function formatMoment(value){
+  if(!value) return 'Fecha no registrada';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return esc(value);
+  try{
+    const parts=new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d);
+    const get=t=>parts.find(p=>p.type===t)?.value||'';
+    return `${get('day')}-${get('month')}-${get('year')} · ${get('hour')}:${get('minute')}`;
+  }catch{return esc(value)}
+}
+
+function actorLabel(v,row){
+  const name=String(v.display_name||'').trim();
+  const username=String(v.username||'').trim();
+  if(name) return `${esc(name)}${username?` · @${esc(username)}`:''}`;
+  if(!v.actor_id) return v.action==='BASELINE'?'Actor no registrado en la versión inicial':'Actor no registrado';
+  let role=v.actor_role==='SUPER_ADMIN'?'Administrador global':v.actor_role==='CLUB_ADMIN'?'Dirigente':'Usuario';
+  if(v.actor_club_id===row.home_id) role+=` · ${row.home_name}`;
+  else if(v.actor_club_id===row.away_id) role+=` · ${row.away_name}`;
+  return `${esc(role)} · ID ${esc(v.actor_id)}`;
+}
+
+function visibleReason(v){
+  if(v.action!=='CORRECT') return '';
+  const reason=String(v.reason||'').trim();
+  if(!reason||reason==='super_admin_score_correction') return 'Motivo no registrado en esta corrección anterior';
+  return reason;
+}
+
 async function sendApi(token,method,body){
   const res=await fetch(`https://api.telegram.org/bot${token}/${method}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   return res;
@@ -131,10 +160,16 @@ async function showResult(env,token,chatId,callback,reporter,matchId,seriesCode)
 async function showHistory(env,token,chatId,callback,reporter,matchId,seriesCode){
   const row=await currentResult(env.DB,matchId,seriesCode);
   if(!row||!canSee(reporter,row)) return false;
-  const q=await env.DB.prepare(`SELECT version_no,home_score,away_score,validation_status,action,created_at
-    FROM match_series_result_versions WHERE match_id=? AND series_code=? ORDER BY version_no DESC LIMIT 12`).bind(matchId,seriesCode).all();
+  const q=await env.DB.prepare(`SELECT v.version_no,v.home_score,v.away_score,v.validation_status,v.action,v.reason,v.actor_id,v.actor_role,v.actor_club_id,v.created_at,
+      r.display_name,r.username
+    FROM match_series_result_versions v
+    LEFT JOIN reporters r ON r.telegram_user_id=v.actor_id
+    WHERE v.match_id=? AND v.series_code=? ORDER BY v.version_no DESC LIMIT 12`).bind(matchId,seriesCode).all();
   const versions=q.results||[];
-  const lines=versions.map((v,i)=>`${i===0?'🔹':'▫️'} ${v.home_score}–${v.away_score} · ${statusLabel(v.validation_status)}\n   ${ACTION_LABEL[v.action]||v.action}`);
+  const lines=versions.map((v,i)=>{
+    const reason=visibleReason(v);
+    return `${i===0?'🔹':'▫️'} ${v.home_score}–${v.away_score} · ${statusLabel(v.validation_status)}\n   ${ACTION_LABEL[v.action]||esc(v.action)}\n   👤 ${actorLabel(v,row)}\n   🕒 ${formatMoment(v.created_at)}${reason?`\n   📝 ${esc(reason)}`:''}`;
+  });
   await present(token,chatId,callback,`🕘 <b>HISTORIAL DEL RESULTADO</b>\n\n🏟️ ${esc(row.home_name)} — ${esc(row.away_name)}\n🏆 ${SERIES_LABEL[row.series_code]||esc(row.series_code)}\n\n${lines.join('\n\n')||'Sin movimientos registrados.'}`,{inline_keyboard:[[{text:'⬅️ Resultado',callback_data:`rg:r:${row.match_id}:${row.series_code}`}]]});
   return true;
 }
