@@ -1,0 +1,65 @@
+name: Validate Result Governance
+on:
+  push:
+    branches: [feature/result-governance-01]
+    paths:
+      - 'sports-bus/**'
+      - 'qa/telegram/**'
+      - '.github/workflows/validate-result-governance.yml'
+      - 'ops/RESULT-GOVERNANCE-01.md'
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/**'
+      - 'qa/telegram/**'
+      - '.github/workflows/validate-result-governance.yml'
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax check
+        run: |
+          set -euo pipefail
+          node --check sports-bus/cors-entry.js
+          node --check sports-bus/worker/result-governance-entry.js
+          node --check qa/telegram/result-governance-harness.mjs
+      - name: Apply all migrations cleanly
+        run: |
+          set -euo pipefail
+          DB=/tmp/g3-schema.db
+          rm -f "$DB"
+          for f in $(find sports-bus/migrations -maxdepth 1 -name '*.sql' | sort); do sqlite3 "$DB" < "$f"; done
+          sqlite3 "$DB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('match_series_result_versions','telegram_result_governance_sessions');" | grep -qx 2
+          sqlite3 "$DB" "SELECT COUNT(*) FROM match_series_results r LEFT JOIN match_series_result_versions v ON v.match_id=r.match_id AND v.series_code=r.series_code AND v.version_no=r.governance_version WHERE v.version_id IS NULL;" | grep -qx 0
+      - name: Run G3 governance harness
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-governance-harness.mjs | tee /tmp/g3.log
+          grep -q 'RESULT: PASS' /tmp/g3.log
+          grep -q 'PASS silent overwrite guard' /tmp/g3.log
+          grep -q 'PASS participating club dispute removes result from public SSOT' /tmp/g3.log
+          grep -q 'PASS correction creates v4 and preserves old score' /tmp/g3.log
+          grep -q 'PASS annul -> hidden -> restore -> VERIFIED with history' /tmp/g3.log
+      - name: Run G2 regression harness
+        run: |
+          set -euo pipefail
+          node qa/telegram/public-result-harness.mjs | tee /tmp/g2.log
+          grep -q 'RESULT: PASS' /tmp/g2.log
+      - name: Run G1 regression harness
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-harness.mjs | tee /tmp/g1.log
+          grep -q 'RESULT: PASS' /tmp/g1.log
+      - name: Verify governance contracts
+        run: |
+          set -euo pipefail
+          grep -q "WHERE r.validation_status='VERIFIED'" sports-bus/worker/series-entry.js
+          grep -q 'official_result_requires_governance' sports-bus/worker/result-governance-entry.js
+          grep -q 'governance_version' sports-bus/migrations/0009_result_governance.sql
+          grep -q 'missing_current_version' .github/workflows/deploy-sports-bus.yml

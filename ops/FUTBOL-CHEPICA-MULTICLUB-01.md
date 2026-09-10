@@ -21,8 +21,8 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 | Gate | Alcance | Estado 2026-09-09 |
 |---|---|---|
 | G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | **PASS E2E REAL** — enrollment/RBAC/suspensión/reactivación comprobados; revocación/idempotencia/auditoría cubiertos por QA |
-| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **DESPLEGADO + QA PASS** — E2E Telegram real pendiente |
-| G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | GAP |
+| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **DESPLEGADO + QA PASS** — E2E Telegram real diferido: actualmente no hay una segunda identidad pública disponible para falsarlo sin mezclar roles |
+| G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | **MATERIALIZADO + QA PASS** — despliegue y gate humano seguro pendientes |
 | G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | GAP |
 | G5 | Gobierno y marca: recuperación/segundo global admin + identidad neutral visible | GAP |
 
@@ -41,6 +41,9 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 - G2 dispone de QA específico que prueba `SUBMITTED` aislado, revisión por club participante, aprobación/rechazo, idempotencia y publicación sólo tras VERIFIED.
 - G2 fue desplegado por `Deploy Sports Event Bus` run `34422788118` (#48), con migración `0008_public_result_submissions.sql`, esquema remoto validado y Worker versión `79454728-c85b-4ce1-adf3-27994bbdc911`.
 - El deploy de G2 conservó la fuente deportiva en 24 series VERIFIED / 6 partidos; no insertó marcadores sintéticos.
+- G3 detectó y cerró técnicamente un riesgo real: los handlers administrativos anteriores podían volver a ejecutar un UPSERT sobre una serie ya oficial.
+- G3 agrega historia inmutable `match_series_result_versions`, estados `VERIFIED / DISPUTED / ANNULLED`, versionado y bloqueo del overwrite silencioso incluso para SUPER_ADMIN.
+- `Validate Result Governance` run `34424510189` pasó G3 + regresión G2 + regresión G1 + migraciones + contratos de despliegue en conjunto.
 
 ## Patrón obligatorio para nuevas entidades
 
@@ -84,10 +87,10 @@ CLUB (ej. Unión Orilla / CUDO)
 ## Próximo orden de ejecución
 
 1. **G1 cerrado.** Mantener su QA como regresión obligatoria.
-2. **G2 desplegado.** Cerrar E2E real sin contaminar la fuente de verdad.
-3. Diseñar y materializar G3 antes de escalar carga de resultados.
-4. Incorporar un segundo club real para falsar el supuesto multi-club.
-5. Cerrar gobierno/recuperación e identidad neutral visible.
+2. **G2 desplegado y técnicamente validado.** E2E público queda diferido hasta disponer de una segunda identidad real o de un caso real que permita falsarlo sin contaminar producción.
+3. **G3 materializado y QA PASS.** Integrar, desplegar y ejecutar sólo el gate humano seguro de navegación/cancelación; una mutación real se validará cuando exista un caso legítimo.
+4. Incorporar un segundo club real para falsar G4 sin intervención técnica del equipo CUDO.
+5. Cerrar G5: gobierno/recuperación e identidad neutral visible.
 
 ## Regla de evidencia
 
@@ -95,4 +98,5 @@ CLUB (ej. Unión Orilla / CUDO)
 - **VALIDADO** = CI/prueba técnica demuestra contrato esperado.
 - **DESPLEGADO** = código/migraciones están en runtime productivo y pasaron gates de deploy.
 - **E2E VALIDADO** = comportamiento comprobado por un usuario/identidad real en runtime.
+- **DIFERIDO** = gate legítimo que no puede falsarse hoy sin una dependencia externa o sin contaminar producción; no se cuenta como E2E cerrado.
 - Nunca usar "listo" o "cerrado" si sólo existe código sin prueba runtime.

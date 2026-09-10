@@ -22,7 +22,7 @@ export async function handlePublicResultRequest(request, env) {
   const callbackData = String(callback?.data || '');
   const actorId = String(actor.id);
   const adminCommand = /^\/(pendientesresultados|aportes)(?:@\w+)?$/i.test(text);
-  const leadersEntry = /^\/dirigentes(?:@\w+)?$/i.test(text) || callbackData === 'tp:leaders';
+  const leadersEntry = /^\/(dirigentes)(?:@\w+)?$/i.test(text) || callbackData === 'tp:leaders';
   let session = null;
   if (env.DB) session = await env.DB.prepare('SELECT * FROM telegram_public_result_sessions WHERE telegram_user_id=?').bind(actorId).first();
   const scoreMessage = !!session && /^\s*\d{1,2}\s*[-:]\s*\d{1,2}\s*$/.test(text);
@@ -348,6 +348,7 @@ async function showAdminDashboard(env, chatId, reporter) {
       [{text:`🟡 Resultados pendientes (${pendingN})`,callback_data:'pr:pending'}],
       [{text:`👥 Dirigentes (${Number(active?.n||0)}/${Number(total?.n||0)})`,callback_data:'tp:admins'}],
       [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
+      [{text:'🛡️ Correcciones y disputas',callback_data:'rg:list'}],
       [{text:'⚽ Mis partidos de club',callback_data:'tp:mymatches'}],
       [{text:'🏠 Inicio',callback_data:'tp:home'}]
     ]});
@@ -358,6 +359,7 @@ async function showAdminDashboard(env, chatId, reporter) {
     [{text:'⚽ Mis partidos',callback_data:'tp:mymatches'}],
     [{text:`🟡 Aportes pendientes (${pendingN})`,callback_data:'pr:pending'}],
     [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
+    [{text:'⚠️ Disputar resultado oficial',callback_data:'rg:list'}],
     [{text:'🏠 Inicio',callback_data:'tp:home'}]
   ]});
 }

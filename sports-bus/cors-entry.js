@@ -5,6 +5,7 @@ import { handleClubAdminSeriesScore } from './worker/club-admin-series-entry.js'
 import { handleDirigentesLifecycleRequest } from './worker/dirigentes-lifecycle-entry.js';
 import { handleSuspendedDirigenteGuard } from './worker/dirigentes-suspended-guard-entry.js';
 import { handlePublicResultRequest } from './worker/public-result-entry.js';
+import { handleResultGovernanceRequest } from './worker/result-governance-entry.js';
 
 const ALLOWED_ORIGINS = new Set([
   'https://cudo.cl',
@@ -140,12 +141,13 @@ export default {
 
     const telegramRequest = await telegramHandlerRequest(request, env);
     const suspendedGuard = await handleSuspendedDirigenteGuard(telegramRequest.clone(), env, ctx);
-    const publicResult = suspendedGuard ? null : await handlePublicResultRequest(telegramRequest.clone(), env, ctx);
-    const dirigentesLifecycle = (suspendedGuard || publicResult) ? null : await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
-    const portal = (suspendedGuard || publicResult || dirigentesLifecycle) ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
-    const clubAdminScore = (suspendedGuard || publicResult || dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
-    const series = (suspendedGuard || publicResult || dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
-    const response = suspendedGuard || publicResult || dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
+    const resultGovernance = suspendedGuard ? null : await handleResultGovernanceRequest(telegramRequest.clone(), env, ctx);
+    const publicResult = (suspendedGuard || resultGovernance) ? null : await handlePublicResultRequest(telegramRequest.clone(), env, ctx);
+    const dirigentesLifecycle = (suspendedGuard || resultGovernance || publicResult) ? null : await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
+    const portal = (suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle) ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
+    const clubAdminScore = (suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
+    const series = (suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
+    const response = suspendedGuard || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
     const cors = corsHeaders(request);
