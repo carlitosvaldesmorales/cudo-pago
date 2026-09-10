@@ -55,7 +55,6 @@ try{
     (telegram_user_id,display_name,username,club_id,role,trust_level,active,created_at,updated_at)
     VALUES (?,?,?,?, 'CLUB_ADMIN','VERIFIED',1,?,?)`).bind(String(OUTSIDER.id),'Otro Dirigente','otro_dirigente',otherClub.team_id,now,now).run();
 
-  // 1) A normal Telegram identity discovers the two-door portal and requests club-admin enrollment.
   reset();
   let result=await message(USER,'/start');
   assert.equal(result.handled,'portal_home');
@@ -83,16 +82,13 @@ try{
   assert.equal(pending.requested_role,'CLUB_ADMIN');
   assert.match(last(USER.id).text,/PENDIENTE/);
 
-  // Re-clicking cannot create a second pending request.
   await callback(USER,`tp:reqclub:${club.team_id}`);
   const pendingCount=await env.DB.prepare("SELECT COUNT(*) AS n FROM access_requests WHERE telegram_user_id=? AND status='PENDING'").bind(String(USER.id)).first();
   assert.equal(Number(pendingCount.n),1);
 
-  // Invalid club callback is rejected and creates no request.
   result=await callback({id:881002,first_name:'QA'},'tp:reqclub:NO-EXISTE');
   assert.equal(result.handled,'portal_request_invalid_club');
 
-  // 2) Another club admin cannot approve enrollment; SUPER_ADMIN can.
   reset();
   result=await callback(OUTSIDER,`tp:approve:${pending.request_id}`);
   assert.equal(result.handled,'portal_denied');
@@ -131,7 +127,6 @@ try{
   assert.ok(audit,'approval must be auditable');
   assert.ok(sent(USER.id).some(x=>/acceso de dirigente fue aprobado/i.test(x.body.text)),'approved user must be notified');
 
-  // 3) The enrolled identity now enters only its club-admin surface.
   reset();
   result=await callback(USER,'tp:leaders');
   assert.equal(result.handled,'public_result_admin_dashboard');
@@ -139,13 +134,15 @@ try{
   assert.match(panel.text,new RegExp(club.canonical_name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
   assert.ok(buttons(panel).some(x=>x.callback_data==='tp:mymatches'));
   const association=await env.DB.prepare('SELECT club_id,role,trust_level,active FROM reporters WHERE telegram_user_id=?').bind(String(USER.id)).first();
-  assert.deepEqual(association,{club_id:club.team_id,role:'CLUB_ADMIN',trust_level:'VERIFIED',active:1});
+  assert.equal(association.club_id,club.team_id);
+  assert.equal(association.role,'CLUB_ADMIN');
+  assert.equal(association.trust_level,'VERIFIED');
+  assert.equal(Number(association.active),1);
 
-  // Replaying approval is idempotent: no second transition.
   reset();
   result=await callback(SUPER,`tp:approve:${pending.request_id}`);
   assert.equal(result.handled,'portal_request_not_pending');
-  assert.equal((await env.DB.prepare("SELECT COUNT(*) AS n FROM permission_audit WHERE action='APPROVE_CLUB_ADMIN' AND resource_id=?").bind(pending.request_id).first()).n,1);
+  assert.equal(Number((await env.DB.prepare("SELECT COUNT(*) AS n FROM permission_audit WHERE action='APPROVE_CLUB_ADMIN' AND resource_id=?").bind(pending.request_id).first()).n),1);
 
   console.log('PASS public identity discovers Público + Dirigentes entrypoints');
   console.log('PASS enrollment binds one pending request to one real club');
