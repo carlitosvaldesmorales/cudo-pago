@@ -10,6 +10,7 @@ on:
       - 'sports-bus/telegram-route-clarity-entry.js'
       - 'sports-bus/migrations/0012_result_governance_correction_flow.sql'
       - 'qa/telegram/result-governance-correction-harness.mjs'
+      - 'qa/telegram/result-correction-command-escape-harness.mjs'
       - '.github/workflows/validate-result-governance-correction.yml'
   push:
     branches:
@@ -20,6 +21,7 @@ on:
       - 'sports-bus/telegram-route-clarity-entry.js'
       - 'sports-bus/migrations/0012_result_governance_correction_flow.sql'
       - 'qa/telegram/result-governance-correction-harness.mjs'
+      - 'qa/telegram/result-correction-command-escape-harness.mjs'
       - '.github/workflows/validate-result-governance-correction.yml'
 
 permissions:
@@ -40,6 +42,7 @@ jobs:
           node --check sports-bus/worker/result-governance-ux-entry.js
           node --check sports-bus/telegram-route-clarity-entry.js
           node --check qa/telegram/result-governance-correction-harness.mjs
+          node --check qa/telegram/result-correction-command-escape-harness.mjs
       - name: Validate correction governance
         run: |
           set -euo pipefail
@@ -51,3 +54,10 @@ jobs:
           grep -q 'PASS repeated apply is idempotent' /tmp/result-governance-correction.log
           grep -q 'PASS history exposes actor, event time and reason without technical status jargon' /tmp/result-governance-correction.log
           grep -q 'RESULT: PASS' /tmp/result-governance-correction.log
+      - name: Validate command escape
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-correction-command-escape-harness.mjs | tee /tmp/result-correction-command-escape.log
+          grep -q 'PASS navigation command escapes stale correction session' /tmp/result-correction-command-escape.log
+          grep -q 'PASS /correcciones reaches governance list exactly once' /tmp/result-correction-command-escape.log
+          grep -q 'RESULT: PASS' /tmp/result-correction-command-escape.log
