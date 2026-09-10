@@ -1,7 +1,7 @@
 # TELEGRAM-NATIVE-MENU-01
 
 Fecha: 2026-09-09
-Estado: **MENÚ NATIVO DESPLEGADO + QA PASS + E2E VISUAL iOS PASS / BRANDING RUNTIME PASS + E2E VISUAL PENDIENTE**
+Estado: **MENÚ NATIVO DESPLEGADO + QA PASS + E2E VISUAL iOS PASS / BRANDING RUNTIME PASS + E2E VISUAL iOS PASS**
 
 ## Objetivo
 
@@ -139,15 +139,10 @@ Evidencia del run:
 - Producción conserva 25 partidos, 5 byes, 11 equipos, 24 series VERIFIED y 6 partidos con resultados.
 - `invalid_public_submission_status=0`, `invalid_governance_status=0`, `invalid_result_versions=0`, `missing_current_version=0`, `invalid_series=0`.
 
-### Gate humano residual
+### E2E visual de branding — PASS
 
-El runtime ya declara que Telegram tiene como nombre visible **Fútbol Chépica**. El único punto pendiente es comprobar cómo lo renderiza el cliente Telegram iOS real.
+Captura real recibida el 2026-09-09 a las 23:11 desde Telegram iOS.
 
-Prueba segura:
+Se observó en la cabecera del chat el nombre visible **Fútbol Chépica** y ya no **CUDO Bot**. En la misma captura permanecen disponibles la vista pública, la administración de dirigentes, el panel **FÚTBOL CHÉPICA · ADMIN GLOBAL** y el menú nativo SUPER_ADMIN.
 
-1. volver a la lista de chats o cerrar/reabrir el chat del bot;
-2. comprobar la cabecera;
-3. debe decir `Fútbol Chépica` en lugar de `CUDO Bot`;
-4. enviar una captura para cerrar el E2E visual de branding.
-
-No requiere modificar resultados, solicitudes ni dirigentes.
+Conclusión: `TELEGRAM-BRAND-NAME-01` queda cerrado con evidencia de runtime + cliente real iOS. No queda GAP funcional ni visual asociado al nombre visible del bot.
