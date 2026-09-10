@@ -1,0 +1,56 @@
+name: Validate Public Championship Web
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/public-championship-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'preview-v8/shared/championship.js'
+      - 'preview-v8/shared/championship-results.css'
+      - 'preview-v8/partidos/index.html'
+      - 'qa/web/public-championship-readmodel-harness.mjs'
+      - '.github/workflows/validate-public-championship-web.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/web-public-championship-readmodel-01
+    paths:
+      - 'sports-bus/worker/public-championship-entry.js'
+      - 'sports-bus/telegram-route-clarity-entry.js'
+      - 'preview-v8/shared/championship.js'
+      - 'preview-v8/shared/championship-results.css'
+      - 'preview-v8/partidos/index.html'
+      - 'qa/web/public-championship-readmodel-harness.mjs'
+      - '.github/workflows/validate-public-championship-web.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/public-championship-entry.js
+          node --check sports-bus/telegram-route-clarity-entry.js
+          node --check preview-v8/shared/championship.js
+          node --check qa/web/public-championship-readmodel-harness.mjs
+      - name: Validate governed public projection
+        run: |
+          set -euo pipefail
+          node qa/web/public-championship-readmodel-harness.mjs | tee /tmp/public-championship-web.log
+          grep -q 'PASS public read model contains only ANFA Chépica fixture and official byes' /tmp/public-championship-web.log
+          grep -q 'PASS every match exposes four governed series' /tmp/public-championship-web.log
+          grep -q 'PASS VERIFIED publishes score while DISPUTED/ANNULLED/PENDING hide it' /tmp/public-championship-web.log
+          grep -q 'PASS public contract does not expose internal governance, source or identity fields' /tmp/public-championship-web.log
+          grep -q 'PASS CORS permits CUDO origin and withholds permission from unknown origins' /tmp/public-championship-web.log
+          grep -q 'PASS V8 championship consumes the governed read model instead of legacy aggregate match scores' /tmp/public-championship-web.log
+          grep -q 'RESULT: PASS' /tmp/public-championship-web.log
