@@ -21,7 +21,7 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 | Gate | Alcance | Estado 2026-09-09 |
 |---|---|---|
 | G1 | Lifecycle dirigentes: listar, ver, suspender, reactivar, revocar | **PASS E2E REAL** — enrollment/RBAC/suspensión/reactivación comprobados; revocación/idempotencia/auditoría cubiertos por QA |
-| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **MATERIALIZADO + QA PASS** — E2E Telegram real pendiente |
+| G2 | Usuario público informa resultado: SUBMITTED → revisión → aprobar/rechazar → VERIFIED | **DESPLEGADO + QA PASS** — E2E Telegram real pendiente |
 | G3 | Resultado oficial seguro: corregir/versionar + disputar/anular + auditoría | GAP |
 | G4 | Segundo club real: enrollment y operación real sin intervención técnica del equipo CUDO | GAP |
 | G5 | Gobierno y marca: recuperación/segundo global admin + identidad neutral visible | GAP |
@@ -39,6 +39,8 @@ Fútbol Chépica NO se declara lanzamiento definitivo hasta cerrar los cinco gat
 - `reporters` ya dispone de `club_id`, `role`, `trust_level` y `active`.
 - QA recurrente `TELEGRAM-QA-HARNESS-01` cubre enrollment, RBAC, score directo de CLUB_ADMIN, suspensión, callbacks viejos, reactivación, revocación e idempotencia.
 - G2 dispone de QA específico que prueba `SUBMITTED` aislado, revisión por club participante, aprobación/rechazo, idempotencia y publicación sólo tras VERIFIED.
+- G2 fue desplegado por `Deploy Sports Event Bus` run `34422788118` (#48), con migración `0008_public_result_submissions.sql`, esquema remoto validado y Worker versión `79454728-c85b-4ce1-adf3-27994bbdc911`.
+- El deploy de G2 conservó la fuente deportiva en 24 series VERIFIED / 6 partidos; no insertó marcadores sintéticos.
 
 ## Patrón obligatorio para nuevas entidades
 
@@ -82,7 +84,7 @@ CLUB (ej. Unión Orilla / CUDO)
 ## Próximo orden de ejecución
 
 1. **G1 cerrado.** Mantener su QA como regresión obligatoria.
-2. **G2:** integrar/desplegar y cerrar E2E real sin contaminar la fuente de verdad.
+2. **G2 desplegado.** Cerrar E2E real sin contaminar la fuente de verdad.
 3. Diseñar y materializar G3 antes de escalar carga de resultados.
 4. Incorporar un segundo club real para falsar el supuesto multi-club.
 5. Cerrar gobierno/recuperación e identidad neutral visible.
@@ -91,5 +93,6 @@ CLUB (ej. Unión Orilla / CUDO)
 
 - **MATERIALIZADO** = existe en código/repositorio.
 - **VALIDADO** = CI/prueba técnica demuestra contrato esperado.
+- **DESPLEGADO** = código/migraciones están en runtime productivo y pasaron gates de deploy.
 - **E2E VALIDADO** = comportamiento comprobado por un usuario/identidad real en runtime.
 - Nunca usar "listo" o "cerrado" si sólo existe código sin prueba runtime.
