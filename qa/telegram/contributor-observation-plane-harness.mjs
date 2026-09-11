@@ -45,7 +45,7 @@ async function seed(actor,role,clubId=null,trust='VERIFIED'){
     .bind(String(actor.id),`${actor.first_name} ${actor.last_name}`,null,clubId,role,trust,now,now).run();
 }
 async function guided(actor,match,series,home,away){
-  let r=await cb(actor,'tp:public-report');
+  let r=await cb(actor,'obs:dates');
   assert.equal(r.handled,'observation_dates');
   r=await cb(actor,`obs:date:${match.round_no}`);
   assert.equal(r.handled,'observation_round');
