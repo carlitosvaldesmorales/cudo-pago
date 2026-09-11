@@ -10,6 +10,7 @@ on:
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-visual-qa-harness.mjs'
+      - 'qa/telegram/media-partner-visual-negatives-harness.mjs'
       - '.github/workflows/validate-media-partner-visual-qa.yml'
   push:
     branches:
@@ -21,6 +22,7 @@ on:
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-visual-qa-harness.mjs'
+      - 'qa/telegram/media-partner-visual-negatives-harness.mjs'
       - '.github/workflows/validate-media-partner-visual-qa.yml'
 
 permissions:
@@ -40,7 +42,8 @@ jobs:
           node --check sports-bus/worker/contributor-observation-entry.js
           node --check sports-bus/worker/media-partner-enrollment-entry.js
           node --check qa/telegram/media-partner-visual-qa-harness.mjs
-      - name: Run pre-user visual contract
+          node --check qa/telegram/media-partner-visual-negatives-harness.mjs
+      - name: Run pre-user visual golden path
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-visual-qa-harness.mjs | tee /tmp/chepica-play-visual.log
@@ -51,3 +54,16 @@ jobs:
           grep -q 'PASS visual agent: cancel returns a Chépica Play member to the partner space' /tmp/chepica-play-visual.log
           grep -q 'PASS visual agent: consumer path reaches the published-results projection without exposing technical role names' /tmp/chepica-play-visual.log
           grep -q 'RESULT: PASS' /tmp/chepica-play-visual.log
+      - name: Run pre-user visual adversarial paths
+        run: |
+          set -euo pipefail
+          node qa/telegram/media-partner-visual-negatives-harness.mjs | tee /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: already-linked identity does not consume another person invitation' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: revoked invite fails closed without creating access' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: expired invite fails closed and visibly explains invalid access' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: stale score callback after cancel cannot resurrect a session' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: change-marker replaces draft values before the single submitted observation' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: duplicate pending result is explained and not duplicated' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual boundary: 8+ stepper remains usable and submits the selected high score' /tmp/chepica-play-visual-negatives.log
+          grep -q 'PASS visual negative: revoking one person removes only that access and leaves another member operational' /tmp/chepica-play-visual-negatives.log
+          grep -q 'RESULT: PASS' /tmp/chepica-play-visual-negatives.log
