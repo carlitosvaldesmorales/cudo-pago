@@ -8,6 +8,7 @@ import { handleSuspendedDirigenteGuard } from './worker/dirigentes-suspended-gua
 import { handlePublicReportContractAdapter } from './worker/public-report-contract-adapter.js';
 import { handleContributorObservationRequest } from './worker/contributor-observation-entry.js';
 import { handlePlatformOperatorRequest } from './worker/platform-operator-entry.js';
+import { handleMediaPartnerLiveEventRequest } from './worker/media-partner-live-event-entry.js';
 import { handleMediaPartnerEnrollmentRequest } from './worker/media-partner-enrollment-entry.js';
 import { handlePublicResultRequest } from './worker/public-result-entry.js';
 import { handleResultGovernanceRequest } from './worker/result-governance-entry.js';
@@ -188,17 +189,18 @@ export default {
     const suspendedGuard = await handleSuspendedDirigenteGuard(telegramRequest.clone(), env, ctx);
     const publicReportContract = suspendedGuard ? null : await handlePublicReportContractAdapter(telegramRequest.clone(), env, ctx);
     const observation = (suspendedGuard || publicReportContract) ? null : await handleContributorObservationRequest(telegramRequest.clone(), env, ctx);
-    const platformOperator = (suspendedGuard || publicReportContract || observation) ? null : await handlePlatformOperatorRequest(telegramRequest.clone(), env, ctx);
-    const mediaPartner = (suspendedGuard || publicReportContract || observation || platformOperator) ? null : await handleMediaPartnerEnrollmentRequest(telegramRequest.clone(), env, ctx);
-    const globalAdminResults = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner) ? null : await handleGlobalAdminResultsRequest(telegramRequest.clone(), env, ctx);
-    const nativeMenu = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults) ? null : await handleTelegramNativeMenuCommand(telegramRequest.clone(), env, ctx);
-    const resultGovernance = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu) ? null : await handleResultGovernanceRequest(telegramRequest.clone(), env, ctx);
-    const publicResult = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance) ? null : await handlePublicResultRequest(telegramRequest.clone(), env, ctx);
-    const dirigentesLifecycle = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult) ? null : await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
-    const portal = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle) ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
-    const clubAdminScore = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
-    const series = (suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
-    const response = suspendedGuard || publicReportContract || observation || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
+    const mediaPartnerLive = (suspendedGuard || publicReportContract || observation) ? null : await handleMediaPartnerLiveEventRequest(telegramRequest.clone(), env, ctx);
+    const platformOperator = (suspendedGuard || publicReportContract || observation || mediaPartnerLive) ? null : await handlePlatformOperatorRequest(telegramRequest.clone(), env, ctx);
+    const mediaPartner = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator) ? null : await handleMediaPartnerEnrollmentRequest(telegramRequest.clone(), env, ctx);
+    const globalAdminResults = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner) ? null : await handleGlobalAdminResultsRequest(telegramRequest.clone(), env, ctx);
+    const nativeMenu = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults) ? null : await handleTelegramNativeMenuCommand(telegramRequest.clone(), env, ctx);
+    const resultGovernance = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu) ? null : await handleResultGovernanceRequest(telegramRequest.clone(), env, ctx);
+    const publicResult = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance) ? null : await handlePublicResultRequest(telegramRequest.clone(), env, ctx);
+    const dirigentesLifecycle = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult) ? null : await handleDirigentesLifecycleRequest(telegramRequest.clone(), env, ctx);
+    const portal = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle) ? null : await handlePortalRequest(telegramRequest.clone(), env, ctx);
+    const clubAdminScore = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal) ? null : await handleClubAdminSeriesScore(telegramRequest.clone(), env, ctx);
+    const series = (suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore) ? null : await handleSeriesRequest(telegramRequest.clone(), env, ctx);
+    const response = suspendedGuard || publicReportContract || observation || mediaPartnerLive || platformOperator || mediaPartner || globalAdminResults || nativeMenu || resultGovernance || publicResult || dirigentesLifecycle || portal || clubAdminScore || series || await worker.fetch(request, env, ctx);
     if (!isPublicApi(request) || request.method !== 'GET') return response;
 
     const cors = corsHeaders(request);
