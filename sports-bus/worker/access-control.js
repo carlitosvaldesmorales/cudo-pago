@@ -86,10 +86,25 @@ function scopeMatches(grant, match){
   return false;
 }
 
-async function grantsFor(db,telegramUserId,role){
+function grantCapabilities(grant){
+  try{
+    const value=JSON.parse(String(grant?.capabilities_json||'[]'));
+    return Array.isArray(value)?new Set(value.map(String)):new Set();
+  }catch{return new Set();}
+}
+
+async function grantsFor(db,telegramUserId,role=null){
   if(!db || !telegramUserId) return [];
-  const q=await db.prepare(`SELECT * FROM actor_scope_grants WHERE telegram_user_id=? AND role=? AND active=1 ORDER BY scope_type,scope_id`).bind(String(telegramUserId),role).all();
+  const q=role
+    ? await db.prepare(`SELECT * FROM actor_scope_grants WHERE telegram_user_id=? AND role=? AND active=1 ORDER BY scope_type,scope_id`).bind(String(telegramUserId),role).all()
+    : await db.prepare(`SELECT * FROM actor_scope_grants WHERE telegram_user_id=? AND active=1 ORDER BY role,scope_type,scope_id`).bind(String(telegramUserId)).all();
   return q.results || [];
+}
+
+export async function matchingScopedGrant(db,reporter,match,role=ROLE.MEDIA_PARTNER){
+  if(!reporter?.telegram_user_id || !match) return null;
+  const grants=await grantsFor(db,reporter.telegram_user_id,role);
+  return grants.find(g=>scopeMatches(g,match)) || null;
 }
 
 export async function resolveObservationProvenance(db,reporter,match){
@@ -101,17 +116,8 @@ export async function resolveObservationProvenance(db,reporter,match){
     scoped:false
   };
 
-  if(role===ROLE.CLUB_ADMIN && reporter?.trust_level==='VERIFIED'){
-    const participates=reporter.club_id && (reporter.club_id===match.home_id || reporter.club_id===match.away_id);
-    if(participates) return {
-      source_type:'CLUB_ADMIN',
-      source_label:`Telegram · dirigente ${reporter.club_id}`,
-      trust_level:'VERIFIED',
-      scoped:true
-    };
-    return base;
-  }
-
+  // Platform operational identities keep their administrative provenance even if
+  // they also hold an additive partner grant.
   if(role===ROLE.PLATFORM_OPERATOR && reporter?.trust_level==='VERIFIED') return {
     source_type:'PLATFORM_OPERATOR',
     source_label:'Telegram · administrador del campeonato',
@@ -126,37 +132,46 @@ export async function resolveObservationProvenance(db,reporter,match){
     scoped:true
   };
 
-  if(role===ROLE.MEDIA_PARTNER && reporter?.trust_level==='VERIFIED'){
-    const grants=await grantsFor(db,reporter.telegram_user_id,ROLE.MEDIA_PARTNER);
-    const grant=grants.find(g=>scopeMatches(g,match));
-    if(grant) return {
-      source_type:'MEDIA_PARTNER',
-      source_label:grant.source_label || 'Telegram · medio colaborador',
-      trust_level:grant.trust_level || 'VERIFIED',
-      scoped:true,
-      grant_id:grant.grant_id
+  // MEDIA_PARTNER is an additive scoped grant, not a forced replacement of the
+  // person's base role. This prevents role explosion and allows an identity to
+  // remain REPORTER or CLUB_ADMIN while contributing as a partner for one match.
+  const mediaGrant=await matchingScopedGrant(db,reporter,match,ROLE.MEDIA_PARTNER);
+  if(mediaGrant && grantCapabilities(mediaGrant).has(CAPABILITY.OBSERVE_RESULT)) return {
+    source_type:'MEDIA_PARTNER',
+    source_label:mediaGrant.source_label || 'Telegram · medio colaborador',
+    trust_level:mediaGrant.trust_level || 'VERIFIED',
+    scoped:true,
+    grant_id:mediaGrant.grant_id
+  };
+
+  if(role===ROLE.CLUB_ADMIN && reporter?.trust_level==='VERIFIED'){
+    const participates=reporter.club_id && (reporter.club_id===match.home_id || reporter.club_id===match.away_id);
+    if(participates) return {
+      source_type:'CLUB_ADMIN',
+      source_label:`Telegram · dirigente ${reporter.club_id}`,
+      trust_level:'VERIFIED',
+      scoped:true
     };
-    // A media identity outside its assigned scope may still contribute as any public user,
-    // but it does not inherit partner trust outside that scope.
     return base;
   }
 
+  if(role===ROLE.MEDIA_PARTNER && reporter?.trust_level==='VERIFIED') return base;
   return base;
 }
 
 export async function hasScopedCapability(db,reporter,capability,match){
-  if(!reporter?.active) return capability===CAPABILITY.OBSERVE_RESULT;
+  if(!reporter || !match) return capability===CAPABILITY.OBSERVE_RESULT;
   const role=effectiveRole(reporter);
   if(role===ROLE.SUPER_ADMIN) return hasCapability(reporter,capability);
   if(role===ROLE.PLATFORM_OPERATOR) return reporter.trust_level==='VERIFIED' && hasCapability(reporter,capability);
+
+  const grants=await grantsFor(db,reporter.telegram_user_id);
+  if(grants.some(g=>scopeMatches(g,match)&&grantCapabilities(g).has(capability))) return true;
+
   if(role===ROLE.CLUB_ADMIN){
     if(reporter.trust_level!=='VERIFIED' || !hasCapability(reporter,capability)) return false;
     return !!reporter.club_id && (reporter.club_id===match.home_id || reporter.club_id===match.away_id);
   }
-  if(role===ROLE.MEDIA_PARTNER){
-    if(reporter.trust_level!=='VERIFIED' || !hasCapability(reporter,capability)) return false;
-    const grants=await grantsFor(db,reporter.telegram_user_id,ROLE.MEDIA_PARTNER);
-    return grants.some(g=>scopeMatches(g,match));
-  }
+  if(role===ROLE.MEDIA_PARTNER) return reporter.trust_level==='VERIFIED' && hasCapability(reporter,capability);
   return capability===CAPABILITY.OBSERVE_RESULT;
 }
