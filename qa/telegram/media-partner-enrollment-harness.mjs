@@ -51,8 +51,10 @@ try{
   assert.equal(r.handled,'media_partner_management');
   assert.match(last(OP.id).text,/Consumir resultados/i);
   assert.match(last(OP.id).text,/Registrar resultados/i);
-  assert.doesNotMatch(last(OP.id).text,/coberturas|corresponsales|eventos en vivo/i);
-  assert.ok(callbacks(last(OP.id)).includes('mp:collab:invite'));
+  assert.match(last(OP.id).text,/No incluye coberturas, corresponsales, goles\/eventos en vivo/i);
+  const manageActions=callbacks(last(OP.id));
+  assert.equal(manageActions.some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')||x==='mp:hub'||x==='mp:mycoverages'),false);
+  assert.ok(manageActions.includes('mp:collab:invite'));
   console.log('PASS management surface declares exactly the two current product capabilities');
 
   r=await cb(OP,'mp:collab:invite');
