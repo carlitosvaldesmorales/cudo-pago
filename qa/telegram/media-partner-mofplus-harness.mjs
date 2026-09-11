@@ -50,7 +50,7 @@ try{
   assert.notEqual(assigned.away_name,'Team B');
   console.log(`FIXTURE: ${assigned.round_label} · ${assigned.home_name} — ${assigned.away_name}`);
 
-  // GOLDEN PATH: persistent enrollment -> operational coverage -> LIVE -> event -> score observation -> close.
+  // GOLDEN PATH: persistent enrollment -> operational coverage -> LIVE -> goal -> score observation -> close.
   let r=await msg(OP,'/medios');
   assert.equal(r.handled,'media_partner_management');
   assert.match(last(OP.id).text,/colaborador permanente/i);
@@ -87,19 +87,31 @@ try{
   assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'LIVE');
   assert.ok(callbacks(last(MEDIA.id)).includes(`mplive:event:${assigned.match_id}`));
   assert.match(last(MEDIA.id).text,/CONSUME:/);
-  assert.match(last(MEDIA.id).text,/CONTRIBUYE:/);
-  console.log('PASS golden path reaches high-fidelity LIVE workspace with consumer + contributor contract');
+  assert.match(last(MEDIA.id).text,/CONTRIBUYE: marcador y goles/i);
+  console.log('PASS golden path reaches high-fidelity LIVE workspace with consumer + goal contributor contract');
 
   r=await cb(MEDIA,`mplive:event:${assigned.match_id}`);
   assert.equal(r.handled,'media_partner_live_series');
   assert.ok(callbacks(last(MEDIA.id)).includes(`mplive:series:${assigned.match_id}:TERCERA`));
   r=await cb(MEDIA,`mplive:series:${assigned.match_id}:TERCERA`);
-  assert.equal(r.handled,'media_partner_live_event_types');
-  assert.ok(callbacks(last(MEDIA.id)).includes(`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`));
+  assert.equal(r.handled,'media_partner_live_goal_teams');
+  const goalButtons=callbacks(last(MEDIA.id));
+  assert.ok(goalButtons.includes(`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`));
+  assert.ok(goalButtons.includes(`mplive:evt:${assigned.match_id}:TERCERA:GOAL:AWAY`));
+  assert.equal(goalButtons.some(x=>x.includes(':YELLOW:')||x.includes(':RED:')),false);
+  console.log('PASS product scope: live UI exposes only goals, with no card controls');
+
+  // NEGATIVE 1: an old/non-product event callback is rejected explicitly and writes nothing.
+  const beforeUnsupported=Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n);
+  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:YELLOW:HOME`,'unsupported-yellow-001');
+  assert.equal(r.handled,'media_partner_live_event_unsupported');
+  assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n),beforeUnsupported);
+  assert.match(last(MEDIA.id).text,/sólo registra goles/i);
+  console.log('PASS negative/product-scope: non-goal live event is rejected without mutation');
 
   const duplicateId='synthetic-same-callback-001';
   r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`,duplicateId);
-  assert.equal(r.handled,'media_partner_live_event_recorded');
+  assert.equal(r.handled,'media_partner_live_goal_recorded');
   const stored=await one("SELECT * FROM events WHERE event_id=?",`mp-live-${duplicateId}`);
   assert.ok(stored);
   const payload=JSON.parse(stored.payload_json);
@@ -109,16 +121,16 @@ try{
   assert.equal(payload.event_kind,'GOAL');
   assert.equal(payload.canonical,false);
   assert.equal(stored.validation_status,'PROVISIONAL');
-  console.log('PASS live event is stored as traced Chépica Play observation, not canonical truth');
+  console.log('PASS goal is stored as traced Chépica Play observation, not canonical truth');
 
-  // NEGATIVE 1: duplicate delivery is idempotent.
+  // NEGATIVE 2: duplicate delivery is idempotent.
   const beforeDup=Number((await one("SELECT COUNT(*) n FROM events WHERE event_id=?",`mp-live-${duplicateId}`)).n);
   r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`,duplicateId);
-  assert.equal(r.handled,'media_partner_live_event_duplicate');
+  assert.equal(r.handled,'media_partner_live_goal_duplicate');
   const afterDup=Number((await one("SELECT COUNT(*) n FROM events WHERE event_id=?",`mp-live-${duplicateId}`)).n);
   assert.equal(beforeDup,1);
   assert.equal(afterDup,1);
-  console.log('PASS negative/idempotency: duplicate callback creates exactly one event');
+  console.log('PASS negative/idempotency: duplicate goal callback creates exactly one event');
 
   // Complete result observation through the same Telegram surface.
   await cb(MEDIA,`obs:match:${assigned.match_id}`);
@@ -134,23 +146,23 @@ try{
   assert.equal(await one('SELECT * FROM match_series_results WHERE match_id=? AND series_code=?',assigned.match_id,'TERCERA'),null);
   console.log('PASS golden path records score observation without canonical overwrite');
 
-  // NEGATIVE 2: same partner identity outside assigned coverage cannot publish a live event.
+  // NEGATIVE 3: same partner identity outside assigned coverage cannot publish a live goal.
   r=await cb(MEDIA,`mplive:event:${outside.match_id}`);
   assert.equal(r.handled,'media_partner_live_stale_callback');
   assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",outside.match_id)).n),0);
-  console.log('PASS negative/scope: partner cannot publish live events outside active coverage');
+  console.log('PASS negative/scope: partner cannot publish live goals outside active coverage');
 
   r=await cb(MEDIA,`mp:coverage-close:${assigned.match_id}`);
   assert.equal(r.handled,'media_partner_live_closed');
   assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'CLOSED');
 
-  // NEGATIVE 3: stale callback after close is rejected and final state is unchanged.
+  // NEGATIVE 4: stale goal callback after close is rejected and final state is unchanged.
   const eventCount=Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n);
-  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:YELLOW:HOME`,'stale-after-close-001');
+  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:GOAL:AWAY`,'stale-after-close-001');
   assert.equal(r.handled,'media_partner_live_stale_callback');
   assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n),eventCount);
   assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'CLOSED');
-  console.log('PASS negative/stale: old callback cannot mutate a closed coverage');
+  console.log('PASS negative/stale: old goal callback cannot mutate a closed coverage');
 
   // Explicit outsider authorization check.
   r=await cb(OUTSIDER,`mplive:event:${assigned.match_id}`);

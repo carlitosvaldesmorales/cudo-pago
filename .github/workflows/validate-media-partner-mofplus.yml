@@ -15,6 +15,7 @@ on:
     branches:
       - feature/sports-event-bus-v1
       - feature/media-partner-live-events-mofplus-v1
+      - feature/media-partner-goal-only-v1
     paths:
       - 'sports-bus/worker/media-partner-live-event-entry.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
@@ -44,12 +45,14 @@ jobs:
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-mofplus-harness.mjs | tee /tmp/media-partner-mofplus.log
-          grep -q 'PASS golden path reaches high-fidelity LIVE workspace with consumer + contributor contract' /tmp/media-partner-mofplus.log
-          grep -q 'PASS live event is stored as traced Chépica Play observation, not canonical truth' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/idempotency: duplicate callback creates exactly one event' /tmp/media-partner-mofplus.log
+          grep -q 'PASS golden path reaches high-fidelity LIVE workspace with consumer + goal contributor contract' /tmp/media-partner-mofplus.log
+          grep -q 'PASS product scope: live UI exposes only goals, with no card controls' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/product-scope: non-goal live event is rejected without mutation' /tmp/media-partner-mofplus.log
+          grep -q 'PASS goal is stored as traced Chépica Play observation, not canonical truth' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/idempotency: duplicate goal callback creates exactly one event' /tmp/media-partner-mofplus.log
           grep -q 'PASS golden path records score observation without canonical overwrite' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/scope: partner cannot publish live events outside active coverage' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/stale: old callback cannot mutate a closed coverage' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/scope: partner cannot publish live goals outside active coverage' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/stale: old goal callback cannot mutate a closed coverage' /tmp/media-partner-mofplus.log
           grep -q 'PASS authorization: non-partner synthetic actor is rejected' /tmp/media-partner-mofplus.log
           grep -q 'PASS final state: permanent membership survives coverage close and base role remains REPORTER' /tmp/media-partner-mofplus.log
           grep -q 'RESULT: PASS' /tmp/media-partner-mofplus.log

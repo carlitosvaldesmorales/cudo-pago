@@ -3,12 +3,12 @@ import { CAPABILITY, getActivePartnerMembership, hasScopedCapability } from './a
 const COMPETITION_ID='ANFA-CHEPICA-2026';
 const PARTNER_NAME='Chépica Play';
 const SERIES_LABEL={TERCERA:'3ª',SEGUNDA:'2ª',SENIOR:'Senior',PRIMERA:'1ª'};
-const EVENT_LABEL={GOAL:'⚽ Gol',YELLOW:'🟨 Amarilla',RED:'🟥 Roja'};
+const EVENT_LABEL={GOAL:'⚽ Gol'};
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8'}});
 
 // MEDIA-PARTNER-LIVE-MOFPLUS-01
-// Thin vertical slice: persistent partner -> assigned coverage -> LIVE -> event observation.
-// Events are observations with provenance, never canonical result mutations.
+// Thin vertical slice: persistent partner -> assigned coverage -> LIVE -> goal observation.
+// Goals are observations with provenance, never canonical result mutations.
 export async function handleMediaPartnerLiveEventRequest(request,env){
   const url=new URL(request.url);
   if(url.pathname!=='/webhook/telegram'||request.method!=='POST') return null;
@@ -67,7 +67,7 @@ export async function handleMediaPartnerLiveEventRequest(request,env){
     const gate=await liveGate(env.DB,reporter,membership,eventMenu[1]);
     if(!gate.ok) return staleOrDenied(env,chatId,callback,gate.reason);
     await answer(env,callback.id,'Selecciona serie');
-    await send(env,chatId,`🎙 EVENTO EN VIVO · ${PARTNER_NAME}\n\n${gate.match.round_label} · ${gate.match.home_name} — ${gate.match.away_name}\n\nSelecciona la serie del evento.`,{
+    await send(env,chatId,`⚽ REGISTRAR GOL · ${PARTNER_NAME}\n\n${gate.match.round_label} · ${gate.match.home_name} — ${gate.match.away_name}\n\nSelecciona la serie del gol.`,{
       inline_keyboard:[
         [{text:'3ª',callback_data:`mplive:series:${gate.match.match_id}:TERCERA`},{text:'2ª',callback_data:`mplive:series:${gate.match.match_id}:SEGUNDA`}],
         [{text:'Senior',callback_data:`mplive:series:${gate.match.match_id}:SENIOR`},{text:'1ª',callback_data:`mplive:series:${gate.match.match_id}:PRIMERA`}],
@@ -83,13 +83,26 @@ export async function handleMediaPartnerLiveEventRequest(request,env){
     const gate=await liveGate(env.DB,reporter,membership,matchId);
     if(!gate.ok) return staleOrDenied(env,chatId,callback,gate.reason);
     await answer(env,callback.id,SERIES_LABEL[seriesCode]);
-    await showEventTypes(env,chatId,gate.match,seriesCode);
-    return json({ok:true,handled:'media_partner_live_event_types',match_id:matchId,series_code:seriesCode});
+    await showGoalTeams(env,chatId,gate.match,seriesCode);
+    return json({ok:true,handled:'media_partner_live_goal_teams',match_id:matchId,series_code:seriesCode});
   }
 
-  const event=data.match(/^mplive:evt:([A-Za-z0-9._:-]+):(TERCERA|SEGUNDA|SENIOR|PRIMERA):(GOAL|YELLOW|RED):(HOME|AWAY)$/);
+  const unsupported=data.match(/^mplive:evt:([A-Za-z0-9._:-]+):(TERCERA|SEGUNDA|SENIOR|PRIMERA):([A-Z_]+):(HOME|AWAY)$/);
+  if(unsupported&&unsupported[3]!=='GOAL'){
+    const [,matchId,seriesCode,eventKind]=unsupported;
+    await answer(env,callback.id,'Evento fuera del alcance actual');
+    await send(env,chatId,`ℹ️ Por ahora Chépica Play sólo registra goles en vivo.\n\nEl evento ${eventKind} no fue guardado.`,{
+      inline_keyboard:[
+        [{text:'⚽ Registrar gol',callback_data:`mplive:series:${matchId}:${seriesCode}`}],
+        [{text:'⬅️ Cobertura',callback_data:`mp:coverage-open:${matchId}`}]
+      ]
+    });
+    return json({ok:true,handled:'media_partner_live_event_unsupported',match_id:matchId,series_code:seriesCode,event_kind:eventKind});
+  }
+
+  const event=data.match(/^mplive:evt:([A-Za-z0-9._:-]+):(TERCERA|SEGUNDA|SENIOR|PRIMERA):GOAL:(HOME|AWAY)$/);
   if(event){
-    const [,matchId,seriesCode,eventKind,side]=event;
+    const [,matchId,seriesCode,side]=event;
     const gate=await liveGate(env.DB,reporter,membership,matchId);
     if(!gate.ok) return staleOrDenied(env,chatId,callback,gate.reason);
     const now=new Date().toISOString();
@@ -99,7 +112,7 @@ export async function handleMediaPartnerLiveEventRequest(request,env){
     const clubName=side==='HOME'?gate.match.home_name:gate.match.away_name;
     const payload={
       series_code:seriesCode,
-      event_kind:eventKind,
+      event_kind:'GOAL',
       side,
       club_name:clubName,
       source_type:'MEDIA_PARTNER',
@@ -115,15 +128,15 @@ export async function handleMediaPartnerLiveEventRequest(request,env){
       VALUES (?,'match.event.observed',?,?,?,?,?,?,?,?,'PROVISIONAL',?)`)
       .bind(eventId,now,now,gate.match.competition_id,gate.match.season_id||null,gate.match.match_id,actorId,reporter.display_name||actor.username||actorId,clubId,JSON.stringify(payload)).run();
     const inserted=Number(result?.meta?.changes??result?.changes??1)>0;
-    await answer(env,callback.id,inserted?'Evento registrado':'Evento ya recibido');
-    await send(env,chatId,`${inserted?'✅':'↩️'} ${EVENT_LABEL[eventKind]} · ${SERIES_LABEL[seriesCode]}\n${clubName}\n\n${inserted?'Registrado como observación de Chépica Play.':'Este mismo callback ya había sido procesado; no se duplicó el evento.'}\nNo modifica automáticamente el resultado oficial.`,{
+    await answer(env,callback.id,inserted?'Gol registrado':'Gol ya recibido');
+    await send(env,chatId,`${inserted?'✅':'↩️'} ${EVENT_LABEL.GOAL} · ${SERIES_LABEL[seriesCode]}\n${clubName}\n\n${inserted?'Registrado como observación de Chépica Play.':'Este mismo callback ya había sido procesado; no se duplicó el gol.'}\nNo modifica automáticamente el resultado oficial.`,{
       inline_keyboard:[
-        [{text:'➕ Otro evento',callback_data:`mplive:series:${matchId}:${seriesCode}`}],
+        [{text:'⚽ Otro gol',callback_data:`mplive:series:${matchId}:${seriesCode}`}],
         [{text:'📣 Informar resultado',callback_data:`obs:match:${matchId}`}],
         [{text:'⬅️ Cobertura',callback_data:`mp:coverage-open:${matchId}`}]
       ]
     });
-    return json({ok:true,handled:inserted?'media_partner_live_event_recorded':'media_partner_live_event_duplicate',event_id:eventId,match_id:matchId,series_code:seriesCode,event_kind:eventKind,side});
+    return json({ok:true,handled:inserted?'media_partner_live_goal_recorded':'media_partner_live_goal_duplicate',event_id:eventId,match_id:matchId,series_code:seriesCode,event_kind:'GOAL',side});
   }
 
   return null;
@@ -143,22 +156,18 @@ async function showWorkspace(env,chatId,match,coverage){
   const rows=[];
   if(coverage.status==='ASSIGNED'||coverage.status==='CLOSED') rows.push([{text:'🔴 Iniciar cobertura',callback_data:`mp:coverage-live:${match.match_id}`}]);
   if(coverage.status==='ASSIGNED'||coverage.status==='LIVE') rows.push([{text:'📣 Informar resultado',callback_data:`obs:match:${match.match_id}`}]);
-  if(coverage.status==='LIVE') rows.push([{text:'🎙 Registrar evento',callback_data:`mplive:event:${match.match_id}`}]);
+  if(coverage.status==='LIVE') rows.push([{text:'⚽ Registrar gol',callback_data:`mplive:event:${match.match_id}`}]);
   if(coverage.status==='LIVE') rows.push([{text:'🏁 Finalizar cobertura',callback_data:`mp:coverage-close:${match.match_id}`}]);
   rows.push([{text:'⚽ Resultados verificados',callback_data:'tp:public-results'}]);
   rows.push([{text:'⬅️ Mis coberturas',callback_data:'mp:mycoverages'}]);
-  await send(env,chatId,`🎥 COBERTURA · ${PARTNER_NAME}\n\n${match.round_label} · Grupo ${match.group_id}\n${match.home_name} — ${match.away_name}\nEstado cobertura: ${coverage.status}\n\nCONSUME: resultados y datos públicos del campeonato.\nCONTRIBUYE: marcador y eventos mientras esta cobertura está activa.\n\nLos aportes quedan trazados como observaciones de ${PARTNER_NAME}; no sobrescriben automáticamente el estado canónico.`,{inline_keyboard:rows});
+  await send(env,chatId,`🎥 COBERTURA · ${PARTNER_NAME}\n\n${match.round_label} · Grupo ${match.group_id}\n${match.home_name} — ${match.away_name}\nEstado cobertura: ${coverage.status}\n\nCONSUME: resultados y datos públicos del campeonato.\nCONTRIBUYE: marcador y goles mientras esta cobertura está activa.\n\nLos aportes quedan trazados como observaciones de ${PARTNER_NAME}; no sobrescriben automáticamente el estado canónico.`,{inline_keyboard:rows});
 }
 
-async function showEventTypes(env,chatId,match,seriesCode){
-  await send(env,chatId,`🎙 ${SERIES_LABEL[seriesCode]} · ¿Qué ocurrió?\n\n${match.home_name} — ${match.away_name}`,{
+async function showGoalTeams(env,chatId,match,seriesCode){
+  await send(env,chatId,`⚽ ${SERIES_LABEL[seriesCode]} · ¿Para qué equipo fue el gol?\n\n${match.home_name} — ${match.away_name}`,{
     inline_keyboard:[
-      [{text:`⚽ Gol · ${short(match.home_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:GOAL:HOME`}],
-      [{text:`⚽ Gol · ${short(match.away_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:GOAL:AWAY`}],
-      [{text:`🟨 Amarilla · ${short(match.home_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:YELLOW:HOME`}],
-      [{text:`🟨 Amarilla · ${short(match.away_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:YELLOW:AWAY`}],
-      [{text:`🟥 Roja · ${short(match.home_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:RED:HOME`}],
-      [{text:`🟥 Roja · ${short(match.away_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:RED:AWAY`}],
+      [{text:`⚽ ${short(match.home_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:GOAL:HOME`}],
+      [{text:`⚽ ${short(match.away_name)}`,callback_data:`mplive:evt:${match.match_id}:${seriesCode}:GOAL:AWAY`}],
       [{text:'⬅️ Series',callback_data:`mplive:event:${match.match_id}`}]
     ]
   });
@@ -171,8 +180,8 @@ function short(value){const s=String(value||'Equipo');return s.length<=24?s:`${s
 async function staleOrDenied(env,chatId,callback,reason){
   await answer(env,callback.id,'Acción no disponible');
   const text=reason==='coverage_not_live'
-    ? '⚠️ Este botón ya no corresponde al estado actual. Los eventos sólo pueden registrarse mientras la cobertura está EN VIVO.'
-    : '🔒 Esta identidad no tiene alcance para registrar eventos en este partido.';
+    ? '⚠️ Este botón ya no corresponde al estado actual. Los goles sólo pueden registrarse mientras la cobertura está EN VIVO.'
+    : '🔒 Esta identidad no tiene alcance para registrar goles en este partido.';
   await send(env,chatId,text,{inline_keyboard:[[{text:'🎥 Mis coberturas',callback_data:'mp:mycoverages'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
   return json({ok:true,handled:reason==='coverage_not_live'?'media_partner_live_stale_callback':'media_partner_live_out_of_scope',reason});
 }
