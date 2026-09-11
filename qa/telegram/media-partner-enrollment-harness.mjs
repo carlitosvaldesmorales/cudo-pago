@@ -22,8 +22,9 @@ globalThis.fetch=async(url,init={})=>{
 };
 
 const OP={id:9940001,first_name:'Operador',last_name:'Campeonato'};
-const MEDIA={id:9940002,first_name:'Chepica',last_name:'Play QA'};
-const OTHER={id:9940003,first_name:'Otro',last_name:'Usuario'};
+const MEDIA_A={id:9940002,first_name:'Chepica',last_name:'Play A'};
+const MEDIA_B={id:9940003,first_name:'Chepica',last_name:'Play B'};
+const OTHER={id:9940004,first_name:'Otro',last_name:'Usuario'};
 let updateId=940000;
 
 function applyMigrations(){for(const f of fs.readdirSync(migrations).filter(x=>x.endsWith('.sql')).sort()) env.DB.exec(fs.readFileSync(path.join(migrations,f),'utf8'));}
@@ -35,12 +36,22 @@ async function one(sql,...args){return env.DB.prepare(sql).bind(...args).first()
 async function all(sql,...args){return (await env.DB.prepare(sql).bind(...args).all()).results;}
 function last(chatId){return outbound.filter(x=>x.method==='sendMessage'&&String(x.body.chat_id)===String(chatId)).at(-1)?.body;}
 function callbacks(body){return (body?.reply_markup?.inline_keyboard||[]).flat().map(x=>x.callback_data).filter(Boolean);}
+function tokenFromLast(chatId){return last(chatId)?.text?.match(/partner_([A-Za-z0-9_-]{12,80})/)?.[1];}
 async function seed(actor,role='REPORTER',trust='PROVISIONAL'){const now=new Date().toISOString();await env.DB.prepare(`INSERT OR REPLACE INTO reporters (telegram_user_id,display_name,username,club_id,role,trust_level,active,created_at,updated_at) VALUES (?,?,?,NULL,?,?,1,?,?)`).bind(String(actor.id),`${actor.first_name} ${actor.last_name}`,null,role,trust,now,now).run();}
+
+async function registerScore(actor,matchId,seriesCode,home,away){
+  await cb(actor,`obs:match:${matchId}`);
+  await cb(actor,`obs:series:${matchId}:${seriesCode}`);
+  await cb(actor,`obs:h:${home}`);
+  await cb(actor,`obs:a:${away}`);
+  return cb(actor,'obs:confirm');
+}
 
 try{
   applyMigrations();
   await seed(OP,'PLATFORM_OPERATOR','VERIFIED');
-  await seed(MEDIA);
+  await seed(MEDIA_A);
+  await seed(MEDIA_B);
   await seed(OTHER);
 
   const match=(await all(`SELECT m.* FROM matches m WHERE m.competition_id='ANFA-CHEPICA-2026' ORDER BY m.round_no,m.match_id LIMIT 1`))[0];
@@ -51,86 +62,148 @@ try{
   assert.equal(r.handled,'media_partner_management');
   assert.match(last(OP.id).text,/Consumir resultados/i);
   assert.match(last(OP.id).text,/Registrar resultados/i);
+  assert.match(last(OP.id).text,/puede tener varias identidades Telegram activas/i);
   assert.match(last(OP.id).text,/No incluye coberturas, corresponsales, goles\/eventos en vivo/i);
   const manageActions=callbacks(last(OP.id));
   assert.equal(manageActions.some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')||x==='mp:hub'||x==='mp:mycoverages'),false);
   assert.ok(manageActions.includes('mp:collab:invite'));
-  console.log('PASS management surface declares exactly the two current product capabilities');
+  console.log('PASS management surface declares one partner organization with N independent identities and exactly two capabilities');
 
+  // Multiple invitations may coexist. Each link is individual and single-use.
   r=await cb(OP,'mp:collab:invite');
   assert.equal(r.handled,'media_partner_collaboration_invite_created');
   assert.deepEqual(r.capabilities,['READ_COMPETITION','OBSERVE_RESULT']);
-  assert.match(last(OP.id).text,/Consultar resultados/i);
-  assert.match(last(OP.id).text,/Registrar resultados/i);
-  assert.match(last(OP.id).text,/No asigna partidos, coberturas, corresponsales ni eventos en vivo/i);
-  const token=last(OP.id).text.match(/partner_([A-Za-z0-9_-]{12,80})/)?.[1];
-  assert.ok(token);
+  const inviteA=r.invite_id,tokenA=tokenFromLast(OP.id);
+  assert.ok(tokenA);
+  assert.match(last(OP.id).text,/individual y de un solo uso/i);
+  assert.match(last(OP.id).text,/varias invitaciones pueden quedar pendientes/i);
 
-  r=await msg(MEDIA,`/start partner_${token}`);
+  r=await cb(OP,'mp:collab:invite');
+  assert.equal(r.handled,'media_partner_collaboration_invite_created');
+  const inviteB=r.invite_id,tokenB=tokenFromLast(OP.id);
+  assert.ok(tokenB);
+
+  r=await cb(OP,'mp:collab:invite');
+  assert.equal(r.handled,'media_partner_collaboration_invite_created');
+  const spareInvite=r.invite_id,spareToken=tokenFromLast(OP.id);
+  assert.ok(spareToken);
+  assert.notEqual(inviteA,inviteB);
+  assert.notEqual(inviteB,spareInvite);
+  assert.equal(Number((await one("SELECT COUNT(*) n FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND status='PENDING'")).n),3);
+  console.log('PASS multiple independent partner invitations coexist in PENDING state');
+
+  r=await msg(MEDIA_A,`/start partner_${tokenA}`);
   assert.equal(r.handled,'media_partner_collaboration_claimed');
-  const membership=await getActivePartnerMembership(env.DB,String(MEDIA.id),'ANFA-CHEPICA-2026');
-  assert.ok(membership);
-  assert.equal(membership.partner_code,'CHEPICA_PLAY');
-  assert.deepEqual(JSON.parse(membership.capabilities_json),['READ_COMPETITION','OBSERVE_RESULT']);
-  assert.equal((await one('SELECT role FROM reporters WHERE telegram_user_id=?',String(MEDIA.id))).role,'REPORTER');
-  r=await msg(OTHER,`/start partner_${token}`);
+  const membershipA=await getActivePartnerMembership(env.DB,String(MEDIA_A.id),'ANFA-CHEPICA-2026');
+  assert.ok(membershipA);
+  assert.equal(membershipA.partner_code,'CHEPICA_PLAY');
+
+  r=await msg(MEDIA_B,`/start partner_${tokenB}`);
+  assert.equal(r.handled,'media_partner_collaboration_claimed');
+  const membershipB=await getActivePartnerMembership(env.DB,String(MEDIA_B.id),'ANFA-CHEPICA-2026');
+  assert.ok(membershipB);
+  assert.equal(membershipB.partner_code,'CHEPICA_PLAY');
+  assert.notEqual(membershipA.telegram_user_id,membershipB.telegram_user_id);
+  assert.deepEqual(JSON.parse(membershipA.capabilities_json),['READ_COMPETITION','OBSERVE_RESULT']);
+  assert.deepEqual(JSON.parse(membershipB.capabilities_json),['READ_COMPETITION','OBSERVE_RESULT']);
+  assert.equal((await one('SELECT role FROM reporters WHERE telegram_user_id=?',String(MEDIA_A.id))).role,'REPORTER');
+  assert.equal((await one('SELECT role FROM reporters WHERE telegram_user_id=?',String(MEDIA_B.id))).role,'REPORTER');
+  assert.equal(Number((await one("SELECT COUNT(*) n FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND active=1")).n),2);
+  console.log('PASS two different Telegram identities are independently linked to the same Chépica Play organization');
+
+  // Claimed link cannot be replayed.
+  r=await msg(OTHER,`/start partner_${tokenA}`);
   assert.equal(r.handled,'media_partner_claim_invalid');
-  console.log('PASS enrollment is additive, single-use and grants only read + register-result capabilities');
+  console.log('PASS each individual invitation remains single-use');
 
-  const reporter=await one('SELECT * FROM reporters WHERE telegram_user_id=?',String(MEDIA.id));
-  assert.equal(await hasScopedCapability(env.DB,reporter,CAPABILITY.READ_COMPETITION,match),true);
-  assert.equal(await hasScopedCapability(env.DB,reporter,CAPABILITY.OBSERVE_RESULT,match),true);
-  assert.equal(await hasScopedCapability(env.DB,reporter,CAPABILITY.PUBLISH_MATCH_EVENT,match),false);
-  console.log('PASS authorization contract: consume=true, register-result=true, publish-live-event=false');
+  // An already-linked person must not consume a spare invitation intended for another person.
+  r=await msg(MEDIA_A,`/start partner_${spareToken}`);
+  assert.equal(r.handled,'media_partner_already_member');
+  assert.equal((await one('SELECT status FROM partner_scope_invites WHERE invite_id=?',spareInvite)).status,'PENDING');
+  assert.equal(Number((await one("SELECT COUNT(*) n FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND active=1")).n),2);
+  console.log('PASS already-linked identity cannot consume another person invitation; spare invite stays available');
 
-  r=await msg(MEDIA,'/partner');
-  assert.equal(r.handled,'media_partner_home');
-  const home=last(MEDIA.id);
-  assert.match(home.text,/CONSUMIDOR DE RESULTADOS/i);
-  assert.match(home.text,/REGISTRADOR DE RESULTADOS/i);
-  const homeCallbacks=callbacks(home);
-  assert.ok(homeCallbacks.includes('tp:public-results'));
-  assert.ok(homeCallbacks.includes('obs:dates'));
-  assert.equal(homeCallbacks.some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')||x==='mp:hub'||x==='mp:mycoverages'),false);
-  console.log('PASS actor-fidelity gate: Chépica Play UI exposes only consume + register result');
+  const reporterA=await one('SELECT * FROM reporters WHERE telegram_user_id=?',String(MEDIA_A.id));
+  const reporterB=await one('SELECT * FROM reporters WHERE telegram_user_id=?',String(MEDIA_B.id));
+  for(const reporter of [reporterA,reporterB]){
+    assert.equal(await hasScopedCapability(env.DB,reporter,CAPABILITY.READ_COMPETITION,match),true);
+    assert.equal(await hasScopedCapability(env.DB,reporter,CAPABILITY.OBSERVE_RESULT,match),true);
+    assert.equal(await hasScopedCapability(env.DB,reporter,CAPABILITY.PUBLISH_MATCH_EVENT,match),false);
+  }
+  console.log('PASS every active identity independently receives consume + register-result and no live-event capability');
 
-  r=await cb(MEDIA,'tp:public-results');
-  assert.equal(r.handled,'portal_public_results');
-  console.log('PASS consumer vertical reaches the verified-results projection');
+  for(const actor of [MEDIA_A,MEDIA_B]){
+    r=await msg(actor,'/partner');
+    assert.equal(r.handled,'media_partner_home');
+    const home=last(actor.id);
+    assert.match(home.text,/CONSUMIDOR DE RESULTADOS/i);
+    assert.match(home.text,/REGISTRADOR DE RESULTADOS/i);
+    assert.match(home.text,/más de una identidad activa/i);
+    const homeCallbacks=callbacks(home);
+    assert.ok(homeCallbacks.includes('tp:public-results'));
+    assert.ok(homeCallbacks.includes('obs:dates'));
+    assert.equal(homeCallbacks.some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')||x==='mp:hub'||x==='mp:mycoverages'),false);
+    r=await cb(actor,'tp:public-results');
+    assert.equal(r.handled,'portal_public_results');
+  }
+  console.log('PASS both identities can independently consume verified results through the same partner contract');
 
   const before=await one('SELECT result_id,home_score,away_score,validation_status FROM match_series_results WHERE match_id=? AND series_code=?',missing.match_id,'TERCERA');
-  await cb(MEDIA,`obs:match:${missing.match_id}`);
-  await cb(MEDIA,`obs:series:${missing.match_id}:TERCERA`);
-  await cb(MEDIA,'obs:h:2');
-  await cb(MEDIA,'obs:a:1');
-  r=await cb(MEDIA,'obs:confirm');
-  assert.equal(r.handled,'observation_submitted');
-  assert.equal(r.source_type,'MEDIA_PARTNER');
-  const observation=await one('SELECT * FROM public_result_submissions WHERE submission_id=?',r.submission_id);
-  assert.equal(observation.source_type,'MEDIA_PARTNER');
-  assert.equal(observation.source_label,'Chépica Play');
-  assert.equal(observation.trust_level,'VERIFIED');
-  assert.equal(observation.status,'SUBMITTED');
+  const resultA=await registerScore(MEDIA_A,missing.match_id,'TERCERA',2,1);
+  assert.equal(resultA.handled,'observation_submitted');
+  assert.equal(resultA.source_type,'MEDIA_PARTNER');
+  const resultB=await registerScore(MEDIA_B,missing.match_id,'TERCERA',1,1);
+  assert.equal(resultB.handled,'observation_submitted');
+  assert.equal(resultB.source_type,'MEDIA_PARTNER');
+
+  const observationA=await one('SELECT * FROM public_result_submissions WHERE submission_id=?',resultA.submission_id);
+  const observationB=await one('SELECT * FROM public_result_submissions WHERE submission_id=?',resultB.submission_id);
+  assert.equal(observationA.source_label,'Chépica Play');
+  assert.equal(observationB.source_label,'Chépica Play');
+  assert.equal(observationA.submitter_id,String(MEDIA_A.id));
+  assert.equal(observationB.submitter_id,String(MEDIA_B.id));
+  assert.equal(observationA.status,'SUBMITTED');
+  assert.equal(observationB.status,'SUBMITTED');
+  assert.notEqual(observationA.submission_id,observationB.submission_id);
   const after=await one('SELECT result_id,home_score,away_score,validation_status FROM match_series_results WHERE match_id=? AND series_code=?',missing.match_id,'TERCERA');
   assert.deepEqual(after,before);
-  console.log('PASS registrar vertical stores a Chépica Play observation without mutating canonical result');
+  console.log('PASS multiple Chépica Play identities can register independent traced result observations without canonical overwrite');
+
+  // Revoking one identity must not revoke the organization or another identity.
+  r=await cb(OP,`mp:member-revoke:${membershipA.grant_id}`);
+  assert.equal(r.handled,'media_partner_member_revoked');
+  assert.equal(Number((await one('SELECT active FROM actor_scope_grants WHERE grant_id=?',membershipA.grant_id)).active),0);
+  assert.equal(Number((await one('SELECT active FROM actor_scope_grants WHERE grant_id=?',membershipB.grant_id)).active),1);
+  assert.ok(await getActivePartnerMembership(env.DB,String(MEDIA_B.id),'ANFA-CHEPICA-2026'));
+  assert.equal(await getActivePartnerMembership(env.DB,String(MEDIA_A.id),'ANFA-CHEPICA-2026'),null);
+  r=await msg(MEDIA_B,'/partner');
+  assert.equal(r.handled,'media_partner_home');
+  assert.match(last(MEDIA_B.id).text,/REGISTRADOR DE RESULTADOS/i);
+  console.log('PASS revoking one identity leaves other Chépica Play identities active and usable');
+
+  // Pending invitations have independent lifecycle too.
+  r=await cb(OP,`mp:invite-revoke:${spareInvite}`);
+  assert.equal(r.handled,'media_partner_invite_revoked');
+  assert.equal((await one('SELECT status FROM partner_scope_invites WHERE invite_id=?',spareInvite)).status,'REVOKED');
+  assert.equal(Number((await one("SELECT COUNT(*) n FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND active=1")).n),1);
+  console.log('PASS invitation lifecycle is independent from active member lifecycle');
 
   const activeCoverages=Number((await one("SELECT COUNT(*) n FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND status IN ('ASSIGNED','LIVE','CLOSED')")).n);
   const activeAssignments=Number((await one("SELECT COUNT(*) n FROM partner_coverage_assignments WHERE partner_code='CHEPICA_PLAY' AND status='ACTIVE'")).n);
   assert.equal(activeCoverages,0);
   assert.equal(activeAssignments,0);
-  console.log('PASS root cleanup leaves no active coverage/correspondent operational scope');
+  console.log('PASS multi-identity support does not reintroduce coverage/correspondent operational scope');
 
-  r=await cb(MEDIA,`mp:coverage-open:${match.match_id}`);
+  r=await cb(MEDIA_B,`mp:coverage-open:${match.match_id}`);
   assert.equal(r.handled,'media_partner_legacy_flow_retired');
-  r=await cb(MEDIA,`mplive:event:${match.match_id}`,'legacy-live-event');
+  r=await cb(MEDIA_B,`mplive:event:${match.match_id}`,'legacy-live-event');
   assert.equal(r.handled,'media_partner_legacy_flow_retired');
   assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_id='mp-live-legacy-live-event'")).n),0);
-  console.log('PASS stale coverage/live buttons are fail-closed and cannot mutate state');
+  console.log('PASS stale coverage/live buttons remain fail-closed');
 
-  const policyAudits=await one("SELECT COUNT(*) n FROM permission_audit WHERE actor_id=? AND action IN ('MANAGE_POLICY','GRANT_SUPER_ADMIN')",String(MEDIA.id));
+  const policyAudits=await one("SELECT COUNT(*) n FROM permission_audit WHERE actor_id IN (?,?) AND action IN ('MANAGE_POLICY','GRANT_SUPER_ADMIN')",String(MEDIA_A.id),String(MEDIA_B.id));
   assert.equal(Number(policyAudits.n),0);
-  console.log('PASS no governance or policy authority is introduced');
+  console.log('PASS no member receives governance or policy authority');
   console.log('RESULT: PASS');
 }finally{
   globalThis.fetch=originalFetch;
