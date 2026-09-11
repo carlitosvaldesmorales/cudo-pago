@@ -1,0 +1,52 @@
+name: Validate Chépica Play Visual QA
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/contributor-observation-entry.js'
+      - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/media-partner-visual-qa-harness.mjs'
+      - '.github/workflows/validate-media-partner-visual-qa.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/chepica-play-preuser-visual-qa-v1
+    paths:
+      - 'sports-bus/worker/contributor-observation-entry.js'
+      - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/media-partner-visual-qa-harness.mjs'
+      - '.github/workflows/validate-media-partner-visual-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/contributor-observation-entry.js
+          node --check qa/telegram/media-partner-visual-qa-harness.mjs
+      - name: Run pre-user visual contract
+        run: |
+          set -euo pipefail
+          node qa/telegram/media-partner-visual-qa-harness.mjs | tee /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: admin surface shows organization + N identities without reintroducing old scope' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: both synthetic members receive the same two-capability home contract' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: unlinked identity cannot see the register-result action' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: two identities complete independent registration paths with person + organization provenance' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: cancel returns a Chépica Play member to the partner space' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: consumer path reaches the published-results projection without exposing technical role names' /tmp/chepica-play-visual.log
+          grep -q 'RESULT: PASS' /tmp/chepica-play-visual.log
