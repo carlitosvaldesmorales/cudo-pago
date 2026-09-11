@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "product": "Fútbol Chépica",
+  "invariants": [
+    "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
+    "CONTEXT_NEQ_REQUIREMENT",
+    "DEPENDENCY_REQUIRES_CONSUMABLE_PROVIDER"
+  ],
+  "modules": [
+    {
+      "id": "CP-RESULTS-CONSUME",
+      "name": "Chépica Play · Consultar resultados",
+      "actor": "Identidad vinculada a Chépica Play",
+      "goal": "Consultar resultados del campeonato",
+      "human_facing": true,
+      "stage": "VISUAL_PENDING",
+      "visual_contract": "PENDING",
+      "product_validation": "PENDING",
+      "technical_implementation": "EXISTS",
+      "qa": "PARTIAL",
+      "runtime_evidence": "TECHNICAL_ONLY",
+      "consumable": false,
+      "dependencies": [],
+      "gap": "No existe evidencia registrada de aceptación del contrato visual completo por producto."
+    },
+    {
+      "id": "CP-RESULTS-REGISTER",
+      "name": "Chépica Play · Registrar resultado",
+      "actor": "Identidad vinculada a Chépica Play",
+      "goal": "Ingresar el marcador de una serie/partido como aporte de Chépica Play",
+      "human_facing": true,
+      "stage": "VISUAL_PENDING",
+      "visual_contract": "PENDING",
+      "product_validation": "PENDING",
+      "technical_implementation": "EXISTS_AHEAD_OF_GATE",
+      "qa": "EXPERIMENTAL_AHEAD_OF_GATE",
+      "runtime_evidence": "NOT_PRODUCT_CERTIFIED",
+      "consumable": false,
+      "dependencies": [],
+      "gap": "Falta diseñar y validar la experiencia visual completa antes de considerar válida la implementación existente."
+    }
+  ],
+  "current_frontier": {
+    "module_id": "CP-RESULTS-REGISTER",
+    "allowed_next_step": "DESIGN_VISUAL_CONTRACT",
+    "blocked_steps": [
+      "NEW_DEPENDENT_MODULES",
+      "REAL_USER_ENROLLMENT",
+      "PRODUCT_CERTIFICATION",
+      "MERGE_EXPERIMENTAL_VISUAL_QA_AS_FINAL"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+name: Validate Consumable Module Gate
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - architecture/consumable-module-gate-v1
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate module maturity invariants
+        run: node scripts/validate-module-registry.mjs
