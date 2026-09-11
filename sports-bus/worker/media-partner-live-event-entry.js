@@ -2,7 +2,6 @@ import { CAPABILITY, getActivePartnerMembership, hasScopedCapability } from './a
 
 const COMPETITION_ID='ANFA-CHEPICA-2026';
 const PARTNER_NAME='Chépica Play';
-const SERIES=['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
 const SERIES_LABEL={TERCERA:'3ª',SEGUNDA:'2ª',SENIOR:'Senior',PRIMERA:'1ª'};
 const EVENT_LABEL={GOAL:'⚽ Gol',YELLOW:'🟨 Amarilla',RED:'🟥 Roja'};
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8'}});
@@ -113,7 +112,7 @@ export async function handleMediaPartnerLiveEventRequest(request,env){
     };
     const result=await env.DB.prepare(`INSERT OR IGNORE INTO events
       (event_id,event_type,occurred_at,received_at,competition_id,season_id,match_id,actor_id,actor_name,club_id,validation_status,payload_json)
-      VALUES (?,'match.event.observed',?,?,?,?,?,?,?,?,?,'PROVISIONAL',?)`)
+      VALUES (?,'match.event.observed',?,?,?,?,?,?,?,?,'PROVISIONAL',?)`)
       .bind(eventId,now,now,gate.match.competition_id,gate.match.season_id||null,gate.match.match_id,actorId,reporter.display_name||actor.username||actorId,clubId,JSON.stringify(payload)).run();
     const inserted=Number(result?.meta?.changes??result?.changes??1)>0;
     await answer(env,callback.id,inserted?'Evento registrado':'Evento ya recibido');
