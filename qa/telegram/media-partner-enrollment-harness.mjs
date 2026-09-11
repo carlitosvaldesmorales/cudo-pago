@@ -60,23 +60,22 @@ try{
 
   let r=await msg(OP,'/medios');
   assert.equal(r.handled,'media_partner_management');
-  assert.match(last(OP.id).text,/Consumir resultados/i);
+  assert.match(last(OP.id).text,/Personas vinculadas: 0/i);
+  assert.match(last(OP.id).text,/Consultar resultados/i);
   assert.match(last(OP.id).text,/Registrar resultados/i);
-  assert.match(last(OP.id).text,/puede tener varias identidades Telegram activas/i);
-  assert.match(last(OP.id).text,/No incluye coberturas, corresponsales, goles\/eventos en vivo/i);
+  assert.equal(/coberturas|corresponsales|eventos en vivo/i.test(last(OP.id).text),false);
   const manageActions=callbacks(last(OP.id));
   assert.equal(manageActions.some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')||x==='mp:hub'||x==='mp:mycoverages'),false);
   assert.ok(manageActions.includes('mp:collab:invite'));
   console.log('PASS management surface declares one partner organization with N independent identities and exactly two capabilities');
 
-  // Multiple invitations may coexist. Each link is individual and single-use.
   r=await cb(OP,'mp:collab:invite');
   assert.equal(r.handled,'media_partner_collaboration_invite_created');
   assert.deepEqual(r.capabilities,['READ_COMPETITION','OBSERVE_RESULT']);
   const inviteA=r.invite_id,tokenA=tokenFromLast(OP.id);
   assert.ok(tokenA);
   assert.match(last(OP.id).text,/individual y de un solo uso/i);
-  assert.match(last(OP.id).text,/varias invitaciones pueden quedar pendientes/i);
+  assert.match(last(OP.id).text,/Puedes crear uno distinto para cada persona/i);
 
   r=await cb(OP,'mp:collab:invite');
   assert.equal(r.handled,'media_partner_collaboration_invite_created');
@@ -111,12 +110,10 @@ try{
   assert.equal(Number((await one("SELECT COUNT(*) n FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND active=1")).n),2);
   console.log('PASS two different Telegram identities are independently linked to the same Chépica Play organization');
 
-  // Claimed link cannot be replayed.
   r=await msg(OTHER,`/start partner_${tokenA}`);
   assert.equal(r.handled,'media_partner_claim_invalid');
   console.log('PASS each individual invitation remains single-use');
 
-  // An already-linked person must not consume a spare invitation intended for another person.
   r=await msg(MEDIA_A,`/start partner_${spareToken}`);
   assert.equal(r.handled,'media_partner_already_member');
   assert.equal((await one('SELECT status FROM partner_scope_invites WHERE invite_id=?',spareInvite)).status,'PENDING');
@@ -136,9 +133,9 @@ try{
     r=await msg(actor,'/partner');
     assert.equal(r.handled,'media_partner_home');
     const home=last(actor.id);
-    assert.match(home.text,/CONSUMIDOR DE RESULTADOS/i);
-    assert.match(home.text,/REGISTRADOR DE RESULTADOS/i);
-    assert.match(home.text,/más de una identidad activa/i);
+    assert.match(home.text,/ACCESOS HABILITADOS/i);
+    assert.match(home.text,/Consultar resultados/i);
+    assert.match(home.text,/Registrar resultado/i);
     const homeCallbacks=callbacks(home);
     assert.ok(homeCallbacks.includes('tp:public-results'));
     assert.ok(homeCallbacks.includes('obs:dates'));
@@ -169,7 +166,6 @@ try{
   assert.deepEqual(after,before);
   console.log('PASS multiple Chépica Play identities can register independent traced result observations without canonical overwrite');
 
-  // Revoking one identity must not revoke the organization or another identity.
   r=await cb(OP,`mp:member-revoke:${membershipA.grant_id}`);
   assert.equal(r.handled,'media_partner_member_revoked');
   assert.equal(Number((await one('SELECT active FROM actor_scope_grants WHERE grant_id=?',membershipA.grant_id)).active),0);
@@ -178,10 +174,9 @@ try{
   assert.equal(await getActivePartnerMembership(env.DB,String(MEDIA_A.id),'ANFA-CHEPICA-2026'),null);
   r=await msg(MEDIA_B,'/partner');
   assert.equal(r.handled,'media_partner_home');
-  assert.match(last(MEDIA_B.id).text,/REGISTRADOR DE RESULTADOS/i);
+  assert.match(last(MEDIA_B.id).text,/Registrar resultado/i);
   console.log('PASS revoking one identity leaves other Chépica Play identities active and usable');
 
-  // Pending invitations have independent lifecycle too.
   r=await cb(OP,`mp:invite-revoke:${spareInvite}`);
   assert.equal(r.handled,'media_partner_invite_revoked');
   assert.equal((await one('SELECT status FROM partner_scope_invites WHERE invite_id=?',spareInvite)).status,'REVOKED');
