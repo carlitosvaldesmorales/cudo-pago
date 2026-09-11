@@ -1,8 +1,9 @@
-import { resolveObservationProvenance } from './access-control.js';
+import { resolveObservationProvenance, getActivePartnerMembership } from './access-control.js';
 
 const SERIES=['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
 const SERIES_LABEL={TERCERA:'3ª',SEGUNDA:'2ª',SENIOR:'Senior',PRIMERA:'1ª'};
 const MAX_PENDING_PER_USER=8;
+const COMPETITION_ID='ANFA-CHEPICA-2026';
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8'}});
 
 export async function handleContributorObservationRequest(request,env){
@@ -27,18 +28,20 @@ export async function handleContributorObservationRequest(request,env){
   const actorId=String(actor.id);
   await upsertIdentity(env.DB,actorId,actor);
   const reporter=await env.DB.prepare('SELECT * FROM reporters WHERE telegram_user_id=?').bind(actorId).first();
+  const partnerUi=!!(await getActivePartnerMembership(env.DB,actorId,COMPETITION_ID));
 
   if(data==='tp:public-report'||data==='obs:dates'||/^\/informar(?:@\w+)?$/i.test(text)){
     await clearSession(env.DB,actorId);
     if(callback) await answer(env,callback.id,'Informar resultado');
-    await showDates(env,chatId);
+    await showDates(env,chatId,partnerUi);
     return json({ok:true,handled:'observation_dates'});
   }
 
   if(data==='obs:cancel'){
     await clearSession(env.DB,actorId);
     await answer(env,callback.id,'Cancelado');
-    await send(env,chatId,'Operación cancelada. No se guardó ninguna observación.',{inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]});
+    const home=partnerUi?{text:'🎥 Chépica Play',callback_data:'mp:home'}:{text:'🌐 Público',callback_data:'tp:public'};
+    await send(env,chatId,'Operación cancelada. No se guardó ninguna observación.',{inline_keyboard:[[home]]});
     return json({ok:true,handled:'observation_cancel'});
   }
 
@@ -99,7 +102,7 @@ export async function handleContributorObservationRequest(request,env){
     await answer(env,callback.id,String(score));
     const match=await getMatch(env.DB,session.match_id);
     if(side==='HOME') await showScorePicker(env,chatId,match,session.series_code,'AWAY',score);
-    else await showConfirmation(env,chatId,actorId,reporter);
+    else await showConfirmation(env,chatId,actorId,reporter,partnerUi);
     return json({ok:true,handled:side==='HOME'?'observation_away_score':'observation_confirm'});
   }
 
@@ -134,7 +137,7 @@ export async function handleContributorObservationRequest(request,env){
     session=await sessionFor(env.DB,actorId);
     const match=await getMatch(env.DB,session.match_id);
     if(side==='HOME') await showScorePicker(env,chatId,match,session.series_code,'AWAY',Number(session.home_score));
-    else await showConfirmation(env,chatId,actorId,reporter);
+    else await showConfirmation(env,chatId,actorId,reporter,partnerUi);
     return json({ok:true,handled:side==='HOME'?'observation_away_score':'observation_confirm'});
   }
 
@@ -193,7 +196,8 @@ export async function handleContributorObservationRequest(request,env){
       : observationKind==='CORROBORATION'
         ? `Tu información coincide con el resultado oficial actual (${official.home_score}-${official.away_score}).`
         : `Tu información difiere del resultado oficial actual (${official.home_score}-${official.away_score}). El oficial NO fue modificado.`;
-    await send(env,chatId,`✅ INFORMACIÓN RECIBIDA\n\n${match.home_name} ${home}-${away} ${match.away_name}\nSerie: ${SERIES_LABEL[session.series_code]}\n\n${context}\n\nOrigen registrado: ${provenance.source_label}\nEstado del aporte: PENDIENTE`,{inline_keyboard:[[{text:'🔎 Mis aportes',callback_data:'pr:my'}],[{text:'📣 Informar otro resultado',callback_data:'obs:dates'}],[{text:'🌐 Público',callback_data:'tp:public'}]]});
+    const homeButton=partnerUi?{text:'🎥 Chépica Play',callback_data:'mp:home'}:{text:'🌐 Público',callback_data:'tp:public'};
+    await send(env,chatId,`✅ INFORMACIÓN RECIBIDA\n\n${match.home_name} ${home}-${away} ${match.away_name}\nSerie: ${SERIES_LABEL[session.series_code]}\n\n${context}\n\nOrigen registrado: ${provenance.source_label}\nEstado del aporte: PENDIENTE`,{inline_keyboard:[[{text:'🔎 Mis aportes',callback_data:'pr:my'}],[{text:'📣 Informar otro resultado',callback_data:'obs:dates'}],[homeButton]]});
     await notifyReviewers(env,match,submissionId,session.series_code,home,away,displayName(actor),observationKind,provenance.source_label);
     return json({ok:true,handled:'observation_submitted',submission_id:submissionId,observation_kind:observationKind,source_type:provenance.source_type});
   }
@@ -201,15 +205,19 @@ export async function handleContributorObservationRequest(request,env){
   return null;
 }
 
-async function showDates(env,chatId){
-  const q=await env.DB.prepare("SELECT DISTINCT round_no,round_label FROM matches WHERE competition_id='ANFA-CHEPICA-2026' ORDER BY round_no").all();
+async function showDates(env,chatId,partnerUi=false){
+  const q=await env.DB.prepare("SELECT DISTINCT round_no,round_label FROM matches WHERE competition_id=? ORDER BY round_no").bind(COMPETITION_ID).all();
   const rows=(q.results||[]).map(r=>[{text:`⚽ ${r.round_label||'Fecha '+r.round_no}`,callback_data:`obs:date:${r.round_no}`}]);
-  rows.push([{text:'🌐 Público',callback_data:'tp:public'}]);
-  await send(env,chatId,'📣 INFORMAR RESULTADO\n\nCualquier persona puede aportar información. Selecciona la fecha; el sistema te guiará sólo con opciones válidas.',{inline_keyboard:rows});
+  const home=partnerUi?{text:'🎥 Chépica Play',callback_data:'mp:home'}:{text:'🌐 Público',callback_data:'tp:public'};
+  rows.push([home]);
+  const text=partnerUi
+    ? '🎥 CHÉPICA PLAY · REGISTRAR RESULTADO\n\nSelecciona la fecha. El marcador quedará identificado como un aporte de Chépica Play y no modifica automáticamente el resultado oficial.'
+    : '📣 INFORMAR RESULTADO\n\nCualquier persona puede aportar información. Selecciona la fecha; el sistema te guiará sólo con opciones válidas.';
+  await send(env,chatId,text,{inline_keyboard:rows});
 }
 
 async function showRound(env,chatId,roundNo){
-  const q=await env.DB.prepare("SELECT match_id,group_id,round_no,round_label,home_name,away_name FROM matches WHERE competition_id='ANFA-CHEPICA-2026' AND round_no=? ORDER BY group_id,match_id").bind(roundNo).all();
+  const q=await env.DB.prepare("SELECT match_id,group_id,round_no,round_label,home_name,away_name FROM matches WHERE competition_id=? AND round_no=? ORDER BY group_id,match_id").bind(COMPETITION_ID,roundNo).all();
   const rows=(q.results||[]).map(m=>[{text:`Grupo ${m.group_id} · ${m.home_name} — ${m.away_name}`,callback_data:`obs:match:${m.match_id}`}]);
   rows.push([{text:'⬅️ Fechas',callback_data:'obs:dates'}]);
   await send(env,chatId,`📅 Fecha ${roundNo}\n\nSelecciona el partido:`,{inline_keyboard:rows});
@@ -224,7 +232,7 @@ async function showSeries(env,chatId,match){
     return [{text:label,callback_data:`obs:series:${match.match_id}:${code}`}];
   });
   rows.push([{text:`⬅️ ${match.round_label||'Fecha'}`,callback_data:`obs:date:${match.round_no}`}]);
-  await send(env,chatId,`🏟 ${match.home_name} — ${match.away_name}\n${match.round_label} · Grupo ${match.group_id}\n\nSelecciona la serie. Incluso si ya existe un resultado oficial puedes informar lo que viste; tu aporte nunca lo sobrescribe.`,{inline_keyboard:rows});
+  await send(env,chatId,`🏟 ${match.home_name} — ${match.away_name}\n${match.round_label} · Grupo ${match.group_id}\n\nSelecciona la serie. Incluso si ya existe un resultado oficial puedes informar un marcador; tu aporte nunca lo sobrescribe.`,{inline_keyboard:rows});
 }
 
 function scoreKeyboard(side){
@@ -254,15 +262,16 @@ async function showHighStepper(env,chatId,actorId,side){
   ]});
 }
 
-async function showConfirmation(env,chatId,actorId,reporter){
+async function showConfirmation(env,chatId,actorId,reporter,partnerUi=false){
   const session=await sessionFor(env.DB,actorId);
   if(!session) return;
   const match=await getMatch(env.DB,session.match_id);
   if(!match) return;
   const official=await env.DB.prepare('SELECT home_score,away_score,validation_status FROM match_series_results WHERE match_id=? AND series_code=?').bind(match.match_id,session.series_code).first();
   const provenance=await resolveObservationProvenance(env.DB,reporter,match);
-  const comparison=official?`\nResultado oficial actual: ${official.home_score}-${official.away_score} · ${official.validation_status}`:'\nAún no existe resultado oficial.';
-  await send(env,chatId,`🧾 CONFIRMAR INFORMACIÓN\n\n${match.round_label} · Grupo ${match.group_id} · ${SERIES_LABEL[session.series_code]}\n${match.home_name} ${session.home_score}–${session.away_score} ${match.away_name}${comparison}\n\nOrigen: ${provenance.source_label}\n\n¿Confirmas que esto es lo que viste?`,{inline_keyboard:[
+  const comparison=official?`\nResultado oficial actual: ${official.home_score}-${official.away_score}`:'\nAún no existe resultado oficial.';
+  const origin=partnerUi?`\nOrigen: ${provenance.source_label}\nEste aporte no reemplaza automáticamente el resultado oficial.`:`\nOrigen: ${provenance.source_label}`;
+  await send(env,chatId,`🧾 CONFIRMAR RESULTADO\n\n${match.round_label} · Grupo ${match.group_id} · ${SERIES_LABEL[session.series_code]}\n${match.home_name} ${session.home_score}–${session.away_score} ${match.away_name}${comparison}${origin}\n\n¿Confirmas que el marcador ingresado es correcto?`,{inline_keyboard:[
     [{text:'✅ Confirmar',callback_data:'obs:confirm'}],
     [{text:'✏️ Cambiar marcador',callback_data:'obs:change'}],
     [{text:'❌ Cancelar',callback_data:'obs:cancel'}]
