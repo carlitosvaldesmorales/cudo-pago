@@ -1,0 +1,55 @@
+name: Validate Media Partner MOF+
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/media-partner-live-event-entry.js'
+      - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/media-partner-mofplus-harness.mjs'
+      - '.github/workflows/validate-media-partner-mofplus.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/media-partner-live-events-mofplus-v1
+    paths:
+      - 'sports-bus/worker/media-partner-live-event-entry.js'
+      - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/media-partner-mofplus-harness.mjs'
+      - '.github/workflows/validate-media-partner-mofplus.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/media-partner-live-event-entry.js
+          node --check sports-bus/cors-entry.js
+          node --check qa/telegram/media-partner-mofplus-harness.mjs
+      - name: Validate representative synthetic end-to-end and critical negatives
+        run: |
+          set -euo pipefail
+          node qa/telegram/media-partner-mofplus-harness.mjs | tee /tmp/media-partner-mofplus.log
+          grep -q 'PASS golden path reaches high-fidelity LIVE workspace with consumer + contributor contract' /tmp/media-partner-mofplus.log
+          grep -q 'PASS live event is stored as traced Chépica Play observation, not canonical truth' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/idempotency: duplicate callback creates exactly one event' /tmp/media-partner-mofplus.log
+          grep -q 'PASS golden path records score observation without canonical overwrite' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/scope: partner cannot publish live events outside active coverage' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/stale: old callback cannot mutate a closed coverage' /tmp/media-partner-mofplus.log
+          grep -q 'PASS authorization: non-partner synthetic actor is rejected' /tmp/media-partner-mofplus.log
+          grep -q 'PASS final state: permanent membership survives coverage close and base role remains REPORTER' /tmp/media-partner-mofplus.log
+          grep -q 'RESULT: PASS' /tmp/media-partner-mofplus.log
