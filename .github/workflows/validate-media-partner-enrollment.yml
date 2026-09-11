@@ -1,0 +1,57 @@
+name: Validate Media Partner Enrollment
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/media-partner-enrollment-harness.mjs'
+      - '.github/workflows/validate-media-partner-enrollment.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/media-partner-enrollment-v1
+    paths:
+      - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/media-partner-enrollment-harness.mjs'
+      - '.github/workflows/validate-media-partner-enrollment.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/access-control.js
+          node --check sports-bus/worker/media-partner-enrollment-entry.js
+          node --check sports-bus/cors-entry.js
+          node --check qa/telegram/media-partner-enrollment-harness.mjs
+      - name: Validate scoped media partner enrollment and provenance
+        run: |
+          set -euo pipefail
+          node qa/telegram/media-partner-enrollment-harness.mjs | tee /tmp/media-partner-enrollment.log
+          grep -q 'PASS PLATFORM_OPERATOR manages media partner enrollment without policy authority' /tmp/media-partner-enrollment.log
+          grep -q 'PASS match-scoped one-use invitation is created for Chépica Play' /tmp/media-partner-enrollment.log
+          grep -q 'PASS partner claim is additive: base role stays REPORTER and MEDIA_PARTNER grant is scoped to one match' /tmp/media-partner-enrollment.log
+          grep -q 'PASS least privilege: Chépica Play can contribute in assigned match but cannot govern results or change policy' /tmp/media-partner-enrollment.log
+          grep -q 'PASS invitation is single-use and cannot be claimed by a second identity' /tmp/media-partner-enrollment.log
+          grep -q 'PASS Chépica Play observation carries trusted provenance but remains an observation until reconciliation' /tmp/media-partner-enrollment.log
+          grep -q 'PASS partner UX exposes only the assigned match scope' /tmp/media-partner-enrollment.log
+          grep -q 'PASS revoking media scope removes partner capability without deleting identity or changing base role' /tmp/media-partner-enrollment.log
+          grep -q 'PASS media integration preserves Separation of Duties and policy boundary' /tmp/media-partner-enrollment.log
+          grep -q 'RESULT: PASS' /tmp/media-partner-enrollment.log
