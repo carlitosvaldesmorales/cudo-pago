@@ -111,10 +111,10 @@ try{
   console.log('PASS partner workspace exposes consumer and contributor capabilities together');
 
   r=await cb(MEDIA,`mp:coverage-open:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_coverage_workspace');
+  assert.equal(r.handled,'media_partner_live_workspace');
   assert.ok(callbacks(last(MEDIA.id)).includes(`obs:match:${assigned.match_id}`));
   r=await cb(MEDIA,`mp:coverage-live:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_coverage_live');
+  assert.equal(r.handled,'media_partner_live_started');
   assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'LIVE');
   console.log('PASS partner can operate its assigned coverage without gaining championship governance');
 
@@ -148,7 +148,7 @@ try{
   console.log('PASS partner trust is contextual: outside coverage the same person contributes as public informant');
 
   r=await cb(MEDIA,`mp:coverage-close:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_coverage_closed');
+  assert.equal(r.handled,'media_partner_live_closed');
   assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'CLOSED');
   assert.ok(await getActivePartnerMembership(env.DB,String(MEDIA.id),'ANFA-CHEPICA-2026'));
   console.log('PASS closing coverage does not terminate the permanent collaboration');
