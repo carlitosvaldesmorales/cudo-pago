@@ -38,13 +38,14 @@ jobs:
         run: |
           set -euo pipefail
           node --check sports-bus/worker/contributor-observation-entry.js
+          node --check sports-bus/worker/media-partner-enrollment-entry.js
           node --check qa/telegram/media-partner-visual-qa-harness.mjs
       - name: Run pre-user visual contract
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-visual-qa-harness.mjs | tee /tmp/chepica-play-visual.log
-          grep -q 'PASS visual agent: admin surface shows organization + N identities without reintroducing old scope' /tmp/chepica-play-visual.log
-          grep -q 'PASS visual agent: both synthetic members receive the same two-capability home contract' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: admin surfaces are concise, multi-person and limited to current capabilities' /tmp/chepica-play-visual.log
+          grep -q 'PASS visual agent: both synthetic members receive the same two-action home contract' /tmp/chepica-play-visual.log
           grep -q 'PASS visual agent: unlinked identity cannot see the register-result action' /tmp/chepica-play-visual.log
           grep -q 'PASS visual agent: two identities complete independent registration paths with person + organization provenance' /tmp/chepica-play-visual.log
           grep -q 'PASS visual agent: cancel returns a Chépica Play member to the partner space' /tmp/chepica-play-visual.log
