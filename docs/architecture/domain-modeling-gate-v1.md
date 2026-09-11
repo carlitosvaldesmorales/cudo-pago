@@ -4,6 +4,8 @@ Estado: ACTIVO
 Ámbito: Fútbol Chépica / CUDO Sports Event Bus
 Objetivo: impedir desvíos de arquitectura causados por convertir contexto, inferencias o posibilidades futuras en requisitos actuales.
 
+Este gate se usa obligatoriamente junto con `docs/architecture/consumable-module-gate-v1.md`.
+
 ## Invariantes principales
 
 Antes de diseñar permisos, UX o implementación, separar explícitamente:
@@ -14,7 +16,11 @@ Y, por encima de todo:
 
 **CONTEXTO ≠ REQUISITO**
 
-Que sepamos cómo una organización trabaja en el mundo real no autoriza a incorporar esa operación al producto. Una capacidad entra en arquitectura sólo cuando ha sido declarada como requisito actual o aceptada explícitamente como parte del alcance.
+Además:
+
+**CAPACIDAD TÉCNICA ≠ MÓDULO CONSUMIBLE**
+
+Que sepamos cómo una organización trabaja en el mundo real no autoriza a incorporar esa operación al producto. Que exista código, persistencia o QA tampoco autoriza a declarar terminado un módulo humano.
 
 ## Gate de alcance antes del modelado
 
@@ -27,28 +33,31 @@ Antes de recorrer la topología del dominio, clasificar cada dato en una de esta
 
 Una inferencia nunca puede ascender de CONTEXTO/HIPÓTESIS a REQUISITO sin validación explícita.
 
-## Orden obligatorio de modelado
+## Orden obligatorio de trabajo
 
-Toda capacidad nueva o cambio relevante debe recorrer este orden:
+Toda capacidad humana nueva o cambio relevante debe recorrer este orden:
 
-1. **Alcance declarado** — qué capacidad se pidió realmente y qué queda fuera.
-2. **Dominio real necesario** — sólo la parte del mundo real necesaria para esa capacidad.
-3. **Topología de actores necesaria** — únicamente actores/relaciones requeridos por el alcance actual.
-4. **Persistencia** — qué debe existir establemente para soportar el requisito.
-5. **Scope/asignación** — sólo si el requisito necesita restricciones operacionales de alcance.
-6. **Capacidades/autoridad** — qué puede hacer y qué NO puede hacer.
-7. **Provenance y verdad** — quién aportó el dato y qué lo separa del estado canónico.
-8. **UX/flujo** — cómo se expresa lo anterior en Telegram/Web/API.
-9. **MOF+ sintético** — actor representativo del requisito, Golden Path, contrato visual, fallos críticos y estado final verificable.
-10. **Implementación/deploy**.
+1. **Alcance declarado** — qué se pidió realmente y qué queda fuera.
+2. **Módulo de producto** — actor, objetivo humano, entrada, salida y frontera del módulo.
+3. **Dominio real necesario** — sólo la parte del mundo real necesaria para ese módulo.
+4. **Topología de actores necesaria** — únicamente actores/relaciones requeridos por el alcance actual.
+5. **Persistencia / scope / autoridad / provenance** — sólo lo necesario para soportar el módulo.
+6. **Prototipo / contrato visual** — pantallas, botones, navegación, errores y estado final.
+7. **Validación de producto** — aceptación explícita del contrato antes de implementarlo.
+8. **Implementación** — código contra el contrato validado.
+9. **QA / MOF+** — Golden Path, fallos críticos y estado final verificable sobre la implementación.
+10. **Deploy / validación de runtime**.
+11. **CONSUMIBLE** — sólo entonces puede habilitar módulos dependientes.
 
-**No se agrega una capa sólo porque exista en el mundo real.** Si no es necesaria para la capacidad declarada, queda fuera del modelo actual.
+Esto implementa la secuencia operativa: **Afinación → Prototipo/estructura → Validación → Ejecución → QA → Consumible**.
+
+**No se agrega una capa sólo porque exista en el mundo real y no se avanza una capa sólo porque exista código.**
 
 ## Domain Actor Fidelity Gate
 
 Antes de aprobar un actor sintético o real, responder:
 
-- ¿Qué capacidad declarada estamos representando?
+- ¿Qué módulo/capacidad declarada estamos representando?
 - ¿Qué información sobre este actor es requisito y cuál es sólo contexto?
 - ¿Es una persona, organización, sistema o autoridad para efectos de esta capacidad?
 - ¿Qué acciones necesita realizar ahora?
@@ -59,6 +68,33 @@ Antes de aprobar un actor sintético o real, responder:
 Sólo si una relación adicional es necesaria para cumplir la capacidad declarada se modelan miembros, asignaciones u otras capas.
 
 Si una respuesta desconocida cambia el requisito actual, se declara **GAP** y se detiene esa parte. No se rellena por inferencia silenciosa.
+
+## Product Consumption Gate
+
+Para un módulo consumido por personas, el contrato visual es parte del requisito, no una decoración posterior.
+
+Antes de implementar debe existir una respuesta concreta para:
+
+```text
+ACTOR:
+PUNTO DE ENTRADA:
+PANTALLA/ESTADO INICIAL:
+ACCIONES DISPONIBLES:
+GOLDEN PATH VISUAL:
+ERRORES/NEGATIVOS RELEVANTES:
+ESTADO FINAL:
+RETORNO/SALIDA:
+```
+
+Si esa experiencia no está validada, el módulo permanece `VISUAL_PENDING` aunque ya exista código técnico.
+
+Los agentes QA pueden falsar una experiencia aprobada. No pueden convertir una experiencia inventada por el código en requisito válido.
+
+## Regla de dependencia
+
+Un módulo no `CONSUMABLE` no puede habilitar avance funcional de un módulo dependiente.
+
+La infraestructura interna sí puede adelantarse cuando es reusable y segura, pero no cuenta como progreso del módulo y no cambia su madurez.
 
 ## Regla de desvío
 
@@ -80,39 +116,45 @@ captura de eventos en vivo
 agregación de goles
 ```
 
-Esos conceptos sólo se incorporan si existe un requisito actual que los necesite.
+Del mismo modo:
 
-## MOF+ elevado
+```text
+handler implementado
+CI verde
+D1 persistiendo
+simulación E2E
+```
 
-Una capacidad no está suficientemente afinada sólo porque funcione.
+NO implica automáticamente:
+
+```text
+módulo visual resuelto
+producto validado
+experiencia consumible
+permiso para construir dependencias
+```
+
+## MOF+
+
+MOF+ se ejecuta DESPUÉS de la validación de producto y de la implementación del contrato aprobado.
 
 Debe demostrar, como mínimo:
 
-- actor sintético que represente correctamente **el alcance declarado**, no todo el contexto conocido;
+- actor sintético que represente correctamente el alcance declarado;
 - vertical end-to-end representativa;
 - Golden Path;
-- contrato visual/operacional coherente con el requisito;
+- contrato visual exacto respecto de la experiencia aprobada;
 - idempotencia/duplicado;
 - callback o acción obsoleta cuando aplique;
 - fuera de scope / autorización;
 - estado final verificable;
 - separación entre observación y estado canónico cuando corresponda.
 
-El MOF+ **no crea una plataforma paralela de QA** y tampoco expande el producto para hacer la simulación más realista de lo solicitado.
+El MOF+ no define el producto retroactivamente.
 
 ## Ejemplo normativo: Chépica Play
 
-Contexto conocido:
-
-- es una plataforma/medio de transmisión;
-- puede concentrar información obtenida por su operación interna;
-- puede existir personal distribuido en terreno.
-
-Ese contexto NO define el producto actual.
-
-### Requisito actual declarado
-
-Chépica Play tiene exactamente dos capacidades:
+Contexto conocido puede existir, pero el requisito actual declarado es únicamente:
 
 ```text
 CHÉPICA PLAY
@@ -120,23 +162,23 @@ CHÉPICA PLAY
     └── REGISTRAR RESULTADOS
 ```
 
-Por lo tanto, el modelo actual correcto es:
+Por tanto, cualquier funcionalidad adicional queda fuera mientras no sea declarada explícitamente.
+
+Registrar un resultado conserva la separación:
 
 ```text
-IDENTIDAD VINCULADA A CHÉPICA PLAY
-        │
-        ├── READ_COMPETITION
-        │      └── consultar resultados
-        │
-        └── OBSERVE_RESULT
-               └── registrar marcador de partido/serie
-                         ↓
-                RESULTADO INFORMADO
-                         ↓
-                REVISIÓN / GOBIERNO
-                         ↓
-                RESULTADO CANÓNICO
+RESULTADO INFORMADO POR CHÉPICA PLAY
+        ↓
+REVISIÓN / GOBIERNO
+        ↓
+RESULTADO CANÓNICO
 ```
+
+### Estado de madurez
+
+El estado real de cada módulo se conserva en `docs/product/module-registry.json`.
+
+Si el registro marca `VISUAL_PENDING`, la implementación técnica existente se considera material adelantado/experimental y NO verdad de producto.
 
 ### Fuera del alcance actual
 
@@ -149,51 +191,42 @@ IDENTIDAD VINCULADA A CHÉPICA PLAY
 - marcador derivado de eventos;
 - cierre de serie/cobertura.
 
-El hecho de que alguno exista en la operación real de Chépica Play no lo convierte en requisito.
-
-### Invariantes específicos
-
-- El vínculo es persistente a nivel campeonato.
-- La capacidad de lectura es `READ_COMPETITION`.
-- La capacidad de registro es `OBSERVE_RESULT`.
-- `PUBLISH_MATCH_EVENT` no pertenece al contrato actual de Chépica Play.
-- Registrar un resultado crea una observación/aporte con provenance `Chépica Play`.
-- El aporte no sobrescribe automáticamente el resultado canónico.
-- Chépica Play no recibe gobierno de resultados ni autoridad de política por este vínculo.
-
 ## Detector previo a implementar
 
-Antes de escribir código, responder en una frase por capa:
+Antes de escribir código de producto, responder:
 
 ```text
+MÓDULO:
 REQUISITO DECLARADO:
 CONTEXTO QUE NO DEBE CONVERTIRSE EN REQUISITO:
-ACTOR NECESARIO:
-CAPACIDADES ACTUALES:
+ACTOR:
+OBJETIVO HUMANO:
 FUERA DE ALCANCE:
+CONTRATO VISUAL:
+VALIDACIÓN DE PRODUCTO:
+DEPENDENCIAS CONSUMIBLES:
 PROVENANCE:
 OBSERVADO VS CANÓNICO:
-MOF+ REPRESENTATIVO:
 ```
 
-Si una línea introduce una capacidad que no aparece en `REQUISITO DECLARADO`, el cambio se bloquea antes de implementación.
+Si `CONTRATO VISUAL` o `VALIDACIÓN DE PRODUCTO` está pendiente para un módulo human-facing, se bloquea la implementación funcional.
 
 ## Regla de reconstrucción
 
 Ante un desvío descubierto después de implementar:
 
-1. identificar qué contexto/inferencia fue promovido erróneamente a requisito;
-2. fijar el alcance declarado correcto;
-3. retirar del runtime las capacidades adelantadas;
-4. preservar evidencia histórica cuando corresponda, pero desactivar su efecto operacional;
-5. corregir modelo de autorización, datos, UX y contratos;
-6. actualizar MOF+ para demostrar tanto el Golden Path correcto como que los flujos retirados fallan cerrados;
-7. desplegar sólo después de validación.
+1. identificar la primera etapa cuya evidencia era inválida;
+2. fijar el alcance y módulo correctos;
+3. retroceder el módulo a su estado real en el registro;
+4. bloquear dependencias;
+5. conservar código/QA adelantado sólo como material experimental cuando aporte evidencia;
+6. corregir primero el contrato visual/producto;
+7. recién después reimplementar, QA, deploy y certificar consumibilidad.
 
 ## Decisión arquitectónica
 
-Este documento es un **gate obligatorio de alcance y modelado** para nuevas capacidades y cambios relevantes.
+Este documento y el `Consumable Module Gate` son gates obligatorios.
 
 La regla práctica es:
 
-> **Primero separar requisito de contexto. Después modelar sólo lo necesario para el requisito. Recién entonces implementar.**
+> **Primero definir el módulo y la experiencia que una persona consumirá. Validarla. Implementarla. Certificarla. Sólo entonces construir lo que depende de ella.**
