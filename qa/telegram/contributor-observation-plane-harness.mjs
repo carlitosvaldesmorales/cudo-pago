@@ -82,10 +82,14 @@ try{
   assert.equal(await one('SELECT result_id FROM match_series_results WHERE match_id=? AND series_code=?',missing.match_id,'TERCERA'),null);
   console.log('PASS any Telegram user can contribute through buttons without mutating canonical state');
 
-  await seed(ACTOR.MEDIA,'MEDIA_PARTNER',null,'VERIFIED');
+  // Media relationship is persistent at competition scope; coverage is a separate match assignment.
+  await seed(ACTOR.MEDIA,'REPORTER',null,'PROVISIONAL');
   const now=new Date().toISOString();
-  await env.DB.prepare(`INSERT INTO actor_scope_grants (grant_id,telegram_user_id,role,scope_type,scope_id,capabilities_json,trust_level,source_label,granted_by,active,created_at,updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,1,?,?)`).bind('qa-media-match',String(ACTOR.MEDIA.id),'MEDIA_PARTNER','MATCH',official.match_id,JSON.stringify(['OBSERVE_RESULT','PUBLISH_MATCH_EVENT']),'VERIFIED','Chépica Play · transmisión','qa-super',now,now).run();
+  await env.DB.prepare(`INSERT INTO actor_scope_grants (grant_id,telegram_user_id,role,scope_type,scope_id,capabilities_json,trust_level,source_label,granted_by,active,created_at,updated_at,partner_code)
+    VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?)`).bind('qa-media-competition',String(ACTOR.MEDIA.id),'MEDIA_PARTNER','COMPETITION','ANFA-CHEPICA-2026',JSON.stringify(['READ_COMPETITION','OBSERVE_RESULT','PUBLISH_MATCH_EVENT']),'VERIFIED','Chépica Play','qa-super',now,now,'CHEPICA_PLAY').run();
+  await env.DB.prepare(`INSERT INTO partner_match_coverages (coverage_id,partner_code,competition_id,match_id,status,assigned_by,assigned_at,started_at,updated_at)
+    VALUES (?,?,?,?, 'LIVE','qa-super',?,?,?)`).bind(`qa-coverage-${official.match_id}`,'CHEPICA_PLAY','ANFA-CHEPICA-2026',official.match_id,now,now,now).run();
+
   let h=Number(official.official_home),a=Number(official.official_away);
   if(h<7) h+=1; else if(a<7) a+=1; else h=0;
   const mediaResult=await guided(ACTOR.MEDIA,official,official.series_code,h,a);
