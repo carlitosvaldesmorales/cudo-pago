@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "lifecycle": [
+    "DEFINED",
+    "VISUALIZED",
+    "PRODUCT_VALIDATED",
+    "IMPLEMENTED",
+    "QA_PASSED",
+    "CONSUMABLE"
+  ],
+  "modules": [
+    {
+      "id": "chepica-play-register-result",
+      "name": "Chépica Play · Registrar resultado",
+      "consumer_type": "HUMAN",
+      "consumer": "Identidad Telegram vinculada a Chépica Play",
+      "goal": "Registrar el marcador de una serie/partido como aporte de Chépica Play",
+      "entry": "Espacio Chépica Play en Telegram",
+      "result": "Resultado informado por Chépica Play",
+      "postcondition": "La persona debe poder comprobar que el marcador fue recibido y conocer que no reemplaza automáticamente el resultado oficial",
+      "authority": "Observación/aporte con provenance Chépica Play; no es autoridad canónica",
+      "status": "DEFINED",
+      "technical_state": "EXISTS_AHEAD_OF_PRODUCT",
+      "dependencies": [],
+      "visual_contract": null,
+      "product_approval": null,
+      "implementation_evidence": [
+        "El runtime base ya contiene un flujo técnico de registro; se considera adelantado y no eleva la madurez del módulo"
+      ],
+      "qa_evidence": [
+        "Existen pruebas sintéticas previas, pero fueron construidas antes de aprobar la visual y no certifican la madurez de producto"
+      ],
+      "final_state_evidence": null,
+      "runtime_paths": [
+        "sports-bus/worker/contributor-observation-entry.js",
+        "sports-bus/worker/media-partner-enrollment-entry.js"
+      ],
+      "blocker": "Falta visual completa y aprobación explícita del contrato de interacción"
+    }
+  ]
+}
