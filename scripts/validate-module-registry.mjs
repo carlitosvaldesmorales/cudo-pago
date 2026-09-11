@@ -15,6 +15,12 @@ for(const m of modules.values()){
     if(m.product_validation!=='APPROVED') errors.push(`${m.id}: human-facing module cannot pass PRODUCT_VALIDATED without product_validation=APPROVED`);
   }
 
+  if(m.human_facing && rank<order.indexOf('PRODUCT_VALIDATED') && String(m.technical_implementation||'').startsWith('EXISTS')){
+    if(!Array.isArray(m.runtime_paths) || m.runtime_paths.length===0){
+      errors.push(`${m.id}: pre-validation module with existing implementation must declare runtime_paths so CI can block accidental forward implementation`);
+    }
+  }
+
   if(rank>=order.indexOf('IMPLEMENTED') && !['DONE','EXISTS'].includes(m.technical_implementation)){
     errors.push(`${m.id}: stage ${m.stage} requires technical_implementation DONE/EXISTS`);
   }
@@ -41,6 +47,23 @@ if(!registry.current_frontier?.module_id || !modules.has(registry.current_fronti
   errors.push('current_frontier.module_id must reference a registered module');
 }
 
+const changedFiles=String(process.env.CHANGED_FILES||'')
+  .split(/\r?\n/)
+  .map(x=>x.trim())
+  .filter(Boolean);
+
+if(changedFiles.length){
+  for(const m of modules.values()){
+    const rank=order.indexOf(m.stage);
+    if(!m.human_facing || rank>=order.indexOf('PRODUCT_VALIDATED')) continue;
+    const protectedPaths=Array.isArray(m.runtime_paths)?m.runtime_paths:[];
+    const touched=changedFiles.filter(file=>protectedPaths.some(p=>file===p || file.startsWith(`${p}/`)));
+    if(touched.length){
+      errors.push(`${m.id}: runtime change blocked while stage=${m.stage}; approve visual/product contract first. Touched: ${touched.join(', ')}`);
+    }
+  }
+}
+
 if(errors.length){
   console.error('Consumable Module Gate: FAIL');
   for(const e of errors) console.error(`- ${e}`);
@@ -50,3 +73,4 @@ if(errors.length){
 console.log('Consumable Module Gate: PASS');
 for(const m of modules.values()) console.log(`${m.id}: ${m.stage} · consumable=${m.consumable}`);
 console.log(`Frontier: ${registry.current_frontier.module_id} → ${registry.current_frontier.allowed_next_step}`);
+if(changedFiles.length) console.log(`Checked ${changedFiles.length} changed file(s) against pre-validation runtime locks.`);

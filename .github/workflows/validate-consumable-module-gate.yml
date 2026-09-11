@@ -8,6 +8,7 @@ on:
     branches:
       - feature/sports-event-bus-v1
       - architecture/consumable-module-gate-v1
+      - fix/consumable-module-runtime-gate-v2
 
 permissions:
   contents: read
@@ -17,8 +18,30 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - name: Validate module maturity invariants
-        run: node scripts/validate-module-registry.mjs
+        run: |
+          set -euo pipefail
+          node --check scripts/validate-module-registry.mjs
+          node scripts/validate-module-registry.mjs
+      - name: Self-test hard runtime lock
+        run: |
+          set -euo pipefail
+          if CHANGED_FILES='sports-bus/worker/contributor-observation-entry.js' node scripts/validate-module-registry.mjs; then
+            echo 'Gate failed: CP-RESULTS-REGISTER runtime advanced before PRODUCT_VALIDATED' >&2
+            exit 1
+          fi
+          CHANGED_FILES='docs/architecture/consumable-module-gate-v1.md' node scripts/validate-module-registry.mjs
+          echo 'PASS hard gate blocks pre-validation runtime work and allows architecture work'
+      - name: Block PR runtime changes ahead of product validation
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          CHANGED_FILES="$(git diff --name-only "origin/${{ github.base_ref }}"...HEAD)"
+          printf '%s\n' "$CHANGED_FILES"
+          CHANGED_FILES="$CHANGED_FILES" node scripts/validate-module-registry.mjs
