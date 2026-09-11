@@ -8,23 +8,23 @@ on:
       - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
       - 'sports-bus/migrations/0019_media_partner_collaboration_root.sql'
       - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
+      - 'sports-bus/migrations/0021_media_partner_two_capabilities_root.sql'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
-      - 'sports-bus/worker/media-partner-correspondent-entry.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-enrollment-harness.mjs'
       - '.github/workflows/validate-media-partner-enrollment.yml'
   push:
     branches:
       - feature/sports-event-bus-v1
-      - feature/chepica-play-correspondents-hub-v1
+      - fix/chepica-play-two-capabilities-root-v1
     paths:
       - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
       - 'sports-bus/migrations/0019_media_partner_collaboration_root.sql'
       - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
+      - 'sports-bus/migrations/0021_media_partner_two_capabilities_root.sql'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
-      - 'sports-bus/worker/media-partner-correspondent-entry.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-enrollment-harness.mjs'
       - '.github/workflows/validate-media-partner-enrollment.yml'
@@ -45,19 +45,19 @@ jobs:
           set -euo pipefail
           node --check sports-bus/worker/access-control.js
           node --check sports-bus/worker/media-partner-enrollment-entry.js
-          node --check sports-bus/worker/media-partner-correspondent-entry.js
           node --check sports-bus/cors-entry.js
           node --check qa/telegram/media-partner-enrollment-harness.mjs
-      - name: Validate persistent organization, membership and human assignments
+      - name: Validate Chépica Play two-capability contract
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-enrollment-harness.mjs | tee /tmp/media-partner-collaboration.log
-          grep -q 'PASS persistent collaboration is additive and invitation is single-use' /tmp/media-partner-collaboration.log
-          grep -q 'PASS membership grants competition read but no write without human assignment' /tmp/media-partner-collaboration.log
-          grep -q 'PASS organization coverage and correspondent assignment are separate scopes' /tmp/media-partner-collaboration.log
-          grep -q 'PASS assigned correspondent can operate only its coverage' /tmp/media-partner-collaboration.log
-          grep -q 'PASS assigned correspondent contribution carries organization provenance' /tmp/media-partner-collaboration.log
-          grep -q 'PASS same member outside assignment falls back to public provenance' /tmp/media-partner-collaboration.log
-          grep -q 'PASS releasing work assignment preserves persistent membership' /tmp/media-partner-collaboration.log
-          grep -q 'PASS no policy authority is introduced' /tmp/media-partner-collaboration.log
+          grep -q 'PASS management surface declares exactly the two current product capabilities' /tmp/media-partner-collaboration.log
+          grep -q 'PASS enrollment is additive, single-use and grants only read + register-result capabilities' /tmp/media-partner-collaboration.log
+          grep -q 'PASS authorization contract: consume=true, register-result=true, publish-live-event=false' /tmp/media-partner-collaboration.log
+          grep -q 'PASS actor-fidelity gate: Chépica Play UI exposes only consume + register result' /tmp/media-partner-collaboration.log
+          grep -q 'PASS consumer vertical reaches the verified-results projection' /tmp/media-partner-collaboration.log
+          grep -q 'PASS registrar vertical stores a Chépica Play observation without mutating canonical result' /tmp/media-partner-collaboration.log
+          grep -q 'PASS root cleanup leaves no active coverage/correspondent operational scope' /tmp/media-partner-collaboration.log
+          grep -q 'PASS stale coverage/live buttons are fail-closed and cannot mutate state' /tmp/media-partner-collaboration.log
+          grep -q 'PASS no governance or policy authority is introduced' /tmp/media-partner-collaboration.log
           grep -q 'RESULT: PASS' /tmp/media-partner-collaboration.log

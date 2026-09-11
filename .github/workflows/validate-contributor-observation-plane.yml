@@ -6,7 +6,7 @@ on:
       - feature/sports-event-bus-v1
     paths:
       - 'sports-bus/migrations/0016_contributor_observation_plane.sql'
-      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
+      - 'sports-bus/migrations/0021_media_partner_two_capabilities_root.sql'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/worker/contributor-observation-entry.js'
       - 'sports-bus/cors-entry.js'
@@ -15,10 +15,10 @@ on:
   push:
     branches:
       - feature/sports-event-bus-v1
-      - feature/chepica-play-correspondents-hub-v1
+      - fix/chepica-play-two-capabilities-root-v1
     paths:
       - 'sports-bus/migrations/0016_contributor_observation_plane.sql'
-      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
+      - 'sports-bus/migrations/0021_media_partner_two_capabilities_root.sql'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/worker/contributor-observation-entry.js'
       - 'sports-bus/cors-entry.js'
@@ -48,7 +48,7 @@ jobs:
           set -euo pipefail
           node qa/telegram/contributor-observation-plane-harness.mjs | tee /tmp/contributor-observation-plane.log
           grep -q 'PASS public observation never mutates canonical state' /tmp/contributor-observation-plane.log
-          grep -q 'PASS MEDIA_PARTNER provenance requires explicit correspondent assignment and preserves canonical truth' /tmp/contributor-observation-plane.log
+          grep -q 'PASS Chépica Play registers results competition-wide without coverage and preserves canonical truth' /tmp/contributor-observation-plane.log
           grep -q 'PASS operational authority remains separated from policy authority' /tmp/contributor-observation-plane.log
           grep -q 'PASS button-first observation UX retained' /tmp/contributor-observation-plane.log
           grep -q 'RESULT: PASS' /tmp/contributor-observation-plane.log

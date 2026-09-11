@@ -2,64 +2,85 @@
 
 Estado: ACTIVO
 Ámbito: Fútbol Chépica / CUDO Sports Event Bus
-Objetivo: impedir desvíos de arquitectura causados por modelar permisos, pantallas o flujos antes de entender correctamente al actor real del negocio.
+Objetivo: impedir desvíos de arquitectura causados por convertir contexto, inferencias o posibilidades futuras en requisitos actuales.
 
-## Invariante principal
+## Invariantes principales
 
 Antes de diseñar permisos, UX o implementación, separar explícitamente:
 
 **ORGANIZACIÓN ≠ IDENTIDAD ≠ ROL ≠ SCOPE ≠ ASIGNACIÓN ≠ ACCIÓN ≠ OBSERVACIÓN ≠ VERDAD CANÓNICA**
 
-Ninguno de estos conceptos puede sustituir silenciosamente a otro.
+Y, por encima de todo:
+
+**CONTEXTO ≠ REQUISITO**
+
+Que sepamos cómo una organización trabaja en el mundo real no autoriza a incorporar esa operación al producto. Una capacidad entra en arquitectura sólo cuando ha sido declarada como requisito actual o aceptada explícitamente como parte del alcance.
+
+## Gate de alcance antes del modelado
+
+Antes de recorrer la topología del dominio, clasificar cada dato en una de estas categorías:
+
+- **REQUISITO DECLARADO**: capacidad que debe existir ahora. Puede entrar al diseño.
+- **CONTEXTO**: información que ayuda a entender al actor, pero no crea funciones del producto.
+- **HIPÓTESIS / POSIBLE EVOLUCIÓN**: opción futura. No se implementa.
+- **GAP**: falta una decisión que puede cambiar el diseño. Se detiene sólo esa parte.
+
+Una inferencia nunca puede ascender de CONTEXTO/HIPÓTESIS a REQUISITO sin validación explícita.
 
 ## Orden obligatorio de modelado
 
 Toda capacidad nueva o cambio relevante debe recorrer este orden:
 
-1. **Dominio real** — qué problema/actividad existe en el mundo real.
-2. **Topología de actores** — organizaciones, personas, sistemas y relaciones entre ellos.
-3. **Persistencia** — qué existe de forma estable y qué es temporal.
-4. **Scope y asignaciones** — dónde puede operar cada identidad y bajo qué encargo.
-5. **Capacidades/autoridad** — qué puede hacer y qué NO puede hacer.
-6. **Provenance y verdad** — quién observó, en representación de quién, y qué separa observación de estado canónico.
-7. **UX/flujo** — cómo se expresa lo anterior en Telegram/Web/API.
-8. **MOF+ sintético** — actor sintético representativo, Golden Path, contrato visual, fallos críticos y estado final verificable.
-9. **Implementación/deploy**.
+1. **Alcance declarado** — qué capacidad se pidió realmente y qué queda fuera.
+2. **Dominio real necesario** — sólo la parte del mundo real necesaria para esa capacidad.
+3. **Topología de actores necesaria** — únicamente actores/relaciones requeridos por el alcance actual.
+4. **Persistencia** — qué debe existir establemente para soportar el requisito.
+5. **Scope/asignación** — sólo si el requisito necesita restricciones operacionales de alcance.
+6. **Capacidades/autoridad** — qué puede hacer y qué NO puede hacer.
+7. **Provenance y verdad** — quién aportó el dato y qué lo separa del estado canónico.
+8. **UX/flujo** — cómo se expresa lo anterior en Telegram/Web/API.
+9. **MOF+ sintético** — actor representativo del requisito, Golden Path, contrato visual, fallos críticos y estado final verificable.
+10. **Implementación/deploy**.
 
-**No se salta un nivel para corregir el siguiente.** Si aparece información nueva que cambia un nivel anterior, se vuelve a ese nivel y se corrige desde la raíz.
+**No se agrega una capa sólo porque exista en el mundo real.** Si no es necesaria para la capacidad declarada, queda fuera del modelo actual.
 
 ## Domain Actor Fidelity Gate
 
-Antes de aprobar un actor sintético o real, responder obligatoriamente:
+Antes de aprobar un actor sintético o real, responder:
 
-- ¿Es una persona, organización, sistema o autoridad?
-- ¿Actúa directamente o a través de múltiples personas/identidades?
-- ¿Su existencia es permanente o depende de una asignación temporal?
-- ¿Puede actuar simultáneamente en varios lugares/partidos?
-- ¿Qué alcance tiene la organización y qué alcance tiene cada miembro?
-- ¿Qué acciones son propias de la organización y cuáles de sus miembros?
+- ¿Qué capacidad declarada estamos representando?
+- ¿Qué información sobre este actor es requisito y cuál es sólo contexto?
+- ¿Es una persona, organización, sistema o autoridad para efectos de esta capacidad?
+- ¿Qué acciones necesita realizar ahora?
+- ¿Qué acciones sabemos que realiza en el mundo real pero NO forman parte del producto actual?
 - ¿Qué dato produce: observación, recomendación, decisión o verdad canónica?
-- ¿Qué provenance mínimo debe conservarse para reconstruir quién hizo qué y en representación de quién?
+- ¿Qué provenance mínimo necesita el requisito actual?
 
-Si una respuesta es desconocida y cambia el diseño, se declara **GAP** y se detiene esa parte del modelado. No se rellena por inferencia silenciosa.
+Sólo si una relación adicional es necesaria para cumplir la capacidad declarada se modelan miembros, asignaciones u otras capas.
+
+Si una respuesta desconocida cambia el requisito actual, se declara **GAP** y se detiene esa parte. No se rellena por inferencia silenciosa.
 
 ## Regla de desvío
 
-Si una entidad aparece actuando en muchos lugares mediante distintas personas, **no modelarla como usuario ni como permiso único**. Modelar primero:
+Una descripción contextual como:
 
 ```text
-ORGANIZACIÓN
-    ↓
-MIEMBROS / IDENTIDADES
-    ↓
-ASIGNACIONES OPERACIONALES
-    ↓
-ACCIONES
-    ↓
-AGREGACIÓN / PROYECCIÓN
-    ↓
-GOBIERNO DE VERDAD CANÓNICA
+“la organización transmite partidos”
+“tiene personas en varias canchas”
+“concentra información de distintas fuentes”
 ```
+
+NO implica automáticamente:
+
+```text
+coberturas en el producto
+corresponsales en el RBAC
+asignaciones por partido
+captura de eventos en vivo
+agregación de goles
+```
+
+Esos conceptos sólo se incorporan si existe un requisito actual que los necesite.
 
 ## MOF+ elevado
 
@@ -67,94 +88,112 @@ Una capacidad no está suficientemente afinada sólo porque funcione.
 
 Debe demostrar, como mínimo:
 
-- actor sintético que represente correctamente la topología real del negocio;
+- actor sintético que represente correctamente **el alcance declarado**, no todo el contexto conocido;
 - vertical end-to-end representativa;
 - Golden Path;
-- contrato visual/operacional coherente con el dominio;
+- contrato visual/operacional coherente con el requisito;
 - idempotencia/duplicado;
-- callback o acción obsoleta;
+- callback o acción obsoleta cuando aplique;
 - fuera de scope / autorización;
 - estado final verificable;
 - separación entre observación y estado canónico cuando corresponda.
 
-El MOF+ **no crea una plataforma paralela de QA**. Se aplica como exigencia mínima a cada capacidad real.
+El MOF+ **no crea una plataforma paralela de QA** y tampoco expande el producto para hacer la simulación más realista de lo solicitado.
 
 ## Ejemplo normativo: Chépica Play
 
-Modelo incorrecto:
+Contexto conocido:
 
-```text
-Chépica Play = usuario/medio
-    ↓
-permiso por partido
-    ↓
-aporta resultado
-```
+- es una plataforma/medio de transmisión;
+- puede concentrar información obtenida por su operación interna;
+- puede existir personal distribuido en terreno.
 
-Modelo correcto:
+Ese contexto NO define el producto actual.
+
+### Requisito actual declarado
+
+Chépica Play tiene exactamente dos capacidades:
 
 ```text
 CHÉPICA PLAY
-organización concentradora permanente
-        ↓
-CORRESPONSALES
-múltiples identidades humanas
-        ↓
-COBERTURAS / ASIGNACIONES
-partido o cancha concreta
-        ↓
-GOLES OBSERVADOS
-con actor + organización + cobertura
-        ↓
-RESULTADO OBSERVADO AGREGADO
-        ↓
-RECONCILIACIÓN
-        ↓
-RESULTADO CANÓNICO / OFICIAL
+    ├── CONSUMIR RESULTADOS
+    └── REGISTRAR RESULTADOS
 ```
 
-Invariantes específicos:
+Por lo tanto, el modelo actual correcto es:
 
-- Chépica Play tiene relación persistente a nivel campeonato.
-- Sus corresponsales son miembros/identidades separadas.
-- Una cobertura es una asignación operacional, no la identidad de Chépica Play.
-- Cada gol conserva doble provenance: **actor humano + organización representada**, además de cobertura/partido/serie.
-- El concentrador puede agregar observaciones de múltiples canchas.
-- La observación de Chépica Play no se convierte silenciosamente en resultado oficial.
-- La autoridad del campeonato conserva el gobierno del estado canónico.
+```text
+IDENTIDAD VINCULADA A CHÉPICA PLAY
+        │
+        ├── READ_COMPETITION
+        │      └── consultar resultados
+        │
+        └── OBSERVE_RESULT
+               └── registrar marcador de partido/serie
+                         ↓
+                RESULTADO INFORMADO
+                         ↓
+                REVISIÓN / GOBIERNO
+                         ↓
+                RESULTADO CANÓNICO
+```
+
+### Fuera del alcance actual
+
+- corresponsales como entidad del sistema;
+- cobertura de partidos/canchas;
+- asignaciones de cobertura;
+- estado LIVE;
+- goles individuales;
+- tarjetas/cambios/eventos;
+- marcador derivado de eventos;
+- cierre de serie/cobertura.
+
+El hecho de que alguno exista en la operación real de Chépica Play no lo convierte en requisito.
+
+### Invariantes específicos
+
+- El vínculo es persistente a nivel campeonato.
+- La capacidad de lectura es `READ_COMPETITION`.
+- La capacidad de registro es `OBSERVE_RESULT`.
+- `PUBLISH_MATCH_EVENT` no pertenece al contrato actual de Chépica Play.
+- Registrar un resultado crea una observación/aporte con provenance `Chépica Play`.
+- El aporte no sobrescribe automáticamente el resultado canónico.
+- Chépica Play no recibe gobierno de resultados ni autoridad de política por este vínculo.
 
 ## Detector previo a implementar
 
 Antes de escribir código, responder en una frase por capa:
 
 ```text
-DOMINIO:
-TOPOLOGÍA DE ACTORES:
-PERSISTENTE VS TEMPORAL:
-SCOPE/ASIGNACIÓN:
-CAPACIDADES:
+REQUISITO DECLARADO:
+CONTEXTO QUE NO DEBE CONVERTIRSE EN REQUISITO:
+ACTOR NECESARIO:
+CAPACIDADES ACTUALES:
+FUERA DE ALCANCE:
 PROVENANCE:
 OBSERVADO VS CANÓNICO:
 MOF+ REPRESENTATIVO:
 ```
 
-Si una frase mezcla dos capas, el modelo todavía no está suficientemente afinado.
+Si una línea introduce una capacidad que no aparece en `REQUISITO DECLARADO`, el cambio se bloquea antes de implementación.
 
 ## Regla de reconstrucción
 
 Ante un desvío descubierto después de implementar:
 
-1. no parchear sólo UX o RBAC;
-2. identificar qué capa anterior estaba mal modelada;
-3. fijar el nuevo invariante;
-4. corregir modelo/datos/contratos;
-5. actualizar MOF+ para que el mismo error no vuelva a pasar;
-6. recién entonces modificar runtime.
+1. identificar qué contexto/inferencia fue promovido erróneamente a requisito;
+2. fijar el alcance declarado correcto;
+3. retirar del runtime las capacidades adelantadas;
+4. preservar evidencia histórica cuando corresponda, pero desactivar su efecto operacional;
+5. corregir modelo de autorización, datos, UX y contratos;
+6. actualizar MOF+ para demostrar tanto el Golden Path correcto como que los flujos retirados fallan cerrados;
+7. desplegar sólo después de validación.
 
 ## Decisión arquitectónica
 
-Este documento es un **gate obligatorio de modelado** para nuevas capacidades y para cambios que alteren actores, scopes, membresías, asignaciones, autoridad, provenance o verdad canónica.
+Este documento es un **gate obligatorio de alcance y modelado** para nuevas capacidades y cambios relevantes.
 
 La regla práctica es:
 
-> **Primero modelar quién existe y cómo se relaciona; después qué puede hacer; recién entonces cómo se implementa.**
+> **Primero separar requisito de contexto. Después modelar sólo lo necesario para el requisito. Recién entonces implementar.**
