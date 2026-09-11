@@ -5,9 +5,7 @@ on:
     branches:
       - feature/sports-event-bus-v1
     paths:
-      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
-      - 'sports-bus/worker/media-partner-correspondent-entry.js'
-      - 'sports-bus/worker/media-partner-live-event-entry.js'
+      - 'sports-bus/migrations/0021_media_partner_two_capabilities_root.sql'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/cors-entry.js'
@@ -16,11 +14,9 @@ on:
   push:
     branches:
       - feature/sports-event-bus-v1
-      - feature/chepica-play-correspondents-hub-v1
+      - fix/chepica-play-two-capabilities-root-v1
     paths:
-      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
-      - 'sports-bus/worker/media-partner-correspondent-entry.js'
-      - 'sports-bus/worker/media-partner-live-event-entry.js'
+      - 'sports-bus/migrations/0021_media_partner_two_capabilities_root.sql'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/cors-entry.js'
@@ -41,19 +37,19 @@ jobs:
       - name: Syntax
         run: |
           set -euo pipefail
-          node --check sports-bus/worker/media-partner-correspondent-entry.js
-          node --check sports-bus/worker/media-partner-live-event-entry.js
+          node --check sports-bus/worker/access-control.js
+          node --check sports-bus/worker/media-partner-enrollment-entry.js
           node --check sports-bus/cors-entry.js
           node --check qa/telegram/media-partner-mofplus-harness.mjs
-      - name: Validate distributed correspondent topology and concentrator
+      - name: Validate representative two-capability end-to-end
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-mofplus-harness.mjs | tee /tmp/media-partner-mofplus.log
-          grep -q 'PASS actor fidelity: one organization has two persistent synthetic correspondents' /tmp/media-partner-mofplus.log
-          grep -q 'PASS organization coverage is separated from human correspondent assignment' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/scope: correspondent A cannot operate correspondent B coverage' /tmp/media-partner-mofplus.log
-          grep -q 'PASS idempotency and double provenance: human + Chépica Play' /tmp/media-partner-mofplus.log
-          grep -q 'PASS concentrator aggregates goals from distributed correspondents without promoting official truth' /tmp/media-partner-mofplus.log
-          grep -q 'PASS unauthorized and stale callbacks are rejected' /tmp/media-partner-mofplus.log
-          grep -q 'PASS canonical result remains untouched' /tmp/media-partner-mofplus.log
+          grep -q 'PASS golden path enrollment reaches persistent Chépica Play identity' /tmp/media-partner-mofplus.log
+          grep -q 'PASS actor fidelity: current product surface contains only consume + register result' /tmp/media-partner-mofplus.log
+          grep -q 'PASS consumer golden path reads the canonical/public result projection' /tmp/media-partner-mofplus.log
+          grep -q 'PASS registrar golden path stores 2–1 as Chépica Play observation and keeps canonical result empty' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/idempotency: same pending result is not duplicated' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/scope: retired coverage, correspondent and live-event flows cannot reactivate' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/authority: no live-event, governance or policy capability leaks into Chépica Play' /tmp/media-partner-mofplus.log
           grep -q 'RESULT: PASS' /tmp/media-partner-mofplus.log
