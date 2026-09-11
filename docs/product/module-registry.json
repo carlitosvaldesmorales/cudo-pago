@@ -4,7 +4,8 @@
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
     "CONTEXT_NEQ_REQUIREMENT",
-    "DEPENDENCY_REQUIRES_CONSUMABLE_PROVIDER"
+    "DEPENDENCY_REQUIRES_CONSUMABLE_PROVIDER",
+    "PREVALIDATION_RUNTIME_CHANGES_BLOCKED"
   ],
   "modules": [
     {
@@ -21,6 +22,11 @@
       "runtime_evidence": "TECHNICAL_ONLY",
       "consumable": false,
       "dependencies": [],
+      "runtime_paths": [
+        "sports-bus/worker/portal-entry.js",
+        "sports-bus/worker/public-results-ux-v3.js",
+        "sports-bus/worker/public-results-table-view.js"
+      ],
       "gap": "No existe evidencia registrada de aceptación del contrato visual completo por producto."
     },
     {
@@ -37,6 +43,10 @@
       "runtime_evidence": "NOT_PRODUCT_CERTIFIED",
       "consumable": false,
       "dependencies": [],
+      "runtime_paths": [
+        "sports-bus/worker/contributor-observation-entry.js",
+        "sports-bus/worker/media-partner-enrollment-entry.js"
+      ],
       "gap": "Falta diseñar y validar la experiencia visual completa antes de considerar válida la implementación existente."
     }
   ],
@@ -44,6 +54,7 @@
     "module_id": "CP-RESULTS-REGISTER",
     "allowed_next_step": "DESIGN_VISUAL_CONTRACT",
     "blocked_steps": [
+      "RUNTIME_CHANGES_TO_FRONTIER_MODULE",
       "NEW_DEPENDENT_MODULES",
       "REAL_USER_ENROLLMENT",
       "PRODUCT_CERTIFICATION",
