@@ -186,15 +186,31 @@ async function showPartnerHome(env,chatId,actorId){
 
 async function showInvites(env,chatId){
   const q=await env.DB.prepare("SELECT * FROM partner_scope_invites WHERE partner_code=? AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id=? ORDER BY created_at DESC LIMIT 10").bind(PARTNER_CODE,COMPETITION_ID).all();
+  const invites=q.results||[];
   const rows=[];
-  for(const i of q.results||[]){
-    const icon=i.status==='PENDING'?'🕒':i.status==='CLAIMED'?'✅':i.status==='EXPIRED'?'⌛':'⛔';
-    if(i.status==='PENDING') rows.push([{text:`${icon} ${i.invite_id}`,callback_data:`mp:invite-revoke:${i.invite_id}`}]);
-  }
+  invites.forEach((invite,index)=>{
+    if(invite.status==='PENDING') rows.push([{text:`⛔ Revocar invitación ${index+1} · ${formatInviteTime(invite.created_at)}`,callback_data:`mp:invite-revoke:${invite.invite_id}`}]);
+  });
   rows.push([{text:'➕ Nueva invitación',callback_data:'mp:collab:invite'}]);
   rows.push([{text:`⬅️ ${PARTNER_NAME}`,callback_data:'mp:manage'}]);
-  const text=(q.results||[]).length?(q.results||[]).map(i=>`${i.status} · ${i.created_at}`).join('\n'):'Sin invitaciones registradas.';
+  const text=invites.length?invites.map((invite,index)=>`${index+1}. ${inviteStatusLabel(invite.status)} · ${formatInviteDate(invite.created_at)}`).join('\n'):'Sin invitaciones registradas.';
   await send(env,chatId,`🕒 INVITACIONES · ${PARTNER_NAME}\n\nCada persona recibe su propio enlace individual y de un solo uso. Puedes mantener varias invitaciones pendientes al mismo tiempo.\n\n${text}`,{inline_keyboard:rows});
+}
+
+function inviteStatusLabel(status){
+  if(status==='PENDING') return '🕒 Pendiente';
+  if(status==='CLAIMED') return '✅ Utilizada';
+  if(status==='EXPIRED') return '⌛ Vencida';
+  if(status==='REVOKED') return '⛔ Revocada';
+  return '• Registrada';
+}
+function formatInviteDate(value){
+  try{return new Intl.DateTimeFormat('es-CL',{dateStyle:'short',timeStyle:'short',timeZone:'America/Santiago'}).format(new Date(value));}
+  catch{return 'fecha registrada';}
+}
+function formatInviteTime(value){
+  try{return new Intl.DateTimeFormat('es-CL',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'America/Santiago'}).format(new Date(value));}
+  catch{return 'reciente';}
 }
 
 async function showMembers(env,chatId){
