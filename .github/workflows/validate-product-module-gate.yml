@@ -27,6 +27,15 @@ jobs:
           set -euo pipefail
           node --check qa/architecture/product-module-gate.mjs
           node qa/architecture/product-module-gate.mjs
+      - name: Self-test blocking behavior
+        run: |
+          set -euo pipefail
+          if CHANGED_FILES='sports-bus/worker/contributor-observation-entry.js' node qa/architecture/product-module-gate.mjs; then
+            echo 'Gate failed to block implementation ahead of PRODUCT_VALIDATED' >&2
+            exit 1
+          fi
+          CHANGED_FILES='docs/architecture/product-module-consumption-gate-v1.md' node qa/architecture/product-module-gate.mjs
+          echo 'PASS gate blocks protected runtime work and allows non-runtime architecture work'
       - name: Block implementation ahead of product validation
         if: github.event_name == 'pull_request'
         run: |
