@@ -1,180 +1,32 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import worker from '../../sports-bus/cors-entry.js';
-import { D1SqliteAdapter } from './d1-sqlite-adapter.mjs';
-
-const __dirname=path.dirname(fileURLToPath(import.meta.url));
-const root=path.resolve(__dirname,'../..');
-const migrations=path.join(root,'sports-bus','migrations');
-const env={DB:new D1SqliteAdapter(),TELEGRAM_BOT_TOKEN:'qa-mofplus-token',TELEGRAM_WEBHOOK_SECRET:'qa-mofplus-secret'};
-const outbound=[];
-const originalFetch=globalThis.fetch;
-globalThis.fetch=async(url,init={})=>{
-  const target=String(url);
-  if(!target.startsWith('https://api.telegram.org/botqa-mofplus-token/')) throw new Error(`Unexpected network call: ${target}`);
-  const method=target.split('/').at(-1);
-  const body=init.body?JSON.parse(String(init.body)):{};
-  outbound.push({method,body});
-  return new Response(JSON.stringify({ok:true,result:{message_id:outbound.length,username:'FutbolChepicaBot',type:'commands',name:'Fútbol Chépica'}}),{status:200,headers:{'content-type':'application/json'}});
-};
-
-const OP={id:9951001,first_name:'Operador',last_name:'Sintetico'};
-const MEDIA={id:9951002,first_name:'Chepica',last_name:'Play QA'};
-const OUTSIDER={id:9951003,first_name:'Usuario',last_name:'Fuera Scope'};
-let updateId=951000;
-
-function applyMigrations(){for(const f of fs.readdirSync(migrations).filter(x=>x.endsWith('.sql')).sort()) env.DB.exec(fs.readFileSync(path.join(migrations,f),'utf8'));}
-async function safeSecret(){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.TELEGRAM_WEBHOOK_SECRET));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('');}
-async function dispatch(update){const req=new Request('https://qa.invalid/webhook/telegram',{method:'POST',headers:{'content-type':'application/json','x-telegram-bot-api-secret-token':await safeSecret()},body:JSON.stringify({update_id:++updateId,...update})});const res=await worker.fetch(req,env,{});assert.equal(res.status,200);return res.json();}
-async function cb(actor,data,id=null){return dispatch({callback_query:{id:id||`cb-${updateId+1}`,from:actor,data,message:{message_id:55,chat:{id:actor.id,type:'private'}}}});}
-async function msg(actor,text){return dispatch({message:{message_id:updateId+1,from:actor,chat:{id:actor.id,type:'private'},text}});}
-async function one(sql,...args){return env.DB.prepare(sql).bind(...args).first();}
-async function all(sql,...args){return (await env.DB.prepare(sql).bind(...args).all()).results;}
-function last(chatId){return outbound.filter(x=>x.method==='sendMessage'&&String(x.body.chat_id)===String(chatId)).at(-1)?.body;}
-function callbacks(body){return (body?.reply_markup?.inline_keyboard||[]).flat().map(x=>x.callback_data).filter(Boolean);}
-async function seedReporter(actor,role='REPORTER',clubId=null,trust='PROVISIONAL'){const now=new Date().toISOString();await env.DB.prepare(`INSERT OR REPLACE INTO reporters (telegram_user_id,display_name,username,club_id,role,trust_level,active,created_at,updated_at) VALUES (?,?,?,?,?,?,1,?,?)`).bind(String(actor.id),`${actor.first_name} ${actor.last_name}`,null,clubId,role,trust,now,now).run();}
+import fs from 'node:fs';import path from 'node:path';import { fileURLToPath } from 'node:url';
+import worker from '../../sports-bus/cors-entry.js';import { D1SqliteAdapter } from './d1-sqlite-adapter.mjs';
+const __dirname=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(__dirname,'../..'),migrations=path.join(root,'sports-bus','migrations');
+const env={DB:new D1SqliteAdapter(),TELEGRAM_BOT_TOKEN:'qa-mofplus-token',TELEGRAM_WEBHOOK_SECRET:'qa-mofplus-secret'},outbound=[],originalFetch=globalThis.fetch;
+globalThis.fetch=async(url,init={})=>{const target=String(url);if(!target.startsWith('https://api.telegram.org/botqa-mofplus-token/'))throw new Error(`Unexpected network call: ${target}`);const method=target.split('/').at(-1),body=init.body?JSON.parse(String(init.body)):{};outbound.push({method,body});return new Response(JSON.stringify({ok:true,result:{message_id:outbound.length}}),{status:200,headers:{'content-type':'application/json'}});};
+const OP={id:9951001,first_name:'Operador',last_name:'Sintetico'},A={id:9951002,first_name:'Corresponsal',last_name:'Cancha A'},B={id:9951003,first_name:'Corresponsal',last_name:'Cancha B'},OUT={id:9951004,first_name:'Fuera',last_name:'Scope'};let updateId=951000;
+function applyMigrations(){for(const f of fs.readdirSync(migrations).filter(x=>x.endsWith('.sql')).sort())env.DB.exec(fs.readFileSync(path.join(migrations,f),'utf8'));}
+async function secret(){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.TELEGRAM_WEBHOOK_SECRET));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+async function dispatch(update){const r=await worker.fetch(new Request('https://qa.invalid/webhook/telegram',{method:'POST',headers:{'content-type':'application/json','x-telegram-bot-api-secret-token':await secret()},body:JSON.stringify({update_id:++updateId,...update})}),env,{});assert.equal(r.status,200);return r.json();}
+async function cb(actor,data,id=null){return dispatch({callback_query:{id:id||`cb-${updateId+1}`,from:actor,data,message:{message_id:1,chat:{id:actor.id,type:'private'}}}});}async function msg(actor,text){return dispatch({message:{message_id:updateId+1,from:actor,chat:{id:actor.id,type:'private'},text}});}async function one(sql,...args){return env.DB.prepare(sql).bind(...args).first();}async function all(sql,...args){return (await env.DB.prepare(sql).bind(...args).all()).results;}function last(id){return outbound.filter(x=>x.method==='sendMessage'&&String(x.body.chat_id)===String(id)).at(-1)?.body;}function callbacks(b){return (b?.reply_markup?.inline_keyboard||[]).flat().map(x=>x.callback_data).filter(Boolean);}async function seed(a,role='REPORTER',trust='PROVISIONAL'){const n=new Date().toISOString();await env.DB.prepare(`INSERT OR REPLACE INTO reporters (telegram_user_id,display_name,username,club_id,role,trust_level,active,created_at,updated_at) VALUES (?,?,?,NULL,?,?,1,?,?)`).bind(String(a.id),`${a.first_name} ${a.last_name}`,null,role,trust,n,n).run();}
+async function enroll(actor){let r=await cb(OP,'mp:collab:invite');assert.equal(r.handled,'media_partner_collaboration_invite_created');const token=last(OP.id).text.match(/partner_([A-Za-z0-9_-]{12,80})/)?.[1];assert.ok(token);r=await msg(actor,`/start partner_${token}`);assert.equal(r.handled,'media_partner_collaboration_claimed');}
+async function assign(match,actor){let r=await cb(OP,`mp:coverage:make:${match.match_id}`);assert.equal(r.handled,'media_partner_organization_coverage_created');r=await cb(OP,`mp:coverage:assign-member:${match.match_id}:${actor.id}`);assert.equal(r.handled,'media_partner_correspondent_assigned');}
+async function goal(actor,match,series,side,id){await cb(actor,`mp:coverage-open:${match.match_id}`);await cb(actor,`mp:coverage-live:${match.match_id}`);await cb(actor,`mplive:event:${match.match_id}`);await cb(actor,`mplive:series:${match.match_id}:${series}`);return cb(actor,`mplive:evt:${match.match_id}:${series}:GOAL:${side}`,id);}
 
 try{
-  applyMigrations();
-  await seedReporter(OP,'PLATFORM_OPERATOR',null,'VERIFIED');
-  await seedReporter(MEDIA,'REPORTER',null,'PROVISIONAL');
-  await seedReporter(OUTSIDER,'REPORTER',null,'PROVISIONAL');
-
-  let assigned=(await all(`SELECT m.* FROM matches m WHERE m.competition_id='ANFA-CHEPICA-2026' AND (m.home_id='UNION-ORILLA' OR m.away_id='UNION-ORILLA') AND NOT EXISTS (SELECT 1 FROM match_series_results r WHERE r.match_id=m.match_id AND r.series_code='TERCERA') ORDER BY m.round_no,m.match_id LIMIT 1`))[0];
-  if(!assigned) assigned=(await all(`SELECT m.* FROM matches m WHERE m.competition_id='ANFA-CHEPICA-2026' AND NOT EXISTS (SELECT 1 FROM match_series_results r WHERE r.match_id=m.match_id AND r.series_code='TERCERA') ORDER BY m.round_no,m.match_id LIMIT 1`))[0];
-  const outside=(await all(`SELECT * FROM matches WHERE competition_id='ANFA-CHEPICA-2026' AND match_id<>? ORDER BY round_no,match_id LIMIT 1`,assigned?.match_id))[0];
-  assert.ok(assigned&&outside,'representative fixture pair required');
-  assert.notEqual(assigned.home_name,'Team A');
-  assert.notEqual(assigned.away_name,'Team B');
-  console.log(`FIXTURE: ${assigned.round_label} · ${assigned.home_name} — ${assigned.away_name}`);
-
-  // GOLDEN PATH: persistent enrollment -> operational coverage -> LIVE -> goal -> score observation -> close.
-  let r=await msg(OP,'/medios');
-  assert.equal(r.handled,'media_partner_management');
-  assert.match(last(OP.id).text,/colaborador permanente/i);
-  assert.ok(callbacks(last(OP.id)).includes('mp:collab:invite'));
-
-  r=await cb(OP,'mp:collab:invite');
-  assert.equal(r.handled,'media_partner_collaboration_invite_created');
-  const token=last(OP.id).text.match(/partner_([A-Za-z0-9_-]{12,80})/)?.[1];
-  assert.ok(token);
-  r=await msg(MEDIA,`/start partner_${token}`);
-  assert.equal(r.handled,'media_partner_collaboration_claimed');
-  assert.match(last(MEDIA.id).text,/campeonato, no a un partido/i);
-
-  r=await cb(OP,'mp:coverage:add');
-  assert.equal(r.handled,'media_partner_coverage_dates');
-  assert.ok(callbacks(last(OP.id)).some(x=>x===`mp:coverage:date:${assigned.round_no}`));
-  r=await cb(OP,`mp:coverage:date:${assigned.round_no}`);
-  assert.equal(r.handled,'media_partner_coverage_matches');
-  assert.ok(callbacks(last(OP.id)).includes(`mp:coverage:make:${assigned.match_id}`));
-  r=await cb(OP,`mp:coverage:make:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_coverage_assigned');
-
-  r=await msg(MEDIA,'/partner');
-  assert.equal(r.handled,'media_partner_home');
-  assert.match(last(MEDIA.id).text,/CONSUM/i);
-  assert.ok(callbacks(last(MEDIA.id)).includes('mp:mycoverages'));
-  await cb(MEDIA,'mp:mycoverages');
-  r=await cb(MEDIA,`mp:coverage-open:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_live_workspace');
-  assert.ok(callbacks(last(MEDIA.id)).includes(`mp:coverage-live:${assigned.match_id}`));
-
-  r=await cb(MEDIA,`mp:coverage-live:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_live_started');
-  assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'LIVE');
-  assert.ok(callbacks(last(MEDIA.id)).includes(`mplive:event:${assigned.match_id}`));
-  assert.match(last(MEDIA.id).text,/CONSUME:/);
-  assert.match(last(MEDIA.id).text,/CONTRIBUYE: marcador y goles/i);
-  console.log('PASS golden path reaches high-fidelity LIVE workspace with consumer + goal contributor contract');
-
-  r=await cb(MEDIA,`mplive:event:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_live_series');
-  assert.ok(callbacks(last(MEDIA.id)).includes(`mplive:series:${assigned.match_id}:TERCERA`));
-  r=await cb(MEDIA,`mplive:series:${assigned.match_id}:TERCERA`);
-  assert.equal(r.handled,'media_partner_live_goal_teams');
-  const goalButtons=callbacks(last(MEDIA.id));
-  assert.ok(goalButtons.includes(`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`));
-  assert.ok(goalButtons.includes(`mplive:evt:${assigned.match_id}:TERCERA:GOAL:AWAY`));
-  assert.equal(goalButtons.some(x=>x.includes(':YELLOW:')||x.includes(':RED:')),false);
-  console.log('PASS product scope: live UI exposes only goals, with no card controls');
-
-  // NEGATIVE 1: an old/non-product event callback is rejected explicitly and writes nothing.
-  const beforeUnsupported=Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n);
-  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:YELLOW:HOME`,'unsupported-yellow-001');
-  assert.equal(r.handled,'media_partner_live_event_unsupported');
-  assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n),beforeUnsupported);
-  assert.match(last(MEDIA.id).text,/sólo registra goles/i);
-  console.log('PASS negative/product-scope: non-goal live event is rejected without mutation');
-
-  const duplicateId='synthetic-same-callback-001';
-  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`,duplicateId);
-  assert.equal(r.handled,'media_partner_live_goal_recorded');
-  const stored=await one("SELECT * FROM events WHERE event_id=?",`mp-live-${duplicateId}`);
-  assert.ok(stored);
-  const payload=JSON.parse(stored.payload_json);
-  assert.equal(payload.source_type,'MEDIA_PARTNER');
-  assert.equal(payload.source_label,'Chépica Play · transmisión');
-  assert.equal(payload.series_code,'TERCERA');
-  assert.equal(payload.event_kind,'GOAL');
-  assert.equal(payload.canonical,false);
-  assert.equal(stored.validation_status,'PROVISIONAL');
-  console.log('PASS goal is stored as traced Chépica Play observation, not canonical truth');
-
-  // NEGATIVE 2: duplicate delivery is idempotent.
-  const beforeDup=Number((await one("SELECT COUNT(*) n FROM events WHERE event_id=?",`mp-live-${duplicateId}`)).n);
-  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:GOAL:HOME`,duplicateId);
-  assert.equal(r.handled,'media_partner_live_goal_duplicate');
-  const afterDup=Number((await one("SELECT COUNT(*) n FROM events WHERE event_id=?",`mp-live-${duplicateId}`)).n);
-  assert.equal(beforeDup,1);
-  assert.equal(afterDup,1);
-  console.log('PASS negative/idempotency: duplicate goal callback creates exactly one event');
-
-  // Complete result observation through the same Telegram surface.
-  await cb(MEDIA,`obs:match:${assigned.match_id}`);
-  await cb(MEDIA,`obs:series:${assigned.match_id}:TERCERA`);
-  await cb(MEDIA,'obs:h:2');
-  await cb(MEDIA,'obs:a:1');
-  r=await cb(MEDIA,'obs:confirm');
-  assert.equal(r.handled,'observation_submitted');
-  const observation=await one('SELECT * FROM public_result_submissions WHERE submission_id=?',r.submission_id);
-  assert.equal(observation.source_type,'MEDIA_PARTNER');
-  assert.equal(observation.source_label,'Chépica Play · transmisión');
-  assert.equal(observation.status,'SUBMITTED');
-  assert.equal(await one('SELECT * FROM match_series_results WHERE match_id=? AND series_code=?',assigned.match_id,'TERCERA'),null);
-  console.log('PASS golden path records score observation without canonical overwrite');
-
-  // NEGATIVE 3: same partner identity outside assigned coverage cannot publish a live goal.
-  r=await cb(MEDIA,`mplive:event:${outside.match_id}`);
-  assert.equal(r.handled,'media_partner_live_stale_callback');
-  assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",outside.match_id)).n),0);
-  console.log('PASS negative/scope: partner cannot publish live goals outside active coverage');
-
-  r=await cb(MEDIA,`mp:coverage-close:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_live_closed');
-  assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'CLOSED');
-
-  // NEGATIVE 4: stale goal callback after close is rejected and final state is unchanged.
-  const eventCount=Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n);
-  r=await cb(MEDIA,`mplive:evt:${assigned.match_id}:TERCERA:GOAL:AWAY`,'stale-after-close-001');
-  assert.equal(r.handled,'media_partner_live_stale_callback');
-  assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_type='match.event.observed' AND match_id=?",assigned.match_id)).n),eventCount);
-  assert.equal((await one("SELECT status FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND match_id=?",assigned.match_id)).status,'CLOSED');
-  console.log('PASS negative/stale: old goal callback cannot mutate a closed coverage');
-
-  // Explicit outsider authorization check.
-  r=await cb(OUTSIDER,`mplive:event:${assigned.match_id}`);
-  assert.equal(r.handled,'media_partner_live_denied');
-  console.log('PASS authorization: non-partner synthetic actor is rejected');
-
-  const member=await one("SELECT * FROM actor_scope_grants WHERE telegram_user_id=? AND role='MEDIA_PARTNER' AND active=1",String(MEDIA.id));
-  assert.ok(member);
-  assert.equal((await one('SELECT role FROM reporters WHERE telegram_user_id=?',String(MEDIA.id))).role,'REPORTER');
-  console.log('PASS final state: permanent membership survives coverage close and base role remains REPORTER');
-  console.log('RESULT: PASS');
-}finally{
-  globalThis.fetch=originalFetch;
-  env.DB.close();
-}
+  applyMigrations();await seed(OP,'PLATFORM_OPERATOR','VERIFIED');await seed(A);await seed(B);await seed(OUT);
+  const m1=(await all(`SELECT m.* FROM matches m WHERE m.competition_id='ANFA-CHEPICA-2026' AND NOT EXISTS (SELECT 1 FROM match_series_results r WHERE r.match_id=m.match_id AND r.series_code='TERCERA') ORDER BY m.round_no,m.match_id LIMIT 1`))[0];
+  const m2=(await all(`SELECT m.* FROM matches m WHERE m.competition_id='ANFA-CHEPICA-2026' AND m.match_id<>? AND NOT EXISTS (SELECT 1 FROM match_series_results r WHERE r.match_id=m.match_id AND r.series_code='PRIMERA') ORDER BY m.round_no,m.match_id LIMIT 1`,m1?.match_id))[0];
+  assert.ok(m1&&m2,'representative fixtures with empty canonical slots required');assert.notEqual(m1.home_name,'Team A');
+  await msg(OP,'/medios');await enroll(A);await enroll(B);console.log('PASS actor fidelity: one organization has two persistent synthetic correspondents');
+  await assign(m1,A);await assign(m2,B);assert.ok(await one("SELECT 1 x FROM partner_coverage_assignments a JOIN partner_match_coverages c ON c.coverage_id=a.coverage_id WHERE c.match_id=? AND a.telegram_user_id=? AND a.status='ACTIVE'",m1.match_id,String(A.id)));assert.ok(await one("SELECT 1 x FROM partner_coverage_assignments a JOIN partner_match_coverages c ON c.coverage_id=a.coverage_id WHERE c.match_id=? AND a.telegram_user_id=? AND a.status='ACTIVE'",m2.match_id,String(B.id)));console.log('PASS organization coverage is separated from human correspondent assignment');
+  let r=await cb(A,'mp:mycoverages');assert.equal(r.handled,'media_partner_correspondent_my_coverages');assert.ok(callbacks(last(A.id)).includes(`mp:coverage-open:${m1.match_id}`));assert.ok(!callbacks(last(A.id)).includes(`mp:coverage-open:${m2.match_id}`));
+  r=await cb(A,`mp:coverage-open:${m2.match_id}`);assert.equal(r.handled,'media_partner_correspondent_assignment_denied');console.log('PASS negative/scope: correspondent A cannot operate correspondent B coverage');
+  r=await goal(A,m1,'TERCERA','HOME','goal-a-1');assert.equal(r.handled,'media_partner_live_goal_recorded');assert.deepEqual(r.observed_score,{home:1,away:0});const stored=await one("SELECT * FROM events WHERE event_id='mp-live-goal-a-1'");const p=JSON.parse(stored.payload_json);assert.equal(p.correspondent_actor_id,String(A.id));assert.ok(p.assignment_id);assert.equal(p.partner_code,'CHEPICA_PLAY');assert.equal(p.canonical,false);
+  r=await cb(A,`mplive:evt:${m1.match_id}:TERCERA:GOAL:HOME`,'goal-a-1');assert.equal(r.handled,'media_partner_live_goal_duplicate');assert.equal(Number((await one("SELECT COUNT(*) n FROM events WHERE event_id='mp-live-goal-a-1'")).n),1);console.log('PASS idempotency and double provenance: human + Chépica Play');
+  r=await goal(B,m2,'PRIMERA','AWAY','goal-b-1');assert.equal(r.handled,'media_partner_live_goal_recorded');
+  r=await cb(A,'mp:hub');assert.equal(r.handled,'media_partner_results_hub');const hub=last(A.id).text;assert.match(hub,/CONCENTRADOR · Chépica Play/);assert.match(hub,new RegExp(m1.home_name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));assert.match(hub,new RegExp(m2.home_name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));assert.match(hub,/3ª 1–0/);assert.match(hub,/1ª 0–1/);assert.match(hub,/no se interpreta como 0–0/i);console.log('PASS concentrator aggregates goals from distributed correspondents without promoting official truth');
+  r=await cb(OUT,`mplive:event:${m1.match_id}`);assert.equal(r.handled,'media_partner_live_denied');
+  await cb(A,`mp:coverage-close:${m1.match_id}`);r=await cb(A,`mplive:evt:${m1.match_id}:TERCERA:GOAL:AWAY`,'stale-a');assert.equal(r.handled,'media_partner_live_stale_callback');console.log('PASS unauthorized and stale callbacks are rejected');
+  assert.equal(await one('SELECT result_id FROM match_series_results WHERE match_id=? AND series_code=?',m1.match_id,'TERCERA'),null);assert.equal(await one('SELECT result_id FROM match_series_results WHERE match_id=? AND series_code=?',m2.match_id,'PRIMERA'),null);console.log('PASS canonical result remains untouched');console.log('RESULT: PASS');
+}finally{globalThis.fetch=originalFetch;env.DB.close();}

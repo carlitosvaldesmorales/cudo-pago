@@ -7,20 +7,24 @@ on:
     paths:
       - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
       - 'sports-bus/migrations/0019_media_partner_collaboration_root.sql'
+      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/worker/media-partner-correspondent-entry.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-enrollment-harness.mjs'
       - '.github/workflows/validate-media-partner-enrollment.yml'
   push:
     branches:
       - feature/sports-event-bus-v1
-      - fix/media-partner-root-model-v2
+      - feature/chepica-play-correspondents-hub-v1
     paths:
       - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
       - 'sports-bus/migrations/0019_media_partner_collaboration_root.sql'
+      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
       - 'sports-bus/worker/access-control.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
+      - 'sports-bus/worker/media-partner-correspondent-entry.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-enrollment-harness.mjs'
       - '.github/workflows/validate-media-partner-enrollment.yml'
@@ -41,23 +45,19 @@ jobs:
           set -euo pipefail
           node --check sports-bus/worker/access-control.js
           node --check sports-bus/worker/media-partner-enrollment-entry.js
+          node --check sports-bus/worker/media-partner-correspondent-entry.js
           node --check sports-bus/cors-entry.js
           node --check qa/telegram/media-partner-enrollment-harness.mjs
-      - name: Validate persistent collaborator and separate coverage model
+      - name: Validate persistent organization, membership and human assignments
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-enrollment-harness.mjs | tee /tmp/media-partner-collaboration.log
-          grep -q 'PASS management models Chépica Play as persistent collaborator, not per-match access' /tmp/media-partner-collaboration.log
-          grep -q 'PASS enrollment invitation creates one persistent competition-scoped relationship' /tmp/media-partner-collaboration.log
-          grep -q 'PASS partner relationship is additive and preserves the person base role' /tmp/media-partner-collaboration.log
-          grep -q 'PASS collaboration invitation remains single-use' /tmp/media-partner-collaboration.log
-          grep -q 'PASS consume scope is championship-wide while write context is absent before coverage' /tmp/media-partner-collaboration.log
-          grep -q 'PASS coverage is a separate work assignment and does not recreate partner identity' /tmp/media-partner-collaboration.log
-          grep -q 'PASS partner workspace exposes consumer and contributor capabilities together' /tmp/media-partner-collaboration.log
-          grep -q 'PASS partner can operate its assigned coverage without gaining championship governance' /tmp/media-partner-collaboration.log
-          grep -q 'PASS coverage contribution carries Chépica Play provenance but does not auto-publish canonical truth' /tmp/media-partner-collaboration.log
-          grep -q 'PASS partner trust is contextual: outside coverage the same person contributes as public informant' /tmp/media-partner-collaboration.log
-          grep -q 'PASS closing coverage does not terminate the permanent collaboration' /tmp/media-partner-collaboration.log
-          grep -q 'PASS revoking partner relationship preserves identity and history' /tmp/media-partner-collaboration.log
-          grep -q 'PASS Separation of Duties: partner collaboration never grants policy authority' /tmp/media-partner-collaboration.log
+          grep -q 'PASS persistent collaboration is additive and invitation is single-use' /tmp/media-partner-collaboration.log
+          grep -q 'PASS membership grants competition read but no write without human assignment' /tmp/media-partner-collaboration.log
+          grep -q 'PASS organization coverage and correspondent assignment are separate scopes' /tmp/media-partner-collaboration.log
+          grep -q 'PASS assigned correspondent can operate only its coverage' /tmp/media-partner-collaboration.log
+          grep -q 'PASS assigned correspondent contribution carries organization provenance' /tmp/media-partner-collaboration.log
+          grep -q 'PASS same member outside assignment falls back to public provenance' /tmp/media-partner-collaboration.log
+          grep -q 'PASS releasing work assignment preserves persistent membership' /tmp/media-partner-collaboration.log
+          grep -q 'PASS no policy authority is introduced' /tmp/media-partner-collaboration.log
           grep -q 'RESULT: PASS' /tmp/media-partner-collaboration.log

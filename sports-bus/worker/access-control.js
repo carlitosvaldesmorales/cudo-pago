@@ -121,11 +121,25 @@ export async function getActivePartnerMembership(db,telegramUserId,competitionId
     ORDER BY updated_at DESC LIMIT 1`).bind(String(telegramUserId),competitionId).first();
 }
 
+// Organization-level coverage. This describes work that Chépica Play has decided
+// to cover; it does not by itself authorize every member to write into the match.
 export async function getPartnerCoverage(db,partnerCode,matchId){
   if(!db || !partnerCode || !matchId) return null;
   return db.prepare(`SELECT * FROM partner_match_coverages
     WHERE partner_code=? AND match_id=? AND status IN ('ASSIGNED','LIVE')
     LIMIT 1`).bind(String(partnerCode),String(matchId)).first();
+}
+
+// Human assignment. This is the operational scope of one correspondent inside
+// an organization coverage and is intentionally separate from persistent membership.
+export async function getPartnerCoverageAssignment(db,partnerCode,matchId,telegramUserId){
+  if(!db || !partnerCode || !matchId || !telegramUserId) return null;
+  return db.prepare(`SELECT a.*,c.match_id,c.competition_id,c.status AS coverage_status
+    FROM partner_coverage_assignments a
+    JOIN partner_match_coverages c ON c.coverage_id=a.coverage_id
+    WHERE a.partner_code=? AND a.telegram_user_id=? AND a.status='ACTIVE'
+      AND c.partner_code=? AND c.match_id=? AND c.status IN ('ASSIGNED','LIVE')
+    LIMIT 1`).bind(String(partnerCode),String(telegramUserId),String(partnerCode),String(matchId)).first();
 }
 
 export async function resolveObservationProvenance(db,reporter,match){
@@ -151,19 +165,21 @@ export async function resolveObservationProvenance(db,reporter,match){
     scoped:true
   };
 
-  // Partner identity is persistent at competition scope. Partner provenance is
-  // only activated when that partner is actually covering this match.
+  // Partner membership enables championship-wide consumption. Partner provenance
+  // activates only for the human correspondent assigned to this coverage.
   const membership=await getActivePartnerMembership(db,reporter?.telegram_user_id,match?.competition_id);
   if(membership && grantCapabilities(membership).has(CAPABILITY.OBSERVE_RESULT)){
-    const coverage=await getPartnerCoverage(db,membership.partner_code,match.match_id);
-    if(coverage) return {
+    const assignment=await getPartnerCoverageAssignment(db,membership.partner_code,match.match_id,reporter?.telegram_user_id);
+    if(assignment) return {
       source_type:'MEDIA_PARTNER',
       source_label:`${membership.source_label||membership.partner_code} · transmisión`,
       trust_level:membership.trust_level || 'VERIFIED',
       scoped:true,
       grant_id:membership.grant_id,
       partner_code:membership.partner_code,
-      coverage_id:coverage.coverage_id
+      coverage_id:assignment.coverage_id,
+      assignment_id:assignment.assignment_id,
+      correspondent_actor_id:String(reporter.telegram_user_id)
     };
   }
 
@@ -191,7 +207,7 @@ export async function hasScopedCapability(db,reporter,capability,match){
   if(membership && grantCapabilities(membership).has(capability)){
     if(capability===CAPABILITY.READ_COMPETITION) return true;
     if(capability===CAPABILITY.OBSERVE_RESULT || capability===CAPABILITY.PUBLISH_MATCH_EVENT){
-      return !!(await getPartnerCoverage(db,membership.partner_code,match.match_id));
+      return !!(await getPartnerCoverageAssignment(db,membership.partner_code,match.match_id,reporter.telegram_user_id));
     }
   }
 
