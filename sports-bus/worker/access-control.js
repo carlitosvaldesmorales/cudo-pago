@@ -28,12 +28,11 @@ const BASE = Object.freeze({
     CAPABILITY.REVIEW_RESULT,
     CAPABILITY.MANAGE_CLUB_RESULTS
   ]),
-  // Kept for backwards compatibility only. New media collaborators are additive
-  // grants and never replace the base reporter role.
+  // Backwards-compatible role profile only. The active Chépica Play model uses
+  // additive competition grants with exactly READ_COMPETITION + OBSERVE_RESULT.
   [ROLE.MEDIA_PARTNER]: new Set([
     CAPABILITY.READ_COMPETITION,
-    CAPABILITY.OBSERVE_RESULT,
-    CAPABILITY.PUBLISH_MATCH_EVENT
+    CAPABILITY.OBSERVE_RESULT
   ]),
   [ROLE.PLATFORM_OPERATOR]: new Set([
     CAPABILITY.READ_COMPETITION,
@@ -121,27 +120,6 @@ export async function getActivePartnerMembership(db,telegramUserId,competitionId
     ORDER BY updated_at DESC LIMIT 1`).bind(String(telegramUserId),competitionId).first();
 }
 
-// Organization-level coverage. This describes work that Chépica Play has decided
-// to cover; it does not by itself authorize every member to write into the match.
-export async function getPartnerCoverage(db,partnerCode,matchId){
-  if(!db || !partnerCode || !matchId) return null;
-  return db.prepare(`SELECT * FROM partner_match_coverages
-    WHERE partner_code=? AND match_id=? AND status IN ('ASSIGNED','LIVE')
-    LIMIT 1`).bind(String(partnerCode),String(matchId)).first();
-}
-
-// Human assignment. This is the operational scope of one correspondent inside
-// an organization coverage and is intentionally separate from persistent membership.
-export async function getPartnerCoverageAssignment(db,partnerCode,matchId,telegramUserId){
-  if(!db || !partnerCode || !matchId || !telegramUserId) return null;
-  return db.prepare(`SELECT a.*,c.match_id,c.competition_id,c.status AS coverage_status
-    FROM partner_coverage_assignments a
-    JOIN partner_match_coverages c ON c.coverage_id=a.coverage_id
-    WHERE a.partner_code=? AND a.telegram_user_id=? AND a.status='ACTIVE'
-      AND c.partner_code=? AND c.match_id=? AND c.status IN ('ASSIGNED','LIVE')
-    LIMIT 1`).bind(String(partnerCode),String(telegramUserId),String(partnerCode),String(matchId)).first();
-}
-
 export async function resolveObservationProvenance(db,reporter,match){
   const role=effectiveRole(reporter);
   const base={
@@ -165,23 +143,18 @@ export async function resolveObservationProvenance(db,reporter,match){
     scoped:true
   };
 
-  // Partner membership enables championship-wide consumption. Partner provenance
-  // activates only for the human correspondent assigned to this coverage.
+  // Chépica Play is intentionally simple: a persistent competition membership
+  // has exactly two product capabilities today: consume results and register results.
+  // No coverage, correspondent, live-event or per-match assignment is required.
   const membership=await getActivePartnerMembership(db,reporter?.telegram_user_id,match?.competition_id);
-  if(membership && grantCapabilities(membership).has(CAPABILITY.OBSERVE_RESULT)){
-    const assignment=await getPartnerCoverageAssignment(db,membership.partner_code,match.match_id,reporter?.telegram_user_id);
-    if(assignment) return {
-      source_type:'MEDIA_PARTNER',
-      source_label:`${membership.source_label||membership.partner_code} · transmisión`,
-      trust_level:membership.trust_level || 'VERIFIED',
-      scoped:true,
-      grant_id:membership.grant_id,
-      partner_code:membership.partner_code,
-      coverage_id:assignment.coverage_id,
-      assignment_id:assignment.assignment_id,
-      correspondent_actor_id:String(reporter.telegram_user_id)
-    };
-  }
+  if(membership && grantCapabilities(membership).has(CAPABILITY.OBSERVE_RESULT)) return {
+    source_type:'MEDIA_PARTNER',
+    source_label:membership.source_label||membership.partner_code,
+    trust_level:membership.trust_level || 'VERIFIED',
+    scoped:true,
+    grant_id:membership.grant_id,
+    partner_code:membership.partner_code
+  };
 
   if(role===ROLE.CLUB_ADMIN && reporter?.trust_level==='VERIFIED'){
     const participates=reporter.club_id && (reporter.club_id===match.home_id || reporter.club_id===match.away_id);
@@ -205,10 +178,7 @@ export async function hasScopedCapability(db,reporter,capability,match){
 
   const membership=await getActivePartnerMembership(db,reporter.telegram_user_id,match.competition_id);
   if(membership && grantCapabilities(membership).has(capability)){
-    if(capability===CAPABILITY.READ_COMPETITION) return true;
-    if(capability===CAPABILITY.OBSERVE_RESULT || capability===CAPABILITY.PUBLISH_MATCH_EVENT){
-      return !!(await getPartnerCoverageAssignment(db,membership.partner_code,match.match_id,reporter.telegram_user_id));
-    }
+    if(capability===CAPABILITY.READ_COMPETITION || capability===CAPABILITY.OBSERVE_RESULT) return true;
   }
 
   const grants=await grantsFor(db,reporter.telegram_user_id);
