@@ -256,8 +256,8 @@ async function showHighStepper(env,chatId,actorId,side){
   const score=Number(side==='HOME'?session?.home_score:session?.away_score)||8;
   const p=side==='HOME'?'h':'a';
   await send(env,chatId,`⚽ Marcador alto: ${score}\n\nAjusta con los botones y confirma.`,{inline_keyboard:[
-    [{text:'➖',callback_data:`obs:step:${p}:dec`},{text:String(score),callback_data:`obs:step:${p}:ok`},{text:'➕',callback_data:`obs:step:${p}:inc`}],
-    [{text:'✅ Usar este valor',callback_data:`obs:step:${p}:ok`}],
+    [{text:'➖',callback_data:`obs:step:${p}:dec`},{text:'➕',callback_data:`obs:step:${p}:inc`}],
+    [{text:`✅ Usar ${score}`,callback_data:`obs:step:${p}:ok`}],
     [{text:'❌ Cancelar',callback_data:'obs:cancel'}]
   ]});
 }
