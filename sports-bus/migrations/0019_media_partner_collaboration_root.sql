@@ -24,6 +24,13 @@ CREATE INDEX IF NOT EXISTS idx_partner_match_coverages_partner
 CREATE INDEX IF NOT EXISTS idx_partner_match_coverages_match
   ON partner_match_coverages(match_id,status);
 
--- Existing match-scoped MEDIA_PARTNER grants from the first model are intentionally
--- not promoted automatically. No real partner identity had been enrolled when this
--- correction was introduced. Future partner relationships are competition-scoped.
+-- Retire the first, incorrect model in which a MEDIA_PARTNER relationship was
+-- granted per match. Those rows are not promoted because identity/relationship
+-- and work assignment are different concerns.
+UPDATE partner_scope_invites
+SET status='REVOKED', revoked_by='SYSTEM-MODEL-CORRECTION', revoked_at=datetime('now')
+WHERE role='MEDIA_PARTNER' AND scope_type='MATCH' AND status='PENDING';
+
+UPDATE actor_scope_grants
+SET active=0, updated_at=datetime('now')
+WHERE role='MEDIA_PARTNER' AND scope_type='MATCH' AND active=1;
