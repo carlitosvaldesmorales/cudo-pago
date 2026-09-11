@@ -13,11 +13,13 @@ on:
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-enrollment-harness.mjs'
+      - 'docs/architecture/access-capability-matrix-v1.md'
       - '.github/workflows/validate-media-partner-enrollment.yml'
   push:
     branches:
       - feature/sports-event-bus-v1
       - fix/chepica-play-two-capabilities-root-v1
+      - feature/media-partner-multi-members-v1
     paths:
       - 'sports-bus/migrations/0018_media_partner_enrollment.sql'
       - 'sports-bus/migrations/0019_media_partner_collaboration_root.sql'
@@ -27,6 +29,7 @@ on:
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
       - 'sports-bus/cors-entry.js'
       - 'qa/telegram/media-partner-enrollment-harness.mjs'
+      - 'docs/architecture/access-capability-matrix-v1.md'
       - '.github/workflows/validate-media-partner-enrollment.yml'
 
 permissions:
@@ -47,17 +50,21 @@ jobs:
           node --check sports-bus/worker/media-partner-enrollment-entry.js
           node --check sports-bus/cors-entry.js
           node --check qa/telegram/media-partner-enrollment-harness.mjs
-      - name: Validate Chépica Play two-capability contract
+      - name: Validate Chépica Play two-capability multi-identity contract
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-enrollment-harness.mjs | tee /tmp/media-partner-collaboration.log
-          grep -q 'PASS management surface declares exactly the two current product capabilities' /tmp/media-partner-collaboration.log
-          grep -q 'PASS enrollment is additive, single-use and grants only read + register-result capabilities' /tmp/media-partner-collaboration.log
-          grep -q 'PASS authorization contract: consume=true, register-result=true, publish-live-event=false' /tmp/media-partner-collaboration.log
-          grep -q 'PASS actor-fidelity gate: Chépica Play UI exposes only consume + register result' /tmp/media-partner-collaboration.log
-          grep -q 'PASS consumer vertical reaches the verified-results projection' /tmp/media-partner-collaboration.log
-          grep -q 'PASS registrar vertical stores a Chépica Play observation without mutating canonical result' /tmp/media-partner-collaboration.log
-          grep -q 'PASS root cleanup leaves no active coverage/correspondent operational scope' /tmp/media-partner-collaboration.log
-          grep -q 'PASS stale coverage/live buttons are fail-closed and cannot mutate state' /tmp/media-partner-collaboration.log
-          grep -q 'PASS no governance or policy authority is introduced' /tmp/media-partner-collaboration.log
+          grep -q 'PASS management surface declares one partner organization with N independent identities and exactly two capabilities' /tmp/media-partner-collaboration.log
+          grep -q 'PASS multiple independent partner invitations coexist in PENDING state' /tmp/media-partner-collaboration.log
+          grep -q 'PASS two different Telegram identities are independently linked to the same Chépica Play organization' /tmp/media-partner-collaboration.log
+          grep -q 'PASS each individual invitation remains single-use' /tmp/media-partner-collaboration.log
+          grep -q 'PASS already-linked identity cannot consume another person invitation; spare invite stays available' /tmp/media-partner-collaboration.log
+          grep -q 'PASS every active identity independently receives consume + register-result and no live-event capability' /tmp/media-partner-collaboration.log
+          grep -q 'PASS both identities can independently consume verified results through the same partner contract' /tmp/media-partner-collaboration.log
+          grep -q 'PASS multiple Chépica Play identities can register independent traced result observations without canonical overwrite' /tmp/media-partner-collaboration.log
+          grep -q 'PASS revoking one identity leaves other Chépica Play identities active and usable' /tmp/media-partner-collaboration.log
+          grep -q 'PASS invitation lifecycle is independent from active member lifecycle' /tmp/media-partner-collaboration.log
+          grep -q 'PASS multi-identity support does not reintroduce coverage/correspondent operational scope' /tmp/media-partner-collaboration.log
+          grep -q 'PASS stale coverage/live buttons remain fail-closed' /tmp/media-partner-collaboration.log
+          grep -q 'PASS no member receives governance or policy authority' /tmp/media-partner-collaboration.log
           grep -q 'RESULT: PASS' /tmp/media-partner-collaboration.log
