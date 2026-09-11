@@ -234,8 +234,15 @@ async function run(){
 
   reset();
   r=await callback(QA.HOME_ADMIN,'tp:public-report');
-  assert.equal(r.handled,'public_result_admin_redirect');
-  console.log('PASS verified admins are redirected to official club flow');
+  assert.equal(r.handled,'public_result_dates');
+  assert.equal(r.observation_contract,'contributor-observation-plane-v1');
+  assert.ok(callbacks(last(QA.HOME_ADMIN.id)).some(x=>x.startsWith('obs:date:')));
+  const preservedRole=await one('SELECT role,club_id,trust_level,active FROM reporters WHERE telegram_user_id=?',QA.HOME_ADMIN.id);
+  assert.equal(preservedRole.role,'CLUB_ADMIN');
+  assert.equal(preservedRole.club_id,match2.home_id);
+  assert.equal(preservedRole.trust_level,'VERIFIED');
+  assert.equal(Number(preservedRole.active),1);
+  console.log('PASS verified admins may also contribute observations without changing role authority');
 
   const tables=await all("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('public_result_submissions','telegram_public_result_sessions') ORDER BY name");
   assert.equal(tables.length,2);
