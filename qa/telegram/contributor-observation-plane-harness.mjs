@@ -83,7 +83,8 @@ try{
 
   const sent=calls.filter(x=>x.method==='sendMessage').map(x=>String(x.body.text||'')).join('\n');
   assert.match(sent,/¿Cuántos goles hizo/);
-  assert.match(sent,/CONFIRMAR INFORMACIÓN/);
+  assert.match(sent,/CONFIRMAR RESULTADO/);
+  assert.match(sent,/¿Confirmas que el marcador ingresado es correcto\?/);
   console.log('PASS button-first observation UX retained');
   console.log('RESULT: PASS');
 }finally{
