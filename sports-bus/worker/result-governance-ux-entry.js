@@ -1,5 +1,6 @@
+import { loadResultControlPlane, SERIES_LABEL, SLOT_STATE } from './result-control-plane-model.js';
+
 const SERIES_ORDER = ['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
-const SERIES_LABEL = {TERCERA:'3ª',SEGUNDA:'2ª',SENIOR:'Senior',PRIMERA:'1ª'};
 const STATUS_LABEL = {VERIFIED:'Oficial',DISPUTED:'En disputa',ANNULLED:'Anulado'};
 const STATUS_ICON = {VERIFIED:'✅',DISPUTED:'⚠️',ANNULLED:'🚫'};
 const ACTION_LABEL = {BASELINE:'Registro inicial',CORRECT:'Marcador corregido',DISPUTE:'Puesto en disputa',RESOLVE:'Disputa resuelta',ANNUL:'Resultado anulado',RESTORE:'Resultado restaurado'};
@@ -49,8 +50,7 @@ function visibleReason(v){
 }
 
 async function sendApi(token,method,body){
-  const res=await fetch(`https://api.telegram.org/bot${token}/${method}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  return res;
+  return fetch(`https://api.telegram.org/bot${token}/${method}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
 }
 
 async function present(token,chatId,callback,text,replyMarkup){
@@ -73,58 +73,61 @@ async function currentResult(db,matchId,seriesCode){
     WHERE r.match_id=? AND r.series_code=?`).bind(matchId,seriesCode).first();
 }
 
-async function rowsInScope(db,reporter){
-  const base=`SELECT r.match_id,r.series_code,r.home_score,r.away_score,r.validation_status,r.governance_version,
-    m.home_id,m.home_name,m.away_id,m.away_name,m.group_id,m.round_no,m.round_label
-    FROM match_series_results r JOIN matches m ON m.match_id=r.match_id`;
-  const q=isSuperAdmin(reporter)
-    ? await db.prepare(`${base} ORDER BY m.round_no DESC,r.match_id,CASE r.series_code WHEN 'TERCERA' THEN 1 WHEN 'SEGUNDA' THEN 2 WHEN 'SENIOR' THEN 3 ELSE 4 END`).all()
-    : await db.prepare(`${base} WHERE m.home_id=? OR m.away_id=? ORDER BY m.round_no DESC,r.match_id,CASE r.series_code WHEN 'TERCERA' THEN 1 WHEN 'SEGUNDA' THEN 2 WHEN 'SENIOR' THEN 3 ELSE 4 END`).bind(reporter.club_id,reporter.club_id).all();
-  return q.results||[];
-}
-
-function groupMatches(rows){
-  const map=new Map();
-  for(const r of rows){
-    if(!map.has(r.match_id)) map.set(r.match_id,{match_id:r.match_id,round_no:r.round_no,round_label:r.round_label,group_id:r.group_id,home_id:r.home_id,home_name:r.home_name,away_id:r.away_id,away_name:r.away_name,series:[]});
-    map.get(r.match_id).series.push(r);
-  }
-  return [...map.values()];
-}
-
-function matchState(match){
-  if(match.series.some(x=>x.validation_status==='DISPUTED')) return '⚠️';
-  if(match.series.some(x=>x.validation_status==='ANNULLED')) return '🚫';
+function matchIcon(match){
+  if(match.state==='DISPUTED') return '⚠️';
+  if(match.state==='HAS_ANNULLED') return '🚫';
+  if(match.state==='INCOMPLETE') return '🟡';
   return '✅';
 }
 
+function slotButton(reporter,match,slot){
+  if(slot.state===SLOT_STATE.MISSING){
+    const callback=isSuperAdmin(reporter)
+      ? `ga:series:${match.match_id}:${slot.series_code}`
+      : `rs:series:${match.match_id}:${slot.series_code}`;
+    return {text:`➕ ${slot.series_label} · Sin resultado`,callback_data:callback};
+  }
+  const icon=slot.state===SLOT_STATE.OFFICIAL?'✅':slot.state===SLOT_STATE.DISPUTED?'⚠️':'🚫';
+  return {text:`${icon} ${slot.series_label} · ${slot.home_score}–${slot.away_score}`,callback_data:`rg:r:${match.match_id}:${slot.series_code}`};
+}
+
 async function showMatchList(env,token,chatId,callback,reporter){
-  const matches=groupMatches(await rowsInScope(env.DB,reporter));
+  const plane=await loadResultControlPlane(env.DB,{reporter});
+  const matches=[...plane.matches].sort((a,b)=>b.round_no-a.round_no||String(a.match_id).localeCompare(String(b.match_id)));
   if(!matches.length){
-    await present(token,chatId,callback,'🛡️ <b>GOBIERNO DE RESULTADOS</b>\n\nNo hay resultados oficiales dentro de tu alcance.',{inline_keyboard:[[{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]]});
+    await present(token,chatId,callback,'🛡️ <b>GOBIERNO DE RESULTADOS</b>\n\nNo hay partidos dentro de tu alcance.',{inline_keyboard:[[{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]]});
     return;
   }
-  const buttons=matches.map(m=>[{text:`${matchState(m)} ${m.round_label} · ${m.home_name} — ${m.away_name}`,callback_data:`rgux:m:${m.match_id}`}]);
+  const buttons=matches.map(m=>[{text:`${matchIcon(m)} ${m.round_label} · ${m.home_name} — ${m.away_name} · ${m.counts.OFFICIAL}/4`,callback_data:`rgux:m:${m.match_id}`}]);
   buttons.push([{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]);
-  await present(token,chatId,callback,`🛡️ <b>GOBIERNO DE RESULTADOS</b>\n\n${isSuperAdmin(reporter)?'Administración global del campeonato.':'Sólo partidos de tu club.'}\nElige un partido para revisar sus series.`,{inline_keyboard:buttons});
+  const summary=plane.summary;
+  const scope=isSuperAdmin(reporter)?'Control global de todos los partidos y sus cuatro series.':'Control de los partidos de tu club.';
+  await present(token,chatId,callback,
+    `🛡️ <b>GOBIERNO DE RESULTADOS</b>\n\n${scope}\n\n`+
+    `Esperados: <b>${summary.expected_slots}</b> · Oficiales: <b>${summary.OFFICIAL}</b> · Sin resultado: <b>${summary.MISSING}</b>`+
+    `${summary.DISPUTED?` · En disputa: <b>${summary.DISPUTED}</b>`:''}${summary.ANNULLED?` · Anulados: <b>${summary.ANNULLED}</b>`:''}\n\n`+
+    `Elige un partido. Los espacios sin marcador también son gobernables.`,
+    {inline_keyboard:buttons}
+  );
 }
 
 async function showMatch(env,token,chatId,callback,reporter,matchId){
-  const rows=(await rowsInScope(env.DB,reporter)).filter(x=>x.match_id===matchId);
-  if(!rows.length){
+  const plane=await loadResultControlPlane(env.DB,{reporter});
+  const match=plane.matches.find(x=>x.match_id===matchId);
+  if(!match){
     await present(token,chatId,callback,'🔒 Ese partido no está disponible dentro de tu alcance.',{inline_keyboard:[[{text:'⬅️ Partidos',callback_data:'rg:list'}]]});
     return false;
   }
-  const first=rows[0];
-  const bySeries=new Map(rows.map(r=>[r.series_code,r]));
-  const cells=SERIES_ORDER.filter(s=>bySeries.has(s)).map(s=>{
-    const r=bySeries.get(s);
-    return {text:`${statusIcon(r.validation_status)} ${SERIES_LABEL[s]} · ${r.home_score}–${r.away_score}`,callback_data:`rg:r:${matchId}:${s}`};
-  });
+  const cells=SERIES_ORDER.map(code=>slotButton(reporter,match,match.slots.find(x=>x.series_code===code)));
   const keyboard=[];
   for(let i=0;i<cells.length;i+=2) keyboard.push(cells.slice(i,i+2));
   keyboard.push([{text:'⬅️ Todos los partidos',callback_data:'rg:list'}]);
-  await present(token,chatId,callback,`🛡️ <b>RESULTADOS DEL PARTIDO</b>\n\n📅 ${esc(first.round_label)} · Grupo ${esc(first.group_id)}\n🏟️ <b>${esc(first.home_name)} — ${esc(first.away_name)}</b>\n\nSelecciona la serie que necesitas revisar.`,{inline_keyboard:keyboard});
+  await present(token,chatId,callback,
+    `🛡️ <b>RESULTADOS DEL PARTIDO</b>\n\n📅 ${esc(match.round_label)} · Grupo ${esc(match.group_id)}\n🏟️ <b>${esc(match.home_name)} — ${esc(match.away_name)}</b>\n\n`+
+    `Estado: <b>${match.counts.OFFICIAL}/4 oficiales</b> · ${match.counts.MISSING} sin resultado${match.counts.DISPUTED?` · ${match.counts.DISPUTED} en disputa`:''}${match.counts.ANNULLED?` · ${match.counts.ANNULLED} anulados`:''}\n\n`+
+    `Selecciona cualquiera de las cuatro series.`,
+    {inline_keyboard:keyboard}
+  );
   return true;
 }
 

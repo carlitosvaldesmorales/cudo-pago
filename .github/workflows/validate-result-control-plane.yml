@@ -1,0 +1,62 @@
+name: Validate Result Control Plane
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/worker/result-control-plane-model.js'
+      - 'sports-bus/worker/result-governance-scope-entry.js'
+      - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'qa/telegram/result-control-plane-model-harness.mjs'
+      - 'qa/telegram/result-control-plane-ux-harness.mjs'
+      - '.github/workflows/validate-result-control-plane.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/result-control-plane-v1
+    paths:
+      - 'sports-bus/worker/result-control-plane-model.js'
+      - 'sports-bus/worker/result-governance-scope-entry.js'
+      - 'sports-bus/worker/result-governance-ux-entry.js'
+      - 'qa/telegram/result-control-plane-model-harness.mjs'
+      - 'qa/telegram/result-control-plane-ux-harness.mjs'
+      - '.github/workflows/validate-result-control-plane.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/result-control-plane-model.js
+          node --check sports-bus/worker/result-governance-scope-entry.js
+          node --check sports-bus/worker/result-governance-ux-entry.js
+          node --check qa/telegram/result-control-plane-model-harness.mjs
+          node --check qa/telegram/result-control-plane-ux-harness.mjs
+      - name: Validate desired inventory model
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-control-plane-model-harness.mjs | tee /tmp/result-control-plane-model.log
+          grep -q 'PASS desired inventory:' /tmp/result-control-plane-model.log
+          grep -q 'PASS absence of stored result is represented as MISSING, not omitted' /tmp/result-control-plane-model.log
+          grep -q 'PASS byes remain separate and do not create result slots' /tmp/result-control-plane-model.log
+          grep -q 'RESULT: PASS' /tmp/result-control-plane-model.log
+      - name: Validate government UX over expected slots
+        run: |
+          set -euo pipefail
+          node qa/telegram/result-control-plane-ux-harness.mjs | tee /tmp/result-control-plane-ux.log
+          grep -q 'PASS government list is built from fixture inventory, not result rows' /tmp/result-control-plane-ux.log
+          grep -q 'PASS summary exposes expected vs actual result-slot counts' /tmp/result-control-plane-ux.log
+          grep -q 'PASS every normal group-stage match exposes four expected series' /tmp/result-control-plane-ux.log
+          grep -q 'PASS missing series remain visible and actionable for SUPER_ADMIN' /tmp/result-control-plane-ux.log
+          grep -q 'PASS observed official series still routes to governance detail' /tmp/result-control-plane-ux.log
+          grep -q 'RESULT: PASS' /tmp/result-control-plane-ux.log
