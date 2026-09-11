@@ -18,7 +18,7 @@ Normal score entry is button-first. Values above 7 use a button stepper rather t
 
 - REPORTER / public identity: may observe.
 - CLUB_ADMIN: may observe and administer results within the participating club scope.
-- MEDIA_PARTNER: may observe with partner provenance only inside an explicit grant scope; outside that scope the same identity falls back to ordinary public provenance.
+- MEDIA_PARTNER: for the current Chépica Play contract, may consume championship results and register result observations across the competition. It does not gain event publishing or canonical governance.
 - PLATFORM_OPERATOR: operational authority across the platform, but no policy authority and no ability to grant SUPER_ADMIN.
 - SUPER_ADMIN: operational authority plus policy/security authority.
 
@@ -36,8 +36,21 @@ Observation kinds:
 
 Existing canonical results are never overwritten by the contribution flow.
 
+For an active Chépica Play competition membership, a result registered through this flow carries:
+
+- `source_type = MEDIA_PARTNER`
+- `source_label = Chépica Play`
+- `trust_level = VERIFIED`
+
+No coverage, correspondent assignment, live state or match-event capability is required to register the score because those concepts are outside the current product scope.
+
 ## Partner scope
 
-`actor_scope_grants` supports PLATFORM, COMPETITION, CLUB and MATCH scopes. MEDIA_PARTNER trust is recognized only when the observed match falls inside an active grant.
+`actor_scope_grants` supports PLATFORM, COMPETITION, CLUB and MATCH scopes. Chépica Play currently uses a persistent `COMPETITION` grant with exactly:
 
-No Chépica Play identity or grant is seeded by this change. Binding a real partner requires a concrete authenticated identity and an explicit initial scope.
+- `READ_COMPETITION`
+- `OBSERVE_RESULT`
+
+The competition scope answers *where the two declared capabilities apply*. It must not be used to infer additional functionality.
+
+Binding a real Chépica Play identity still requires an explicit one-time enrollment; enrollment preserves the person's base role and adds the two-capability partner relationship.
