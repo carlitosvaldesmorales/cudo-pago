@@ -47,25 +47,39 @@ try{
   const list=last('sendMessage');
   assert.match(list.text,/GOBIERNO DE RESULTADOS/);
   assert.doesNotMatch(list.text,/VERIFIED|v\d+/);
+  assert.match(list.text,/Esperados:/);
+  assert.match(list.text,/Sin resultado:/);
+
   const matchButtons=list.reply_markup.inline_keyboard.flat().filter(x=>String(x.callback_data||'').startsWith('rgux:m:'));
-  assert.ok(matchButtons.length>0,'must expose match buttons');
-  assert.ok(matchButtons.length<=10,'must group series under matches instead of dumping all series');
+  const expectedMatches=await env.DB.prepare("SELECT COUNT(*) AS n FROM matches WHERE competition_id='ANFA-CHEPICA-2026'").first();
+  assert.equal(matchButtons.length,Number(expectedMatches.n),'must expose one button per fixture match, independent of result-row existence');
   assert.ok(matchButtons.some(x=>/—/.test(x.text)),'match button must identify both clubs');
 
+  const observedMatch=await env.DB.prepare(`
+    SELECT m.match_id
+    FROM match_series_results r JOIN matches m ON m.match_id=r.match_id
+    WHERE m.competition_id='ANFA-CHEPICA-2026'
+    ORDER BY m.round_no DESC,m.match_id LIMIT 1
+  `).first();
+  assert.ok(observedMatch?.match_id,'need one governed result for detail assertions');
+  const observedButton=matchButtons.find(x=>x.callback_data===`rgux:m:${observedMatch.match_id}`);
+  assert.ok(observedButton,'governed match must still appear in full fixture control plane');
+
   calls.length=0;
-  const matchData=matchButtons[0].callback_data;
-  response=await invoke(cb(matchData));
+  response=await invoke(cb(observedButton.callback_data));
   payload=await response.json();
   assert.equal(payload.handled,'result_governance_ux_match');
   const matchView=last('editMessageText');
   assert.ok(matchView,'callback navigation must edit the same Telegram message');
   assert.match(matchView.text,/RESULTADOS DEL PARTIDO/);
-  const seriesButtons=matchView.reply_markup.inline_keyboard.flat().filter(x=>String(x.callback_data||'').startsWith('rg:r:'));
-  assert.ok(seriesButtons.length>=1&&seriesButtons.length<=4);
-  assert.ok(seriesButtons.some(x=>/[123]ª|Senior/.test(x.text)));
+  const slotButtons=matchView.reply_markup.inline_keyboard.flat().filter(x=>/^(rg:r:|ga:series:)/.test(String(x.callback_data||'')));
+  assert.equal(slotButtons.length,4,'every normal group-stage match must expose four expected series');
+  assert.ok(slotButtons.some(x=>/[123]ª|Senior/.test(x.text)));
+  const governedSeries=slotButtons.find(x=>String(x.callback_data||'').startsWith('rg:r:'));
+  assert.ok(governedSeries,'observed result must remain navigable to governance detail');
 
   calls.length=0;
-  response=await invoke(cb(seriesButtons[0].callback_data));
+  response=await invoke(cb(governedSeries.callback_data));
   payload=await response.json();
   assert.equal(payload.handled,'result_governance_ux_detail');
   const detail=last('editMessageText');
@@ -89,8 +103,10 @@ try{
   assert.match(history.text,/HISTORIAL DEL RESULTADO/);
   assert.doesNotMatch(history.text,/VERIFIED|DISPUTED|ANNULLED/);
 
-  console.log('PASS governance list groups by match and identifies clubs');
+  console.log('PASS governance list groups by fixture match and identifies clubs');
+  console.log('PASS governance list includes missing-result matches instead of hiding them');
   console.log('PASS callback navigation reuses one Telegram message');
+  console.log('PASS each group-stage match exposes four expected series slots');
   console.log('PASS detail hides technical state/version jargon');
   console.log('PASS destructive action is visually distinguished');
   console.log('RESULT: PASS');
