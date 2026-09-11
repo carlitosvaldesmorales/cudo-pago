@@ -41,7 +41,7 @@ export async function handleMediaPartnerEnrollmentRequest(request,env){
 
   if(legacy){
     if(callback) await answer(env,callback.id,'Flujo retirado');
-    await send(env,chatId,`ℹ️ Ese botón pertenece a un modelo anterior de ${PARTNER_NAME} y ya no realiza acciones.\n\nHoy ${PARTNER_NAME} tiene sólo dos capacidades: consultar resultados y registrar resultados.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'📝 Registrar resultado',callback_data:'obs:dates'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+    await send(env,chatId,`ℹ️ Ese botón pertenece a un flujo anterior y ya no realiza acciones.\n\nVuelve al espacio actual de ${PARTNER_NAME}.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'📝 Registrar resultado',callback_data:'obs:dates'}],[{text:`🎥 ${PARTNER_NAME}`,callback_data:'mp:home'}]]});
     return json({ok:true,handled:'media_partner_legacy_flow_retired'});
   }
 
@@ -73,7 +73,7 @@ export async function handleMediaPartnerEnrollmentRequest(request,env){
     ]);
     const deepLink=`https://t.me/FutbolChepicaBot?start=partner_${token}`;
     await answer(env,callback.id,'Invitación creada');
-    await send(env,chatId,`🤝 VINCULAR PERSONA · ${PARTNER_NAME}\n\nEsta invitación es individual y de un solo uso. Puedes generar una distinta para cada persona de ${PARTNER_NAME}; varias invitaciones pueden quedar pendientes al mismo tiempo.\n\nCada identidad vinculada obtiene exactamente dos capacidades:\n\n1. ⚽ Consultar resultados\n2. 📝 Registrar resultados\n\nNo asigna partidos, coberturas, corresponsales ni eventos en vivo. Tampoco entrega gobierno del campeonato.\nVigencia: ${INVITE_TTL_DAYS} días.\n\n${deepLink}`,{inline_keyboard:[[{text:'➕ Otra invitación',callback_data:'mp:collab:invite'}],[{text:'🕒 Invitaciones',callback_data:'mp:invites'}],[{text:'⬅️ Chépica Play',callback_data:'mp:manage'}]]});
+    await send(env,chatId,`🤝 INVITAR A ${PARTNER_NAME.toUpperCase()}\n\nEste enlace es individual y de un solo uso. Puedes crear uno distinto para cada persona.\n\nAl aceptar tendrá acceso a:\n⚽ Consultar resultados\n📝 Registrar resultados\n\nVigencia: ${INVITE_TTL_DAYS} días.\n\n${deepLink}`,{inline_keyboard:[[{text:'➕ Otra invitación',callback_data:'mp:collab:invite'}],[{text:'🕒 Invitaciones',callback_data:'mp:invites'}],[{text:`⬅️ ${PARTNER_NAME}`,callback_data:'mp:manage'}]]});
     return json({ok:true,handled:'media_partner_collaboration_invite_created',invite_id:inviteId,scope_type:'COMPETITION',scope_id:COMPETITION_ID,capabilities:PARTNER_CAPABILITIES});
   }
 
@@ -97,7 +97,7 @@ export async function handleMediaPartnerEnrollmentRequest(request,env){
 
   if(data==='mp:members'){
     if(!canManagePartners(reporter)) return denyManage(env,chatId,callback);
-    await answer(env,callback.id,'Identidades');
+    await answer(env,callback.id,'Personas vinculadas');
     await showMembers(env,chatId);
     return json({ok:true,handled:'media_partner_members'});
   }
@@ -112,8 +112,8 @@ export async function handleMediaPartnerEnrollmentRequest(request,env){
       env.DB.prepare('UPDATE actor_scope_grants SET active=0,updated_at=? WHERE grant_id=? AND active=1').bind(now,grant.grant_id),
       auditStmt(env.DB,`mp-member-revoke-${grant.grant_id}`,actorId,reporter,'REVOKE_MEDIA_PARTNER_MEMBERSHIP','partner_collaboration',PARTNER_CODE,1,'partner_relationship_revoked_without_erasing_history',now)
     ]);
-    await answer(env,callback.id,'Vínculo revocado');
-    await send(env,grant.telegram_user_id,`⛔ Tu vínculo con ${PARTNER_NAME} fue revocado. Tu identidad y tus aportes históricos se conservan.`);
+    await answer(env,callback.id,'Acceso revocado');
+    await send(env,grant.telegram_user_id,`⛔ Tu acceso como parte de ${PARTNER_NAME} fue revocado. Tus aportes históricos se conservan.`);
     await showMembers(env,chatId);
     return json({ok:true,handled:'media_partner_member_revoked'});
   }
@@ -134,7 +134,7 @@ async function claimCollaborationInvite(env,chatId,actorId,reporter,token){
 
   const existing=await getActivePartnerMembership(env.DB,actorId,invite.scope_id);
   if(existing?.partner_code===invite.partner_code){
-    await send(env,chatId,`ℹ️ Tu identidad ya está vinculada a ${invite.partner_name||PARTNER_NAME}.\n\nEsta invitación no fue consumida y puede ser utilizada por otra persona.` ,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'📝 Registrar resultado',callback_data:'obs:dates'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+    await send(env,chatId,`ℹ️ Ya tienes acceso a ${invite.partner_name||PARTNER_NAME}.\n\nEsta invitación sigue disponible para otra persona.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'📝 Registrar resultado',callback_data:'obs:dates'}],[{text:`🎥 ${PARTNER_NAME}`,callback_data:'mp:home'}]]});
     return json({ok:true,handled:'media_partner_already_member',grant_id:existing.grant_id,invite_id:invite.invite_id});
   }
 
@@ -142,7 +142,7 @@ async function claimCollaborationInvite(env,chatId,actorId,reporter,token){
   await env.DB.prepare("UPDATE partner_scope_invites SET status='CLAIMED',claimed_by=?,claimed_at=? WHERE invite_id=? AND status='PENDING'").bind(actorId,now,invite.invite_id).run();
   const claimed=await env.DB.prepare('SELECT status,claimed_by FROM partner_scope_invites WHERE invite_id=?').bind(invite.invite_id).first();
   if(claimed?.status!=='CLAIMED'||String(claimed.claimed_by)!==actorId){
-    await send(env,chatId,'⚠️ La invitación cambió mientras se procesaba. No se creó el vínculo.');
+    await send(env,chatId,'⚠️ La invitación cambió mientras se procesaba. No se creó el acceso.');
     return json({ok:true,handled:'media_partner_claim_race_guard'});
   }
   const grantId=`mpg-${invite.partner_code}-${actorId}-${invite.scope_id}`;
@@ -153,7 +153,7 @@ async function claimCollaborationInvite(env,chatId,actorId,reporter,token){
       ON CONFLICT(telegram_user_id,role,scope_type,scope_id) DO UPDATE SET capabilities_json=excluded.capabilities_json,trust_level=excluded.trust_level,source_label=excluded.source_label,granted_by=excluded.granted_by,active=1,updated_at=excluded.updated_at,partner_code=excluded.partner_code`).bind(grantId,actorId,invite.scope_id,capabilities,invite.trust_level,invite.partner_name||PARTNER_NAME,invite.created_by,now,now,invite.partner_code),
     auditStmt(env.DB,`mp-claim-${invite.invite_id}`,actorId,reporter||{role:'REPORTER',club_id:null},'CLAIM_MEDIA_PARTNER_COLLABORATION','partner_collaboration',invite.partner_code,1,'two_capability_partner_relationship_claimed',now)
   ]);
-  await send(env,chatId,`✅ ${invite.partner_name||PARTNER_NAME} · VÍNCULO ACTIVO\n\nTu identidad quedó vinculada de forma independiente a ${PARTNER_NAME}. Puede haber otras identidades activas de la misma organización.\n\nTu espacio tiene sólo estas dos capacidades:\n\n1. ⚽ Consultar resultados\n2. 📝 Registrar resultados\n\nRegistrar un resultado crea un aporte identificado como ${PARTNER_NAME}; no te entrega gobierno ni modifica automáticamente el resultado oficial.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'📝 Registrar resultado',callback_data:'obs:dates'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+  await send(env,chatId,`✅ ACCESO ACTIVADO · ${invite.partner_name||PARTNER_NAME}\n\nYa puedes:\n⚽ Consultar resultados\n📝 Registrar resultados\n\nLos resultados que registres quedarán identificados como aportes de ${PARTNER_NAME} y pasarán por el flujo de validación antes de convertirse en oficiales.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'📝 Registrar resultado',callback_data:'obs:dates'}],[{text:`🎥 ${PARTNER_NAME}`,callback_data:'mp:home'}]]});
   return json({ok:true,handled:'media_partner_collaboration_claimed',grant_id:grantId,scope_type:'COMPETITION',scope_id:invite.scope_id,capabilities:PARTNER_CAPABILITIES});
 }
 
@@ -163,9 +163,9 @@ async function showManagement(env,chatId){
     activeMembers(env.DB),
     env.DB.prepare("SELECT COUNT(*) AS n FROM partner_scope_invites WHERE partner_code=? AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id=? AND status='PENDING' AND expires_at>?").bind(PARTNER_CODE,COMPETITION_ID,new Date().toISOString()).first()
   ]);
-  await send(env,chatId,`🎥 ${PARTNER_NAME}\n\nEstado: ${members.length>0?'✅ ACTIVO':'⚪ SIN IDENTIDAD VINCULADA'}\nIdentidades activas: ${members.length}\nInvitaciones pendientes: ${Number(pending?.n||0)}\n\nMODELO DE IDENTIDAD\n${PARTNER_NAME} es una sola organización y puede tener varias identidades Telegram activas. Cada persona usa su propia cuenta; no se comparte una identidad técnica.\n\nCAPACIDADES ACTUALES\n1. ⚽ Consumir resultados\n2. 📝 Registrar resultados\n\nNo incluye coberturas, corresponsales, goles/eventos en vivo ni gobierno del campeonato.`,{inline_keyboard:[
+  await send(env,chatId,`🎥 ${PARTNER_NAME}\n\nEstado: ${members.length>0?'✅ ACTIVO':'⚪ SIN PERSONAS VINCULADAS'}\nPersonas vinculadas: ${members.length}\nInvitaciones pendientes: ${Number(pending?.n||0)}\n\nACCESOS HABILITADOS\n⚽ Consultar resultados\n📝 Registrar resultados`,{inline_keyboard:[
     [{text:'➕ Nueva invitación individual',callback_data:'mp:collab:invite'}],
-    [{text:`👥 Identidades (${members.length})`,callback_data:'mp:members'}],
+    [{text:`👥 Personas vinculadas (${members.length})`,callback_data:'mp:members'}],
     [{text:`🕒 Invitaciones (${Number(pending?.n||0)})`,callback_data:'mp:invites'}],
     [{text:'⬅️ Administración',callback_data:'po:home'}]
   ]});
@@ -174,10 +174,10 @@ async function showManagement(env,chatId){
 async function showPartnerHome(env,chatId,actorId){
   const membership=await getActivePartnerMembership(env.DB,actorId,COMPETITION_ID);
   if(!membership){
-    await send(env,chatId,`🎥 ${PARTNER_NAME}\n\nTu cuenta no está vinculada a ${PARTNER_NAME}.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+    await send(env,chatId,`🎥 ${PARTNER_NAME}\n\nTu cuenta no tiene acceso como parte de ${PARTNER_NAME}.`,{inline_keyboard:[[{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
     return;
   }
-  await send(env,chatId,`🎥 ${PARTNER_NAME}\n\nEsta identidad está vinculada a ${PARTNER_NAME}. La organización puede tener más de una identidad activa, todas independientes.\n\nTienes dos capacidades habilitadas para el campeonato:\n\n1. ⚽ CONSUMIDOR DE RESULTADOS\nConsulta los resultados publicados.\n\n2. 📝 REGISTRADOR DE RESULTADOS\nInforma el marcador de una serie. El aporte queda trazado como fuente ${PARTNER_NAME} y no se convierte automáticamente en resultado oficial.`,{inline_keyboard:[
+  await send(env,chatId,`🎥 ${PARTNER_NAME}\n\nACCESOS HABILITADOS\n\n⚽ Consultar resultados\nRevisa los resultados publicados del campeonato.\n\n📝 Registrar resultado\nInforma el marcador de una serie como aporte de ${PARTNER_NAME}. El resultado pasa por validación antes de convertirse en oficial.`,{inline_keyboard:[
     [{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],
     [{text:'📝 Registrar resultado',callback_data:'obs:dates'}],
     [{text:'🏠 Inicio',callback_data:'tp:home'}]
@@ -192,9 +192,9 @@ async function showInvites(env,chatId){
     if(i.status==='PENDING') rows.push([{text:`${icon} ${i.invite_id}`,callback_data:`mp:invite-revoke:${i.invite_id}`}]);
   }
   rows.push([{text:'➕ Nueva invitación',callback_data:'mp:collab:invite'}]);
-  rows.push([{text:'⬅️ Chépica Play',callback_data:'mp:manage'}]);
+  rows.push([{text:`⬅️ ${PARTNER_NAME}`,callback_data:'mp:manage'}]);
   const text=(q.results||[]).length?(q.results||[]).map(i=>`${i.status} · ${i.created_at}`).join('\n'):'Sin invitaciones registradas.';
-  await send(env,chatId,`🕒 INVITACIONES · ${PARTNER_NAME}\n\nCada persona debe recibir su propia invitación. Pueden existir varias invitaciones pendientes simultáneamente; cada una es de un solo uso y habilita únicamente consultar + registrar resultados.\n\n${text}`,{inline_keyboard:rows});
+  await send(env,chatId,`🕒 INVITACIONES · ${PARTNER_NAME}\n\nCada persona recibe su propio enlace individual y de un solo uso. Puedes mantener varias invitaciones pendientes al mismo tiempo.\n\n${text}`,{inline_keyboard:rows});
 }
 
 async function showMembers(env,chatId){
@@ -203,9 +203,9 @@ async function showMembers(env,chatId){
   const rows=[];
   for(const g of q.results||[]){if(Number(g.active)===1) rows.push([{text:`⛔ Revocar · ${g.display_name||g.telegram_user_id}`,callback_data:`mp:member-revoke:${g.grant_id}`}]);}
   rows.push([{text:'➕ Nueva invitación',callback_data:'mp:collab:invite'}]);
-  rows.push([{text:'⬅️ Chépica Play',callback_data:'mp:manage'}]);
-  const text=(q.results||[]).length?(q.results||[]).map(g=>`${Number(g.active)===1?'✅':'⛔'} ${g.display_name||g.telegram_user_id}`).join('\n'):'Sin identidades vinculadas.';
-  await send(env,chatId,`👥 IDENTIDADES · ${PARTNER_NAME}\n\n${text}\n\n${PARTNER_NAME} puede tener múltiples identidades activas. Cada identidad es independiente y todas comparten el mismo contrato actual: consultar resultados + registrar resultados. Revocar una identidad no afecta a las demás.`,{inline_keyboard:rows});
+  rows.push([{text:`⬅️ ${PARTNER_NAME}`,callback_data:'mp:manage'}]);
+  const text=(q.results||[]).length?(q.results||[]).map(g=>`${Number(g.active)===1?'✅':'⛔'} ${g.display_name||g.telegram_user_id}`).join('\n'):'Sin personas vinculadas.';
+  await send(env,chatId,`👥 PERSONAS VINCULADAS · ${PARTNER_NAME}\n\n${text}\n\nCada persona tiene su propio acceso. Revocar a una no afecta a las demás.`,{inline_keyboard:rows});
 }
 
 async function activeMembers(db){
@@ -224,7 +224,7 @@ async function upsertIdentity(db,actorId,actor){
 
 function displayName(actor){return [actor?.first_name,actor?.last_name].filter(Boolean).join(' ').trim()||actor?.username||String(actor?.id||'Usuario');}
 
-async function denyManage(env,chatId,callback){if(callback)await answer(env,callback.id,'Sin permiso');await send(env,chatId,'🔒 Sólo la administración del campeonato puede gestionar vínculos de colaboradores.');return json({ok:true,handled:'media_partner_manage_denied'});}
+async function denyManage(env,chatId,callback){if(callback)await answer(env,callback.id,'Sin permiso');await send(env,chatId,'🔒 Sólo la administración del campeonato puede gestionar accesos de colaboradores.');return json({ok:true,handled:'media_partner_manage_denied'});}
 function auditStmt(db,auditId,actorId,reporter,action,resourceType,resourceId,allowed,reason,createdAt){return db.prepare(`INSERT OR REPLACE INTO permission_audit (audit_id,actor_id,role,club_id,action,resource_type,resource_id,allowed,reason,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(auditId,String(actorId),reporter?.role||'REPORTER',reporter?.club_id||null,action,resourceType,resourceId,allowed,reason,createdAt);}
 async function send(env,chatId,text,replyMarkup=null){const body={chat_id:chatId,text};if(replyMarkup)body.reply_markup=replyMarkup;const res=await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});return res.json();}
 async function answer(env,id,text){if(!id)return;await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/answerCallbackQuery`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({callback_query_id:id,text})});}
