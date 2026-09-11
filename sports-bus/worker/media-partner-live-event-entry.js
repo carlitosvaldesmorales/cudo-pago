@@ -1,4 +1,4 @@
-import { CAPABILITY, getActivePartnerMembership, getPartnerCoverageAssignment, hasScopedCapability } from './access-control.js';
+import { CAPABILITY, getActivePartnerMembership, hasScopedCapability } from './access-control.js';
 
 const COMPETITION_ID='ANFA-CHEPICA-2026';
 const PARTNER_NAME='Chépica Play';
@@ -60,12 +60,13 @@ export async function handleMediaPartnerLiveEventRequest(request,env){
 
 async function liveGate(db,reporter,membership,matchId){
   const match=await getMatch(db,matchId); if(!match||match.competition_id!==COMPETITION_ID) return {ok:false,reason:'match_out_of_scope'};
-  const assignment=await getPartnerCoverageAssignment(db,membership.partner_code,matchId,reporter.telegram_user_id);
+  const assignment=await getAssignmentAnyStatus(db,membership.partner_code,matchId,reporter.telegram_user_id);
   if(!assignment) return {ok:false,reason:'correspondent_not_assigned'};
   if(assignment.coverage_status!=='LIVE') return {ok:false,reason:'coverage_not_live'};
   if(!(await hasScopedCapability(db,reporter,CAPABILITY.PUBLISH_MATCH_EVENT,match))) return {ok:false,reason:'publish_event_not_allowed'};
   return {ok:true,match,assignment};
 }
+async function getAssignmentAnyStatus(db,partnerCode,matchId,actorId){return db.prepare(`SELECT a.*,c.status coverage_status FROM partner_coverage_assignments a JOIN partner_match_coverages c ON c.coverage_id=a.coverage_id WHERE a.partner_code=? AND a.telegram_user_id=? AND a.status='ACTIVE' AND c.partner_code=? AND c.match_id=? LIMIT 1`).bind(String(partnerCode),String(actorId),String(partnerCode),String(matchId)).first();}
 async function observedScore(db,partnerCode,matchId,seriesCode){const q=await db.prepare("SELECT payload_json FROM events WHERE match_id=? AND event_type='match.event.observed'").bind(matchId).all();let home=0,away=0;for(const e of q.results||[]){let p;try{p=JSON.parse(e.payload_json||'{}')}catch{continue}if(p.partner_code===partnerCode&&p.event_kind==='GOAL'&&p.series_code===seriesCode){if(p.side==='HOME')home++;if(p.side==='AWAY')away++;}}return {home,away};}
 async function getMatch(db,matchId){return db.prepare('SELECT match_id,competition_id,season_id,round_label,group_id,home_id,away_id,home_name,away_name FROM matches WHERE match_id=?').bind(matchId).first();}
 function short(v){const s=String(v||'Equipo');return s.length<=24?s:`${s.slice(0,21)}…`;}
