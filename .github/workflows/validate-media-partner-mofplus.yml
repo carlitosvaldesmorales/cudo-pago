@@ -5,6 +5,8 @@ on:
     branches:
       - feature/sports-event-bus-v1
     paths:
+      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
+      - 'sports-bus/worker/media-partner-correspondent-entry.js'
       - 'sports-bus/worker/media-partner-live-event-entry.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
       - 'sports-bus/worker/access-control.js'
@@ -14,9 +16,10 @@ on:
   push:
     branches:
       - feature/sports-event-bus-v1
-      - feature/media-partner-live-events-mofplus-v1
-      - feature/media-partner-goal-only-v1
+      - feature/chepica-play-correspondents-hub-v1
     paths:
+      - 'sports-bus/migrations/0020_media_partner_correspondent_assignments.sql'
+      - 'sports-bus/worker/media-partner-correspondent-entry.js'
       - 'sports-bus/worker/media-partner-live-event-entry.js'
       - 'sports-bus/worker/media-partner-enrollment-entry.js'
       - 'sports-bus/worker/access-control.js'
@@ -38,21 +41,19 @@ jobs:
       - name: Syntax
         run: |
           set -euo pipefail
+          node --check sports-bus/worker/media-partner-correspondent-entry.js
           node --check sports-bus/worker/media-partner-live-event-entry.js
           node --check sports-bus/cors-entry.js
           node --check qa/telegram/media-partner-mofplus-harness.mjs
-      - name: Validate representative synthetic end-to-end and critical negatives
+      - name: Validate distributed correspondent topology and concentrator
         run: |
           set -euo pipefail
           node qa/telegram/media-partner-mofplus-harness.mjs | tee /tmp/media-partner-mofplus.log
-          grep -q 'PASS golden path reaches high-fidelity LIVE workspace with consumer + goal contributor contract' /tmp/media-partner-mofplus.log
-          grep -q 'PASS product scope: live UI exposes only goals, with no card controls' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/product-scope: non-goal live event is rejected without mutation' /tmp/media-partner-mofplus.log
-          grep -q 'PASS goal is stored as traced Chépica Play observation, not canonical truth' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/idempotency: duplicate goal callback creates exactly one event' /tmp/media-partner-mofplus.log
-          grep -q 'PASS golden path records score observation without canonical overwrite' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/scope: partner cannot publish live goals outside active coverage' /tmp/media-partner-mofplus.log
-          grep -q 'PASS negative/stale: old goal callback cannot mutate a closed coverage' /tmp/media-partner-mofplus.log
-          grep -q 'PASS authorization: non-partner synthetic actor is rejected' /tmp/media-partner-mofplus.log
-          grep -q 'PASS final state: permanent membership survives coverage close and base role remains REPORTER' /tmp/media-partner-mofplus.log
+          grep -q 'PASS actor fidelity: one organization has two persistent synthetic correspondents' /tmp/media-partner-mofplus.log
+          grep -q 'PASS organization coverage is separated from human correspondent assignment' /tmp/media-partner-mofplus.log
+          grep -q 'PASS negative/scope: correspondent A cannot operate correspondent B coverage' /tmp/media-partner-mofplus.log
+          grep -q 'PASS idempotency and double provenance: human + Chépica Play' /tmp/media-partner-mofplus.log
+          grep -q 'PASS concentrator aggregates goals from distributed correspondents without promoting official truth' /tmp/media-partner-mofplus.log
+          grep -q 'PASS unauthorized and stale callbacks are rejected' /tmp/media-partner-mofplus.log
+          grep -q 'PASS canonical result remains untouched' /tmp/media-partner-mofplus.log
           grep -q 'RESULT: PASS' /tmp/media-partner-mofplus.log
