@@ -58,14 +58,38 @@ function visualAudit(body,label,{allowInternal=false}={}){
     }
   }
 }
+function noRetiredScope(body,label){
+  assert.equal(/coberturas|corresponsales|eventos en vivo|goles\/eventos/i.test(body.text),false,`${label}: retired scope leaked into active UX`);
+  assert.equal(callbacks(body).some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')||x==='mp:hub'||x==='mp:mycoverages'),false,`${label}: retired action exposed`);
+}
 function printScreen(label,body){const rows=(body?.reply_markup?.inline_keyboard||[]).map(r=>r.map(b=>`[${b.text}]`).join(' '));console.log(`SCREEN ${label}\n${body.text}\n${rows.join('\n')}\n---`);}
-async function createInvite(){const r=await cb(OP,'mp:collab:invite');assert.equal(r.handled,'media_partner_collaboration_invite_created');const token=last(OP.id).text.match(/partner_([A-Za-z0-9_-]{12,80})/)?.[1];assert.ok(token);return token;}
-async function claim(actor,token){const r=await msg(actor,`/start partner_${token}`);assert.equal(r.handled,'media_partner_collaboration_claimed');}
+async function createInvite(){
+  const r=await cb(OP,'mp:collab:invite');assert.equal(r.handled,'media_partner_collaboration_invite_created');
+  const screen=last(OP.id);visualAudit(screen,'invite');noRetiredScope(screen,'invite');
+  assert.match(screen.text,/INVITAR A CHÉPICA PLAY/i);
+  assert.match(screen.text,/individual y de un solo uso/i);
+  assert.match(screen.text,/Consultar resultados/i);
+  assert.match(screen.text,/Registrar resultados/i);
+  const token=screen.text.match(/partner_([A-Za-z0-9_-]{12,80})/)?.[1];assert.ok(token);
+  printScreen('invite',screen);
+  return token;
+}
+async function claim(actor,token){
+  const r=await msg(actor,`/start partner_${token}`);assert.equal(r.handled,'media_partner_collaboration_claimed');
+  const screen=last(actor.id);visualAudit(screen,'claim');noRetiredScope(screen,'claim');
+  assert.match(screen.text,/ACCESO ACTIVADO · Chépica Play/i);
+  assert.match(screen.text,/Consultar resultados/i);
+  assert.match(screen.text,/Registrar resultados/i);
+  assert.match(screen.text,/validación antes de convertirse en oficiales/i);
+  assert.ok(callbacks(screen).includes('tp:public-results'));
+  assert.ok(callbacks(screen).includes('obs:dates'));
+  printScreen(`claim_${actor.id}`,screen);
+}
 
 async function runRegistration(actor,homeScore,awayScore){
   let r=await cb(actor,'obs:dates');
   assert.equal(r.handled,'observation_dates');
-  let screen=last(actor.id);visualAudit(screen,'register_dates');
+  let screen=last(actor.id);visualAudit(screen,'register_dates');noRetiredScope(screen,'register_dates');
   assert.match(screen.text,/CHÉPICA PLAY · REGISTRAR RESULTADO/i);
   assert.match(screen.text,/no modifica automáticamente el resultado oficial/i);
   assert.ok(callbacks(screen).includes('mp:home'));
@@ -134,28 +158,44 @@ try{
   await claim(MEDIA_B,tokenB);
 
   let r=await msg(OP,'/medios');assert.equal(r.handled,'media_partner_management');
-  let screen=last(OP.id);visualAudit(screen,'admin_partner_management');
-  assert.match(screen.text,/Identidades activas: 2/i);
-  assert.match(screen.text,/Consumir resultados/i);
+  let screen=last(OP.id);visualAudit(screen,'admin_partner_management');noRetiredScope(screen,'admin_partner_management');
+  assert.match(screen.text,/Personas vinculadas: 2/i);
+  assert.match(screen.text,/Consultar resultados/i);
   assert.match(screen.text,/Registrar resultados/i);
-  assert.equal(/coberturas|corresponsales|eventos en vivo/i.test(screen.text),true);
-  assert.equal(callbacks(screen).some(x=>x.startsWith('mp:coverage')||x.startsWith('mplive:')),false);
+  assert.ok(callbacks(screen).includes('mp:collab:invite'));
+  assert.ok(callbacks(screen).includes('mp:members'));
   printScreen('admin_partner_management',screen);
-  console.log('PASS visual agent: admin surface shows organization + N identities without reintroducing old scope');
+
+  r=await cb(OP,'mp:members');assert.equal(r.handled,'media_partner_members');
+  screen=last(OP.id);visualAudit(screen,'members');noRetiredScope(screen,'members');
+  assert.match(screen.text,/PERSONAS VINCULADAS · Chépica Play/i);
+  assert.match(screen.text,/Integrante A/i);
+  assert.match(screen.text,/Integrante B/i);
+  assert.match(screen.text,/Revocar a una no afecta a las demás/i);
+  printScreen('members',screen);
+
+  r=await cb(OP,'mp:invites');assert.equal(r.handled,'media_partner_invites');
+  screen=last(OP.id);visualAudit(screen,'invites');noRetiredScope(screen,'invites');
+  assert.match(screen.text,/INVITACIONES · Chépica Play/i);
+  assert.match(screen.text,/propio enlace individual y de un solo uso/i);
+  printScreen('invites',screen);
+  console.log('PASS visual agent: admin surfaces are concise, multi-person and limited to current capabilities');
 
   for(const actor of [MEDIA_A,MEDIA_B]){
     r=await msg(actor,'/partner');assert.equal(r.handled,'media_partner_home');
-    screen=last(actor.id);visualAudit(screen,'partner_home');
-    assert.match(screen.text,/CONSUMIDOR DE RESULTADOS/i);
-    assert.match(screen.text,/REGISTRADOR DE RESULTADOS/i);
+    screen=last(actor.id);visualAudit(screen,'partner_home');noRetiredScope(screen,'partner_home');
+    assert.match(screen.text,/ACCESOS HABILITADOS/i);
+    assert.match(screen.text,/Consultar resultados/i);
+    assert.match(screen.text,/Registrar resultado/i);
+    assert.match(screen.text,/validación antes de convertirse en oficial/i);
     assert.deepEqual(callbacks(screen).filter(x=>x!=='tp:home').sort(),['obs:dates','tp:public-results'].sort());
     printScreen(`partner_home_${actor.id}`,screen);
   }
-  console.log('PASS visual agent: both synthetic members receive the same two-capability home contract');
+  console.log('PASS visual agent: both synthetic members receive the same two-action home contract');
 
   r=await msg(VISITOR,'/partner');assert.equal(r.handled,'media_partner_home');
   screen=last(VISITOR.id);visualAudit(screen,'unlinked_home');
-  assert.match(screen.text,/no está vinculada/i);
+  assert.match(screen.text,/no tiene acceso/i);
   assert.equal(callbacks(screen).includes('obs:dates'),false);
   printScreen('unlinked_home',screen);
   console.log('PASS visual agent: unlinked identity cannot see the register-result action');
