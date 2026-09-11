@@ -7,6 +7,7 @@ export const ROLE = Object.freeze({
 });
 
 export const CAPABILITY = Object.freeze({
+  READ_COMPETITION:'READ_COMPETITION',
   OBSERVE_RESULT:'OBSERVE_RESULT',
   REVIEW_RESULT:'REVIEW_RESULT',
   GOVERN_RESULTS:'GOVERN_RESULTS',
@@ -27,11 +28,15 @@ const BASE = Object.freeze({
     CAPABILITY.REVIEW_RESULT,
     CAPABILITY.MANAGE_CLUB_RESULTS
   ]),
+  // Kept for backwards compatibility only. New media collaborators are additive
+  // grants and never replace the base reporter role.
   [ROLE.MEDIA_PARTNER]: new Set([
+    CAPABILITY.READ_COMPETITION,
     CAPABILITY.OBSERVE_RESULT,
     CAPABILITY.PUBLISH_MATCH_EVENT
   ]),
   [ROLE.PLATFORM_OPERATOR]: new Set([
+    CAPABILITY.READ_COMPETITION,
     CAPABILITY.OBSERVE_RESULT,
     CAPABILITY.REVIEW_RESULT,
     CAPABILITY.GOVERN_RESULTS,
@@ -42,6 +47,7 @@ const BASE = Object.freeze({
     CAPABILITY.VIEW_AUDIT
   ]),
   [ROLE.SUPER_ADMIN]: new Set([
+    CAPABILITY.READ_COMPETITION,
     CAPABILITY.OBSERVE_RESULT,
     CAPABILITY.REVIEW_RESULT,
     CAPABILITY.GOVERN_RESULTS,
@@ -107,6 +113,21 @@ export async function matchingScopedGrant(db,reporter,match,role=ROLE.MEDIA_PART
   return grants.find(g=>scopeMatches(g,match)) || null;
 }
 
+export async function getActivePartnerMembership(db,telegramUserId,competitionId='ANFA-CHEPICA-2026'){
+  if(!db || !telegramUserId) return null;
+  return db.prepare(`SELECT * FROM actor_scope_grants
+    WHERE telegram_user_id=? AND role='MEDIA_PARTNER' AND scope_type='COMPETITION'
+      AND scope_id=? AND active=1 AND partner_code IS NOT NULL
+    ORDER BY updated_at DESC LIMIT 1`).bind(String(telegramUserId),competitionId).first();
+}
+
+export async function getPartnerCoverage(db,partnerCode,matchId){
+  if(!db || !partnerCode || !matchId) return null;
+  return db.prepare(`SELECT * FROM partner_match_coverages
+    WHERE partner_code=? AND match_id=? AND status IN ('ASSIGNED','LIVE')
+    LIMIT 1`).bind(String(partnerCode),String(matchId)).first();
+}
+
 export async function resolveObservationProvenance(db,reporter,match){
   const role=effectiveRole(reporter);
   const base={
@@ -116,8 +137,6 @@ export async function resolveObservationProvenance(db,reporter,match){
     scoped:false
   };
 
-  // Platform operational identities keep their administrative provenance even if
-  // they also hold an additive partner grant.
   if(role===ROLE.PLATFORM_OPERATOR && reporter?.trust_level==='VERIFIED') return {
     source_type:'PLATFORM_OPERATOR',
     source_label:'Telegram · administrador del campeonato',
@@ -132,17 +151,21 @@ export async function resolveObservationProvenance(db,reporter,match){
     scoped:true
   };
 
-  // MEDIA_PARTNER is an additive scoped grant, not a forced replacement of the
-  // person's base role. This prevents role explosion and allows an identity to
-  // remain REPORTER or CLUB_ADMIN while contributing as a partner for one match.
-  const mediaGrant=await matchingScopedGrant(db,reporter,match,ROLE.MEDIA_PARTNER);
-  if(mediaGrant && grantCapabilities(mediaGrant).has(CAPABILITY.OBSERVE_RESULT)) return {
-    source_type:'MEDIA_PARTNER',
-    source_label:mediaGrant.source_label || 'Telegram · medio colaborador',
-    trust_level:mediaGrant.trust_level || 'VERIFIED',
-    scoped:true,
-    grant_id:mediaGrant.grant_id
-  };
+  // Partner identity is persistent at competition scope. Partner provenance is
+  // only activated when that partner is actually covering this match.
+  const membership=await getActivePartnerMembership(db,reporter?.telegram_user_id,match?.competition_id);
+  if(membership && grantCapabilities(membership).has(CAPABILITY.OBSERVE_RESULT)){
+    const coverage=await getPartnerCoverage(db,membership.partner_code,match.match_id);
+    if(coverage) return {
+      source_type:'MEDIA_PARTNER',
+      source_label:`${membership.source_label||membership.partner_code} · transmisión`,
+      trust_level:membership.trust_level || 'VERIFIED',
+      scoped:true,
+      grant_id:membership.grant_id,
+      partner_code:membership.partner_code,
+      coverage_id:coverage.coverage_id
+    };
+  }
 
   if(role===ROLE.CLUB_ADMIN && reporter?.trust_level==='VERIFIED'){
     const participates=reporter.club_id && (reporter.club_id===match.home_id || reporter.club_id===match.away_id);
@@ -155,7 +178,6 @@ export async function resolveObservationProvenance(db,reporter,match){
     return base;
   }
 
-  if(role===ROLE.MEDIA_PARTNER && reporter?.trust_level==='VERIFIED') return base;
   return base;
 }
 
@@ -165,13 +187,20 @@ export async function hasScopedCapability(db,reporter,capability,match){
   if(role===ROLE.SUPER_ADMIN) return hasCapability(reporter,capability);
   if(role===ROLE.PLATFORM_OPERATOR) return reporter.trust_level==='VERIFIED' && hasCapability(reporter,capability);
 
+  const membership=await getActivePartnerMembership(db,reporter.telegram_user_id,match.competition_id);
+  if(membership && grantCapabilities(membership).has(capability)){
+    if(capability===CAPABILITY.READ_COMPETITION) return true;
+    if(capability===CAPABILITY.OBSERVE_RESULT || capability===CAPABILITY.PUBLISH_MATCH_EVENT){
+      return !!(await getPartnerCoverage(db,membership.partner_code,match.match_id));
+    }
+  }
+
   const grants=await grantsFor(db,reporter.telegram_user_id);
-  if(grants.some(g=>scopeMatches(g,match)&&grantCapabilities(g).has(capability))) return true;
+  if(grants.some(g=>g.role!==ROLE.MEDIA_PARTNER && scopeMatches(g,match)&&grantCapabilities(g).has(capability))) return true;
 
   if(role===ROLE.CLUB_ADMIN){
     if(reporter.trust_level!=='VERIFIED' || !hasCapability(reporter,capability)) return false;
     return !!reporter.club_id && (reporter.club_id===match.home_id || reporter.club_id===match.away_id);
   }
-  if(role===ROLE.MEDIA_PARTNER) return reporter.trust_level==='VERIFIED' && hasCapability(reporter,capability);
   return capability===CAPABILITY.OBSERVE_RESULT;
 }
