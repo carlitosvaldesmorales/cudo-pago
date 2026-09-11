@@ -1,0 +1,53 @@
+name: Validate Contributor Observation Plane
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/migrations/0016_contributor_observation_plane.sql'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/worker/contributor-observation-entry.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/contributor-observation-plane-harness.mjs'
+      - '.github/workflows/validate-contributor-observation-plane.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - feature/contributor-observation-plane-v1
+    paths:
+      - 'sports-bus/migrations/0016_contributor_observation_plane.sql'
+      - 'sports-bus/worker/access-control.js'
+      - 'sports-bus/worker/contributor-observation-entry.js'
+      - 'sports-bus/cors-entry.js'
+      - 'qa/telegram/contributor-observation-plane-harness.mjs'
+      - '.github/workflows/validate-contributor-observation-plane.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/access-control.js
+          node --check sports-bus/worker/contributor-observation-entry.js
+          node --check sports-bus/cors-entry.js
+          node --check qa/telegram/contributor-observation-plane-harness.mjs
+      - name: Validate contributor observation plane
+        run: |
+          set -euo pipefail
+          node qa/telegram/contributor-observation-plane-harness.mjs | tee /tmp/contributor-observation-plane.log
+          grep -q 'PASS any Telegram user can contribute through buttons without mutating canonical state' /tmp/contributor-observation-plane.log
+          grep -q 'PASS scoped MEDIA_PARTNER contributes trusted evidence without overwriting official result' /tmp/contributor-observation-plane.log
+          grep -q 'PASS PLATFORM_OPERATOR has operational authority but cannot change policy or grant SUPER_ADMIN' /tmp/contributor-observation-plane.log
+          grep -q 'PASS PLATFORM_OPERATOR can also act as an informant; contribution and authority remain separate' /tmp/contributor-observation-plane.log
+          grep -q 'PASS normal score capture is button-first with explicit confirmation' /tmp/contributor-observation-plane.log
+          grep -q 'RESULT: PASS' /tmp/contributor-observation-plane.log
