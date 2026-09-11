@@ -6,11 +6,6 @@ const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt
 function slot(url){return url.pathname==='/webhook/telegram-next'?'next':'primary'}
 function isVerifiedAdmin(r){return !!r&&Number(r.active)===1&&r.trust_level==='VERIFIED'&&['SUPER_ADMIN','CLUB_ADMIN'].includes(r.role)}
 function isSuperAdmin(r){return isVerifiedAdmin(r)&&r.role==='SUPER_ADMIN'}
-function stateIcon(statuses){
-  if(statuses.includes('DISPUTED')) return '⚠️';
-  if(statuses.includes('ANNULLED')) return '🚫';
-  return '✅';
-}
 
 async function deriveSecret(source){
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source));
@@ -36,36 +31,6 @@ async function present(token,chatId,callback,text,replyMarkup){
   }
   await telegram(token,'sendMessage',body);
   if(callback?.id) await telegram(token,'answerCallbackQuery',{callback_query_id:callback.id});
-}
-
-async function normalRows(db,reporter){
-  const base=`SELECT m.match_id,m.competition_id,m.round_no,m.round_label,m.group_id,m.home_id,m.home_name,m.away_id,m.away_name,r.validation_status
-    FROM match_series_results r JOIN matches m ON m.match_id=r.match_id
-    WHERE m.competition_id<>?`;
-  const q=isSuperAdmin(reporter)
-    ? await db.prepare(`${base} ORDER BY m.round_no DESC,m.match_id`).bind(QA_COMPETITION_ID).all()
-    : await db.prepare(`${base} AND (m.home_id=? OR m.away_id=?) ORDER BY m.round_no DESC,m.match_id`).bind(QA_COMPETITION_ID,reporter.club_id,reporter.club_id).all();
-  return q.results||[];
-}
-
-function groupMatches(rows){
-  const map=new Map();
-  for(const r of rows){
-    if(!map.has(r.match_id)) map.set(r.match_id,{...r,statuses:[]});
-    map.get(r.match_id).statuses.push(r.validation_status);
-  }
-  return [...map.values()];
-}
-
-async function showNormal(env,token,chatId,callback,reporter){
-  const matches=groupMatches(await normalRows(env.DB,reporter));
-  if(!matches.length){
-    await present(token,chatId,callback,'🛡️ <b>GOBIERNO DE RESULTADOS</b>\n\nNo hay resultados oficiales dentro de tu alcance.',{inline_keyboard:[[{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]]});
-    return;
-  }
-  const keyboard=matches.map(m=>[{text:`${stateIcon(m.statuses)} ${m.round_label} · ${m.home_name} — ${m.away_name}`,callback_data:`rgux:m:${m.match_id}`}]);
-  keyboard.push([{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]);
-  await present(token,chatId,callback,`🛡️ <b>GOBIERNO DE RESULTADOS</b>\n\n${isSuperAdmin(reporter)?'Administración global del campeonato.':'Sólo partidos de tu club.'}\nElige un partido para revisar sus series.`,{inline_keyboard:keyboard});
 }
 
 async function showQa(env,token,chatId,callback,reporter){
@@ -97,9 +62,8 @@ export async function handleResultGovernanceScopeRequest(request,env){
   if(!actor?.id||!chatId) return null;
   const text=String(message?.text||'').trim();
   const data=String(callback?.data||'');
-  const normal=/^\/(correcciones|gobiernoresultados)(?:@\w+)?$/i.test(text)||data==='rg:list';
   const qa=/^\/correccionesqa(?:@\w+)?$/i.test(text)||data==='rgqa:list';
-  if(!normal&&!qa) return null;
+  if(!qa) return null;
 
   const source=slot(url)==='next'?`${env.TELEGRAM_WEBHOOK_SECRET}:next`:env.TELEGRAM_WEBHOOK_SECRET;
   const expected=await deriveSecret(source);
@@ -109,12 +73,6 @@ export async function handleResultGovernanceScopeRequest(request,env){
   const reporter=await env.DB.prepare('SELECT * FROM reporters WHERE telegram_user_id=?').bind(String(actor.id)).first();
   if(!isVerifiedAdmin(reporter)) return null;
 
-  if(qa){
-    const outcome=await showQa(env,token,chatId,callback,reporter);
-    return json({ok:true,handled:`result_governance_qa_${outcome}`});
-  }
-  await showNormal(env,token,chatId,callback,reporter);
-  // Preserve the existing routing contract for /correcciones while applying
-  // the additional QA exclusion internally.
-  return json({ok:true,handled:'result_governance_ux_list'});
+  const outcome=await showQa(env,token,chatId,callback,reporter);
+  return json({ok:true,handled:`result_governance_qa_${outcome}`});
 }
