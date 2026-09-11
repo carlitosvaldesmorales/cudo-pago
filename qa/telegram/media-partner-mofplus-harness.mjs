@@ -54,8 +54,9 @@ try{
   r=await msg(MEDIA,'/partner');
   assert.equal(r.handled,'media_partner_home');
   const surface=last(MEDIA.id);
-  assert.match(surface.text,/CONSUMIDOR DE RESULTADOS/i);
-  assert.match(surface.text,/REGISTRADOR DE RESULTADOS/i);
+  assert.match(surface.text,/ACCESOS HABILITADOS/i);
+  assert.match(surface.text,/Consultar resultados/i);
+  assert.match(surface.text,/Registrar resultado/i);
   const buttons=callbacks(surface);
   assert.deepEqual(buttons.filter(x=>x!=='tp:home'),['tp:public-results','obs:dates']);
   console.log('PASS actor fidelity: current product surface contains only consume + register result');
@@ -82,24 +83,18 @@ try{
   assert.equal(await one('SELECT result_id FROM match_series_results WHERE match_id=? AND series_code=?',match.match_id,'TERCERA'),null);
   console.log('PASS registrar golden path stores 2–1 as Chépica Play observation and keeps canonical result empty');
 
-  // Negative 1: repeat registration for the same identity/match/series is idempotent at pending-submission level.
   await cb(MEDIA,`obs:match:${match.match_id}`);
   r=await cb(MEDIA,`obs:series:${match.match_id}:TERCERA`);
   assert.equal(r.handled,'observation_duplicate_pending');
   assert.equal(Number((await one("SELECT COUNT(*) n FROM public_result_submissions WHERE submitter_id=? AND match_id=? AND series_code='TERCERA' AND status='SUBMITTED'",String(MEDIA.id),match.match_id)).n),1);
   console.log('PASS negative/idempotency: same pending result is not duplicated');
 
-  // Negative 2: historical coverage/correspondent/live callbacks fail closed.
   const legacy=['mp:coverage','mp:mycoverages','mp:hub',`mp:coverage-open:${match.match_id}`,`mplive:event:${match.match_id}`];
-  for(const action of legacy){
-    r=await cb(MEDIA,action);
-    assert.equal(r.handled,'media_partner_legacy_flow_retired');
-  }
+  for(const action of legacy){r=await cb(MEDIA,action);assert.equal(r.handled,'media_partner_legacy_flow_retired');}
   assert.equal(Number((await one("SELECT COUNT(*) n FROM partner_match_coverages WHERE partner_code='CHEPICA_PLAY' AND status IN ('ASSIGNED','LIVE','CLOSED')")).n),0);
   assert.equal(Number((await one("SELECT COUNT(*) n FROM partner_coverage_assignments WHERE partner_code='CHEPICA_PLAY' AND status='ACTIVE'")).n),0);
   console.log('PASS negative/scope: retired coverage, correspondent and live-event flows cannot reactivate');
 
-  // Negative 3: no hidden capability expansion in the active grant.
   const grant=await one("SELECT * FROM actor_scope_grants WHERE telegram_user_id=? AND role='MEDIA_PARTNER' AND active=1",String(MEDIA.id));
   const caps=JSON.parse(grant.capabilities_json);
   assert.deepEqual(caps,['READ_COMPETITION','OBSERVE_RESULT']);
