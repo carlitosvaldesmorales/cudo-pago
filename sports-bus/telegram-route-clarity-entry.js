@@ -88,9 +88,9 @@ async function blockLegacyMatchResultCommand(request, env) {
   });
 }
 
-async function normalizeDestinationResultsCommand(request) {
+async function normalizeResultsCommand(request) {
   const url = new URL(request.url);
-  if (url.pathname !== NEXT_WEBHOOK_PATH || request.method !== 'POST') return request;
+  if (![PRIMARY_WEBHOOK_PATH, NEXT_WEBHOOK_PATH].includes(url.pathname) || request.method !== 'POST') return request;
 
   let update;
   try {
@@ -123,13 +123,9 @@ async function normalizeDestinationResultsCommand(request) {
 
 export default {
   async fetch(request, env, ctx) {
-    // La jerarquía pública Fútbol Chépica -> clubes/tenants es independiente
-    // de Telegram y se resuelve antes de cualquier webhook o compatibilidad legacy.
     const platformTenancy = await handlePlatformTenancyRequest(request.clone(), env);
     if (platformTenancy) return platformTenancy;
 
-    // Public web read model is deliberately separated from Telegram. It projects
-    // only governed public data and never exposes actor/audit/source internals.
     const publicChampionship = await handlePublicChampionshipRequest(request.clone(), env);
     if (publicChampionship) return publicChampionship;
 
@@ -150,7 +146,7 @@ export default {
     const publicGovernanceStatus = await handlePublicResultGovernanceStatus(request.clone(), env);
     if (publicGovernanceStatus) return publicGovernanceStatus;
 
-    const normalized = await normalizeDestinationResultsCommand(request);
+    const normalized = await normalizeResultsCommand(request);
     const allResults = await handlePublicResultsTableView(normalized.clone(), env);
     if (allResults) return allResults;
     return worker.fetch(normalized, env, ctx);
