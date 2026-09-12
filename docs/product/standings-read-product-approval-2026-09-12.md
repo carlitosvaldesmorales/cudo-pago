@@ -1,47 +1,47 @@
-# STANDINGS-READ — aprobación de producto
+# STANDINGS-READ — aprobación de producto v1
 
 Fecha: 2026-09-12
-Estado: APPROVED
+Estado: **SUPERSEDED_BY_PRESENTATION_V2**
 
-## Intención aprobada
+## Qué permanece aprobado
 
-El acceso Público de Fútbol Chépica debe presentar las lecturas del campeonato antes que las acciones de aporte:
+El acceso Público de Fútbol Chépica presenta las lecturas del campeonato antes que las acciones de aporte:
 
 - ⚽ Resultados
 - 🏆 Tablas de posiciones
 - 📝 Informar resultado
 - 🔎 Mis aportes
 
-El usuario aprobó implementar este patrón como Competition Hub y luego aclaró el límite competitivo que debe quedar en la lógica y en el ADN:
+La semántica deportiva también permanece aprobada:
 
 - Campeonato Principal = Tercera + Segunda + Primera.
 - Jornada del Campeonato Principal = máximo 9 puntos.
 - Campeonato Senior = campeonato independiente y no suma a los 9 puntos del Principal.
-
-## Contrato visual aprobado
-
-La proyección de tablas debe distinguir explícitamente, y no sólo mediante cálculo interno:
-
-```text
-🏆 CAMPEONATOS · ANFA CHÉPICA 2026
-
-⚽ CAMPEONATO PRINCIPAL
-3ª + 2ª + 1ª · máximo 9 puntos por jornada
-[clasificación por grupo]
-
-👴 CAMPEONATO SENIOR · INDEPENDIENTE
-Senior tiene su propia clasificación y no suma a los 9 puntos del Campeonato Principal.
-[clasificación por grupo]
-```
-
-No se deben mezclar ambas clasificaciones ni presentar Senior como una cuarta serie que eleve el máximo del Campeonato Principal a 12 puntos.
-
-## Autoridad
-
-- Sólo resultados `VERIFIED` afectan las clasificaciones.
+- Sólo resultados `VERIFIED` afectan la clasificación.
 - La diferencia de gol no rompe empates oficiales.
-- Las sanciones de puntos son ajustes administrativos explícitos al campeonato correspondiente.
+- Las sanciones de puntos son ajustes administrativos explícitos.
 
-## Canal
+## Qué queda supersedido
 
-La experiencia Telegram canónica de este contrato es **@FutbolChepicaBot**. El bot CUDO anterior puede conservar compatibilidad técnica, pero no es la identidad canónica para nuevos cambios de producto.
+La presentación visual que concatenaba:
+
+- Campeonato Principal;
+- Grupo A;
+- Grupo B;
+- Campeonato Senior;
+- Grupo A;
+- Grupo B;
+
+en un único mensaje de Telegram fue revisada en runtime real y rechazada por el usuario por falta de formato y jerarquía.
+
+Por lo tanto, esa disposición deja de ser un contrato visual aprobado.
+
+## Contrato vigente
+
+La presentación vigente pasa a:
+
+`docs/product/standings-read-telegram-presentation-contract-v2.md`
+
+Estado actual del contrato v2: `IMPLEMENTED_PENDING_HUMAN_APPROVAL`.
+
+La experiencia Telegram canónica continúa siendo **@FutbolChepicaBot**. El bot CUDO anterior conserva únicamente compatibilidad técnica.

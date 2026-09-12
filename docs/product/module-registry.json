@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "product": "Fútbol Chépica",
   "canonical_channels": {
     "telegram": {
@@ -51,7 +51,12 @@
     "CHAMPIONSHIP_BOUNDARY_PRECEDES_PROJECTION",
     "SHARED_FIXTURE_NEQ_SHARED_STANDINGS",
     "SENIOR_NEQ_PRINCIPAL_CHAMPIONSHIP",
-    "PRINCIPAL_MATCHDAY_MAX_POINTS_EQ_9"
+    "PRINCIPAL_MATCHDAY_MAX_POINTS_EQ_9",
+    "HUMAN_OUTPUT_REQUIRES_PRESENTATION_MODEL",
+    "DATA_CORRECT_NEQ_CONSUMABLE_UX",
+    "ONE_SCREEN_ONE_PRIMARY_CONTEXT",
+    "CHANNEL_RENDERER_NEQ_DOMAIN_POLICY",
+    "TELEGRAM_STRUCTURED_NEQ_PLAIN_TEXT"
   ],
   "modules": [
     {
@@ -89,39 +94,44 @@
       "id": "STANDINGS-READ",
       "capability_key": "STANDINGS-READ",
       "name": "Consultar tablas de posiciones",
-      "goal": "Consultar de forma independiente la clasificación del Campeonato Principal y del Campeonato Senior",
+      "goal": "Consultar de forma independiente la clasificación del Campeonato Principal y del Campeonato Senior mediante una presentación legible por contexto",
       "human_facing": true,
       "canonical": true,
       "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM", "API", "WEB"],
       "canonical_telegram": "@FutbolChepicaBot",
       "domain_contract": "docs/architecture/competition-domain-adn-v2.md",
-      "stage": "CONSUMABLE",
+      "presentation_architecture": "docs/architecture/human-presentation-adn-v1.md",
+      "stage": "QA_CERTIFIED",
       "visual_contract": "APPROVED",
-      "visual_contract_ref": "docs/product/standings-read-product-approval-2026-09-12.md",
+      "visual_contract_ref": "docs/product/standings-read-telegram-presentation-contract-v2.md",
+      "superseded_visual_contract_ref": "docs/product/standings-read-product-approval-2026-09-12.md",
       "product_validation": "APPROVED",
-      "product_validation_evidence": "docs/product/standings-read-product-approval-2026-09-12.md",
+      "product_validation_evidence": "docs/product/standings-read-telegram-presentation-contract-v2.md",
+      "presentation_validation": "PENDING_HUMAN_RUNTIME",
       "technical_implementation": "DONE",
       "implementation_entry": "sports-bus/worker/public-standings-entry.js",
+      "presentation_model_entry": "sports-bus/worker/public-presentation-model.js",
+      "channel_renderer_entry": "sports-bus/worker/telegram-presentation-renderer.js",
       "api_contract": "public-standings-v2",
       "qa": "PASS",
-      "deployment_evidence": "Deploy Sports Event Bus run 34703434427: success; D1 migration, Worker deploy, public API and both Telegram runtime checks passed",
-      "runtime_evidence": "VERIFIED",
+      "deployment_evidence": "Domain/API standings v2 verified previously; presentation v2 requires deployment after this change.",
+      "runtime_evidence": "DOMAIN_VERIFIED_PRESENTATION_V2_PENDING_DEPLOY",
       "runtime_smoke": [
-        "Validate Public Standings Runtime run 34703434425: success",
-        "Audit Sunday Readiness run 34703434385: success",
         "/api/v1/public-standings contract=public-standings-v2",
         "PRINCIPAL max_points_per_matchday=9",
         "SENIOR independent_from=PRINCIPAL"
       ],
-      "consumable": true,
+      "consumable": false,
       "dependencies": ["RESULTS-READ"],
       "runtime_paths": [
         "sports-bus/worker/competition-domain.js",
         "sports-bus/worker/public-standings-entry.js",
+        "sports-bus/worker/public-presentation-model.js",
+        "sports-bus/worker/telegram-presentation-renderer.js",
         "sports-bus/worker/public-competition-hub-entry.js"
       ],
-      "gap": null
+      "gap": "Aprobación humana de la presentación Telegram v2 en @FutbolChepicaBot después del despliegue real."
     },
     {
       "id": "RESULTS-REGISTER",
@@ -208,14 +218,13 @@
     }
   ],
   "current_frontier": {
-    "module_id": "RESULTS-REGISTER",
-    "allowed_next_step": "HUMAN_VALIDATE_REAL_TELEGRAM_UX_V2_ON_CANONICAL_BOT",
-    "human_gate": "REAL_TELEGRAM_UX_V2_APPROVAL_ON_FUTBOLCHEPICABOT",
+    "module_id": "STANDINGS-READ",
+    "allowed_next_step": "HUMAN_VALIDATE_STANDINGS_PRESENTATION_V2_ON_CANONICAL_BOT",
+    "human_gate": "REAL_TELEGRAM_STANDINGS_PRESENTATION_V2_APPROVAL_ON_FUTBOLCHEPICABOT",
     "blocked_steps": [
-      "MARK_RESULTS_REGISTER_V2_CONSUMABLE_BEFORE_HUMAN_APPROVAL",
-      "ACTOR_SPECIFIC_REGISTER_VARIANTS",
-      "POLLING_BASED_STREAMING_PROJECTION",
-      "REAL_USER_ENROLLMENT_WITHOUT_EXPLICIT_APPROVAL",
+      "MARK_STANDINGS_READ_CONSUMABLE_BEFORE_HUMAN_RUNTIME_APPROVAL",
+      "BYPASS_PRESENTATION_MODEL_IN_HUMAN_CHANNELS",
+      "CONCATENATE_MULTIPLE_STANDINGS_CONTEXTS_IN_ONE_TELEGRAM_SCREEN",
       "NEW_FEATURES_TARGETING_LEGACY_TELEGRAM_BOT"
     ]
   }

@@ -1,5 +1,13 @@
 import { buildPublicStandings } from './public-standings-entry.js';
 import { TELEGRAM_CHANNEL } from './telegram-channel-contract.js';
+import {
+  buildPublicHubPresentation,
+  buildStandingsPresentation
+} from './public-presentation-model.js';
+import {
+  renderPublicHubTelegram,
+  renderStandingsTelegram
+} from './telegram-presentation-renderer.js';
 
 const PRIMARY=TELEGRAM_CHANNEL.LEGACY.webhook_path;
 const NEXT=TELEGRAM_CHANNEL.CANONICAL.webhook_path;
@@ -36,7 +44,12 @@ async function callTelegram(token,method,body){
     body:JSON.stringify(body)
   });
   const payload=await response.json().catch(()=>({ok:false}));
-  if(!response.ok||!payload?.ok) throw new Error(`telegram_${method}_failed`);
+  if(!response.ok||!payload?.ok){
+    const error=new Error(payload?.description||`telegram_${method}_failed`);
+    error.telegram_method=method;
+    error.telegram_description=String(payload?.description||'');
+    throw error;
+  }
   return payload;
 }
 
@@ -45,54 +58,47 @@ async function answer(token,callbackId,text){
   await callTelegram(token,'answerCallbackQuery',{callback_query_id:callbackId,text});
 }
 
-async function send(token,chatId,text,replyMarkup){
+async function present(token,callback,rendered){
+  const chatId=callback?.message?.chat?.id;
+  const messageId=callback?.message?.message_id;
+  if(!chatId) throw new Error('telegram_chat_missing');
+
+  const common={
+    text:rendered.text,
+    parse_mode:rendered.parse_mode,
+    reply_markup:rendered.reply_markup,
+    disable_web_page_preview:true
+  };
+
+  if(messageId){
+    try{
+      await callTelegram(token,'editMessageText',{
+        chat_id:chatId,
+        message_id:messageId,
+        ...common
+      });
+      return 'EDITED';
+    }catch(error){
+      if(String(error.telegram_description||'').toLowerCase().includes('message is not modified')){
+        return 'UNCHANGED';
+      }
+    }
+  }
+
   await callTelegram(token,'sendMessage',{
     chat_id:chatId,
-    text,
-    reply_markup:replyMarkup
+    ...common
   });
+  return 'SENT';
 }
 
-function formatRows(championship){
-  return championship.rows.map(row=>{
-    const tie=row.tiebreak_status==='PLAYOFF_REQUIRED'?' ⚖️':'';
-    const adjustment=row.adjustment_points
-      ? ` · ajuste ${row.adjustment_points>0?'+':''}${row.adjustment_points}`
-      : '';
-    return `${row.position}. ${row.team_name} — ${row.points} pts${adjustment}${tie}`;
-  }).join('\n');
-}
-
-function formatStandings(standings){
-  const blocks=[
-    '🏆 CAMPEONATOS · ANFA CHÉPICA 2026',
-    '',
-    '⚽ CAMPEONATO PRINCIPAL',
-    '3ª + 2ª + 1ª · máximo 9 puntos por jornada',
-    ''
-  ];
-
-  for(const group of standings.groups){
-    const principal=group.championships.find(item=>item.championship_code==='PRINCIPAL');
-    blocks.push(`GRUPO ${group.group_id}`);
-    blocks.push(formatRows(principal));
-    blocks.push('');
+function standingsSelection(data){
+  if(data==='tp:public-standings'){
+    return {championshipCode:'PRINCIPAL',groupId:null};
   }
-
-  blocks.push('👴 CAMPEONATO SENIOR · INDEPENDIENTE');
-  blocks.push('Senior tiene su propia clasificación y no suma a los 9 puntos del Campeonato Principal.');
-  blocks.push('');
-
-  for(const group of standings.groups){
-    const senior=group.championships.find(item=>item.championship_code==='SENIOR');
-    blocks.push(`GRUPO ${group.group_id}`);
-    blocks.push(formatRows(senior));
-    blocks.push('');
-  }
-
-  blocks.push('⚖️ Igualdad no resuelta por puntaje entre los clubes: definición por partido único.');
-  blocks.push('Sólo resultados verificados modifican las clasificaciones.');
-  return blocks.join('\n').trim();
+  const match=data.match(/^tp:standings:(PRINCIPAL|SENIOR):([A-Za-z0-9._-]+)$/);
+  if(!match) return null;
+  return {championshipCode:match[1],groupId:match[2]};
 }
 
 export async function handlePublicCompetitionHubRequest(request,env){
@@ -103,7 +109,8 @@ export async function handlePublicCompetitionHubRequest(request,env){
   try{update=await request.clone().json();}catch{return null;}
   const callback=update?.callback_query;
   const data=String(callback?.data||'');
-  if(!['tp:public','p3:public','tp:public-standings'].includes(data)) return null;
+  const selection=standingsSelection(data);
+  if(!['tp:public','p3:public'].includes(data)&&!selection) return null;
 
   const chatId=callback?.message?.chat?.id;
   if(!callback?.from?.id||!chatId) return null;
@@ -115,51 +122,53 @@ export async function handlePublicCompetitionHubRequest(request,env){
 
   if(data==='tp:public'||data==='p3:public'){
     await answer(context.token,callback.id,'Público');
-    await send(
-      context.token,
-      chatId,
-      '🌐 FÚTBOL CHÉPICA · PÚBLICO\n\nInformación oficial del Campeonato Principal y del Campeonato Senior.\n\nConsulta primero la información publicada. También puedes aportar un resultado para revisión.',
-      {inline_keyboard:[
-        [{text:'⚽ Resultados',callback_data:'tp:public-results'}],
-        [{text:'🏆 Tablas de posiciones',callback_data:'tp:public-standings'}],
-        [{text:'📝 Informar resultado',callback_data:'tp:public-report'}],
-        [{text:'🔎 Mis aportes',callback_data:'pr:my'}],
-        [{text:'🏠 Volver',callback_data:'tp:home'}]
-      ]}
-    );
-    return json({ok:true,handled:'public_competition_hub',channel_role:context.channel_role,entry:data});
+    const model=buildPublicHubPresentation();
+    const rendered=renderPublicHubTelegram(model);
+    const presentation_mode=await present(context.token,callback,rendered);
+    return json({
+      ok:true,
+      handled:'public_competition_hub',
+      screen_id:model.screen_id,
+      channel_role:context.channel_role,
+      entry:data,
+      presentation_mode
+    });
   }
 
-  await answer(context.token,callback.id,'Tablas de posiciones');
+  await answer(context.token,callback.id,'Tabla de posiciones');
   if(!env.DB){
-    await send(context.token,chatId,'⚠️ Las tablas no están disponibles temporalmente: persistencia no configurada.',{
-      inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]
-    });
+    const fallback={
+      text:'⚠️ <b>Tabla no disponible</b>\n\nPersistencia no configurada.',
+      parse_mode:'HTML',
+      reply_markup:{inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]}
+    };
+    await present(context.token,callback,fallback);
     return json({ok:false,error:'persistence_not_configured'},503);
   }
 
   try{
     const standings=await buildPublicStandings(env);
-    await send(
-      context.token,
-      chatId,
-      formatStandings(standings),
-      {inline_keyboard:[
-        [{text:'⚽ Resultados',callback_data:'tp:public-results'}],
-        [{text:'🌐 Público',callback_data:'tp:public'}]
-      ]}
-    );
+    const model=buildStandingsPresentation(standings,selection);
+    if(!model) throw new Error('standings_presentation_unavailable');
+    const rendered=renderStandingsTelegram(model);
+    const presentation_mode=await present(context.token,callback,rendered);
     return json({
       ok:true,
       handled:'public_standings',
+      screen_id:model.screen_id,
       contract:standings.contract,
-      groups:standings.groups.length,
-      channel_role:context.channel_role
+      championship_code:model.championship_code,
+      group_id:model.group_id,
+      channel_role:context.channel_role,
+      presentation_mode
     });
   }catch(error){
-    await send(context.token,chatId,'⚠️ No fue posible calcular las tablas desde los resultados verificados. No se publicaron posiciones parciales inventadas.',{
-      inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]
-    });
+    const fallback={
+      text:'⚠️ <b>No fue posible calcular la tabla.</b>\n\nNo se publicaron posiciones parciales inventadas.',
+      parse_mode:'HTML',
+      reply_markup:{inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]}
+    };
+    await present(context.token,callback,fallback);
     return json({ok:false,error:'standings_build_failed'},500);
   }
 }
