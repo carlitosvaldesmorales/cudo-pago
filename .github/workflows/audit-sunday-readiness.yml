@@ -1,0 +1,100 @@
+name: Audit Sunday Readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ops/sunday-readiness-audit
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BASE: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Install Wrangler
+        run: npm install --no-save wrangler@latest
+        working-directory: sports-bus
+      - name: Read-only operational state
+        id: state
+        working-directory: sports-bus
+        shell: bash
+        run: |
+          set -euo pipefail
+          SQL="SELECT
+            (SELECT COUNT(*) FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND active=1) AS active_chepica_play_identities,
+            (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at>datetime('now')) AS valid_pending_invites,
+            (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at<=datetime('now')) AS expired_pending_invites,
+            (SELECT COUNT(*) FROM matches WHERE competition_id='ANFA-CHEPICA-2026' AND round_no=3) AS round3_matches,
+            (SELECT COUNT(*) FROM byes WHERE competition_id='ANFA-CHEPICA-2026' AND round_no=3) AS round3_byes,
+            (SELECT COUNT(*) FROM public_result_submissions WHERE status='SUBMITTED') AS pending_result_submissions,
+            (SELECT COUNT(*) FROM match_series_results r JOIN matches m ON m.match_id=r.match_id WHERE m.competition_id='ANFA-CHEPICA-2026' AND r.validation_status='VERIFIED') AS verified_series_results;"
+          npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "$SQL" > /tmp/readiness.json
+          cat /tmp/readiness.json
+          node <<'NODE' > /tmp/state.env
+          const fs=require('fs');
+          const payload=JSON.parse(fs.readFileSync('/tmp/readiness.json','utf8'));
+          const r=payload[0]?.results?.[0];
+          if(!r) throw new Error('missing_readiness_row');
+          if(Number(r.round3_matches)!==5) throw new Error('round3_fixture_not_ready');
+          if(Number(r.round3_byes)!==1) throw new Error('round3_bye_not_ready');
+          console.log(`active=${Number(r.active_chepica_play_identities)}`);
+          console.log(`valid_invites=${Number(r.valid_pending_invites)}`);
+          console.log(`expired_invites=${Number(r.expired_pending_invites)}`);
+          console.log(`round3_matches=${Number(r.round3_matches)}`);
+          console.log(`round3_byes=${Number(r.round3_byes)}`);
+          console.log(`pending_submissions=${Number(r.pending_result_submissions)}`);
+          console.log(`verified_series=${Number(r.verified_series_results)}`);
+          NODE
+          cat /tmp/state.env
+          cat /tmp/state.env >> "$GITHUB_OUTPUT"
+      - name: Runtime read projections
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "$BASE/health" -o /tmp/health.json
+          curl -fsS "$BASE/health/telegram" -o /tmp/telegram.json
+          curl -fsS "$BASE/health/telegram-next" -o /tmp/telegram-next.json
+          curl -fsS "$BASE/api/v1/rounds/3/results?mode=official" -o /tmp/official.json
+          curl -fsS "$BASE/api/v1/rounds/3/results?mode=reported" -o /tmp/reported.json
+          curl -fsS "$BASE/api/v1/public-standings" -o /tmp/standings.json
+          node <<'NODE'
+          const fs=require('fs');
+          const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
+          const h=read('/tmp/health.json');
+          const t=read('/tmp/telegram.json');
+          const n=read('/tmp/telegram-next.json');
+          const o=read('/tmp/official.json');
+          const r=read('/tmp/reported.json');
+          const s=read('/tmp/standings.json');
+          if(!h.ok) throw new Error('worker_health_failed');
+          if(!t.ok) throw new Error('primary_telegram_health_failed');
+          if(!n.ok) throw new Error('next_telegram_health_failed');
+          if(!o.ok||o.mode!=='official'||Number(o.round_no)!==3) throw new Error('official_round3_failed');
+          if(!r.ok||r.mode!=='reported'||Number(r.round_no)!==3) throw new Error('reported_round3_failed');
+          if(!s.ok||s.contract!=='public-standings-v1') throw new Error('standings_runtime_failed');
+          console.log('RUNTIME_PROJECTIONS=PASS');
+          NODE
+      - name: READY — Chépica Play has an active real identity
+        if: steps.state.outputs.active != '0'
+        run: echo "A real Chépica Play Telegram identity is already active."
+      - name: HUMAN GATE — real Chépica Play person must claim valid Telegram invite
+        if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites != '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "A valid single-use invitation exists, but no real Chépica Play Telegram identity is active."
+          echo "The irreducible next action is for a real Chépica Play person to claim that invitation from their own Telegram account."
+      - name: HUMAN GATE — admin must create fresh invite, then real person must claim it
+        if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites == '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "No active Chépica Play identity and no valid pending invitation exist."
+          echo "An authorized administrator must create a fresh single-use invitation, then a real Chépica Play person must claim it."
