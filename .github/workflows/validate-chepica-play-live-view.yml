@@ -5,12 +5,14 @@ on:
     branches: [feature/sports-event-bus-v1]
     paths:
       - 'preview-v8/chepica-play/**'
+      - 'sports-bus/canonical-entry.js'
       - 'qa/web/chepica-play-live-view-harness.mjs'
       - '.github/workflows/validate-chepica-play-live-view.yml'
   push:
     branches: [feature/sports-event-bus-v1]
     paths:
       - 'preview-v8/chepica-play/**'
+      - 'sports-bus/canonical-entry.js'
       - 'qa/web/chepica-play-live-view-harness.mjs'
       - '.github/workflows/validate-chepica-play-live-view.yml'
 
@@ -27,6 +29,11 @@ jobs:
         with:
           node-version: 24
       - name: Syntax
-        run: node --check preview-v8/chepica-play/live.js && node --check qa/web/chepica-play-live-view-harness.mjs
-      - name: Contract + runtime
+        run: node --check preview-v8/chepica-play/live.js && node --check sports-bus/canonical-entry.js && node --check qa/web/chepica-play-live-view-harness.mjs
+      - name: Contract gate
+        run: node qa/web/chepica-play-live-view-harness.mjs
+      - name: Runtime after merge/deploy
+        if: github.event_name == 'push'
+        env:
+          RUNTIME_CHECK: '1'
         run: node qa/web/chepica-play-live-view-harness.mjs
