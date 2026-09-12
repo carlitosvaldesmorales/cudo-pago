@@ -12,6 +12,7 @@ on:
       - feature/sports-event-bus-v1
       - ops/audit-admin-chepica-play-context-v1
       - ops/audit-audience-access-gate-v1
+      - ops/audit-structured-intake-v1
       - fix/restricted-audience-no-admin-bypass-v1
     paths:
       - 'sports-bus/**'
@@ -60,7 +61,12 @@ jobs:
           set -euo pipefail
           SQL="SELECT
             (SELECT COUNT(*) FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND active=1) AS active_chepica_play_identities,
-            (SELECT COUNT(*) FROM partner_access_requests WHERE partner_code='CHEPICA_PLAY' AND requested_role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING') AS pending_partner_access_requests,
+            (SELECT COUNT(*) FROM access_request_intakes WHERE audience_id='CHEPICA_PLAY' AND expires_at>datetime('now')) AS active_chepica_play_intakes,
+            (SELECT COUNT(*) FROM access_request_intakes WHERE audience_id='CHEPICA_PLAY' AND state='AWAITING_NAME' AND expires_at>datetime('now')) AS intakes_awaiting_name,
+            (SELECT COUNT(*) FROM access_request_intakes WHERE audience_id='CHEPICA_PLAY' AND state='AWAITING_ENTITY' AND expires_at>datetime('now')) AS intakes_awaiting_entity,
+            (SELECT COUNT(*) FROM access_request_intakes WHERE audience_id='CHEPICA_PLAY' AND state='REVIEW' AND expires_at>datetime('now')) AS intakes_awaiting_confirmation,
+            (SELECT COUNT(*) FROM partner_access_requests WHERE partner_code='CHEPICA_PLAY' AND requested_role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND submitted_at IS NOT NULL) AS pending_partner_access_requests,
+            (SELECT COUNT(*) FROM partner_access_requests WHERE partner_code='CHEPICA_PLAY' AND requested_role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND submitted_at IS NULL) AS invalid_legacy_pending_requests,
             (SELECT COUNT(*) FROM partner_access_requests WHERE partner_code='CHEPICA_PLAY' AND requested_role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='APPROVED') AS approved_partner_access_requests,
             (SELECT COUNT(*) FROM partner_access_requests r JOIN actor_scope_grants g ON g.telegram_user_id=r.telegram_user_id AND g.partner_code=r.partner_code AND g.role=r.requested_role AND g.scope_type=r.scope_type AND g.scope_id=r.scope_id AND g.active=1 WHERE r.partner_code='CHEPICA_PLAY' AND r.requested_role='MEDIA_PARTNER' AND r.scope_type='COMPETITION' AND r.scope_id='ANFA-CHEPICA-2026' AND r.status='APPROVED') AS request_flow_active_identities,
             (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at>datetime('now')) AS valid_pending_invites,
@@ -78,7 +84,12 @@ jobs:
           if(!r) throw new Error('missing_readiness_row');
           if(Number(r.round3_matches)!==5) throw new Error('round3_fixture_not_ready');
           if(Number(r.round3_byes)!==1) throw new Error('round3_bye_not_ready');
+          if(Number(r.invalid_legacy_pending_requests)!==0) throw new Error('legacy_one_click_pending_request_survived_structured_intake_migration');
           console.log(`active=${Number(r.active_chepica_play_identities)}`);
+          console.log(`active_intakes=${Number(r.active_chepica_play_intakes)}`);
+          console.log(`intakes_awaiting_name=${Number(r.intakes_awaiting_name)}`);
+          console.log(`intakes_awaiting_entity=${Number(r.intakes_awaiting_entity)}`);
+          console.log(`intakes_awaiting_confirmation=${Number(r.intakes_awaiting_confirmation)}`);
           console.log(`pending_access_requests=${Number(r.pending_partner_access_requests)}`);
           console.log(`approved_access_requests=${Number(r.approved_partner_access_requests)}`);
           console.log(`request_flow_active=${Number(r.request_flow_active_identities)}`);
@@ -117,21 +128,41 @@ jobs:
           if(s.championships?.SENIOR?.independent_from!=='PRINCIPAL') throw new Error('senior_independence_failed');
           console.log('RUNTIME_PROJECTIONS=PASS');
           NODE
-      - name: HUMAN GATE 1 — unlinked identity must request Chépica Play access
-        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests == '0'
+      - name: HUMAN GATE 1A — start structured Chépica Play intake
+        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests == '0' && steps.state.outputs.active_intakes == '0'
         run: |
           echo "BLOCKED_BY_HUMAN"
-          echo "The restricted-audience policy is deployed and no request-based Chépica Play enrollment has reached PENDING yet."
-          echo "Next irreducible action: from any real Telegram identity without an active Chépica Play scoped grant open @FutbolChepicaBot -> Chépica Play -> Solicitar autorización."
-          echo "SUPER_ADMIN and PLATFORM_OPERATOR identities follow this same membership gate for their own Chépica Play access."
-          echo "The expected runtime transition is REQUESTABLE -> PENDING. Creating the request must not create a grant."
-      - name: HUMAN GATE 2 — administrator must decide pending Chépica Play request
+          echo "No valid submitted PENDING request and no active Chépica Play draft exist."
+          echo "Next irreducible action: from a real Telegram identity without an active Chépica Play grant open @FutbolChepicaBot -> Chépica Play -> Solicitar autorización."
+          echo "Expected state: REQUESTABLE -> DRAFT/AWAITING_NAME. It must NOT become PENDING and must NOT notify an approver yet."
+      - name: HUMAN GATE 1B — complete declared name
+        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests == '0' && steps.state.outputs.intakes_awaiting_name != '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "Structured intake exists and is waiting for the declared human name."
+          echo "Next irreducible action: reply to the Telegram ForceReply prompt with the requester's name and surname."
+          echo "Expected state: AWAITING_NAME -> AWAITING_ENTITY. It must still NOT become PENDING."
+      - name: HUMAN GATE 1C — complete represented entity
+        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests == '0' && steps.state.outputs.intakes_awaiting_entity != '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "Name was captured; structured intake is waiting for club/institution."
+          echo "Next irreducible action: reply with the club or institution represented."
+          echo "Expected state: AWAITING_ENTITY -> REVIEW. It must still NOT become PENDING."
+      - name: HUMAN GATE 1D — confirm reviewed request
+        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests == '0' && steps.state.outputs.intakes_awaiting_confirmation != '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "Required human context is complete and the draft is waiting for explicit review confirmation."
+          echo "Next irreducible action: verify the summary and press Enviar solicitud."
+          echo "Only this transition may create the PENDING request and notify approvers."
+      - name: HUMAN GATE 2 — administrator must decide submitted Chépica Play request
         if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests != '0'
         run: |
           echo "BLOCKED_BY_HUMAN"
-          echo "A real Chépica Play access request is PENDING."
-          echo "Next irreducible action: an authorized control-plane administrator must review that Telegram request and choose Aprobar or Rechazar."
-          echo "The administrator does not need Chépica Play membership to manage the request. Only Aprobar may materialize the scoped MEDIA_PARTNER grant."
+          echo "A structured, explicitly confirmed Chépica Play access request is PENDING."
+          echo "Next irreducible action: an authorized control-plane administrator must review name, represented entity and Telegram identity, then choose Aprobar or Rechazar."
+          echo "Only Aprobar may materialize the scoped MEDIA_PARTNER grant."
       - name: READY — request and approval flow proven end-to-end
         if: steps.state.outputs.request_flow_active != '0'
         run: |
