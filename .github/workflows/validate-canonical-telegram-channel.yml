@@ -32,6 +32,14 @@ jobs:
           grep -q 'same core capabilities as the legacy slot' sports-bus/telegram-migration-entry.js
           grep -q '@FutbolChepicaBot' docs/architecture/telegram-canonical-channel-v1.md
           echo 'PASS canonical Telegram channel is identity, not duplicated business logic'
+      - name: Apply all migrations and exercise both Telegram adapters
+        run: |
+          set -euo pipefail
+          node qa/telegram/telegram-bot-migration-harness.mjs | tee /tmp/canonical-bot.log
+          grep -q 'PASS product identity fixes @FutbolChepicaBot as canonical Telegram channel' /tmp/canonical-bot.log
+          grep -q 'PASS canonical bot reuses core logic and shared D1 identity while using its own adapter/token' /tmp/canonical-bot.log
+          grep -q 'PASS legacy CUDO bot remains technically compatible but is not canonical' /tmp/canonical-bot.log
+          grep -q 'RESULT: PASS' /tmp/canonical-bot.log
       - name: Runtime token points to exact canonical bot
         env:
           URL: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/health/telegram-next
