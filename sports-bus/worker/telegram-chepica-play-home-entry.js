@@ -1,5 +1,10 @@
 import { CAPABILITY, getActivePartnerMembership, hasCapability } from './access-control.js';
 import { TELEGRAM_CHANNEL } from './telegram-channel-contract.js';
+import {
+  accessRequestSubjectName,
+  accessRequestRepresentedEntity,
+  accessRequestTechnicalIdentity
+} from './access-request-presentation.js';
 
 const PRIMARY=TELEGRAM_CHANNEL.LEGACY.webhook_path;
 const CANONICAL=TELEGRAM_CHANNEL.CANONICAL.webhook_path;
@@ -228,7 +233,7 @@ async function notifyApprovers(db,token,requestRow){
     await send(
       token,
       reviewerId,
-      `🔔 SOLICITUD CHÉPICA PLAY\n\n${requestRow.display_name||requestRow.telegram_user_id}${requestRow.username?' · @'+requestRow.username:''}\nsolicita vincular su cuenta a Chépica Play.\n\nSi se aprueba obtendrá sólo:\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados`,
+      `🔔 SOLICITUD CHÉPICA PLAY\n\n👤 ${accessRequestSubjectName(requestRow)}\n🏟️ ${accessRequestRepresentedEntity(requestRow)}\n📱 ${accessRequestTechnicalIdentity(requestRow)}\nsolicita vincular su cuenta a Chépica Play.\n\nSi se aprueba obtendrá sólo:\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados`,
       [[{text:'🔎 Revisar solicitud',callback_data:`cp:access-review:${requestRow.request_id}`}]]
     );
   }
@@ -239,7 +244,7 @@ async function showReview(token,update,row){
   return present(
     token,
     update,
-    `🔐 REVISAR ACCESO CHÉPICA PLAY\n\nPersona: ${row.display_name||row.telegram_user_id}\nTelegram: ${row.username?'@'+row.username:row.telegram_user_id}\nEstado: ${row.status}\n\nAl aprobar se vincula esta identidad a Chépica Play con sólo dos capacidades:\n\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados`,
+    `🔐 REVISAR ACCESO CHÉPICA PLAY\n\n👤 Nombre declarado: ${accessRequestSubjectName(row)}\n🏟️ Club / institución: ${accessRequestRepresentedEntity(row)}\n📱 Telegram: ${accessRequestTechnicalIdentity(row)}\nEstado: ${row.status}\n\nAl aprobar se vincula esta identidad a Chépica Play con sólo dos capacidades:\n\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados`,
     [
       [{text:'✅ Aprobar',callback_data:`cp:access-approve:${row.request_id}`}],
       [{text:'❌ Rechazar',callback_data:`cp:access-reject:${row.request_id}`}],
@@ -394,7 +399,12 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
       `✅ ACCESO CHÉPICA PLAY APROBADO\n\nTu cuenta quedó vinculada a Chépica Play. Ya puedes entrar desde Inicio → 🎥 Chépica Play.`,
       [[{text:'🎥 Entrar a Chépica Play',callback_data:'mp:home'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]
     );
-    await present(context.token,update,`✅ ACCESO APROBADO\n\n${row.display_name||row.telegram_user_id} quedó vinculado a Chépica Play.`,[[{text:'🏠 Inicio',callback_data:'tp:home'}]]);
+    await present(
+      context.token,
+      update,
+      `✅ ACCESO APROBADO\n\n👤 ${accessRequestSubjectName(row)} quedó vinculado a Chépica Play.\n🏟️ ${accessRequestRepresentedEntity(row)}\n📱 ${accessRequestTechnicalIdentity(row)}`,
+      [[{text:'🏠 Inicio',callback_data:'tp:home'}]]
+    );
     return json({ok:true,handled:'chepica_play_access_approved',request_id:row.request_id,target_id:row.telegram_user_id,permission_change:true,identity_change:false});
   }
 
@@ -419,7 +429,12 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
         .bind(`cp-access-reject-${row.request_id}`,actorId,reporter.role,row.request_id,now)
     ]);
     await send(context.token,row.telegram_user_id,'❌ Tu solicitud de acceso a Chépica Play fue rechazada. Tu acceso público sigue disponible.',[[{text:'🌐 Público general',callback_data:'tp:public'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]);
-    await present(context.token,update,`❌ SOLICITUD RECHAZADA\n\n${row.display_name||row.telegram_user_id} no fue vinculado a Chépica Play.`,[[{text:'🏠 Inicio',callback_data:'tp:home'}]]);
+    await present(
+      context.token,
+      update,
+      `❌ SOLICITUD RECHAZADA\n\n👤 ${accessRequestSubjectName(row)} no fue vinculado a Chépica Play.\n🏟️ ${accessRequestRepresentedEntity(row)}\n📱 ${accessRequestTechnicalIdentity(row)}`,
+      [[{text:'🏠 Inicio',callback_data:'tp:home'}]]
+    );
     return json({ok:true,handled:'chepica_play_access_rejected',request_id:row.request_id,target_id:row.telegram_user_id,permission_change:false,identity_change:false});
   }
 

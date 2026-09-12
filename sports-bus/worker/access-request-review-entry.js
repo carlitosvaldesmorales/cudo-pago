@@ -1,5 +1,10 @@
 import { CAPABILITY, hasCapability } from './access-control.js';
 import { TELEGRAM_CHANNEL } from './telegram-channel-contract.js';
+import {
+  accessRequestSubjectName,
+  accessRequestRepresentedEntity,
+  accessRequestTechnicalIdentity
+} from './access-request-presentation.js';
 
 const PRIMARY=TELEGRAM_CHANNEL.LEGACY.webhook_path;
 const CANONICAL=TELEGRAM_CHANNEL.CANONICAL.webhook_path;
@@ -86,14 +91,6 @@ function canManageAccess(reporter){
     && hasCapability(reporter,CAPABILITY.MANAGE_ACCESS);
 }
 
-function requesterName(row){
-  return row.declared_name||row.display_name||row.telegram_user_id;
-}
-
-function representedEntity(row){
-  return row.represented_entity||'No informado';
-}
-
 export async function handleAccessRequestReview(request,env){
   const url=new URL(request.url);
   if(![PRIMARY,CANONICAL].includes(url.pathname)||request.method!=='POST'||!env?.DB) return null;
@@ -137,7 +134,7 @@ export async function handleAccessRequestReview(request,env){
   const mode=await present(
     context.token,
     update,
-    `🔐 REVISAR ACCESO CHÉPICA PLAY\n\n👤 Nombre declarado: ${requesterName(row)}\n🏟️ Representa: ${representedEntity(row)}\n📱 Telegram: ${row.username?'@'+row.username:row.telegram_user_id}\n🕒 Estado: ${row.status}\n\nRevisar esta solicitud no concede permisos. Sólo ✅ Aprobar puede vincular esta identidad a Chépica Play.\n\nAl aprobar obtiene exactamente:\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados`,
+    `🔐 REVISAR ACCESO CHÉPICA PLAY\n\n👤 Nombre declarado: ${accessRequestSubjectName(row)}\n🏟️ Representa: ${accessRequestRepresentedEntity(row)}\n📱 Telegram: ${accessRequestTechnicalIdentity(row)}\n🕒 Estado: ${row.status}\n\nRevisar esta solicitud no concede permisos. Sólo ✅ Aprobar puede vincular esta identidad a Chépica Play.\n\nAl aprobar obtiene exactamente:\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados`,
     [
       [{text:'✅ Aprobar',callback_data:`cp:access-approve:${row.request_id}`}],
       [{text:'❌ Rechazar',callback_data:`cp:access-reject:${row.request_id}`}],

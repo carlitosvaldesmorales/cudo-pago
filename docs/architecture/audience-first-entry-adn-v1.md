@@ -6,7 +6,7 @@ Canal producto: **@FutbolChepicaBot**
 
 ## Causa raíz
 
-El menú raíz de Fútbol Chépica estaba modelado como una mezcla de funciones y accesos. Luego aparecieron dos desvíos adicionales: se confundió **entrar a una audiencia** con **adoptar la identidad de esa audiencia**, y se mostró una audiencia restringida sin ofrecer una ruta operativa para obtener autorización.
+El menú raíz de Fútbol Chépica estaba modelado como una mezcla de funciones y accesos. Luego aparecieron desvíos adicionales: se confundió **entrar a una audiencia** con **adoptar la identidad de esa audiencia**, se mostró una audiencia restringida sin ofrecer una ruta operativa para obtener autorización y, finalmente, una decisión de acceso volvió a presentar el nombre técnico de Telegram en vez del nombre declarado capturado durante la solicitud.
 
 La entrada canónica es:
 
@@ -17,7 +17,7 @@ FÚTBOL CHÉPICA
 └── 🎥 Chépica Play
 ```
 
-La identidad del actor, el contexto de entrada y la autorización son dimensiones distintas.
+La identidad técnica del actor, los datos declarados por la persona, el contexto de entrada y la autorización son dimensiones distintas.
 
 ## Invariantes
 
@@ -47,6 +47,14 @@ Crear una solicitud nunca concede capacidades. La solicitud queda `PENDING` hast
 `APPROVAL_CREATES_SCOPED_GRANT`
 
 La aprobación crea o reactiva un grant `MEDIA_PARTNER` limitado a `ANFA-CHEPICA-2026`, con exactamente `READ_COMPETITION` + `OBSERVE_RESULT`. No reemplaza el rol base del actor ni modifica su identidad.
+
+`DECLARED_IDENTITY_NEQ_TECHNICAL_IDENTITY`
+
+El nombre declarado y la institución representada son contexto humano de la solicitud. La identidad Telegram es la identidad técnica verificable. Ninguna debe sobrescribir a la otra.
+
+`DECLARED_CONTEXT_SURVIVES_THE_WHOLE_DECISION_LIFECYCLE`
+
+Los datos capturados durante el intake deben sobrevivir sin reinterpretación a todas las superficies posteriores: notificación al revisor, pantalla de revisión, aprobación, rechazo y auditoría de la solicitud. Cuando existe `declared_name`, ese nombre tiene precedencia visual sobre `display_name` de Telegram; el identificador técnico sigue mostrándose por separado.
 
 `ACTOR_IDENTITY_NEQ_ENTRY_CONTEXT`
 
@@ -135,6 +143,7 @@ La raíz/contexto sólo puede considerarse consumible cuando:
 - seleccionar una audiencia no crea permisos;
 - una identidad no vinculada puede solicitar autorización o usar una invitación;
 - una solicitud pendiente no crea grants;
+- nombre declarado, institución e identidad Telegram se mantienen separados y consistentes durante todo el ciclo;
 - un administrador autorizado puede aprobar/rechazar y la persona es notificada;
 - la aprobación crea sólo el grant de competencia con las dos capacidades aprobadas;
 - Admin Global puede probar la UX Chépica Play sin convertirse en media partner;
