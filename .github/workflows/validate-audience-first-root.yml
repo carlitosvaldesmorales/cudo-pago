@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - refactor/audience-first-root-v1
+      - refactor/audience-access-policy-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -23,19 +24,31 @@ jobs:
         run: |
           set -euo pipefail
           node --check sports-bus/canonical-entry.js
+          node --check sports-bus/worker/audience-access-policy.js
           node --check sports-bus/worker/telegram-audience-root.js
           node --check sports-bus/worker/telegram-audience-root-entry.js
           node --check qa/telegram/audience-root-harness.mjs
+          node --check qa/telegram/audience-access-policy-harness.mjs
       - name: Audience root deterministic contract
         run: node qa/telegram/audience-root-harness.mjs
+      - name: Audience access control-plane contract
+        run: node qa/telegram/audience-access-policy-harness.mjs
       - name: ADN contract
         run: |
           set -euo pipefail
           grep -q 'ROOT_MENU_REPRESENTS_AUDIENCES_NOT_CAPABILITIES' docs/architecture/audience-first-entry-adn-v1.md
           grep -q 'AUDIENCE_CONTEXT_PRECEDES_CAPABILITY_SELECTION' docs/architecture/audience-first-entry-adn-v1.md
           grep -q 'AUDIENCE_ENTRY_NEQ_AUTHORIZATION' docs/architecture/audience-first-entry-adn-v1.md
+          grep -q 'ROOT_AUDIENCE_REGISTRY_IS_CANONICAL' docs/architecture/audience-access-control-plane-v1.md
+          grep -q 'RESTRICTED_AUDIENCE_MUST_HAVE_ACTIONABLE_ENROLLMENT_PATH' docs/architecture/audience-access-control-plane-v1.md
+          grep -q 'NO_RESTRICTED_AUDIENCE_DEAD_END' docs/architecture/audience-access-control-plane-v1.md
+          grep -q 'REQUEST_NEQ_GRANT' docs/architecture/audience-access-control-plane-v1.md
+          grep -q 'APPROVAL_PRECEDES_AUTHORITY' docs/architecture/audience-access-control-plane-v1.md
+          grep -q 'SAME_STATE_MACHINE_DIFFERENT_AUTHORITY_MATERIALIZERS' docs/architecture/audience-access-control-plane-v1.md
           grep -q 'Público general' docs/product/telegram-root-audience-contract-v1.md
           grep -q 'Dirigentes' docs/product/telegram-root-audience-contract-v1.md
           grep -q 'Chépica Play' docs/product/telegram-root-audience-contract-v1.md
-          grep -q "callback_data:'mp:home'" sports-bus/worker/telegram-audience-root.js
+          grep -q "entry_callback:'mp:home'" sports-bus/worker/audience-access-policy.js
+          grep -q "request_callback:'tp:req'" sports-bus/worker/audience-access-policy.js
+          grep -q "request_callback:'cp:access-request'" sports-bus/worker/audience-access-policy.js
           grep -q 'handleTelegramAudienceRootRequest' sports-bus/canonical-entry.js
