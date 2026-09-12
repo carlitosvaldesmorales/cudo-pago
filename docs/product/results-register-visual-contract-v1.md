@@ -1,6 +1,6 @@
 # RESULTS-REGISTER · Contrato visual v1
 
-Estado: PENDIENTE DE VALIDACIÓN DE PRODUCTO
+Estado: APROBADO POR PRODUCTO · 2026-09-11
 Canal inicial: Telegram
 Principio: mínima carga cognitiva, máxima selección por botones, cero texto libre en Golden Path.
 
@@ -182,6 +182,4 @@ El resultado quedó registrado.
 
 ## Gate
 
-Este documento NO autoriza cambios de runtime mientras `product_validation` siga `PENDING`.
-
-La implementación sólo puede comenzar cuando producto apruebe este contrato o indique cambios concretos.
+Contrato APROBADO por producto el 2026-09-11. La implementación puede comenzar contra este contrato. La certificación de producto continúa bloqueada hasta completar implementación canónica, QA/MOF+, deploy y evidencia de runtime.
