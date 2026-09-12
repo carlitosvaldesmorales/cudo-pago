@@ -7,6 +7,7 @@ on:
     branches:
       - refactor/audience-first-root-v1
       - refactor/audience-access-policy-v1
+      - fix/restricted-audience-no-admin-bypass-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -44,6 +45,7 @@ jobs:
           grep -q 'NO_RESTRICTED_AUDIENCE_DEAD_END' docs/architecture/audience-access-control-plane-v1.md
           grep -q 'REQUEST_NEQ_GRANT' docs/architecture/audience-access-control-plane-v1.md
           grep -q 'APPROVAL_PRECEDES_AUTHORITY' docs/architecture/audience-access-control-plane-v1.md
+          grep -q 'CONTROL_PLANE_AUTHORITY_NEQ_SCOPED_AUDIENCE_MEMBERSHIP' docs/architecture/audience-access-control-plane-v1.md
           grep -q 'SAME_STATE_MACHINE_DIFFERENT_AUTHORITY_MATERIALIZERS' docs/architecture/audience-access-control-plane-v1.md
           grep -q 'Público general' docs/product/telegram-root-audience-contract-v1.md
           grep -q 'Dirigentes' docs/product/telegram-root-audience-contract-v1.md
@@ -51,4 +53,5 @@ jobs:
           grep -q "entry_callback:'mp:home'" sports-bus/worker/audience-access-policy.js
           grep -q "request_callback:'tp:req'" sports-bus/worker/audience-access-policy.js
           grep -q "request_callback:'cp:access-request'" sports-bus/worker/audience-access-policy.js
+          grep -q "control_plane_bypass:false" sports-bus/worker/audience-access-policy.js
           grep -q 'handleTelegramAudienceRootRequest' sports-bus/canonical-entry.js
