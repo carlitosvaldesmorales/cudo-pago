@@ -1,0 +1,41 @@
+name: Validate Navigation Continuity
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+  push:
+    branches:
+      - refactor/navigation-continuity-v1
+      - feature/sports-event-bus-v1
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/telegram-navigation-contract.js
+          node --check sports-bus/worker/telegram-entry-context.js
+          node --check sports-bus/worker/results-register-v2-entry.js
+          node --check sports-bus/worker/public-results-table-view.js
+          node --check sports-bus/worker/public-results-ux-v3.js
+          node --check sports-bus/worker/portal-entry.js
+          node --check qa/telegram/navigation-continuity-harness.mjs
+      - name: Navigation continuity contract
+        run: node qa/telegram/navigation-continuity-harness.mjs
+      - name: ADN invariants
+        run: |
+          set -euo pipefail
+          grep -q 'BACK_RETURNS_TO_IMMEDIATE_PARENT' docs/architecture/navigation-continuity-adn-v1.md
+          grep -q 'BACK_NEVER_MEANS_HOME' docs/architecture/navigation-continuity-adn-v1.md
+          grep -q 'CANCEL_ONLY_DISCARDS_UNCONFIRMED_WORK' docs/architecture/navigation-continuity-adn-v1.md
+          grep -q 'HOME_IS_EXPLICIT_CONTEXT_EXIT' docs/architecture/navigation-continuity-adn-v1.md
+          grep -q 'SHARED_CAPABILITY_RETURNS_TO_ORIGIN_AUDIENCE' docs/architecture/navigation-continuity-adn-v1.md
