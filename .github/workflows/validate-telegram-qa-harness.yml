@@ -83,18 +83,20 @@ jobs:
           grep -q 'PASS deploy reconcile configures native menu and bot name' /tmp/telegram-menu-qa.log
           grep -q 'PASS native menu and branding runtime health contract' /tmp/telegram-menu-qa.log
           grep -q 'RESULT: PASS' /tmp/telegram-menu-qa.log
-      - name: Run blue green Telegram bot migration QA
+      - name: Run canonical + legacy Telegram adapter QA
         run: |
           set -euo pipefail
           node qa/telegram/telegram-bot-migration-harness.mjs | tee /tmp/telegram-migration-qa.log
-          grep -q 'PASS independent next-bot menu cache schema' /tmp/telegram-migration-qa.log
-          grep -q 'PASS next webhook reuses core logic, D1 identity and next token only' /tmp/telegram-migration-qa.log
-          grep -q 'PASS next-bot menu sync idempotence' /tmp/telegram-migration-qa.log
-          grep -q 'PASS primary and next menu caches are independent' /tmp/telegram-migration-qa.log
-          grep -q 'PASS next reconcile configures isolated webhook, menu and branding' /tmp/telegram-migration-qa.log
-          grep -q 'PASS next runtime health contract' /tmp/telegram-migration-qa.log
-          grep -q 'PASS primary bot remains untouched during blue green migration' /tmp/telegram-migration-qa.log
-          grep -q 'PASS migration slot stays safely dormant without next token' /tmp/telegram-migration-qa.log
+          grep -q 'PASS product identity fixes @FutbolChepicaBot as canonical Telegram channel' /tmp/telegram-migration-qa.log
+          grep -q 'PASS canonical and legacy adapters keep independent menu cache state' /tmp/telegram-migration-qa.log
+          grep -q 'PASS canonical bot reuses core logic and shared D1 identity while using its own adapter/token' /tmp/telegram-migration-qa.log
+          grep -q 'PASS canonical menu sync idempotence' /tmp/telegram-migration-qa.log
+          grep -q 'PASS legacy adapter can remain compatible without becoming the product authority' /tmp/telegram-migration-qa.log
+          grep -q 'PASS canonical reconcile refuses identity drift and configures the canonical adapter' /tmp/telegram-migration-qa.log
+          grep -q 'PASS canonical runtime health contract' /tmp/telegram-migration-qa.log
+          grep -q 'PASS old /health/telegram-next path remains a compatibility alias for the canonical bot' /tmp/telegram-migration-qa.log
+          grep -q 'PASS legacy CUDO bot remains technically compatible but is not canonical' /tmp/telegram-migration-qa.log
+          grep -q 'PASS canonical channel fails closed without its token' /tmp/telegram-migration-qa.log
           grep -q 'RESULT: PASS' /tmp/telegram-migration-qa.log
       - name: Run historical V2 public-results compatibility QA
         run: |
