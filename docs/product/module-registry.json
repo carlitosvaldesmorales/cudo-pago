@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -35,7 +35,7 @@
         "sports-bus/worker/public-results-table-view.js",
         "sports-bus/worker/public-championship-entry.js"
       ],
-      "gap": "La capacidad existe técnicamente en varias proyecciones, pero todavía no está certificada como módulo canónico consumible en todos sus canales."
+      "gap": "La capacidad existe técnicamente en varias proyecciones, pero todavía no está certificada como módulo humano canónico consumible en todos sus canales."
     },
     {
       "id": "RESULTS-REGISTER",
@@ -47,7 +47,7 @@
       "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
       "policy_variants": ["scope","authority","submission_status","provenance"],
-      "stage": "QA_CERTIFIED",
+      "stage": "CONSUMABLE",
       "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/results-register-visual-contract-v1.md",
       "product_validation": "APPROVED",
@@ -55,9 +55,20 @@
       "technical_implementation": "DONE",
       "implementation_entry": "sports-bus/worker/results-register-entry.js",
       "qa": "PASS",
-      "qa_evidence": "GitHub Actions 34664361335 · Validate Canonical Results Register",
-      "runtime_evidence": "NOT_DEPLOYED",
-      "consumable": false,
+      "qa_evidence": [
+        "GitHub Actions 34664361335 · Validate Canonical Results Register",
+        "GitHub Actions 34664680950 · Validate Results Register Runtime"
+      ],
+      "deployment_evidence": "GitHub Actions 34664573260 · Deploy Sports Event Bus · success",
+      "runtime_evidence": "VERIFIED",
+      "runtime_smoke": [
+        "/health",
+        "/api/v1/rounds/3/results?mode=official",
+        "/api/v1/rounds/3/results?mode=reported",
+        "/stream/fecha/3?mode=reported",
+        "wss /stream/ws/3"
+      ],
+      "consumable": true,
       "dependencies": [],
       "runtime_paths": [
         "sports-bus/worker/results-register-entry.js",
@@ -69,7 +80,7 @@
         "sports-bus/worker/global-admin-results-entry.js",
         "sports-bus/worker/series-entry.js"
       ],
-      "gap": "Implementación canónica y QA sintético aprobados. Falta merge, deploy y validación del runtime desplegado antes de CONSUMABLE."
+      "gap": null
     },
     {
       "id": "RESULTS-GOVERN",
@@ -98,14 +109,13 @@
     }
   ],
   "current_frontier": {
-    "module_id": "RESULTS-REGISTER",
-    "allowed_next_step": "MERGE_DEPLOY_RUNTIME_VALIDATE",
-    "visual_contract": "docs/product/results-register-visual-contract-v1.md",
+    "module_id": "RESULTS-READ",
+    "allowed_next_step": "DESIGN_VISUAL_CONTRACT",
+    "operational_blocker": "REAL_USER_ENROLLMENT_REQUIRES_EXPLICIT_USER_DECISION",
     "blocked_steps": [
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",
       "POLLING_BASED_STREAMING_PROJECTION",
-      "REAL_USER_ENROLLMENT",
-      "PRODUCT_CERTIFICATION"
+      "REAL_USER_ENROLLMENT_WITHOUT_APPROVAL"
     ]
   }
 }
