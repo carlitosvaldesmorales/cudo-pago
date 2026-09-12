@@ -1,0 +1,32 @@
+name: Validate Chépica Play Live View
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'preview-v8/chepica-play/**'
+      - 'qa/web/chepica-play-live-view-harness.mjs'
+      - '.github/workflows/validate-chepica-play-live-view.yml'
+  push:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'preview-v8/chepica-play/**'
+      - 'qa/web/chepica-play-live-view-harness.mjs'
+      - '.github/workflows/validate-chepica-play-live-view.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-view:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: node --check preview-v8/chepica-play/live.js && node --check qa/web/chepica-play-live-view-harness.mjs
+      - name: Contract + runtime
+        run: node qa/web/chepica-play-live-view-harness.mjs
