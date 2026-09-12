@@ -1,0 +1,95 @@
+name: Chépica Play - certificar live producción
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'preview-v8/chepica-play/**'
+      - '.github/workflows/validate-chepica-play-live-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Esperar publicación GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAGE="https://cudo.cl/preview-v8/chepica-play/?fecha=3&qa=${GITHUB_SHA}"
+          JS="https://cudo.cl/preview-v8/chepica-play/live.js?qa=${GITHUB_SHA}"
+          ready=0
+          for i in $(seq 1 50); do
+            if curl -LfsS "$PAGE" -o /tmp/live.html \
+              && curl -LfsS "$JS" -o /tmp/live.js \
+              && grep -q 'Chépica Play · En cancha' /tmp/live.html \
+              && grep -q 'mode=reported' /tmp/live.js \
+              && grep -q '/stream/ws/' /tmp/live.js; then
+              ready=1
+              break
+            fi
+            echo "Esperando publicación ($i/50)"
+            sleep 6
+          done
+          test "$ready" = "1"
+          if grep -Eq 'setInterval\s*\(' /tmp/live.js; then
+            echo 'Polling detectado en live view' >&2
+            exit 1
+          fi
+          echo 'PASS GitHub Pages: Chépica Play Live View publicado y event-driven'
+
+      - name: Certificar proyecciones Worker desde origen cudo.cl
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev'
+          curl -fsS -D /tmp/reported.headers -H 'Origin: https://cudo.cl' \
+            "$BASE/api/v1/rounds/3/results?mode=reported" -o /tmp/reported.json
+          curl -fsS -D /tmp/official.headers -H 'Origin: https://cudo.cl' \
+            "$BASE/api/v1/rounds/3/results?mode=official" -o /tmp/official.json
+          grep -qi '^access-control-allow-origin: https://cudo.cl' /tmp/reported.headers
+          grep -qi '^access-control-allow-origin: https://cudo.cl' /tmp/official.headers
+          node <<'NODE'
+          const fs=require('fs');
+          const reported=JSON.parse(fs.readFileSync('/tmp/reported.json','utf8'));
+          const official=JSON.parse(fs.readFileSync('/tmp/official.json','utf8'));
+          if(!reported.ok||reported.mode!=='reported'||reported.round_no!==3||!Array.isArray(reported.matches)||!reported.matches.length) throw new Error('reported inválido');
+          if(!official.ok||official.mode!=='official'||official.round_no!==3||!Array.isArray(official.matches)||!official.matches.length) throw new Error('official inválido');
+          const expected=['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
+          for(const [name,snapshot] of [['reported',reported],['official',official]]){
+            for(const match of snapshot.matches){
+              if(!Array.isArray(match.series)||match.series.length!==4) throw new Error(`${name}: series inválidas`);
+              for(const code of expected) if(!match.series.some(s=>s.series_code===code)) throw new Error(`${name}: falta ${code}`);
+            }
+          }
+          for(const match of official.matches) for(const s of match.series) if(s.status==='PENDIENTE') throw new Error('official filtró mal un aporte pendiente');
+          console.log(`PASS Worker: reported=${reported.matches.length} official=${official.matches.length}; autoridad separada`);
+          NODE
+
+      - name: Certificar WebSocket real Fecha 3
+        shell: bash
+        run: |
+          node <<'NODE'
+          const url='wss://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/stream/ws/3';
+          await new Promise((resolve,reject)=>{
+            const ws=new WebSocket(url);
+            const timer=setTimeout(()=>{try{ws.close()}catch{};reject(new Error('WebSocket timeout'))},10000);
+            ws.addEventListener('open',()=>{clearTimeout(timer);ws.close();resolve()});
+            ws.addEventListener('error',e=>{clearTimeout(timer);reject(new Error(e?.message||'WebSocket error'))});
+          });
+          console.log('PASS WebSocket: Fecha 3 conectada');
+          NODE
+
+      - name: Resultado
+        run: |
+          echo 'READY_TECHNICAL_CHAIN=TRUE'
+          echo 'GitHub Pages -> Worker reported -> WebSocket = CONFORME'
