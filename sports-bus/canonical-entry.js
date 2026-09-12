@@ -7,6 +7,7 @@ import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-ro
 import { handleTelegramChepicaPlayHomeRequest } from './worker/telegram-chepica-play-home-entry.js';
 import { handleAccessRequestIntake } from './worker/access-request-intake-entry.js';
 import { handleAccessRequestConfirmation } from './worker/access-request-confirm-entry.js';
+import { handleAccessRequestReview } from './worker/access-request-review-entry.js';
 import { prepareTelegramEntryContext } from './worker/telegram-entry-context.js';
 
 export { ResultsStreamHub };
@@ -81,6 +82,9 @@ export default {
 
     const intake=await handleAccessRequestIntake(request.clone(),env);
     if(intake) return intake;
+
+    const review=await handleAccessRequestReview(request.clone(),env);
+    if(review) return review;
 
     const audienceRoot=await handleTelegramAudienceRootRequest(request.clone(),env);
     if(audienceRoot) return audienceRoot;
