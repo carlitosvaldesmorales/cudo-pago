@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -30,6 +30,7 @@
       "stage": "VISUAL_PENDING",
       "visual_contract": "DRAFT",
       "visual_contract_ref": "docs/product/results-read-visual-contract-v1.md",
+      "runtime_audit_ref": "docs/product/results-read-runtime-audit-2026-09-11.md",
       "product_validation": "PENDING",
       "technical_implementation": "EXISTS_AHEAD_OF_GATE",
       "qa": "PARTIAL",
@@ -39,9 +40,12 @@
       "runtime_paths": [
         "sports-bus/worker/public-results-ux-v3.js",
         "sports-bus/worker/public-results-table-view.js",
-        "sports-bus/worker/public-championship-entry.js"
+        "sports-bus/worker/public-championship-entry.js",
+        "sports-bus/worker/telegram-native-menu-entry.js",
+        "sports-bus/telegram-route-clarity-entry.js",
+        "sports-bus/telegram-migration-entry.js"
       ],
-      "gap": "Contrato visual canónico diseñado. Requiere validación de producto antes de alinear/certificar los runtimes existentes."
+      "gap": "Evidencia real de Telegram confirma tres UX divergentes para la misma intención de consultar resultados, incluida /resultados como listado largo. Requiere aprobación del contrato visual canónico antes de consolidar el runtime."
     },
     {
       "id": "RESULTS-REGISTER",
