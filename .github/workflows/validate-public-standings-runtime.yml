@@ -6,44 +6,50 @@ on:
   push:
     branches:
       - qa/public-standings-runtime-smoke
+      - refactor/championship-adn-canonical-bot
       - feature/sports-event-bus-v1
 
 permissions:
   contents: read
 
 jobs:
-  runtime-smoke:
+  validate:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Deterministic championship contract
+        run: node qa/web/public-standings-harness.mjs
       - name: Validate deployed standings API
+        if: github.ref_name == 'feature/sports-event-bus-v1'
         env:
           URL: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/api/v1/public-standings
         run: |
           set -euo pipefail
-          for attempt in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --max-time 20 "$URL" -o standings.json; then
+          for attempt in 1 2 3 4 5 6 7 8; do
+            if curl --fail --silent --show-error --max-time 20 "$URL" -o standings.json && jq -e '.contract == "public-standings-v2"' standings.json >/dev/null; then
               break
             fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "Runtime standings endpoint did not respond successfully"
+            if [ "$attempt" -eq 8 ]; then
+              echo "Deployed standings v2 did not become ready"
+              cat standings.json || true
               exit 1
             fi
-            sleep 3
+            sleep 4
           done
 
           jq -e '.ok == true' standings.json
-          jq -e '.contract == "public-standings-v1"' standings.json
+          jq -e '.contract == "public-standings-v2"' standings.json
           jq -e '.competition_id == "ANFA-CHEPICA-2026"' standings.json
-          jq -e '.rules.table_general == ["TERCERA","SEGUNDA","PRIMERA"]' standings.json
-          jq -e '.rules.table_senior == ["SENIOR"]' standings.json
-          jq -e '.rules.points_by_series.TERCERA == {"win":2,"draw":1,"loss":0}' standings.json
-          jq -e '.rules.points_by_series.SEGUNDA == {"win":3,"draw":1,"loss":0}' standings.json
-          jq -e '.rules.points_by_series.SENIOR == {"win":3,"draw":1,"loss":0}' standings.json
-          jq -e '.rules.points_by_series.PRIMERA == {"win":4,"draw":2,"loss":0}' standings.json
+          jq -e '.competition_model == "TWO_INDEPENDENT_CHAMPIONSHIPS_SHARED_MATCHDAY"' standings.json
+          jq -e '.championships.PRINCIPAL.included_series == ["TERCERA","SEGUNDA","PRIMERA"]' standings.json
+          jq -e '.championships.PRINCIPAL.max_points_per_matchday == 9' standings.json
+          jq -e '.championships.SENIOR.included_series == ["SENIOR"]' standings.json
+          jq -e '.championships.SENIOR.independent_from == "PRINCIPAL"' standings.json
           jq -e '.rules.goal_difference_is_tiebreaker == false' standings.json
           jq -e '.rules.only_verified_results == true' standings.json
           jq -e '(.groups | length) == 2' standings.json
-          jq -e 'all(.groups[]; ([.tables[].table_code] | sort) == ["GENERAL","SENIOR"])' standings.json
+          jq -e 'all(.groups[]; ([.championships[].championship_code] | sort) == ["PRINCIPAL","SENIOR"])' standings.json
 
-          echo "PASS deployed public standings contract"
-          jq '{contract,competition_id,rules,groups:[.groups[]|{group_id,tables:[.tables[]|{table_code,rows:(.rows|length)}]}]}' standings.json
+          echo "PASS deployed principal + Senior championship contract"

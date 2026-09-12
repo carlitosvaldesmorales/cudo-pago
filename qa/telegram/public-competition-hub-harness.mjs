@@ -81,11 +81,12 @@ try{
   assert.equal(response.status,200);
   let body=await response.json();
   assert.equal(body.handled,'public_competition_hub');
+  assert.equal(body.channel_role,'LEGACY_COMPATIBILITY');
 
   const hubCall=calls.findLast(x=>x.method==='sendMessage');
   assert.ok(hubCall);
   assert.match(hubCall.body.text,/FÚTBOL CHÉPICA · PÚBLICO/);
-  assert.match(hubCall.body.text,/Información oficial del campeonato/);
+  assert.match(hubCall.body.text,/Campeonato Principal y del Campeonato Senior/);
   const hubButtons=hubCall.body.reply_markup.inline_keyboard.flat();
   assert.deepEqual(
     hubButtons.map(x=>x.callback_data),
@@ -93,24 +94,25 @@ try{
   );
   assert.deepEqual(
     hubButtons.map(x=>x.text),
-    ['⚽ Resultados','🏆 Tabla de posiciones','📝 Informar resultado','🔎 Mis aportes','🏠 Volver']
+    ['⚽ Resultados','🏆 Tablas de posiciones','📝 Informar resultado','🔎 Mis aportes','🏠 Volver']
   );
-  console.log('PASS public hub orders read projections before contribution actions');
+  console.log('PASS public hub exposes results and championship standings before contribution actions');
 
   response=await dispatch('tp:public-standings');
   assert.ok(response);
   assert.equal(response.status,200);
   body=await response.json();
   assert.equal(body.handled,'public_standings');
-  assert.equal(body.contract,'public-standings-v1');
+  assert.equal(body.contract,'public-standings-v2');
   const standingsCall=calls.findLast(x=>x.method==='sendMessage');
-  assert.match(standingsCall.body.text,/TABLA DE POSICIONES · ANFA CHÉPICA 2026/);
-  assert.match(standingsCall.body.text,/General = Tercera \+ Segunda \+ Primera/);
-  assert.match(standingsCall.body.text,/Senior = tabla separada/);
+  assert.match(standingsCall.body.text,/CAMPEONATO PRINCIPAL/);
+  assert.match(standingsCall.body.text,/3ª \+ 2ª \+ 1ª · máximo 9 puntos por jornada/);
+  assert.match(standingsCall.body.text,/CAMPEONATO SENIOR · INDEPENDIENTE/);
+  assert.match(standingsCall.body.text,/no suma a los 9 puntos del Campeonato Principal/);
   assert.match(standingsCall.body.text,/Unión Orilla — 7 pts/);
-  assert.match(standingsCall.body.text,/Sólo resultados verificados modifican la tabla/);
+  assert.match(standingsCall.body.text,/Sólo resultados verificados modifican las clasificaciones/);
   assert.doesNotMatch(standingsCall.body.text,/diferencia de gol/i);
-  console.log('PASS standings route publishes verified official calculation');
+  console.log('PASS standings UX separates principal championship from independent Senior championship');
 
   const before=calls.length;
   response=await dispatch('tp:public-results');
@@ -124,9 +126,11 @@ try{
 
   response=await dispatch('tp:public',{next:true});
   assert.ok(response);
+  body=await response.json();
+  assert.equal(body.channel_role,'CANONICAL');
   const nextCall=calls.findLast(x=>x.method==='sendMessage');
   assert.match(nextCall.target,/botqa-next-token\/sendMessage$/);
-  console.log('PASS same hub semantics on destination Telegram slot');
+  console.log('PASS canonical Telegram adapter reuses the same hub capability semantics');
 
   const bad=new Request('https://qa.invalid/webhook/telegram',{
     method:'POST',

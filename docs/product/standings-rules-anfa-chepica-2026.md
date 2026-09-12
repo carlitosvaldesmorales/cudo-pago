@@ -1,7 +1,7 @@
-# Reglas de tabla — ANFA Chépica 2026
+# Reglas de campeonatos y clasificación — ANFA Chépica 2026
 
 Fecha de consolidación: 2026-09-12
-Estado: FUENTE OFICIAL + ACLARACIÓN OPERATIVA PREVIA DEL USUARIO
+Estado: FUENTE OFICIAL + ACLARACIÓN OPERATIVA DEL USUARIO
 
 ## Fuente oficial
 
@@ -18,45 +18,61 @@ La base oficial establece:
 - En cuartos, semifinales y finales, la igualdad se define mediante lanzamientos penales.
 - Las bases contemplan pérdidas/deducciones de puntos por determinadas infracciones. Cuando la cantidad exacta no esté expresada de forma inequívoca, el sistema NO debe inventarla: debe registrarse como ajuste administrativo explícito.
 
-## Aclaración operativa ya definida por el usuario
+## Aclaración operativa del dominio
 
-Para la tabla del campeonato:
+La jornada deportiva contiene **dos campeonatos independientes** que comparten fixture físico:
 
-- **Tabla General** = suma de los puntos obtenidos en Tercera + Segunda + Primera.
-- **Tabla Senior** = se calcula separadamente con los resultados de Senior.
-- Derrota = 0 puntos.
-- Sólo resultados `VERIFIED` impactan la tabla.
+### Campeonato Principal
 
-Ejemplo ya aplicado en conversación para Unión Orilla vs San Juan, Fecha II:
+Se compone únicamente de Tercera + Segunda + Primera.
+
+- Tercera: máximo 2 puntos por victoria.
+- Segunda: máximo 3 puntos por victoria.
+- Primera: máximo 4 puntos por victoria.
+- Máximo de una jornada perfecta: **9 puntos**.
+- Senior nunca se suma a estos 9 puntos.
+
+### Campeonato Senior
+
+Senior constituye un campeonato independiente y mantiene su propia clasificación.
+
+- Victoria Senior: 3 puntos.
+- Empate Senior: 1 punto.
+- Derrota Senior: 0 puntos.
+- Sus puntos no alteran la clasificación del Campeonato Principal.
+
+Sólo resultados `VERIFIED` impactan cualquiera de las dos clasificaciones.
+
+Ejemplo ya aplicado para Unión Orilla vs San Juan, Fecha II:
 
 - Tercera: derrota de Unión Orilla = 0.
 - Segunda: victoria de Unión Orilla = 3.
 - Primera: victoria de Unión Orilla = 4.
-- Total nuevo Tabla General = 7.
-- Senior: empate = 1 punto en Tabla Senior.
+- Total de Unión Orilla en el Campeonato Principal para esa jornada = 7.
+- Senior: empate = 1 punto únicamente en el Campeonato Senior.
 
 ## Regla de implementación
 
-La clasificación se calcula por grupo y por tabla (`GENERAL` / `SENIOR`).
+La clasificación se calcula por grupo y por campeonato (`PRINCIPAL` / `SENIOR`).
 
 Orden deportivo:
 
-1. Puntos totales, incluyendo ajustes administrativos explícitos.
-2. Entre clubes empatados, puntaje obtenido en los enfrentamientos entre esos clubes.
+1. Puntos totales del campeonato correspondiente, incluyendo ajustes administrativos explícitos.
+2. Entre clubes empatados, puntaje obtenido en los enfrentamientos entre esos clubes dentro del mismo campeonato.
 3. Si continúa la igualdad, el sistema NO usa diferencia de gol como desempate: marca la igualdad como pendiente de definición por partido único.
 
 La diferencia de gol puede exponerse únicamente como estadística informativa; no decide posiciones.
 
 ## Sanciones / ajustes
 
-Las sanciones que afecten puntos se registran en `standings_adjustments`, con:
+Las sanciones que afecten puntos se registran en `standings_adjustments`, indicando explícitamente:
 
 - club;
-- tabla afectada (`GENERAL` o `SENIOR`);
+- campeonato afectado (`PRINCIPAL` o `SENIOR`);
 - delta de puntos;
 - motivo;
 - fuente/autoridad;
 - fecha efectiva;
 - trazabilidad temporal.
 
-Esto permite aplicar una pérdida o descuento de puntos sin modificar marcadores históricos ni inventar cantidades no definidas por la fuente.
+Esto permite aplicar una pérdida o descuento de puntos sin modificar marcadores históricos, sin mezclar ambos campeonatos y sin inventar cantidades no definidas por la fuente.

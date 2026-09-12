@@ -7,6 +7,7 @@ on:
     branches:
       - feature/public-competition-hub-v1
       - feature/standings-2026-official-rules
+      - refactor/championship-adn-canonical-bot
       - feature/sports-event-bus-v1
 
 permissions:
@@ -24,19 +25,23 @@ jobs:
         run: |
           set -euo pipefail
           node --check sports-bus/canonical-entry.js
+          node --check sports-bus/telegram-migration-entry.js
+          node --check sports-bus/worker/telegram-channel-contract.js
+          node --check sports-bus/worker/competition-domain.js
           node --check sports-bus/worker/public-competition-hub-entry.js
           node --check sports-bus/worker/public-standings-entry.js
           node --check qa/telegram/public-competition-hub-harness.mjs
           node --check qa/web/public-standings-harness.mjs
       - name: Competition Hub contract
         run: node qa/telegram/public-competition-hub-harness.mjs
-      - name: Official standings rules
+      - name: Championship domain contract
         run: node qa/web/public-standings-harness.mjs
-      - name: Standings source gap is resolved
+      - name: ADN source contract
         run: |
           set -euo pipefail
-          grep -q 'Estado: \*\*RESUELTO\*\*' ops/STANDINGS-RULES-GAP-01.md
-          grep -q 'Tercera: victoria 2 puntos' ops/STANDINGS-RULES-GAP-01.md
-          grep -q 'Primera: victoria 4 puntos; empate 2 puntos' ops/STANDINGS-RULES-GAP-01.md
-          grep -q 'Tabla General = Tercera + Segunda + Primera' ops/STANDINGS-RULES-GAP-01.md
+          grep -q 'CAMPEONATO_PRINCIPAL_MAX_9_PUNTOS_POR_JORNADA' docs/architecture/competition-domain-adn-v2.md
+          grep -q 'SENIOR_ES_CAMPEONATO_INDEPENDIENTE' docs/architecture/competition-domain-adn-v2.md
+          grep -q '@FutbolChepicaBot' docs/architecture/telegram-canonical-channel-v1.md
+          grep -q 'CANONICAL_TELEGRAM_BOT_EQ_FUTBOLCHEPICABOT' docs/product/module-registry.json
+          grep -q 'PRINCIPAL_MATCHDAY_MAX_POINTS_EQ_9' docs/product/module-registry.json
           grep -q "goal_difference_is_tiebreaker:false" sports-bus/worker/public-standings-entry.js
