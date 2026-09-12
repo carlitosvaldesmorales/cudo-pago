@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -65,21 +65,31 @@
       "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
       "policy_variants": ["scope", "authority", "submission_status", "provenance"],
-      "stage": "PRODUCT_VALIDATED",
+      "stage": "QA_CERTIFIED",
       "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/results-register-visual-contract-v2.md",
       "superseded_visual_contract_ref": "docs/product/results-register-visual-contract-v1.md",
       "product_validation": "APPROVED",
       "product_validation_evidence": "docs/product/results-register-product-approval-v2-2026-09-12.md",
       "architecture_gate": "docs/architecture/human-intent-adapter-gate-v1.md",
-      "technical_implementation": "IN_PROGRESS_V2",
+      "technical_implementation": "DONE",
       "implementation_entry": "sports-bus/worker/results-register-entry.js",
       "implementation_v2": "sports-bus/worker/results-register-v2-entry.js",
       "policy_entry": "sports-bus/worker/results-register-policy.js",
-      "qa": "PENDING_V2",
-      "qa_evidence": [],
-      "deployment_evidence": null,
-      "runtime_evidence": "PENDING_V2",
+      "qa": "PASS",
+      "qa_evidence": [
+        "GitHub Actions Validate Canonical Results Register run 34700506796: success",
+        "GitHub Actions Validate Canonical Results Register run 34700618745: success",
+        "GitHub Actions Validate Consumable Module Gate run 34700618685: success",
+        "GitHub Actions Validate Results Register Runtime run 34700618690: success",
+        "GitHub Actions Validate Telegram QA Harness run 34700618748: success",
+        "GitHub Actions Validate Public Result Submission run 34700618750: success",
+        "GitHub Actions Validate Result Governance run 34700618682: success",
+        "GitHub Actions Validate System Authority Registry run 34700618724: success",
+        "GitHub Actions Validate Legacy Match Result Command Guard run 34700618668: success"
+      ],
+      "deployment_evidence": "Deploy Sports Event Bus run 34700643461: success; Worker deployed, primary Telegram runtime and destination Telegram UX contract validated",
+      "runtime_evidence": "TECHNICALLY_VERIFIED_V2",
       "runtime_smoke": [
         "/health",
         "/api/v1/rounds/3/results?mode=official",
@@ -96,7 +106,7 @@
         "sports-bus/worker/results-stream-entry.js",
         "sports-bus/canonical-entry.js"
       ],
-      "gap": "Completar QA, deploy y evidencia runtime del contrato v2; luego requiere una única validación humana real de fluidez Telegram."
+      "gap": "Único GAP de esta revisión: aprobación humana de la fluidez real en Telegram del contrato v2 ya desplegado."
     },
     {
       "id": "RESULTS-GOVERN",
@@ -126,9 +136,10 @@
   ],
   "current_frontier": {
     "module_id": "RESULTS-REGISTER",
-    "allowed_next_step": "IMPLEMENT_TEST_DEPLOY_MATCH_WORK_UNIT_V2",
-    "human_gate": null,
+    "allowed_next_step": "HUMAN_VALIDATE_REAL_TELEGRAM_UX_V2",
+    "human_gate": "REAL_TELEGRAM_UX_V2_APPROVAL",
     "blocked_steps": [
+      "MARK_RESULTS_REGISTER_V2_CONSUMABLE_BEFORE_HUMAN_APPROVAL",
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",
       "POLLING_BASED_STREAMING_PROJECTION",
       "REAL_USER_ENROLLMENT_WITHOUT_EXPLICIT_APPROVAL"
