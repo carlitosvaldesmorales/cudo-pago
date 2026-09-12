@@ -84,6 +84,9 @@ function last(method){return calls.findLast(call=>call.method===method);}
 function callbacks(call){
   return (call?.body?.reply_markup?.inline_keyboard||[]).flat().map(button=>button.callback_data).filter(Boolean);
 }
+function labels(call){
+  return (call?.body?.reply_markup?.inline_keyboard||[]).flat().map(button=>button.text);
+}
 
 try{
   applyMigrations();
@@ -96,41 +99,51 @@ try{
   let response=await handleTelegramChepicaPlayHomeRequest(await callback(ADMIN),env);
   assert.equal(response.status,200);
   let body=await response.json();
-  assert.equal(body.handled,'chepica_play_access_gate');
+  assert.equal(body.handled,'chepica_play_home');
   assert.equal(body.linked,false);
-  assert.equal(body.can_manage_access,true);
+  assert.equal(body.access_mode,'PRIVILEGED_CONTEXT');
+  assert.equal(body.entry_context,'CHEPICA_PLAY');
+  assert.equal(body.actor_role,'SUPER_ADMIN');
   assert.equal(body.permission_change,false);
+  assert.equal(body.identity_change,false);
   let screen=last('editMessageText');
-  assert.match(screen.body.text,/ACCESO CHÉPICA PLAY/);
-  assert.match(screen.body.text,/Ingresar resultados/);
-  assert.match(screen.body.text,/Consultar resultados/);
-  assert.ok(callbacks(screen).includes('mp:manage'));
-  assert.ok(!callbacks(screen).includes('obs:dates'),'unlinked admin must not act as Chépica Play');
-  console.log('PASS unlinked SUPER_ADMIN sees the two-capability contract but cannot impersonate Chépica Play');
+  assert.match(screen.body.text,/CHÉPICA PLAY/);
+  assert.match(screen.body.text,/identidad administrativa real se conserva/i);
+  assert.deepEqual(callbacks(screen),['cp:observe','tp:public-results','tp:home']);
+  assert.deepEqual(labels(screen),['📝 Ingresar resultados','⚽ Consultar resultados','🏠 Inicio']);
+  console.log('PASS SUPER_ADMIN enters the Chépica Play UX while preserving real identity');
 
   calls.length=0;
   response=await handleTelegramChepicaPlayHomeRequest(await callback(PUBLIC),env);
   body=await response.json();
   assert.equal(body.handled,'chepica_play_access_gate');
-  assert.equal(body.can_manage_access,false);
+  assert.equal(body.linked,false);
+  assert.equal(body.permission_change,false);
+  assert.equal(body.identity_change,false);
   screen=last('editMessageText');
-  assert.ok(!callbacks(screen).includes('mp:manage'));
+  assert.ok(!callbacks(screen).includes('cp:observe'));
   assert.ok(!callbacks(screen).includes('obs:dates'));
-  console.log('PASS unlinked public identity cannot obtain partner authority from audience selection');
+  console.log('PASS unlinked public identity does not gain Chépica Play write authority from navigation');
 
   calls.length=0;
   response=await handleTelegramChepicaPlayHomeRequest(await callback(MEDIA),env);
   body=await response.json();
   assert.equal(body.handled,'chepica_play_home');
   assert.equal(body.linked,true);
+  assert.equal(body.access_mode,'PARTNER_IDENTITY');
+  assert.equal(body.entry_context,'CHEPICA_PLAY');
   assert.deepEqual(body.capabilities,['OBSERVE_RESULT','READ_COMPETITION']);
   assert.equal(body.permission_change,false);
+  assert.equal(body.identity_change,false);
   screen=last('editMessageText');
   assert.match(screen.body.text,/CHÉPICA PLAY/);
-  assert.deepEqual(callbacks(screen),['obs:dates','tp:public-results','tp:home']);
-  const labels=screen.body.reply_markup.inline_keyboard.flat().map(button=>button.text);
-  assert.deepEqual(labels,['📝 Ingresar resultados','⚽ Consultar resultados','🏠 Inicio']);
-  console.log('PASS linked Chépica Play identity gets exactly ingresar + consultar resultados');
+  assert.deepEqual(callbacks(screen),['cp:observe','tp:public-results','tp:home']);
+  assert.deepEqual(labels(screen),['📝 Ingresar resultados','⚽ Consultar resultados','🏠 Inicio']);
+  console.log('PASS linked Chépica Play identity and privileged admin share the same two-function UX');
+
+  const adminGrant=await env.DB.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY'").bind(String(ADMIN.id)).first();
+  assert.equal(Number(adminGrant.n),0,'entering Chépica Play UX must not create partner identity/grant');
+  console.log('PASS audience/context switch never mutates authorization');
 
   console.log('RESULT: PASS');
 }finally{
