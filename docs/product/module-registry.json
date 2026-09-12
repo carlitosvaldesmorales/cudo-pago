@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -9,6 +9,11 @@
     "ACTOR_NEQ_MODULE",
     "CHANNEL_NEQ_MODULE",
     "TENANT_NEQ_MODULE",
+    "PERSON_NEQ_CAPABILITY_VALIDATION",
+    "POLICY_NEQ_FLOW",
+    "PROJECTION_NEQ_AUTHORITY",
+    "REFERENCE_OVER_COPY",
+    "ONE_SEMANTIC_SCOPE_ONE_CANONICAL_AUTHORITY",
     "CANONICAL_CAPABILITY_IS_REUSED_BY_CONSUMERS",
     "EVENT_DRIVEN_PRIMARY_PROPAGATION"
   ],
@@ -23,7 +28,8 @@
       "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
       "channels": ["TELEGRAM","WEB","API","STREAMING"],
       "stage": "VISUAL_PENDING",
-      "visual_contract": "PENDING",
+      "visual_contract": "DRAFT",
+      "visual_contract_ref": "docs/product/results-read-visual-contract-v1.md",
       "product_validation": "PENDING",
       "technical_implementation": "EXISTS_AHEAD_OF_GATE",
       "qa": "PARTIAL",
@@ -35,7 +41,7 @@
         "sports-bus/worker/public-results-table-view.js",
         "sports-bus/worker/public-championship-entry.js"
       ],
-      "gap": "La capacidad existe técnicamente en varias proyecciones, pero todavía no está certificada como módulo humano canónico consumible en todos sus canales."
+      "gap": "Contrato visual canónico diseñado. Requiere validación de producto antes de alinear/certificar los runtimes existentes."
     },
     {
       "id": "RESULTS-REGISTER",
@@ -105,17 +111,18 @@
         "sports-bus/worker/result-correction-flow-entry.js",
         "sports-bus/worker/platform-operator-entry.js"
       ],
-      "gap": "La capacidad existe técnicamente pero debe revisarse después de cerrar RESULTS-REGISTER para asegurar reutilización y separación de policy."
+      "gap": "La capacidad existe técnicamente pero debe revisarse después de cerrar RESULTS-READ para asegurar reutilización y separación de policy."
     }
   ],
   "current_frontier": {
     "module_id": "RESULTS-READ",
-    "allowed_next_step": "DESIGN_VISUAL_CONTRACT",
-    "operational_blocker": "REAL_USER_ENROLLMENT_REQUIRES_EXPLICIT_USER_DECISION",
+    "allowed_next_step": "PRODUCT_VALIDATE_VISUAL_CONTRACT",
+    "human_gate": "RESULTS_READ_VISUAL_PRODUCT_APPROVAL",
     "blocked_steps": [
+      "RESULTS_READ_RUNTIME_CHANGE_BEFORE_APPROVAL",
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",
       "POLLING_BASED_STREAMING_PROJECTION",
-      "REAL_USER_ENROLLMENT_WITHOUT_APPROVAL"
+      "REAL_USER_ENROLLMENT_WITHOUT_EXPLICIT_APPROVAL"
     ]
   }
 }
