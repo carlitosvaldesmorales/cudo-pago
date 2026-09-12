@@ -11,6 +11,7 @@ on:
     branches:
       - feature/sports-event-bus-v1
       - ops/audit-admin-chepica-play-context-v1
+      - ops/audit-audience-access-gate-v1
     paths:
       - 'sports-bus/**'
       - '.github/workflows/audit-sunday-readiness.yml'
@@ -58,6 +59,9 @@ jobs:
           set -euo pipefail
           SQL="SELECT
             (SELECT COUNT(*) FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND active=1) AS active_chepica_play_identities,
+            (SELECT COUNT(*) FROM partner_access_requests WHERE partner_code='CHEPICA_PLAY' AND requested_role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING') AS pending_partner_access_requests,
+            (SELECT COUNT(*) FROM partner_access_requests WHERE partner_code='CHEPICA_PLAY' AND requested_role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='APPROVED') AS approved_partner_access_requests,
+            (SELECT COUNT(*) FROM partner_access_requests r JOIN actor_scope_grants g ON g.telegram_user_id=r.telegram_user_id AND g.partner_code=r.partner_code AND g.role=r.requested_role AND g.scope_type=r.scope_type AND g.scope_id=r.scope_id AND g.active=1 WHERE r.partner_code='CHEPICA_PLAY' AND r.requested_role='MEDIA_PARTNER' AND r.scope_type='COMPETITION' AND r.scope_id='ANFA-CHEPICA-2026' AND r.status='APPROVED') AS request_flow_active_identities,
             (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at>datetime('now')) AS valid_pending_invites,
             (SELECT COUNT(*) FROM reporters WHERE active=1 AND trust_level='VERIFIED' AND role IN ('SUPER_ADMIN','PLATFORM_OPERATOR')) AS privileged_context_testers,
             (SELECT COUNT(*) FROM public_result_submissions p JOIN reporters r ON r.telegram_user_id=p.submitter_id WHERE p.entry_context='CHEPICA_PLAY' AND p.source_channel='telegram:chepica_play' AND r.active=1 AND r.trust_level='VERIFIED' AND r.role IN ('SUPER_ADMIN','PLATFORM_OPERATOR')) AS privileged_chepica_play_submissions,
@@ -75,6 +79,9 @@ jobs:
           if(Number(r.round3_matches)!==5) throw new Error('round3_fixture_not_ready');
           if(Number(r.round3_byes)!==1) throw new Error('round3_bye_not_ready');
           console.log(`active=${Number(r.active_chepica_play_identities)}`);
+          console.log(`pending_access_requests=${Number(r.pending_partner_access_requests)}`);
+          console.log(`approved_access_requests=${Number(r.approved_partner_access_requests)}`);
+          console.log(`request_flow_active=${Number(r.request_flow_active_identities)}`);
           console.log(`valid_invites=${Number(r.valid_pending_invites)}`);
           console.log(`privileged_testers=${Number(r.privileged_context_testers)}`);
           console.log(`privileged_context_submissions=${Number(r.privileged_chepica_play_submissions)}`);
@@ -111,26 +118,41 @@ jobs:
           if(s.championships?.SENIOR?.independent_from!=='PRINCIPAL') throw new Error('senior_independence_failed');
           console.log('RUNTIME_PROJECTIONS=PASS');
           NODE
-      - name: HUMAN GATE — privileged admin must prove Chépica Play context in real Telegram
-        if: steps.state.outputs.privileged_testers != '0' && steps.state.outputs.privileged_context_submissions == '0'
+      - name: HUMAN GATE 1 — unlinked identity must request Chépica Play access
+        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests == '0'
         run: |
           echo "BLOCKED_BY_HUMAN"
-          echo "A verified privileged actor exists and can test Chépica Play without becoming a partner identity."
-          echo "Next irreducible action: open @FutbolChepicaBot -> Chépica Play -> Ingresar resultados and submit one controlled result observation."
-          echo "After that, audit must show the real actor plus entry_context=CHEPICA_PLAY and source_channel=telegram:chepica_play."
+          echo "The restricted-audience policy is deployed and no request-based Chépica Play enrollment has reached PENDING yet."
+          echo "Next irreducible action: from a real unlinked Telegram identity open @FutbolChepicaBot -> Chépica Play -> Solicitar autorización."
+          echo "The expected runtime transition is REQUESTABLE -> PENDING. Creating the request must not create a grant."
+      - name: HUMAN GATE 2 — administrator must decide pending Chépica Play request
+        if: steps.state.outputs.request_flow_active == '0' && steps.state.outputs.pending_access_requests != '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "A real Chépica Play access request is PENDING."
+          echo "Next irreducible action: an authorized administrator must review that Telegram request and choose Aprobar or Rechazar."
+          echo "Only Aprobar may materialize the scoped MEDIA_PARTNER grant."
+      - name: READY — request and approval flow proven end-to-end
+        if: steps.state.outputs.request_flow_active != '0'
+        run: |
+          echo "REQUEST_APPROVAL_FLOW=PROVEN"
+          echo "At least one APPROVED partner_access_request has a matching active scoped Chépica Play grant."
+      - name: NEXT HUMAN GATE — privileged admin context UAT
+        if: steps.state.outputs.request_flow_active != '0' && steps.state.outputs.privileged_testers != '0' && steps.state.outputs.privileged_context_submissions == '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN_AFTER_ACCESS_FLOW"
+          echo "Request/approval onboarding is proven. The next separate UAT is privileged Admin -> Chépica Play -> Ingresar resultados with audited actor/context preservation."
       - name: READY — privileged Chépica Play context proven end-to-end
-        if: steps.state.outputs.privileged_context_submissions != '0'
+        if: steps.state.outputs.request_flow_active != '0' && steps.state.outputs.privileged_context_submissions != '0'
         run: echo "Privileged actor -> Chépica Play context -> audited submission is proven in runtime."
-      - name: HUMAN GATE — no privileged tester exists
-        if: steps.state.outputs.privileged_testers == '0'
+      - name: INFO — no privileged tester exists
+        if: steps.state.outputs.request_flow_active != '0' && steps.state.outputs.privileged_testers == '0'
+        run: echo "No verified SUPER_ADMIN or PLATFORM_OPERATOR exists for the later privileged-context UAT."
+      - name: INFO — invitation path is available
+        if: steps.state.outputs.valid_invites != '0'
         run: |
-          echo "BLOCKED_BY_HUMAN"
-          echo "No verified SUPER_ADMIN or PLATFORM_OPERATOR exists to perform privileged context UAT."
-      - name: INFO — partner onboarding still pending
-        if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites != '0'
-        run: |
-          echo "ONBOARDING_PENDING_NOT_ADMIN_UAT_BLOCKER"
-          echo "A valid Chépica Play invitation exists. A real Chépica Play person can claim it later; this no longer blocks Admin Global testing."
+          echo "ALTERNATE_ENROLLMENT_PATH_AVAILABLE"
+          echo "A valid individual Chépica Play invitation exists. It remains a supported alternative, but it does not substitute the request/approval UAT currently being proven."
       - name: INFO — Chépica Play real identity already active
         if: steps.state.outputs.active != '0'
         run: echo "At least one real Chépica Play identity is already linked."
