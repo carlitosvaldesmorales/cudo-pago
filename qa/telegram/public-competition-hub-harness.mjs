@@ -1,10 +1,39 @@
 import assert from 'node:assert/strict';
 import { handlePublicCompetitionHubRequest } from '../../sports-bus/worker/public-competition-hub-entry.js';
 
+const teamRows=[
+  {team_id:'ORILLA',canonical_name:'Unión Orilla',group_id:'A'},
+  {team_id:'SANJUAN',canonical_name:'San Juan',group_id:'A'},
+  {team_id:'HURACAN',canonical_name:'Huracán',group_id:'B'}
+];
+const resultRows=[
+  {match_id:'A-F2-M1',group_id:'A',home_id:'ORILLA',home_name:'Unión Orilla',away_id:'SANJUAN',away_name:'San Juan',series_code:'TERCERA',home_score:2,away_score:3,validation_status:'VERIFIED'},
+  {match_id:'A-F2-M1',group_id:'A',home_id:'ORILLA',home_name:'Unión Orilla',away_id:'SANJUAN',away_name:'San Juan',series_code:'SEGUNDA',home_score:1,away_score:0,validation_status:'VERIFIED'},
+  {match_id:'A-F2-M1',group_id:'A',home_id:'ORILLA',home_name:'Unión Orilla',away_id:'SANJUAN',away_name:'San Juan',series_code:'SENIOR',home_score:0,away_score:0,validation_status:'VERIFIED'},
+  {match_id:'A-F2-M1',group_id:'A',home_id:'ORILLA',home_name:'Unión Orilla',away_id:'SANJUAN',away_name:'San Juan',series_code:'PRIMERA',home_score:3,away_score:0,validation_status:'VERIFIED'}
+];
+
+const DB={
+  prepare(sql){
+    const text=String(sql);
+    const statement={
+      bind(){return statement;},
+      async all(){
+        if(text.includes('FROM teams')) return {results:teamRows};
+        if(text.includes('FROM match_series_results r')) return {results:resultRows};
+        if(text.includes('FROM standings_adjustments')) return {results:[]};
+        return {results:[]};
+      }
+    };
+    return statement;
+  }
+};
+
 const env={
   TELEGRAM_WEBHOOK_SECRET:'qa-hub-secret',
   TELEGRAM_BOT_TOKEN:'qa-primary-token',
-  TELEGRAM_BOT_TOKEN_NEXT:'qa-next-token'
+  TELEGRAM_BOT_TOKEN_NEXT:'qa-next-token',
+  DB
 };
 const calls=[];
 const originalFetch=globalThis.fetch;
@@ -70,15 +99,18 @@ try{
 
   response=await dispatch('tp:public-standings');
   assert.ok(response);
+  assert.equal(response.status,200);
   body=await response.json();
-  assert.equal(body.handled,'public_standings_source_gap');
-  assert.equal(body.blocker,'STANDINGS_RULES_SOURCE');
+  assert.equal(body.handled,'public_standings');
+  assert.equal(body.contract,'public-standings-v1');
   const standingsCall=calls.findLast(x=>x.method==='sendMessage');
-  assert.match(standingsCall.body.text,/Aún no se publica/);
-  assert.match(standingsCall.body.text,/No calcularemos una tabla usando supuestos/);
-  assert.match(standingsCall.body.text,/resultados verificados/);
-  assert.doesNotMatch(standingsCall.body.text,/\b3 puntos\b|\b1 punto\b|diferencia de gol/i);
-  console.log('PASS standings route fails closed while official rules source is missing');
+  assert.match(standingsCall.body.text,/TABLA DE POSICIONES · ANFA CHÉPICA 2026/);
+  assert.match(standingsCall.body.text,/General = Tercera \+ Segunda \+ Primera/);
+  assert.match(standingsCall.body.text,/Senior = tabla separada/);
+  assert.match(standingsCall.body.text,/Unión Orilla — 7 pts/);
+  assert.match(standingsCall.body.text,/Sólo resultados verificados modifican la tabla/);
+  assert.doesNotMatch(standingsCall.body.text,/diferencia de gol/i);
+  console.log('PASS standings route publishes verified official calculation');
 
   const before=calls.length;
   response=await dispatch('tp:public-results');

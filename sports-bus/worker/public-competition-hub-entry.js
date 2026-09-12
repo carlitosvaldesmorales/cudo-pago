@@ -1,3 +1,5 @@
+import { buildPublicStandings } from './public-standings-entry.js';
+
 const PRIMARY='/webhook/telegram';
 const NEXT='/webhook/telegram-next';
 
@@ -50,6 +52,43 @@ async function send(token,chatId,text,replyMarkup){
   });
 }
 
+function formatTable(table){
+  const lines=[];
+  for(const row of table.rows){
+    const tie=row.tiebreak_status==='PLAYOFF_REQUIRED'?' ⚖️':'';
+    const adjustment=row.adjustment_points
+      ? ` · ajuste ${row.adjustment_points>0?'+':''}${row.adjustment_points}`
+      : '';
+    lines.push(`${row.position}. ${row.team_name} — ${row.points} pts${adjustment}${tie}`);
+  }
+  return lines.join('\n');
+}
+
+function formatStandings(standings){
+  const blocks=[
+    '🏆 TABLA DE POSICIONES · ANFA CHÉPICA 2026',
+    '',
+    'General = Tercera + Segunda + Primera',
+    'Senior = tabla separada',
+    ''
+  ];
+
+  for(const group of standings.groups){
+    const general=group.tables.find(table=>table.table_code==='GENERAL');
+    const senior=group.tables.find(table=>table.table_code==='SENIOR');
+    blocks.push(`GRUPO ${group.group_id} · GENERAL`);
+    blocks.push(formatTable(general));
+    blocks.push('');
+    blocks.push(`GRUPO ${group.group_id} · SENIOR`);
+    blocks.push(formatTable(senior));
+    blocks.push('');
+  }
+
+  blocks.push('⚖️ Igualdad no resuelta por puntaje entre los clubes: definición por partido único.');
+  blocks.push('Sólo resultados verificados modifican la tabla.');
+  return blocks.join('\n').trim();
+}
+
 export async function handlePublicCompetitionHubRequest(request,env){
   const url=new URL(request.url);
   if(![PRIMARY,NEXT].includes(url.pathname)||request.method!=='POST') return null;
@@ -86,18 +125,34 @@ export async function handlePublicCompetitionHubRequest(request,env){
   }
 
   await answer(context.token,callback.id,'Tabla de posiciones');
-  await send(
-    context.token,
-    chatId,
-    '🏆 TABLA DE POSICIONES\n\nAún no se publica. Falta incorporar la regla oficial de clasificación del Campeonato ANFA Chépica 2026: estructura de la tabla, puntaje, desempates, WO y sanciones.\n\nNo calcularemos una tabla usando supuestos. Cuando exista la fuente oficial, la tabla se calculará únicamente desde resultados verificados.',
-    {inline_keyboard:[
-      [{text:'⚽ Resultados',callback_data:'tp:public-results'}],
-      [{text:'🌐 Público',callback_data:'tp:public'}]
-    ]}
-  );
-  return json({
-    ok:true,
-    handled:'public_standings_source_gap',
-    blocker:'STANDINGS_RULES_SOURCE'
-  });
+  if(!env.DB){
+    await send(context.token,chatId,'⚠️ La tabla no está disponible temporalmente: persistencia no configurada.',{
+      inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]
+    });
+    return json({ok:false,error:'persistence_not_configured'},503);
+  }
+
+  try{
+    const standings=await buildPublicStandings(env);
+    await send(
+      context.token,
+      chatId,
+      formatStandings(standings),
+      {inline_keyboard:[
+        [{text:'⚽ Resultados',callback_data:'tp:public-results'}],
+        [{text:'🌐 Público',callback_data:'tp:public'}]
+      ]}
+    );
+    return json({
+      ok:true,
+      handled:'public_standings',
+      contract:standings.contract,
+      groups:standings.groups.length
+    });
+  }catch(error){
+    await send(context.token,chatId,'⚠️ No fue posible calcular la tabla desde los resultados verificados. No se publicaron posiciones parciales inventadas.',{
+      inline_keyboard:[[{text:'🌐 Público',callback_data:'tp:public'}]]
+    });
+    return json({ok:false,error:'standings_build_failed'},500);
+  }
 }
