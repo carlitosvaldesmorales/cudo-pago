@@ -1,9 +1,17 @@
 name = "cudo-sports-event-bus"
-main = "telegram-route-clarity-entry.js"
+main = "canonical-entry.js"
 compatibility_date = "2026-09-08"
 
 [observability]
 enabled = true
+
+[[durable_objects.bindings]]
+name = "RESULTS_STREAM"
+class_name = "ResultsStreamHub"
+
+[[migrations]]
+tag = "results-stream-v1"
+new_sqlite_classes = ["ResultsStreamHub"]
 
 # No recurring bootstrap cron. Telegram webhook registration is a one-time setup action.
 [triggers]
