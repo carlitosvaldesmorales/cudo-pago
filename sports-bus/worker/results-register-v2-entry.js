@@ -1,6 +1,7 @@
 import { ROLE, effectiveRole, getActivePartnerMembership } from './access-control.js';
 import { publishRoundSnapshots } from './results-stream-entry.js';
 import { applyResultsRegisterPolicy, outcomeNotice } from './results-register-policy.js';
+import { NAVIGATION_ACTION, navigationButton } from './telegram-navigation-contract.js';
 
 const COMPETITION_ID='ANFA-CHEPICA-2026';
 const SERIES=['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
@@ -46,11 +47,13 @@ export async function handleResultsRegisterRequest(request,env){
     return json({ok:true,handled:'results_register_dates'});
   }
 
+  // Compatibility only. New surfaces no longer emit rr:cancel-menu; the
+  // entry-context adapter rewrites old buttons to context-aware Back.
   if(data==='rr:cancel-menu'){
     await clearSession(env.DB,actorId);
-    await answer(env,callback.id,'Carga cerrada');
-    await render(env,chatId,surface,'✅ Carga cerrada.\n\nLos resultados que ya confirmaste permanecen guardados.',homeKeyboard());
-    return json({ok:true,handled:'results_register_cancel'});
+    await answer(env,callback.id,'Volver');
+    await render(env,chatId,surface,'↩️ Carga cerrada. Los resultados ya confirmados permanecen guardados.',backHomeKeyboard());
+    return json({ok:true,handled:'results_register_legacy_exit_compat'});
   }
 
   const dateCb=data.match(/^rr:date:(\d+)$/);
@@ -154,7 +157,7 @@ export async function handleResultsRegisterRequest(request,env){
     if(!match) return stale(env,callback);
     await setScore(env.DB,actorId,n,side,8,side==='HOME'?'HOME_HIGH':'AWAY_HIGH');
     await answer(env,callback.id,'8+');
-    await showHighStepper(env,chatId,surface,match,session,n,side);
+    await showHighStepper(env,chatId,surface,match,await sessionFor(env.DB,actorId,n),n,side);
     return json({ok:true,handled:'results_register_high_score'});
   }
 
@@ -187,6 +190,22 @@ export async function handleResultsRegisterRequest(request,env){
     return json({ok:true,handled:side==='HOME'?'results_register_away_score':'results_register_confirm'});
   }
 
+  const highBack=data.match(/^rr:step-back:([A-Za-z0-9_-]{6,24}):(h|a)$/);
+  if(highBack){
+    const n=highBack[1];
+    const side=highBack[2]==='h'?'HOME':'AWAY';
+    const session=await sessionFor(env.DB,actorId,n);
+    const expected=side==='HOME'?'HOME_HIGH':'AWAY_HIGH';
+    if(!session||session.state!==expected) return stale(env,callback);
+    const match=await scopedMatch(env.DB,context,session.match_id);
+    if(!match) return stale(env,callback);
+    await env.DB.prepare('UPDATE telegram_result_register_sessions SET state=?,updated_at=? WHERE telegram_user_id=? AND nonce=? AND state=?')
+      .bind(side==='HOME'?'HOME_SCORE':'AWAY_SCORE',new Date().toISOString(),actorId,n,expected).run();
+    await answer(env,callback.id,'Volver');
+    await showScorePicker(env,chatId,surface,match,session.series_code,side,n,Number(session.home_score));
+    return json({ok:true,handled:'results_register_high_back'});
+  }
+
   const backHome=data.match(/^rr:back-home:([A-Za-z0-9_-]{6,24})$/);
   if(backHome){
     const n=backHome[1];
@@ -194,10 +213,10 @@ export async function handleResultsRegisterRequest(request,env){
     if(!session) return stale(env,callback);
     const match=await scopedMatch(env.DB,context,session.match_id);
     if(!match) return stale(env,callback);
-    await env.DB.prepare("UPDATE telegram_result_register_sessions SET state='HOME_SCORE',home_score=NULL,away_score=NULL,updated_at=? WHERE telegram_user_id=? AND nonce=?")
+    await env.DB.prepare("UPDATE telegram_result_register_sessions SET state='HOME_SCORE',away_score=NULL,updated_at=? WHERE telegram_user_id=? AND nonce=?")
       .bind(new Date().toISOString(),actorId,n).run();
-    await answer(env,callback.id,'Goles local');
-    await showScorePicker(env,chatId,surface,match,session.series_code,'HOME',n,null);
+    await answer(env,callback.id,'Volver');
+    await showScorePicker(env,chatId,surface,match,session.series_code,'HOME',n,Number(session.home_score));
     return json({ok:true,handled:'results_register_back_home'});
   }
 
@@ -209,8 +228,8 @@ export async function handleResultsRegisterRequest(request,env){
     const match=await scopedMatch(env.DB,context,session.match_id);
     if(!match) return stale(env,callback);
     await clearSession(env.DB,actorId,n);
-    await answer(env,callback.id,'Partido');
-    await showMatchDashboard(env,chatId,context,actorId,match,surface,'↩️ Serie sin cambios.');
+    await answer(env,callback.id,'Volver');
+    await showMatchDashboard(env,chatId,context,actorId,match,surface,'↩️ Volviste al partido. No había marcador confirmado en esta serie.');
     return json({ok:true,handled:'results_register_back_match'});
   }
 
@@ -237,7 +256,7 @@ export async function handleResultsRegisterRequest(request,env){
     await clearSession(env.DB,actorId,n);
     await answer(env,callback.id,'Serie cancelada');
     if(!match) return stale(env,callback);
-    await showMatchDashboard(env,chatId,context,actorId,match,surface,'↩️ Serie cancelada. Los resultados ya guardados no cambiaron.');
+    await showMatchDashboard(env,chatId,context,actorId,match,surface,'↩️ Serie cancelada. Sólo se descartó el trabajo no confirmado de esta serie.');
     return json({ok:true,handled:'results_register_series_cancel'});
   }
 
@@ -290,7 +309,7 @@ async function showDates(env,chatId,ctx,messageId=null){
   const rounds=q.results||[];
   rounds.sort((a,b)=>Number(a.round_no===3?-1000:a.round_no)-Number(b.round_no===3?-1000:b.round_no));
   const rows=rounds.map(r=>[{text:`⚽ ${r.round_label||`Fecha ${r.round_no}`}`,callback_data:`rr:date:${r.round_no}`}]);
-  rows.push([{text:'🏠 Inicio',callback_data:'tp:home'}]);
+  rows.push([navigationButton(NAVIGATION_ACTION.BACK,'nav:back')]);
   await render(env,chatId,messageId,'📝 REGISTRAR RESULTADOS\n\nSelecciona la fecha:',{inline_keyboard:rows});
 }
 
@@ -299,7 +318,7 @@ async function showRound(env,chatId,ctx,roundNo,messageId=null,notice=null){
     ? await env.DB.prepare(`SELECT * FROM matches WHERE competition_id=? AND round_no=? AND (home_id=? OR away_id=?) ORDER BY group_id,match_id`).bind(COMPETITION_ID,roundNo,ctx.scopeClub,ctx.scopeClub).all()
     : await env.DB.prepare('SELECT * FROM matches WHERE competition_id=? AND round_no=? ORDER BY group_id,match_id').bind(COMPETITION_ID,roundNo).all();
   const rows=(q.results||[]).map(m=>[{text:`${m.home_name} — ${m.away_name}`,callback_data:`rr:match:${m.match_id}`}]);
-  rows.push([{text:'⬅️ Fechas',callback_data:'rr:dates'}],[{text:'❌ Salir',callback_data:'rr:cancel-menu'}]);
+  rows.push([{text:'⬅️ Volver a fechas',callback_data:'rr:dates'}]);
   const head=notice?`${notice}\n\n`:'';
   await render(env,chatId,messageId,`${head}📅 FECHA ${roundNo}\n\nSelecciona el partido que vas a completar:`,{inline_keyboard:rows});
 }
@@ -335,7 +354,7 @@ async function showMatchDashboard(env,chatId,ctx,actorId,match,messageId=null,no
 
   const rows=[[buttons[0],buttons[1]],[buttons[2],buttons[3]]];
   rows.push([{text:'✅ Terminar carga del partido',callback_data:`rr:finish:${match.match_id}`}]);
-  rows.push([{text:`⬅️ ${match.round_label||`Fecha ${match.round_no}`}`,callback_data:`rr:date:${match.round_no}`}],[{text:'❌ Salir',callback_data:'rr:cancel-menu'}]);
+  rows.push([{text:`⬅️ Volver a ${match.round_label||`Fecha ${match.round_no}`}`,callback_data:`rr:date:${match.round_no}`}]);
   const prefix=notice?`${notice}\n\n`:'';
   const text=`${prefix}⚽ ${match.round_label||`Fecha ${match.round_no}`}\n${match.home_name} — ${match.away_name}\n\nRESULTADOS DEL PARTIDO · ${complete}/4 con dato\n\n${lines.join('\n')}\n\nSelecciona una serie para completar o revisar.`;
   await render(env,chatId,messageId,text,{inline_keyboard:rows});
@@ -347,9 +366,11 @@ async function showScorePicker(env,chatId,messageId,match,seriesCode,side,n,home
   const prefix=isHome?'h':'a';
   const buttons=[[0,1,2,3],[4,5,6,7]].map(xs=>xs.map(v=>({text:String(v),callback_data:`rr:${prefix}:${n}:${v}`})));
   buttons.push([{text:'8+',callback_data:`rr:${prefix}:${n}:more`}]);
-  buttons.push([{text:isHome?'⬅️ Partido':'⬅️ Local',callback_data:isHome?`rr:back-series:${n}`:`rr:back-home:${n}`}],[{text:'❌ Cancelar serie',callback_data:`rr:cancel:${n}`}]);
-  const marker=isHome?`${match.home_name} ? — ? ${match.away_name}`:`${match.home_name} ${homeScore} — ? ${match.away_name}`;
-  const text=`⚽ ${match.home_name} — ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n\n${isHome?'🏠':'🚗'} Goles de ${name}\n\nMarcador: ${marker}`;
+  buttons.push([{text:isHome?'⬅️ Volver al partido':'⬅️ Volver al local',callback_data:isHome?`rr:back-series:${n}`:`rr:back-home:${n}`}],[{text:'❌ Cancelar serie',callback_data:`rr:cancel:${n}`}]);
+  const currentHome=homeScore===null||homeScore===undefined?'?':Number(homeScore);
+  const marker=isHome?`${match.home_name} ${currentHome} — ? ${match.away_name}`:`${match.home_name} ${currentHome} — ? ${match.away_name}`;
+  const current=isHome&&homeScore!==null&&homeScore!==undefined?`\nValor actual: ${Number(homeScore)}`:'';
+  const text=`⚽ ${match.home_name} — ${match.away_name}\nSerie: ${SERIES_LABEL[seriesCode]}\n\n${isHome?'🏠':'🚗'} Goles de ${name}${current}\n\nMarcador: ${marker}`;
   await render(env,chatId,messageId,text,{inline_keyboard:buttons});
 }
 
@@ -361,7 +382,7 @@ async function showHighStepper(env,chatId,messageId,match,session,n,side){
   await render(env,chatId,messageId,text,{inline_keyboard:[
     [{text:'➖',callback_data:`rr:step:${n}:${prefix}:dec`},{text:'➕',callback_data:`rr:step:${n}:${prefix}:inc`}],
     [{text:`✅ Usar ${score}`,callback_data:`rr:step:${n}:${prefix}:ok`}],
-    [{text:'❌ Cancelar serie',callback_data:`rr:cancel:${n}`}]
+    [{text:'⬅️ Volver',callback_data:`rr:step-back:${n}:${prefix}`}],[{text:'❌ Cancelar serie',callback_data:`rr:cancel:${n}`}]
   ]});
 }
 
@@ -381,7 +402,8 @@ async function clearSession(db,actorId,n=null){return n?db.prepare('DELETE FROM 
 async function stale(env,callback){if(callback)await answer(env,callback.id,'Acción vencida. El estado no cambió.');return json({ok:true,handled:'results_register_stale'});}
 async function denyScope(env,chatId,callback,messageId){if(callback)await answer(env,callback.id,'Fuera de alcance');await render(env,chatId,messageId,'🔒 Ese partido no está disponible para tu autorización.',homeKeyboard());return json({ok:true,handled:'results_register_scope_denied'});}
 function makeNonce(){return `${Date.now().toString(36)}${crypto.getRandomValues(new Uint16Array(1))[0].toString(36)}`.slice(-12);}
-function homeKeyboard(){return {inline_keyboard:[[{text:'📝 Registrar resultados',callback_data:'rr:dates'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]};}
+function homeKeyboard(){return {inline_keyboard:[[navigationButton(NAVIGATION_ACTION.BACK,'nav:back')],[navigationButton(NAVIGATION_ACTION.HOME,'tp:home')]]};}
+function backHomeKeyboard(){return {inline_keyboard:[[navigationButton(NAVIGATION_ACTION.BACK,'nav:back')],[navigationButton(NAVIGATION_ACTION.HOME,'tp:home')]]};}
 
 async function answer(env,id,text){if(!id)return;await tg(env,'answerCallbackQuery',{callback_query_id:id,text}).catch(()=>{});}
 async function render(env,chatId,messageId,text,replyMarkup){
