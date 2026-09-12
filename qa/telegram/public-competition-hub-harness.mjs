@@ -132,6 +132,18 @@ try{
   assert.match(nextCall.target,/botqa-next-token\/sendMessage$/);
   console.log('PASS canonical Telegram adapter reuses the same hub capability semantics');
 
+  response=await dispatch('p3:public',{next:true});
+  assert.ok(response);
+  body=await response.json();
+  assert.equal(body.handled,'public_competition_hub');
+  assert.equal(body.entry,'p3:public');
+  assert.equal(body.channel_role,'CANONICAL');
+  const resultsPublicEntry=calls.findLast(x=>x.method==='sendMessage');
+  const resultsPublicButtons=resultsPublicEntry.body.reply_markup.inline_keyboard.flat();
+  assert.ok(resultsPublicButtons.some(x=>x.callback_data==='tp:public-results'));
+  assert.ok(resultsPublicButtons.some(x=>x.callback_data==='tp:public-standings'));
+  console.log('PASS results-screen Público button lands on canonical hub with Results + Standings');
+
   const bad=new Request('https://qa.invalid/webhook/telegram',{
     method:'POST',
     headers:{'content-type':'application/json','x-telegram-bot-api-secret-token':'wrong'},

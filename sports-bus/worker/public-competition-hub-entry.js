@@ -103,7 +103,7 @@ export async function handlePublicCompetitionHubRequest(request,env){
   try{update=await request.clone().json();}catch{return null;}
   const callback=update?.callback_query;
   const data=String(callback?.data||'');
-  if(!['tp:public','tp:public-standings'].includes(data)) return null;
+  if(!['tp:public','p3:public','tp:public-standings'].includes(data)) return null;
 
   const chatId=callback?.message?.chat?.id;
   if(!callback?.from?.id||!chatId) return null;
@@ -113,7 +113,7 @@ export async function handlePublicCompetitionHubRequest(request,env){
   if(context?.error) return json({ok:false,error:context.error},503);
   if(!context) return null;
 
-  if(data==='tp:public'){
+  if(data==='tp:public'||data==='p3:public'){
     await answer(context.token,callback.id,'Público');
     await send(
       context.token,
@@ -127,7 +127,7 @@ export async function handlePublicCompetitionHubRequest(request,env){
         [{text:'🏠 Volver',callback_data:'tp:home'}]
       ]}
     );
-    return json({ok:true,handled:'public_competition_hub',channel_role:context.channel_role});
+    return json({ok:true,handled:'public_competition_hub',channel_role:context.channel_role,entry:data});
   }
 
   await answer(context.token,callback.id,'Tablas de posiciones');
