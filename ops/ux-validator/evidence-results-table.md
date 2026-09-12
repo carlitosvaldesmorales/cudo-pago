@@ -1,18 +1,23 @@
 # Evidencia humana — resultados públicos / Telegram iOS
 
-## Observación E2E vigente
+## Secuencia de evidencia recuperada
 
-- En `@FutbolChepicaBot`, `/resultados` llega a una vista compacta de un solo partido.
-- La vista muestra cuatro series del partido seleccionado, pero obliga a navegar para consultar los demás partidos/resultados.
-- En la captura iOS, las etiquetas `3ª`, `2ª`, `Senior`, `1ª` tienen longitudes distintas y la presentación de los marcadores no se percibe como una tabla alineada.
+1. La primera experiencia V3 mostraba un solo partido/fecha como camino principal. Fue **RECHAZADA** porque obligaba a navegar para descubrir los demás resultados.
+2. Se pidió ver **todos los resultados** en la vista principal y una **tabla/matriz visualmente alineada**.
+3. PR #22 materializó la matriz global.
+4. PR #23 documentó explícitamente que esa matriz **ya había sido aceptada visualmente** y sólo corrigió el solapamiento del control nativo de Telegram.
+5. PR #24 conservó la misma matriz y reemplazó `<pre>` por dos líneas `<code>` de ancho fijo porque el control `</>` ensuciaba la vista en Telegram iOS.
+6. La revisión actual confirma que reabrir esta decisión como DRAFT fue una regresión de autoridad de producto. La tarea vigente es restaurar el runtime aprobado, no diseñar una UX nueva.
 
-## Feedback humano explícito
+## Requisito humano vigente
 
-- Aceptación UX: **RECHAZADA**.
-- Necesidad declarada: ver **todos los resultados**, no solamente un partido por pantalla.
-- Necesidad declarada: una **tabla/matriz visualmente alineada**, limpia y bonita.
-- Los filtros pueden existir, pero no deben reemplazar la visión global de resultados como camino principal.
+- Ver **todos los resultados verificados** como vista principal.
+- Mantener una **tabla/matriz visualmente alineada**, limpia y compacta.
+- Usar `<code>` inline monoespaciado y **no `<pre>`**, para evitar el control nativo de copia/código de Telegram iOS.
+- Los filtros pueden existir, pero son secundarios y no reemplazan la visión global.
+- `/resultados` conserva la misma semántica independientemente del bot/slot técnico.
+- `📋 Resultados registrados` permanece como superficie administrativa explícita y no sustituye la consulta pública.
 
-## Restricción de evidencia
+## Autoridad
 
-Esta evidencia describe únicamente lo observado y solicitado en el E2E humano. No certifica el nuevo diseño ni sustituye la validación visual final en Telegram iOS.
+La aceptación visual histórica de la matriz no queda anulada por una migración blue/green, un refactor arquitectónico ni un validador automatizado. Los validadores deben comprobar no-regresión contra la decisión humana ya aceptada; no pueden volver a colocarla en estado PENDING.
