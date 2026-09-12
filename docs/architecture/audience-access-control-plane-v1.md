@@ -30,6 +30,8 @@ AUTHORITY MATERIALIZER
 
 La semántica de acceso es común. El almacenamiento y la forma de materializar la autoridad pueden ser distintos porque representan modelos de autorización distintos.
 
+Un actor del plano de control puede administrar una audiencia sin pertenecer a ella. Por ejemplo, un `SUPER_ADMIN` puede revisar y aprobar el acceso a Chépica Play, pero esa facultad administrativa no lo convierte automáticamente en `MEDIA_PARTNER`. Para consumir la audiencia restringida debe cumplir el mismo modelo de autorización declarado por esa audiencia.
+
 ## Registro canónico
 
 La fuente canónica es:
@@ -67,8 +69,10 @@ El menú raíz de Telegram deriva directamente de ese registro. No existe una se
 - persistencia del request: `partner_access_requests`
 - scope: competencia `ANFA-CHEPICA-2026`
 - capacidades: `READ_COMPETITION` + `OBSERVE_RESULT`
+- `control_plane_bypass: false`
 - admite además invitación individual existente
 - la autoridad sólo se materializa después de aprobación o claim válido
+- `SUPER_ADMIN` / `PLATFORM_OPERATOR` pueden administrar solicitudes, pero no entran como Chépica Play sin un grant explícito
 
 ## Invariantes
 
@@ -100,6 +104,10 @@ Crear una solicitud sólo materializa intención y estado `PENDING`; no crea aut
 
 La autoridad se materializa sólo después de una decisión de aprobación válida por un actor autorizado.
 
+`CONTROL_PLANE_AUTHORITY_NEQ_SCOPED_AUDIENCE_MEMBERSHIP`
+
+Ser `SUPER_ADMIN`, `PLATFORM_OPERATOR` o tener capacidad de administrar accesos no satisface por sí mismo una policy `SCOPED_GRANT`. La pertenencia a esa audiencia exige el grant explícito declarado por la policy. El administrador ve el mismo estado `REQUESTABLE/PENDING/AUTHORIZED` que cualquier otra identidad para su propia pertenencia.
+
 `SAME_STATE_MACHINE_DIFFERENT_AUTHORITY_MATERIALIZERS`
 
 Las audiencias restringidas comparten la máquina semántica `REQUESTABLE → PENDING → APPROVED/REJECTED`, pero cada modelo de autorización conserva su materializador correcto. Dirigentes puede materializar un rol; Chépica Play un grant de scope.
@@ -120,8 +128,9 @@ Una audiencia restringida sólo puede considerarse consumible cuando:
 - tiene modelo de autorización explícito;
 - entrar no concede autoridad;
 - una identidad no autorizada recibe una acción resolutiva, no un callejón sin salida;
+- una autoridad del plano de control no obtiene membresía implícita en una audiencia `SCOPED_GRANT`;
 - la solicitud permanece sin privilegios;
-- un aprobador autorizado puede revisar y decidir;
+- un aprobador autorizado puede revisar y decidir sin necesidad de pertenecer a la audiencia que administra;
 - la aprobación materializa exactamente la autoridad declarada;
 - rechazo/cancelación no crean autoridad;
 - QA determinista verifica policy + adaptadores;
