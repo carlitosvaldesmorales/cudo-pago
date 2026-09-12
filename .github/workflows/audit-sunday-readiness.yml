@@ -24,6 +24,7 @@ jobs:
         run: npm install --no-save wrangler@latest
         working-directory: sports-bus
       - name: Read-only operational state
+        id: state
         working-directory: sports-bus
         shell: bash
         run: |
@@ -38,15 +39,23 @@ jobs:
             (SELECT COUNT(*) FROM match_series_results r JOIN matches m ON m.match_id=r.match_id WHERE m.competition_id='ANFA-CHEPICA-2026' AND r.validation_status='VERIFIED') AS verified_series_results;"
           npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "$SQL" > /tmp/readiness.json
           cat /tmp/readiness.json
-          node <<'NODE'
+          node <<'NODE' > /tmp/state.env
           const fs=require('fs');
           const payload=JSON.parse(fs.readFileSync('/tmp/readiness.json','utf8'));
           const r=payload[0]?.results?.[0];
           if(!r) throw new Error('missing_readiness_row');
-          console.log('READINESS_STATE='+JSON.stringify(r));
           if(Number(r.round3_matches)!==5) throw new Error('round3_fixture_not_ready');
           if(Number(r.round3_byes)!==1) throw new Error('round3_bye_not_ready');
+          console.log(`active=${Number(r.active_chepica_play_identities)}`);
+          console.log(`valid_invites=${Number(r.valid_pending_invites)}`);
+          console.log(`expired_invites=${Number(r.expired_pending_invites)}`);
+          console.log(`round3_matches=${Number(r.round3_matches)}`);
+          console.log(`round3_byes=${Number(r.round3_byes)}`);
+          console.log(`pending_submissions=${Number(r.pending_result_submissions)}`);
+          console.log(`verified_series=${Number(r.verified_series_results)}`);
           NODE
+          cat /tmp/state.env
+          cat /tmp/state.env >> "$GITHUB_OUTPUT"
       - name: Runtime read projections
         shell: bash
         run: |
@@ -74,27 +83,18 @@ jobs:
           if(!s.ok||s.contract!=='public-standings-v1') throw new Error('standings_runtime_failed');
           console.log('RUNTIME_PROJECTIONS=PASS');
           NODE
-      - name: Classify human gate
-        working-directory: sports-bus
-        shell: bash
+      - name: READY — Chépica Play has an active real identity
+        if: steps.state.outputs.active != '0'
+        run: echo "A real Chépica Play Telegram identity is already active."
+      - name: HUMAN GATE — real Chépica Play person must claim valid Telegram invite
+        if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites != '0'
         run: |
-          set -euo pipefail
-          SQL="SELECT
-            (SELECT COUNT(*) FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND active=1) AS active_identities,
-            (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at>datetime('now')) AS valid_invites;"
-          npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "$SQL" > /tmp/gate.json
-          node <<'NODE'
-          const fs=require('fs');
-          const p=JSON.parse(fs.readFileSync('/tmp/gate.json','utf8'));
-          const r=p[0]?.results?.[0];
-          if(!r) throw new Error('missing_gate_row');
-          if(Number(r.active_identities)>0){
-            console.log('FINAL_STATE=READY_FOR_REAL_CHEPICA_PLAY_IDENTITY');
-          } else if(Number(r.valid_invites)>0){
-            console.log('FINAL_STATE=BLOCKED_BY_HUMAN');
-            console.log('HUMAN_GATE=A real Chepica Play person must claim one valid single-use Telegram invitation from their own Telegram identity.');
-          } else {
-            console.log('FINAL_STATE=BLOCKED_BY_HUMAN');
-            console.log('HUMAN_GATE=An authorized administrator must create a fresh Chépica Play single-use Telegram invitation, then a real Chépica Play person must claim it.');
-          }
-          NODE
+          echo "BLOCKED_BY_HUMAN"
+          echo "A valid single-use invitation exists, but no real Chépica Play Telegram identity is active."
+          echo "The irreducible next action is for a real Chépica Play person to claim that invitation from their own Telegram account."
+      - name: HUMAN GATE — admin must create fresh invite, then real person must claim it
+        if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites == '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "No active Chépica Play identity and no valid pending invitation exist."
+          echo "An authorized administrator must create a fresh single-use invitation, then a real Chépica Play person must claim it."
