@@ -11,28 +11,26 @@ const CHAMPIONSHIP_META=Object.freeze({
     icon:'👴',
     title:'CAMPEONATO SENIOR',
     short_label:'Senior',
-    subtitle:'Campeonato independiente · 3 pts máx. por jornada'
+    subtitle:'Campeonato independiente · no suma a los 9 pts del Principal'
   })
 });
 
-function availableGroupIds(standings){
-  return (standings?.groups||[])
-    .map(group=>String(group.group_id||''))
-    .filter(Boolean);
+function resolveChampionshipCode(requestedCode){
+  return CHAMPIONSHIP_META[requestedCode]?requestedCode:'PRINCIPAL';
 }
 
-function resolveGroup(standings,requestedGroupId){
-  const groups=standings?.groups||[];
-  if(!groups.length) return null;
-  const requested=String(requestedGroupId||'');
-  return groups.find(group=>String(group.group_id)===requested)||groups[0];
-}
-
-function resolveChampionship(group,requestedCode){
-  const requested=CHAMPIONSHIP_META[requestedCode]?requestedCode:'PRINCIPAL';
-  return group?.championships?.find(item=>item.championship_code===requested)
-    ||group?.championships?.[0]
-    ||null;
+function rowsForChampionship(group,championshipCode){
+  const championship=group?.championships?.find(item=>item.championship_code===championshipCode);
+  if(!championship) return [];
+  return (championship.rows||[]).map(row=>({
+    position:Number(row.position),
+    team_id:String(row.team_id||''),
+    team_name:String(row.team_name||''),
+    points:Number(row.points||0),
+    adjustment_points:Number(row.adjustment_points||0),
+    tied:row.tiebreak_status==='PLAYOFF_REQUIRED',
+    tiebreak_status:String(row.tiebreak_status||'NONE')
+  }));
 }
 
 export function buildPublicHubPresentation(){
@@ -50,57 +48,46 @@ export function buildPublicHubPresentation(){
   };
 }
 
-export function buildStandingsPresentation(standings,{championshipCode='PRINCIPAL',groupId=null}={}){
-  const group=resolveGroup(standings,groupId);
-  if(!group) return null;
+export function buildStandingsPresentation(standings,{championshipCode='PRINCIPAL'}={}){
+  const resolvedCode=resolveChampionshipCode(championshipCode);
+  const meta=CHAMPIONSHIP_META[resolvedCode];
+  const groups=(standings?.groups||[])
+    .map(group=>{
+      const rows=rowsForChampionship(group,resolvedCode);
+      if(!rows.length) return null;
+      return {
+        group_id:String(group.group_id||''),
+        rows,
+        has_unresolved_tie:rows.some(row=>row.tied),
+        has_adjustments:rows.some(row=>row.adjustment_points!==0)
+      };
+    })
+    .filter(Boolean);
 
-  const championship=resolveChampionship(group,championshipCode);
-  if(!championship) return null;
-
-  const meta=CHAMPIONSHIP_META[championship.championship_code]||CHAMPIONSHIP_META.PRINCIPAL;
-  const rows=(championship.rows||[]).map(row=>({
-    position:Number(row.position),
-    team_id:String(row.team_id||''),
-    team_name:String(row.team_name||''),
-    points:Number(row.points||0),
-    adjustment_points:Number(row.adjustment_points||0),
-    tied:row.tiebreak_status==='PLAYOFF_REQUIRED',
-    tiebreak_status:String(row.tiebreak_status||'NONE')
-  }));
-
-  const unresolvedTie=rows.some(row=>row.tied);
-  const adjustments=rows.filter(row=>row.adjustment_points!==0);
-  const groups=availableGroupIds(standings);
+  if(!groups.length) return null;
 
   return {
-    screen_id:'STANDINGS_GROUP',
+    screen_id:'STANDINGS_CHAMPIONSHIP',
     competition_id:String(standings.competition_id||''),
-    championship_code:championship.championship_code,
+    championship_code:resolvedCode,
     championship_title:meta.title,
     championship_icon:meta.icon,
     championship_short_label:meta.short_label,
-    group_id:String(group.group_id),
     subtitle:meta.subtitle,
-    rows,
+    groups,
     status_text:'Sólo resultados verificados modifican esta clasificación.',
-    tie_notice:unresolvedTie
+    tie_notice:groups.some(group=>group.has_unresolved_tie)
       ? 'Hay posiciones empatadas pendientes de definición según el reglamento.'
       : null,
-    adjustment_notice:adjustments.length
-      ? 'La tabla incluye ajustes administrativos explícitos.'
+    adjustment_notice:groups.some(group=>group.has_adjustments)
+      ? 'La clasificación incluye ajustes administrativos explícitos.'
       : null,
     navigation:{
       championships:Object.values(CHAMPIONSHIP_META).map(item=>({
         code:item.code,
         label:item.short_label,
-        active:item.code===championship.championship_code,
-        callback_data:`tp:standings:${item.code}:${String(group.group_id)}`
-      })),
-      groups:groups.map(id=>({
-        id,
-        label:`Grupo ${id}`,
-        active:id===String(group.group_id),
-        callback_data:`tp:standings:${championship.championship_code}:${id}`
+        active:item.code===resolvedCode,
+        callback_data:`tp:standings:${item.code}`
       })),
       results:{label:'⚽ Resultados',callback_data:'tp:public-results'},
       public:{label:'🌐 Público',callback_data:'tp:public'}
@@ -113,7 +100,8 @@ export const PRESENTATION_MODEL_CONTRACT=Object.freeze({
   telegram:{
     one_screen_one_primary_context:true,
     standings_one_championship_per_screen:true,
-    standings_one_group_per_screen:true,
+    standings_all_groups_in_championship_screen:true,
+    standings_group_navigation:false,
     persistent_context_navigation:true
   }
 });
