@@ -25,6 +25,20 @@ CHANNEL RENDERER
 Telegram · Web · otros canales
 ```
 
+Para una entrada raíz existe una decisión anterior a la selección de capacidad:
+
+```text
+PERSONA
+  ↓
+AUDIENCIA / CONTEXTO DE ACCESO
+  ↓
+CAPACIDADES DISPONIBLES
+  ↓
+POLICY / AUTORIZACIÓN
+```
+
+El contrato específico está en `docs/architecture/audience-first-entry-adn-v1.md`.
+
 ## Invariantes
 
 `HUMAN_OUTPUT_REQUIRES_PRESENTATION_MODEL`
@@ -38,6 +52,18 @@ Dato correcto y runtime correcto no equivalen a experiencia terminada. Una capac
 `ONE_SCREEN_ONE_PRIMARY_CONTEXT`
 
 Una pantalla debe tener un contexto primario identificable. El contexto primario se define por la intención humana, no por la granularidad interna del dato. En `STANDINGS-READ`, el contexto primario público es el **campeonato**; sus grupos son secciones naturales de esa misma vista y no requieren navegación separada.
+
+`ROOT_MENU_REPRESENTS_AUDIENCES_NOT_CAPABILITIES`
+
+La pantalla raíz no es un catálogo de módulos. Representa los contextos humanos estables de acceso y deriva después hacia capacidades canónicas.
+
+`AUDIENCE_CONTEXT_PRECEDES_CAPABILITY_SELECTION`
+
+En la raíz, primero se resuelve si la persona entra como Público general, Dirigentes o Chépica Play. Esa elección sólo organiza navegación; no concede permisos.
+
+`AUDIENCE_ENTRY_NEQ_AUTHORIZATION`
+
+La selección de audiencia nunca reemplaza RBAC, scopes, membresías ni policies de las capacidades.
 
 `CHANNEL_RENDERER_NEQ_DOMAIN_POLICY`
 
@@ -54,6 +80,16 @@ La presentación debe respetar las limitaciones reales del canal y del dispositi
 `TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED`
 
 Cuando una interacción ocurre sobre un mensaje con botones inline, la navegación debe preferir `editMessageText`/`editMessageReplyMarkup` en vez de acumular mensajes nuevos.
+
+## Contrato raíz Telegram
+
+La raíz canónica de **@FutbolChepicaBot** contiene exactamente:
+
+- 🌐 Público general
+- 🔐 Dirigentes
+- 🎥 Chépica Play
+
+`/start`, `/portal`, `/inicio`, `/menu` y `tp:home` deben converger a esta misma representación. Las tres entradas reutilizan flujos existentes; el root no implementa reglas deportivas ni de autorización.
 
 ## Contrato de tablas en Telegram
 
