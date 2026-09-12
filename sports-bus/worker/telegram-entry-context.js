@@ -104,7 +104,8 @@ export async function prepareTelegramEntryContext(request,env){
     'tp:leaders',
     'mp:home',
     'nav:back',
-    'rr:cancel-menu'
+    'rr:cancel-menu',
+    'p3:public'
   ].includes(data)||/^\/informar(?:@\w+)?$/i.test(text);
   if(!relevant) return {request,response:null};
 
@@ -137,7 +138,7 @@ export async function prepareTelegramEntryContext(request,env){
     return {request,response:null};
   }
 
-  if(data==='nav:back'||data==='rr:cancel-menu'){
+  if(data==='nav:back'||data==='rr:cancel-menu'||data==='p3:public'){
     const contextCode=await activeContext(env.DB,actorId);
     const parent=audienceHomeCallback(contextCode);
     if(parent==='tp:home') await clearContext(env.DB,actorId);
