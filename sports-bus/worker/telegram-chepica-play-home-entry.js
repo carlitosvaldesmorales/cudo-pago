@@ -86,14 +86,6 @@ async function send(token,chatId,text,inlineKeyboard=null){
   await telegram(token,'sendMessage',body);
 }
 
-function canUsePrivilegedContext(reporter){
-  return !!reporter
-    && Number(reporter.active)===1
-    && reporter.trust_level==='VERIFIED'
-    && ['SUPER_ADMIN','PLATFORM_OPERATOR'].includes(reporter.role)
-    && hasCapability(reporter,CAPABILITY.OBSERVE_RESULT);
-}
-
 function canManageAccess(reporter){
   return !!reporter
     && Number(reporter.active)===1
@@ -146,14 +138,11 @@ async function latestRequest(db,actorId){
     .bind(String(actorId),PARTNER_CODE,COMPETITION_ID).first();
 }
 
-async function showOperationalHome(token,update,{linked,privilegedContext,reporter,channelRole}){
-  const identityNote=privilegedContext&&!linked
-    ? '\n\nModo Chépica Play. Tu identidad administrativa real se conserva en la trazabilidad.'
-    : '';
+async function showOperationalHome(token,update,{linked,reporter,channelRole}){
   const mode=await present(
     token,
     update,
-    `🎥 CHÉPICA PLAY\n\nElige qué necesitas hacer:${identityNote}`,
+    '🎥 CHÉPICA PLAY\n\nElige qué necesitas hacer:',
     [
       [{text:'📝 Ingresar resultados',callback_data:'cp:observe'}],
       [{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],
@@ -166,7 +155,7 @@ async function showOperationalHome(token,update,{linked,privilegedContext,report
     linked,
     entry_context:'CHEPICA_PLAY',
     actor_role:reporter?.role||null,
-    access_mode:linked?'PARTNER_IDENTITY':'PRIVILEGED_CONTEXT',
+    access_mode:'PARTNER_IDENTITY',
     capabilities:['OBSERVE_RESULT','READ_COMPETITION'],
     presentation_mode:mode,
     channel_role:channelRole,
@@ -288,11 +277,10 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
   if(update?.callback_query) await answer(context.token,update.callback_query.id,PARTNER_NAME);
 
   const linked=membership?.partner_code===PARTNER_CODE;
-  const privilegedContext=canUsePrivilegedContext(reporter);
 
   if(data==='cp:access-request'){
-    if(linked||privilegedContext){
-      return showOperationalHome(context.token,update,{linked,privilegedContext,reporter,channelRole:context.channel_role});
+    if(linked){
+      return showOperationalHome(context.token,update,{linked,reporter,channelRole:context.channel_role});
     }
     let pending=await pendingRequest(env.DB,actorId);
     if(!pending){
@@ -318,8 +306,8 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
   }
 
   if(data==='cp:access-status'){
-    if(linked||privilegedContext){
-      return showOperationalHome(context.token,update,{linked,privilegedContext,reporter,channelRole:context.channel_role});
+    if(linked){
+      return showOperationalHome(context.token,update,{linked,reporter,channelRole:context.channel_role});
     }
     const row=await latestRequest(env.DB,actorId);
     if(!row||row.status==='REJECTED'||row.status==='CANCELLED'){
@@ -328,7 +316,7 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
     if(row.status==='APPROVED'){
       const refreshed=await getActivePartnerMembership(env.DB,actorId,COMPETITION_ID);
       if(refreshed?.partner_code===PARTNER_CODE){
-        return showOperationalHome(context.token,update,{linked:true,privilegedContext:false,reporter,channelRole:context.channel_role});
+        return showOperationalHome(context.token,update,{linked:true,reporter,channelRole:context.channel_role});
       }
     }
     return showAccessGate(context.token,update,row.status==='PENDING'?row:null,context.channel_role);
@@ -435,8 +423,8 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
     return json({ok:true,handled:'chepica_play_access_rejected',request_id:row.request_id,target_id:row.telegram_user_id,permission_change:false,identity_change:false});
   }
 
-  if(linked||privilegedContext){
-    return showOperationalHome(context.token,update,{linked,privilegedContext,reporter,channelRole:context.channel_role});
+  if(linked){
+    return showOperationalHome(context.token,update,{linked,reporter,channelRole:context.channel_role});
   }
 
   return showAccessGate(context.token,update,await pendingRequest(env.DB,actorId),context.channel_role);

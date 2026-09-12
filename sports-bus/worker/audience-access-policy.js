@@ -58,6 +58,7 @@ const POLICIES=Object.freeze([
     cancel_callback:'cp:access-cancel',
     approval_required:true,
     grants_on_entry:false,
+    control_plane_bypass:false,
     persistence_adapter:'partner_access_requests',
     scope_type:'COMPETITION',
     scope_id:'ANFA-CHEPICA-2026',
@@ -74,6 +75,8 @@ export const AUDIENCE_ACCESS_CONTRACT=Object.freeze({
   request_never_grants_authority:true,
   approval_precedes_authority_materialization:true,
   audience_entry_never_materializes_authority:true,
+  scoped_grant_requires_explicit_membership:true,
+  control_plane_authority_never_implies_scoped_audience_membership:true,
   storage_adapter_is_not_access_semantics:true
 });
 
@@ -122,6 +125,9 @@ export function validateAudienceAccessPolicies(policies=POLICIES){
     if(policy.requestable&&!policy.request_callback) errors.push(`request_callback_missing:${policy.id}`);
     if(policy.requestable&&!policy.status_callback) errors.push(`status_callback_missing:${policy.id}`);
     if(policy.authorization_model===AUTHORIZATION_MODEL.NONE) errors.push(`restricted_audience_without_authority_model:${policy.id}`);
+    if(policy.authorization_model===AUTHORIZATION_MODEL.SCOPED_GRANT&&policy.control_plane_bypass!==false){
+      errors.push(`scoped_audience_control_plane_bypass_forbidden:${policy.id}`);
+    }
   }
 
   return errors;

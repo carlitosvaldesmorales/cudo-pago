@@ -100,19 +100,17 @@ try{
   let response=await handleTelegramChepicaPlayHomeRequest(await callback(ADMIN),env);
   assert.equal(response.status,200);
   let body=await response.json();
-  assert.equal(body.handled,'chepica_play_home');
+  assert.equal(body.handled,'chepica_play_access_gate');
   assert.equal(body.linked,false);
-  assert.equal(body.access_mode,'PRIVILEGED_CONTEXT');
-  assert.equal(body.entry_context,'CHEPICA_PLAY');
-  assert.equal(body.actor_role,'SUPER_ADMIN');
+  assert.equal(body.authorization_path,'REQUEST_OR_INVITE');
   assert.equal(body.permission_change,false);
   assert.equal(body.identity_change,false);
   let screen=last('editMessageText');
-  assert.match(screen.body.text,/CHÉPICA PLAY/);
-  assert.match(screen.body.text,/identidad administrativa real se conserva/i);
-  assert.deepEqual(callbacks(screen),['cp:observe','tp:public-results','tp:home']);
-  assert.deepEqual(labels(screen),['📝 Ingresar resultados','⚽ Consultar resultados','🏠 Inicio']);
-  console.log('PASS SUPER_ADMIN enters the Chépica Play UX while preserving real identity');
+  assert.match(screen.body.text,/ACCESO CHÉPICA PLAY/);
+  assert.ok(!callbacks(screen).includes('cp:observe'));
+  assert.ok(callbacks(screen).includes('cp:access-request'));
+  assert.ok(labels(screen).includes('📝 Solicitar autorización'));
+  console.log('PASS SUPER_ADMIN is not an implicit Chépica Play member and sees the same restricted-audience gate');
 
   calls.length=0;
   response=await handleTelegramChepicaPlayHomeRequest(await callback(PUBLIC),env);
@@ -128,7 +126,7 @@ try{
   assert.ok(labels(screen).includes('📝 Solicitar autorización'));
   assert.match(screen.body.text,/debes vincular esta identidad/i);
   assert.match(screen.body.text,/invitación personal/i);
-  console.log('PASS unlinked public identity receives an actionable authorization/linking gate');
+  console.log('PASS every unlinked identity receives the same actionable authorization/linking gate');
 
   let publicGrant=await env.DB.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY' AND active=1").bind(String(PUBLIC.id)).first();
   assert.equal(Number(publicGrant.n),0);
@@ -160,7 +158,7 @@ try{
   assert.match(screen.body.text,/REVISAR ACCESO CHÉPICA PLAY/);
   assert.ok(callbacks(screen).includes(`cp:access-approve:${requestRow.request_id}`));
   assert.ok(callbacks(screen).includes(`cp:access-reject:${requestRow.request_id}`));
-  console.log('PASS authorized admin can review the request');
+  console.log('PASS control-plane administrator can review without being an audience member');
 
   calls.length=0;
   response=await handleTelegramChepicaPlayHomeRequest(await callback(ADMIN,`cp:access-approve:${requestRow.request_id}`),env);
@@ -188,7 +186,7 @@ try{
   assert.equal(body.access_mode,'PARTNER_IDENTITY');
   screen=last('editMessageText');
   assert.deepEqual(callbacks(screen),['cp:observe','tp:public-results','tp:home']);
-  console.log('PASS approved public identity now enters the real Chépica Play two-function home');
+  console.log('PASS approved identity now enters the real Chépica Play two-function home');
 
   calls.length=0;
   response=await handleTelegramChepicaPlayHomeRequest(await callback(MEDIA),env);
@@ -204,11 +202,17 @@ try{
   assert.match(screen.body.text,/CHÉPICA PLAY/);
   assert.deepEqual(callbacks(screen),['cp:observe','tp:public-results','tp:home']);
   assert.deepEqual(labels(screen),['📝 Ingresar resultados','⚽ Consultar resultados','🏠 Inicio']);
-  console.log('PASS linked Chépica Play identity and privileged admin share the same two-function UX');
+  console.log('PASS linked Chépica Play identities share one operational UX');
 
+  calls.length=0;
+  response=await handleTelegramChepicaPlayHomeRequest(await callback(ADMIN),env);
+  body=await response.json();
+  assert.equal(body.handled,'chepica_play_access_gate');
+  assert.equal(body.linked,false);
+  assert.ok(callbacks(last('editMessageText')).includes('cp:access-request'));
   const adminGrant=await env.DB.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY'").bind(String(ADMIN.id)).first();
-  assert.equal(Number(adminGrant.n),0,'entering Chépica Play UX must not create partner identity/grant');
-  console.log('PASS audience/context switch never mutates admin authorization');
+  assert.equal(Number(adminGrant.n),0,'control-plane authority must not imply audience membership');
+  console.log('PASS administrator remains outside the restricted audience until explicitly granted');
 
   console.log('RESULT: PASS');
 }finally{

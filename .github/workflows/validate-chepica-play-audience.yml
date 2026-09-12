@@ -8,6 +8,7 @@ on:
       - fix/chepica-play-audience-gate-v1
       - fix/admin-chepica-play-context-v1
       - fix/chepica-play-access-request-v1
+      - fix/restricted-audience-no-admin-bypass-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -42,6 +43,10 @@ jobs:
           grep -q "Ingresar resultados" sports-bus/worker/telegram-chepica-play-home-entry.js
           grep -q "Consultar resultados" sports-bus/worker/telegram-chepica-play-home-entry.js
           grep -q "callback_data:'cp:observe'" sports-bus/worker/telegram-chepica-play-home-entry.js
+          ! grep -q "privilegedContext" sports-bus/worker/telegram-chepica-play-home-entry.js
+          ! grep -q "canUsePrivilegedContext" sports-bus/worker/telegram-chepica-play-home-entry.js
+          ! grep -q "SUPER_ADMIN.*PLATFORM_OPERATOR" sports-bus/worker/telegram-entry-context.js
+          grep -q "membership?.partner_code==='CHEPICA_PLAY'" sports-bus/worker/telegram-entry-context.js
           grep -q "prepareTelegramEntryContext" sports-bus/canonical-entry.js
           grep -q "telegram:chepica_play" sports-bus/migrations/0025_telegram_entry_context.sql
           grep -q "CREATE TABLE IF NOT EXISTS partner_access_requests" sports-bus/migrations/0026_chepica_play_access_requests.sql
