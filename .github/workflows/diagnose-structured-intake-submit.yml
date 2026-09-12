@@ -1,0 +1,39 @@
+name: Diagnose Structured Intake Submit
+
+on:
+  push:
+    branches: [ops/audit-structured-intake-v1]
+    paths:
+      - '.github/workflows/diagnose-structured-intake-submit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Install Wrangler
+        run: npm install --no-save wrangler@latest
+        working-directory: sports-bus
+      - name: Probe production schema with disposable structured request
+        working-directory: sports-bus
+        shell: bash
+        run: |
+          set -euo pipefail
+          RID="qa-submit-probe-${GITHUB_RUN_ID}"
+          EID="qa-event-${GITHUB_RUN_ID}"
+          cleanup() {
+            npx wrangler d1 execute cudo-sports-event-bus --remote --command "DELETE FROM events WHERE event_id='$EID'; DELETE FROM partner_access_requests WHERE request_id='$RID';" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "PRAGMA table_info(partner_access_requests); PRAGMA table_info(events);" > /tmp/schema.json
+          cat /tmp/schema.json
+          npx wrangler d1 execute cudo-sports-event-bus --remote --json --command "INSERT INTO partner_access_requests (request_id,telegram_user_id,display_name,username,partner_code,requested_role,scope_type,scope_id,status,created_at,declared_name,represented_entity,intake_id,submitted_at) VALUES ('$RID','qa-probe','QA Probe',NULL,'CHEPICA_PLAY','MEDIA_PARTNER','COMPETITION','ANFA-CHEPICA-2026','PENDING',datetime('now'),'QA Probe','QA Institution','qa-intake',datetime('now')); INSERT INTO events (event_id,event_type,occurred_at,received_at,competition_id,season_id,actor_id,actor_name,validation_status,payload_json) VALUES ('$EID','telegram.partner_access.requested',datetime('now'),datetime('now'),'ANFA-CHEPICA-2026','2026','qa-probe','QA Probe','PENDING','{}'); SELECT request_id,status,submitted_at FROM partner_access_requests WHERE request_id='$RID';" > /tmp/probe.json
+          cat /tmp/probe.json
