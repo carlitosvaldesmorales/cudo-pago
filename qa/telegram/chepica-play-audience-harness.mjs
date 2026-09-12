@@ -16,9 +16,9 @@ const env={
   TELEGRAM_BOT_TOKEN_NEXT:'qa-canonical-token'
 };
 
-const ADMIN={id:9962001,first_name:'Admin',last_name:'Global'};
-const MEDIA={id:9962002,first_name:'Persona',last_name:'Chépica Play'};
-const PUBLIC={id:9962003,first_name:'Persona',last_name:'Pública'};
+const ADMIN={id:9962001,first_name:'Admin',last_name:'Global',username:'admin_global'};
+const MEDIA={id:9962002,first_name:'Persona',last_name:'Chépica Play',username:'media_cp'};
+const PUBLIC={id:9962003,first_name:'Persona',last_name:'Pública',username:'public_cp'};
 
 const calls=[];
 const originalFetch=globalThis.fetch;
@@ -53,9 +53,9 @@ async function callback(actor,data='mp:home'){
       'x-telegram-bot-api-secret-token':await sha256Hex(secret)
     },
     body:JSON.stringify({
-      update_id:1,
+      update_id:Math.floor(Math.random()*100000),
       callback_query:{
-        id:`cb-${actor.id}`,
+        id:`cb-${actor.id}-${Date.now()}`,
         from:actor,
         data,
         message:{message_id:77,chat:{id:actor.id,type:'private'}}
@@ -68,8 +68,8 @@ async function seedReporter(actor,role='REPORTER',trust='PROVISIONAL'){
   const now=new Date().toISOString();
   await env.DB.prepare(`INSERT OR REPLACE INTO reporters
     (telegram_user_id,display_name,username,club_id,role,trust_level,active,created_at,updated_at)
-    VALUES (?,?,NULL,NULL,?,?,1,?,?)`)
-    .bind(String(actor.id),`${actor.first_name} ${actor.last_name}`,role,trust,now,now).run();
+    VALUES (?,?,?,NULL,?,?,1,?,?)`)
+    .bind(String(actor.id),`${actor.first_name} ${actor.last_name}`,actor.username||null,role,trust,now,now).run();
 }
 
 async function grantChepicaPlay(actor){
@@ -81,6 +81,7 @@ async function grantChepicaPlay(actor){
 }
 
 function last(method){return calls.findLast(call=>call.method===method);}
+function all(method){return calls.filter(call=>call.method===method);}
 function callbacks(call){
   return (call?.body?.reply_markup?.inline_keyboard||[]).flat().map(button=>button.callback_data).filter(Boolean);
 }
@@ -118,12 +119,76 @@ try{
   body=await response.json();
   assert.equal(body.handled,'chepica_play_access_gate');
   assert.equal(body.linked,false);
+  assert.equal(body.authorization_path,'REQUEST_OR_INVITE');
   assert.equal(body.permission_change,false);
   assert.equal(body.identity_change,false);
   screen=last('editMessageText');
   assert.ok(!callbacks(screen).includes('cp:observe'));
-  assert.ok(!callbacks(screen).includes('obs:dates'));
-  console.log('PASS unlinked public identity does not gain Chépica Play write authority from navigation');
+  assert.ok(callbacks(screen).includes('cp:access-request'));
+  assert.ok(labels(screen).includes('📝 Solicitar autorización'));
+  assert.match(screen.body.text,/debes vincular esta identidad/i);
+  assert.match(screen.body.text,/invitación personal/i);
+  console.log('PASS unlinked public identity receives an actionable authorization/linking gate');
+
+  let publicGrant=await env.DB.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY' AND active=1").bind(String(PUBLIC.id)).first();
+  assert.equal(Number(publicGrant.n),0);
+
+  calls.length=0;
+  response=await handleTelegramChepicaPlayHomeRequest(await callback(PUBLIC,'cp:access-request'),env);
+  body=await response.json();
+  assert.equal(body.handled,'chepica_play_access_requested');
+  assert.equal(body.request_status,'PENDING');
+  assert.ok(body.request_id.startsWith(`cpar-${PUBLIC.id}-`));
+  assert.ok(body.approvers_notified>=1);
+  screen=last('editMessageText');
+  assert.match(screen.body.text,/Estado: PENDIENTE/);
+  assert.ok(callbacks(screen).includes('cp:access-status'));
+  assert.ok(callbacks(screen).includes('cp:access-cancel'));
+  const requestRow=await env.DB.prepare("SELECT * FROM partner_access_requests WHERE telegram_user_id=? AND status='PENDING'").bind(String(PUBLIC.id)).first();
+  assert.ok(requestRow);
+  publicGrant=await env.DB.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY' AND active=1").bind(String(PUBLIC.id)).first();
+  assert.equal(Number(publicGrant.n),0,'requesting access must not grant access');
+  const adminNotifications=all('sendMessage').filter(call=>String(call.body.chat_id)===String(ADMIN.id));
+  assert.ok(adminNotifications.some(call=>callbacks(call).includes(`cp:access-review:${requestRow.request_id}`)));
+  console.log('PASS access request is pending, grants nothing, and notifies an authorized reviewer');
+
+  calls.length=0;
+  response=await handleTelegramChepicaPlayHomeRequest(await callback(ADMIN,`cp:access-review:${requestRow.request_id}`),env);
+  body=await response.json();
+  assert.equal(body.handled,'chepica_play_access_review');
+  screen=last('editMessageText');
+  assert.match(screen.body.text,/REVISAR ACCESO CHÉPICA PLAY/);
+  assert.ok(callbacks(screen).includes(`cp:access-approve:${requestRow.request_id}`));
+  assert.ok(callbacks(screen).includes(`cp:access-reject:${requestRow.request_id}`));
+  console.log('PASS authorized admin can review the request');
+
+  calls.length=0;
+  response=await handleTelegramChepicaPlayHomeRequest(await callback(ADMIN,`cp:access-approve:${requestRow.request_id}`),env);
+  body=await response.json();
+  assert.equal(body.handled,'chepica_play_access_approved');
+  assert.equal(body.permission_change,true);
+  assert.equal(body.identity_change,false);
+  const approved=await env.DB.prepare('SELECT * FROM partner_access_requests WHERE request_id=?').bind(requestRow.request_id).first();
+  assert.equal(approved.status,'APPROVED');
+  publicGrant=await env.DB.prepare("SELECT * FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY' AND active=1").bind(String(PUBLIC.id)).first();
+  assert.ok(publicGrant);
+  assert.equal(publicGrant.role,'MEDIA_PARTNER');
+  assert.deepEqual(JSON.parse(publicGrant.capabilities_json),['READ_COMPETITION','OBSERVE_RESULT']);
+  const publicReporter=await env.DB.prepare('SELECT role,trust_level FROM reporters WHERE telegram_user_id=?').bind(String(PUBLIC.id)).first();
+  assert.equal(publicReporter.role,'REPORTER','partner grant must not overwrite the real base identity');
+  assert.equal(publicReporter.trust_level,'PROVISIONAL');
+  assert.ok(all('sendMessage').some(call=>String(call.body.chat_id)===String(PUBLIC.id)&&/ACCESO CHÉPICA PLAY APROBADO/.test(call.body.text)));
+  console.log('PASS approval creates scoped partner membership without changing base identity');
+
+  calls.length=0;
+  response=await handleTelegramChepicaPlayHomeRequest(await callback(PUBLIC),env);
+  body=await response.json();
+  assert.equal(body.handled,'chepica_play_home');
+  assert.equal(body.linked,true);
+  assert.equal(body.access_mode,'PARTNER_IDENTITY');
+  screen=last('editMessageText');
+  assert.deepEqual(callbacks(screen),['cp:observe','tp:public-results','tp:home']);
+  console.log('PASS approved public identity now enters the real Chépica Play two-function home');
 
   calls.length=0;
   response=await handleTelegramChepicaPlayHomeRequest(await callback(MEDIA),env);
@@ -143,7 +208,7 @@ try{
 
   const adminGrant=await env.DB.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE telegram_user_id=? AND partner_code='CHEPICA_PLAY'").bind(String(ADMIN.id)).first();
   assert.equal(Number(adminGrant.n),0,'entering Chépica Play UX must not create partner identity/grant');
-  console.log('PASS audience/context switch never mutates authorization');
+  console.log('PASS audience/context switch never mutates admin authorization');
 
   console.log('RESULT: PASS');
 }finally{
