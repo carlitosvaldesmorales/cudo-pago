@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - refactor/championship-adn-canonical-bot
+      - fix/canonical-health-race-and-certify-standings
       - feature/sports-event-bus-v1
 
 permissions:
@@ -55,14 +56,16 @@ jobs:
           URL: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/health/telegram-canonical
         run: |
           set -euo pipefail
-          for attempt in 1 2 3 4 5 6; do
-            if curl -fsS "$URL" -o /tmp/telegram-canonical.json; then break; fi
-            if [ "$attempt" -eq 6 ]; then exit 1; fi
-            sleep 3
+          READY=0
+          for attempt in $(seq 1 30); do
+            CODE="$(curl -sS -o /tmp/telegram-canonical.json -w '%{http_code}' "$URL" || true)"
+            echo "Canonical health HTTP $CODE (attempt $attempt/30)"
+            cat /tmp/telegram-canonical.json || true
+            if [ "$CODE" = "200" ] && jq -e '.ok == true and .channel_role == "CANONICAL" and .canonical_username == "FutbolChepicaBot" and .bot_username == "FutbolChepicaBot" and .is_canonical_bot == true' /tmp/telegram-canonical.json >/dev/null 2>&1; then
+              READY=1
+              break
+            fi
+            sleep 4
           done
-          jq -e '.ok == true' /tmp/telegram-canonical.json
-          jq -e '.channel_role == "CANONICAL"' /tmp/telegram-canonical.json
-          jq -e '.canonical_username == "FutbolChepicaBot"' /tmp/telegram-canonical.json
-          jq -e '.bot_username == "FutbolChepicaBot"' /tmp/telegram-canonical.json
-          jq -e '.is_canonical_bot == true' /tmp/telegram-canonical.json
+          test "$READY" -eq 1
           echo 'PASS canonical runtime alias and identity contract'
