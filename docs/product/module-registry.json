@@ -1,6 +1,31 @@
 {
-  "version": 10,
+  "version": 11,
   "product": "Fútbol Chépica",
+  "canonical_channels": {
+    "telegram": {
+      "username": "FutbolChepicaBot",
+      "mention": "@FutbolChepicaBot",
+      "internal_slot": "next",
+      "role": "CANONICAL",
+      "health_path": "/health/telegram-canonical",
+      "legacy_compatibility_path": "/health/telegram"
+    }
+  },
+  "competition_domain": {
+    "competition_id": "ANFA-CHEPICA-2026",
+    "model": "TWO_INDEPENDENT_CHAMPIONSHIPS_SHARED_MATCHDAY",
+    "championships": {
+      "PRINCIPAL": {
+        "series": ["TERCERA", "SEGUNDA", "PRIMERA"],
+        "max_points_per_matchday": 9
+      },
+      "SENIOR": {
+        "series": ["SENIOR"],
+        "independent_from": "PRINCIPAL",
+        "max_points_per_matchday": 3
+      }
+    }
+  },
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
     "CONTEXT_NEQ_REQUIREMENT",
@@ -17,21 +42,28 @@
     "CANONICAL_CAPABILITY_IS_REUSED_BY_CONSUMERS",
     "EVENT_DRIVEN_PRIMARY_PROPAGATION",
     "BOT_SLOT_NEQ_CAPABILITY_SEMANTICS",
+    "CANONICAL_TELEGRAM_BOT_EQ_FUTBOLCHEPICABOT",
+    "LEGACY_BOT_NEQ_CANONICAL_CHANNEL",
     "HUMAN_WORK_UNIT_NEQ_PERSISTENCE_UNIT",
     "INTENT_BEFORE_ADAPTER",
     "HUMAN_CONTEXT_PERSISTS_ACROSS_FIELD_CAPTURE",
-    "TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED"
+    "TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED",
+    "CHAMPIONSHIP_BOUNDARY_PRECEDES_PROJECTION",
+    "SHARED_FIXTURE_NEQ_SHARED_STANDINGS",
+    "SENIOR_NEQ_PRINCIPAL_CHAMPIONSHIP",
+    "PRINCIPAL_MATCHDAY_MAX_POINTS_EQ_9"
   ],
   "modules": [
     {
       "id": "RESULTS-READ",
       "capability_key": "RESULTS-READ",
       "name": "Consultar resultados",
-      "goal": "Consultar resultados publicados del campeonato",
+      "goal": "Consultar resultados publicados de la jornada deportiva sin mezclar autoridad de campeonatos",
       "human_facing": true,
       "canonical": true,
       "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM", "WEB", "API", "STREAMING"],
+      "canonical_telegram": "@FutbolChepicaBot",
       "stage": "CONSUMABLE",
       "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/results-read-visual-contract-v1.md",
@@ -54,6 +86,32 @@
       "gap": null
     },
     {
+      "id": "STANDINGS-READ",
+      "capability_key": "STANDINGS-READ",
+      "name": "Consultar tablas de posiciones",
+      "goal": "Consultar de forma independiente la clasificación del Campeonato Principal y del Campeonato Senior",
+      "human_facing": true,
+      "canonical": true,
+      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
+      "channels": ["TELEGRAM", "API", "WEB"],
+      "canonical_telegram": "@FutbolChepicaBot",
+      "domain_contract": "docs/architecture/competition-domain-adn-v2.md",
+      "stage": "QA_CERTIFIED",
+      "technical_implementation": "DONE",
+      "implementation_entry": "sports-bus/worker/public-standings-entry.js",
+      "api_contract": "public-standings-v2",
+      "qa": "PASS_PENDING_RUNTIME_AFTER_DEPLOY",
+      "runtime_evidence": "PENDING_DEPLOY",
+      "consumable": false,
+      "dependencies": ["RESULTS-READ"],
+      "runtime_paths": [
+        "sports-bus/worker/competition-domain.js",
+        "sports-bus/worker/public-standings-entry.js",
+        "sports-bus/worker/public-competition-hub-entry.js"
+      ],
+      "gap": "Requiere deploy y smoke runtime de public-standings-v2 antes de marcar CONSUMABLE."
+    },
+    {
       "id": "RESULTS-REGISTER",
       "capability_key": "RESULTS-REGISTER",
       "name": "Registrar resultado",
@@ -64,6 +122,7 @@
       "canonical": true,
       "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
+      "canonical_telegram": "@FutbolChepicaBot",
       "policy_variants": ["scope", "authority", "submission_status", "provenance"],
       "stage": "QA_CERTIFIED",
       "visual_contract": "APPROVED",
@@ -88,10 +147,11 @@
         "GitHub Actions Validate System Authority Registry run 34700618724: success",
         "GitHub Actions Validate Legacy Match Result Command Guard run 34700618668: success"
       ],
-      "deployment_evidence": "Deploy Sports Event Bus run 34700643461: success; Worker deployed, primary Telegram runtime and destination Telegram UX contract validated",
+      "deployment_evidence": "Deploy Sports Event Bus run 34700643461: success; Worker deployed, legacy Telegram runtime and canonical Telegram UX contract validated",
       "runtime_evidence": "TECHNICALLY_VERIFIED_V2",
       "runtime_smoke": [
         "/health",
+        "/health/telegram-canonical",
         "/api/v1/rounds/3/results?mode=official",
         "/api/v1/rounds/3/results?mode=reported",
         "/stream/fecha/3?mode=reported",
@@ -106,7 +166,7 @@
         "sports-bus/worker/results-stream-entry.js",
         "sports-bus/canonical-entry.js"
       ],
-      "gap": "Único GAP de esta revisión: aprobación humana de la fluidez real en Telegram del contrato v2 ya desplegado."
+      "gap": "Único GAP de esta revisión: aprobación humana de la fluidez real en Telegram del contrato v2 ya desplegado en el canal canónico."
     },
     {
       "id": "RESULTS-GOVERN",
@@ -117,6 +177,7 @@
       "canonical": true,
       "consumers": ["PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
+      "canonical_telegram": "@FutbolChepicaBot",
       "stage": "DEFINED",
       "visual_contract": "PENDING",
       "product_validation": "PENDING",
@@ -136,13 +197,14 @@
   ],
   "current_frontier": {
     "module_id": "RESULTS-REGISTER",
-    "allowed_next_step": "HUMAN_VALIDATE_REAL_TELEGRAM_UX_V2",
-    "human_gate": "REAL_TELEGRAM_UX_V2_APPROVAL",
+    "allowed_next_step": "HUMAN_VALIDATE_REAL_TELEGRAM_UX_V2_ON_CANONICAL_BOT",
+    "human_gate": "REAL_TELEGRAM_UX_V2_APPROVAL_ON_FUTBOLCHEPICABOT",
     "blocked_steps": [
       "MARK_RESULTS_REGISTER_V2_CONSUMABLE_BEFORE_HUMAN_APPROVAL",
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",
       "POLLING_BASED_STREAMING_PROJECTION",
-      "REAL_USER_ENROLLMENT_WITHOUT_EXPLICIT_APPROVAL"
+      "REAL_USER_ENROLLMENT_WITHOUT_EXPLICIT_APPROVAL",
+      "NEW_FEATURES_TARGETING_LEGACY_TELEGRAM_BOT"
     ]
   }
 }
