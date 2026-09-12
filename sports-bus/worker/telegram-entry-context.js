@@ -1,5 +1,9 @@
 import { getActivePartnerMembership } from './access-control.js';
 import { TELEGRAM_CHANNEL } from './telegram-channel-contract.js';
+import {
+  AUDIENCE_CONTEXT,
+  audienceHomeCallback
+} from './telegram-navigation-contract.js';
 
 const PRIMARY=TELEGRAM_CHANNEL.LEGACY.webhook_path;
 const CANONICAL=TELEGRAM_CHANNEL.CANONICAL.webhook_path;
@@ -55,6 +59,13 @@ async function clearContext(db,actorId){
   await db.prepare('DELETE FROM telegram_entry_contexts WHERE telegram_user_id=?').bind(String(actorId)).run();
 }
 
+async function activeContext(db,actorId){
+  const row=await db.prepare(`SELECT context_code FROM telegram_entry_contexts
+    WHERE telegram_user_id=? AND datetime(expires_at)>datetime('now') LIMIT 1`)
+    .bind(String(actorId)).first();
+  return row?.context_code||null;
+}
+
 async function canUseChepicaPlayContext(db,actorId){
   const membership=await getActivePartnerMembership(db,String(actorId),COMPETITION_ID);
   return membership?.partner_code==='CHEPICA_PLAY';
@@ -85,7 +96,17 @@ export async function prepareTelegramEntryContext(request,env){
 
   const data=String(update?.callback_query?.data||'');
   const text=String(update?.message?.text||'').trim();
-  const relevant=data==='cp:observe'||data==='tp:public-report'||data==='tp:home'||/^\/informar(?:@\w+)?$/i.test(text);
+  const relevant=[
+    'cp:observe',
+    'tp:public-report',
+    'tp:home',
+    'tp:public',
+    'tp:leaders',
+    'mp:home',
+    'nav:back',
+    'rr:cancel-menu',
+    'p3:public'
+  ].includes(data)||/^\/informar(?:@\w+)?$/i.test(text);
   if(!relevant) return {request,response:null};
 
   const runtime=await runtimeContext(request,env);
@@ -100,8 +121,32 @@ export async function prepareTelegramEntryContext(request,env){
     return {request,response:null};
   }
 
+  if(data==='tp:public'){
+    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.PUBLIC_GENERAL);
+    return {request,response:null};
+  }
+
+  if(data==='tp:leaders'){
+    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.DIRIGENTES);
+    return {request,response:null};
+  }
+
+  if(data==='mp:home'){
+    // Entry context is navigation state only; authorization is still enforced
+    // by the Chépica Play capability handler.
+    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.CHEPICA_PLAY);
+    return {request,response:null};
+  }
+
+  if(data==='nav:back'||data==='rr:cancel-menu'||data==='p3:public'){
+    const contextCode=await activeContext(env.DB,actorId);
+    const parent=audienceHomeCallback(contextCode);
+    if(parent==='tp:home') await clearContext(env.DB,actorId);
+    return {request:rewriteCallback(request,update,parent),response:null};
+  }
+
   if(data==='tp:public-report'||/^\/informar(?:@\w+)?$/i.test(text)){
-    await setContext(env.DB,actorId,'PUBLIC_GENERAL');
+    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.PUBLIC_GENERAL);
     return {request,response:null};
   }
 
@@ -114,12 +159,12 @@ export async function prepareTelegramEntryContext(request,env){
       if(chatId) await telegram(runtime.token,'sendMessage',{
         chat_id:chatId,
         text:'🔐 Esta identidad no puede ingresar resultados desde el contexto Chépica Play.',
-        reply_markup:{inline_keyboard:[[{text:'🏠 Inicio',callback_data:'tp:home'}]]}
+        reply_markup:{inline_keyboard:[[{text:'⬅️ Volver',callback_data:'nav:back'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]}
       });
       return {request,response:json({ok:true,handled:'chepica_play_context_denied',permission_change:false})};
     }
 
-    await setContext(env.DB,actorId,'CHEPICA_PLAY');
+    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.CHEPICA_PLAY);
     return {
       request:rewriteCallback(request,update,'obs:dates'),
       response:null
@@ -130,9 +175,6 @@ export async function prepareTelegramEntryContext(request,env){
 }
 
 export async function getTelegramEntryContext(db,actorId){
-  if(!db||!actorId) return 'PUBLIC_GENERAL';
-  const row=await db.prepare(`SELECT context_code FROM telegram_entry_contexts
-    WHERE telegram_user_id=? AND datetime(expires_at)>datetime('now') LIMIT 1`)
-    .bind(String(actorId)).first();
-  return row?.context_code||'PUBLIC_GENERAL';
+  if(!db||!actorId) return AUDIENCE_CONTEXT.PUBLIC_GENERAL;
+  return (await activeContext(db,actorId))||AUDIENCE_CONTEXT.PUBLIC_GENERAL;
 }
