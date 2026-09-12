@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "system": "Fútbol Chépica / CUDO",
+  "invariants": [
+    "ONE_SEMANTIC_SCOPE_ONE_CANONICAL_AUTHORITY",
+    "REFERENCE_OVER_COPY",
+    "PROJECTION_NEQ_AUTHORITY",
+    "CHANNEL_NEQ_AUTHORITY",
+    "TENANT_NEQ_AUTHORITY",
+    "PERSON_NEQ_CAPABILITY_VALIDATION",
+    "POLICY_NEQ_FLOW",
+    "EVENT_DRIVEN_PRIMARY_PROPAGATION"
+  ],
+  "semantic_scopes": [
+    {
+      "id": "FUTBOL_CHEPICA.ANFA_CHEPICA_2026.FIXTURE",
+      "bounded_context": "FUTBOL_CHEPICA",
+      "meaning": "Fixture oficial de la competición ANFA Chépica 2026",
+      "authority": {
+        "system": "SPORTS_EVENT_BUS",
+        "store": "D1",
+        "model": "matches"
+      },
+      "projections": [
+        "GET /api/v1/public-championship",
+        "GET /api/v1/tenant/{tenant}/matches",
+        "preview-v8/shared/championship.js",
+        "preview-v8/data/championship-fixture.json (fallback snapshot only)"
+      ]
+    },
+    {
+      "id": "FUTBOL_CHEPICA.ANFA_CHEPICA_2026.RESULTS",
+      "bounded_context": "FUTBOL_CHEPICA",
+      "meaning": "Resultado por partido y serie, incluida su gobernanza canónica",
+      "authority": {
+        "system": "SPORTS_EVENT_BUS",
+        "store": "D1",
+        "model": "match_series_results + governance"
+      },
+      "commands": ["RESULTS-REGISTER", "RESULTS-GOVERN"],
+      "events": ["result.submitted", "result.updated", "result.governance_changed"],
+      "projections": [
+        "RESULTS-READ",
+        "Telegram",
+        "Web/API",
+        "Streaming WebSocket/HTML",
+        "tenant projections"
+      ]
+    },
+    {
+      "id": "FUTBOL_CHEPICA.ANFA_CHEPICA_2026.STANDINGS",
+      "bounded_context": "FUTBOL_CHEPICA",
+      "meaning": "Tabla de posiciones de la competición",
+      "authority": {
+        "system": "DERIVED_FROM_CANONICAL_COMPETITION_STATE",
+        "store": "projection",
+        "model": "official results + approved competition rules"
+      },
+      "dependencies": ["FUTBOL_CHEPICA.ANFA_CHEPICA_2026.RESULTS"],
+      "status": "RULES_GAP_OPEN",
+      "projections": ["Web", "API", "Telegram"]
+    },
+    {
+      "id": "CUDO.CLUB.NEWS",
+      "bounded_context": "CUDO",
+      "meaning": "Noticias editoriales propias del club CUDO",
+      "authority": {
+        "system": "CUDO_CONTENT_CONTROL",
+        "store": "Google Sheets CONTROL/PUBLICO_EXPORT",
+        "model": "CUDO_WEB_NOTICIAS"
+      },
+      "projections": ["preview-v8/data/noticias.json", "cudo.cl web"]
+    },
+    {
+      "id": "CUDO.CLUB.GALLERY",
+      "bounded_context": "CUDO",
+      "meaning": "Galería editorial propia del club CUDO",
+      "authority": {
+        "system": "CUDO_CONTENT_CONTROL",
+        "store": "Google Sheets CONTROL/PUBLICO_EXPORT",
+        "model": "CUDO_WEB_GALERIA"
+      },
+      "projections": ["preview-v8/data/galeria.json", "cudo.cl web"]
+    },
+    {
+      "id": "CUDO.CLUB.ROSTER",
+      "bounded_context": "CUDO",
+      "meaning": "Plantel publicado por CUDO en su sitio de club",
+      "authority": {
+        "system": "CUDO_CONTENT_CONTROL",
+        "store": "Google Sheets CONTROL/PUBLICO_EXPORT",
+        "model": "CUDO_WEB_PLANTEL"
+      },
+      "projections": ["preview-v8/data/plantel.json", "cudo.cl web"]
+    },
+    {
+      "id": "CUDO.CLUB.TEAM_CATEGORIES",
+      "bounded_context": "CUDO",
+      "meaning": "Categorías/equipos editoriales publicados por CUDO",
+      "authority": {
+        "system": "CUDO_CONTENT_CONTROL",
+        "store": "Google Sheets CONTROL/PUBLICO_EXPORT",
+        "model": "CUDO_WEB_EQUIPOS"
+      },
+      "projections": ["preview-v8/data/equipos.json", "cudo.cl web"]
+    }
+  ],
+  "artifact_classification": [
+    {
+      "path": "preview-v8/data/championship-fixture.json",
+      "classification": "PROJECTION_SNAPSHOT",
+      "authoritative": false,
+      "semantic_scope": "FUTBOL_CHEPICA.ANFA_CHEPICA_2026.FIXTURE",
+      "note": "Fallback point-in-time; no puede competir con D1 como autoridad."
+    },
+    {
+      "path": "preview-v8/data/partidos.json",
+      "classification": "LEGACY_UNRESOLVED_NON_AUTHORITY",
+      "authoritative": false,
+      "note": "CUDO_WEB_PARTIDOS contiene contenido de club/amistosos. No es autoridad del fixture ni de resultados ANFA Chépica 2026 y el runtime actual de Campeonato usa Sports Event Bus."
+    },
+    {
+      "path": "preview-v8/data/tabla.json",
+      "classification": "LEGACY_UNRESOLVED_NON_AUTHORITY",
+      "authoritative": false,
+      "note": "CUDO_WEB_TABLA no puede ser una segunda autoridad de posiciones ANFA; la tabla de competición debe derivarse del estado oficial y reglas aprobadas."
+    },
+    {
+      "path": "preview-v8/data/noticias.json",
+      "classification": "TENANT_PROJECTION",
+      "authoritative": false,
+      "semantic_scope": "CUDO.CLUB.NEWS"
+    },
+    {
+      "path": "preview-v8/data/galeria.json",
+      "classification": "TENANT_PROJECTION",
+      "authoritative": false,
+      "semantic_scope": "CUDO.CLUB.GALLERY"
+    },
+    {
+      "path": "preview-v8/data/plantel.json",
+      "classification": "TENANT_PROJECTION",
+      "authoritative": false,
+      "semantic_scope": "CUDO.CLUB.ROSTER"
+    },
+    {
+      "path": "preview-v8/data/equipos.json",
+      "classification": "TENANT_PROJECTION",
+      "authoritative": false,
+      "semantic_scope": "CUDO.CLUB.TEAM_CATEGORIES"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "CUDO_WEB_PARTIDOS_SEMANTIC_OWNER",
+      "requires_human_decision": false,
+      "status": "DEFERRED",
+      "rule": "No usarlo como autoridad ANFA mientras se determina si corresponde conservar una agenda/historial propio del club."
+    },
+    {
+      "id": "CUDO_WEB_TABLA_RETIREMENT",
+      "requires_human_decision": false,
+      "status": "DEFERRED",
+      "rule": "No usarlo para publicar tabla ANFA; retirar o convertir a proyección sólo cuando el módulo standings canónico esté cerrado."
+    }
+  ]
+}
