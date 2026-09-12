@@ -6,9 +6,9 @@ Canal producto: **@FutbolChepicaBot**
 
 ## Causa raíz
 
-El menú raíz de Fútbol Chépica estaba modelado como una mezcla de funciones y accesos. Eso obliga al usuario a comprender la estructura interna del sistema antes de resolver una pregunta más básica: **quién entra y en qué contexto humano**.
+El menú raíz de Fútbol Chépica estaba modelado como una mezcla de funciones y accesos. Luego apareció un segundo desvío: se confundió **entrar a una audiencia** con **adoptar la identidad de esa audiencia**.
 
-La entrada canónica se corrige a:
+La entrada canónica es:
 
 ```text
 FÚTBOL CHÉPICA
@@ -16,6 +16,8 @@ FÚTBOL CHÉPICA
 ├── 🔐 Dirigentes
 └── 🎥 Chépica Play
 ```
+
+La identidad del actor y el contexto de entrada son dimensiones distintas.
 
 ## Invariantes
 
@@ -29,7 +31,34 @@ Primero se selecciona el contexto humano; después se presentan las capacidades 
 
 `AUDIENCE_ENTRY_NEQ_AUTHORIZATION`
 
-Pulsar Público general, Dirigentes o Chépica Play no concede permisos. Cada capacidad sigue validando identidad, membresía, scope, rol y autoridad según su policy canónica.
+Pulsar Público general, Dirigentes o Chépica Play no concede permisos. Cada capacidad sigue validando identidad, scope, rol, trust y autoridad según su policy canónica.
+
+`ACTOR_IDENTITY_NEQ_ENTRY_CONTEXT`
+
+La identidad real del actor nunca se reemplaza por la audiencia seleccionada. Un Admin Global puede entrar al contexto Chépica Play sin convertirse en una identidad Chépica Play.
+
+`AUTHORIZATION_FOLLOWS_ACTOR`
+
+La autorización se resuelve siempre desde el actor real. El contexto no eleva privilegios ni crea grants.
+
+`UX_FOLLOWS_CONTEXT`
+
+La superficie visual y la navegación siguen el contexto seleccionado. Un Admin Global que entra a Chépica Play puede probar exactamente la experiencia operativa Chépica Play si su rol real ya posee autoridad suficiente.
+
+`AUDIT_RECORDS_ACTOR_AND_CONTEXT`
+
+Toda escritura originada desde un contexto debe preservar por separado:
+
+- actor real;
+- rol/provenance real;
+- contexto de entrada;
+- canal técnico.
+
+Para Telegram Chépica Play, una escritura de Admin Global conserva `submitter_id` del administrador y registra `entry_context=CHEPICA_PLAY` y `source_channel=telegram:chepica_play`.
+
+`CONTEXT_SWITCH_NEQ_IMPERSONATION`
+
+Cambiar de contexto de trabajo no es impersonación. Impersonar significaría reemplazar la identidad o provenance del actor; eso está prohibido.
 
 `AUDIENCE_NEQ_CAPABILITY`
 
@@ -68,23 +97,29 @@ La entrada sólo resuelve contexto de navegación. La autoridad permanece en las
 
 ## Chépica Play
 
-El botón `🎥 Chépica Play` reutiliza `mp:home`, propiedad de `media-partner-enrollment-entry.js`.
+El botón `🎥 Chépica Play` reutiliza `mp:home`.
 
-No se crea un segundo flujo de negocio. La organización conserva exactamente sus capacidades actuales:
+No se crea un segundo flujo de negocio. La audiencia conserva exactamente dos funciones operativas:
 
 1. consultar resultados;
-2. registrar resultados como aporte identificado.
+2. ingresar resultados mediante la capacidad de observación existente.
 
-Una identidad no vinculada recibe la experiencia de no-vinculado existente; una identidad vinculada recibe sus capacidades existentes.
+Pueden usar esa superficie:
+
+- una identidad real vinculada a Chépica Play;
+- un `SUPER_ADMIN` o `PLATFORM_OPERATOR` verificado para operación, prueba y soporte.
+
+En el segundo caso la experiencia visual es Chépica Play, pero la auditoría sigue atribuyendo la acción al administrador real. Una persona pública no vinculada y sin privilegio no obtiene autoridad por pulsar el botón.
 
 ## Definition of Done
 
-La raíz sólo puede considerarse consumible cuando:
+La raíz/contexto sólo puede considerarse consumible cuando:
 
-- los cinco caminos de entrada convergen en el mismo modelo;
 - aparecen exactamente las tres audiencias aprobadas;
 - Chépica Play reutiliza el flujo existente;
-- seleccionar una audiencia no cambia permisos;
+- seleccionar una audiencia no crea permisos;
+- Admin Global puede probar la UX Chépica Play sin convertirse en media partner;
+- una escritura de prueba conserva actor real + contexto Chépica Play por separado;
 - QA determinista pasa;
 - despliegue canónico pasa;
 - una validación humana confirma la presentación real en Telegram.

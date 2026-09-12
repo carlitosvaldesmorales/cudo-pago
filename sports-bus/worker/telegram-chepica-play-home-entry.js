@@ -78,12 +78,12 @@ async function present(token,update,text,inlineKeyboard){
   return 'SENT';
 }
 
-function canManagePartners(reporter){
+function canUsePrivilegedContext(reporter){
   return !!reporter
     && Number(reporter.active)===1
     && reporter.trust_level==='VERIFIED'
-    && hasCapability(reporter,CAPABILITY.MANAGE_ACCESS)
-    && ['SUPER_ADMIN','PLATFORM_OPERATOR'].includes(reporter.role);
+    && ['SUPER_ADMIN','PLATFORM_OPERATOR'].includes(reporter.role)
+    && hasCapability(reporter,CAPABILITY.OBSERVE_RESULT);
 }
 
 function isPartnerHomeIntent(update){
@@ -117,13 +117,19 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
 
   if(update?.callback_query) await answer(context.token,update.callback_query.id,PARTNER_NAME);
 
-  if(membership?.partner_code==='CHEPICA_PLAY'){
+  const linked=membership?.partner_code==='CHEPICA_PLAY';
+  const privilegedContext=canUsePrivilegedContext(reporter);
+
+  if(linked||privilegedContext){
+    const identityNote=privilegedContext&&!linked
+      ? '\n\nModo Chépica Play. Tu identidad administrativa real se conserva en la trazabilidad.'
+      : '';
     const mode=await present(
       context.token,
       update,
-      `🎥 CHÉPICA PLAY\n\nElige qué necesitas hacer:`,
+      `🎥 CHÉPICA PLAY\n\nElige qué necesitas hacer:${identityNote}`,
       [
-        [{text:'📝 Ingresar resultados',callback_data:'obs:dates'}],
+        [{text:'📝 Ingresar resultados',callback_data:'cp:observe'}],
         [{text:'⚽ Consultar resultados',callback_data:'tp:public-results'}],
         [{text:'🏠 Inicio',callback_data:'tp:home'}]
       ]
@@ -131,35 +137,37 @@ export async function handleTelegramChepicaPlayHomeRequest(request,env){
     return json({
       ok:true,
       handled:'chepica_play_home',
-      linked:true,
+      linked,
+      entry_context:'CHEPICA_PLAY',
+      actor_role:reporter?.role||null,
+      access_mode:linked?'PARTNER_IDENTITY':'PRIVILEGED_CONTEXT',
       capabilities:['OBSERVE_RESULT','READ_COMPETITION'],
       presentation_mode:mode,
       channel_role:context.channel_role,
-      permission_change:false
+      permission_change:false,
+      identity_change:false
     });
   }
-
-  const manager=canManagePartners(reporter);
-  const rows=[];
-  if(manager) rows.push([{text:'👥 Administrar accesos Chépica Play',callback_data:'mp:manage'}]);
-  rows.push([{text:'🌐 Público general',callback_data:'tp:public'}]);
-  rows.push([{text:'🏠 Inicio',callback_data:'tp:home'}]);
 
   const mode=await present(
     context.token,
     update,
-    `🔐 ACCESO CHÉPICA PLAY\n\nEsta cuenta no está vinculada a Chépica Play.\n\nUna identidad Chépica Play habilitada tiene exactamente dos funciones:\n\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados\n\nPara ingresar resultados identificados como Chépica Play, la persona debe abrir su invitación individual y vincular su propia cuenta de Telegram.`,
-    rows
+    `🔐 ACCESO CHÉPICA PLAY\n\nEsta cuenta no está vinculada a Chépica Play.\n\nUna identidad Chépica Play habilitada tiene exactamente dos funciones:\n\n1. 📝 Ingresar resultados\n2. ⚽ Consultar resultados\n\nEl acceso al contexto Chépica Play no cambia la identidad ni concede permisos.`,
+    [
+      [{text:'🌐 Público general',callback_data:'tp:public'}],
+      [{text:'🏠 Inicio',callback_data:'tp:home'}]
+    ]
   );
 
   return json({
     ok:true,
     handled:'chepica_play_access_gate',
     linked:false,
+    entry_context:null,
     expected_capabilities:['OBSERVE_RESULT','READ_COMPETITION'],
-    can_manage_access:manager,
     presentation_mode:mode,
     channel_role:context.channel_role,
-    permission_change:false
+    permission_change:false,
+    identity_change:false
   });
 }
