@@ -1,7 +1,7 @@
 # STANDINGS-READ — aprobación de producto v1
 
 Fecha: 2026-09-12
-Estado: **SUPERSEDED_BY_PRESENTATION_V2**
+Estado: **SUPERSEDED_BY_PRESENTATION_V3**
 
 ## Qué permanece aprobado
 
@@ -12,7 +12,7 @@ El acceso Público de Fútbol Chépica presenta las lecturas del campeonato ante
 - 📝 Informar resultado
 - 🔎 Mis aportes
 
-La semántica deportiva también permanece aprobada:
+La semántica deportiva permanece aprobada:
 
 - Campeonato Principal = Tercera + Segunda + Primera.
 - Jornada del Campeonato Principal = máximo 9 puntos.
@@ -21,27 +21,23 @@ La semántica deportiva también permanece aprobada:
 - La diferencia de gol no rompe empates oficiales.
 - Las sanciones de puntos son ajustes administrativos explícitos.
 
-## Qué queda supersedido
+## Evolución visual
 
-La presentación visual que concatenaba:
-
-- Campeonato Principal;
-- Grupo A;
-- Grupo B;
-- Campeonato Senior;
-- Grupo A;
-- Grupo B;
-
-en un único mensaje de Telegram fue revisada en runtime real y rechazada por el usuario por falta de formato y jerarquía.
-
-Por lo tanto, esa disposición deja de ser un contrato visual aprobado.
+La primera presentación concatenaba ambos campeonatos y ambos grupos en un solo bloque largo. La v2 separó por campeonato y grupo, pero la validación humana real detectó que esa granularidad obligaba a navegar innecesariamente por Grupo A/B y que el `<pre>` podía provocar scroll horizontal e indicador visual extraño en Telegram iOS.
 
 ## Contrato vigente
 
-La presentación vigente pasa a:
+`docs/product/standings-read-telegram-presentation-contract-v3.md`
 
-`docs/product/standings-read-telegram-presentation-contract-v2.md`
+La v3 fija:
 
-Estado actual del contrato v2: `IMPLEMENTED_PENDING_HUMAN_APPROVAL`.
+- una pantalla = un campeonato;
+- Grupo A + Grupo B visibles juntos;
+- sólo selector Principal / Senior;
+- sin botones por grupo;
+- sin `<pre>`/`<code>` ni scroll horizontal;
+- edición del mismo mensaje cuando Telegram lo permita.
+
+Estado actual: `IMPLEMENTED_PENDING_HUMAN_APPROVAL`.
 
 La experiencia Telegram canónica continúa siendo **@FutbolChepicaBot**. El bot CUDO anterior conserva únicamente compatibilidad técnica.

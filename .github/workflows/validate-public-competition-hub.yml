@@ -9,6 +9,7 @@ on:
       - feature/standings-2026-official-rules
       - refactor/championship-adn-canonical-bot
       - refactor/standings-presentation-model-v1
+      - fix/standings-telegram-v3
       - feature/sports-event-bus-v1
 
 permissions:
@@ -46,11 +47,15 @@ jobs:
           grep -q 'SENIOR_ES_CAMPEONATO_INDEPENDIENTE' docs/architecture/competition-domain-adn-v2.md
           grep -q 'HUMAN_OUTPUT_REQUIRES_PRESENTATION_MODEL' docs/architecture/human-presentation-adn-v1.md
           grep -q 'DATA_CORRECT_NEQ_CONSUMABLE_UX' docs/architecture/human-presentation-adn-v1.md
-          grep -q 'ONE_STANDINGS_SCREEN_ONE_CHAMPIONSHIP' docs/product/standings-read-telegram-presentation-contract-v2.md
-          grep -q 'IMPLEMENTED_PENDING_HUMAN_APPROVAL' docs/product/standings-read-telegram-presentation-contract-v2.md
+          grep -q 'CHANNEL_FORMAT_MUST_FIT_TARGET_DEVICE' docs/architecture/human-presentation-adn-v1.md
+          grep -q 'ONE_CHAMPIONSHIP_SCREEN_CONTAINS_ALL_GROUPS' docs/product/standings-read-telegram-presentation-contract-v3.md
+          grep -q 'NO_GROUP_NAVIGATION_IN_PUBLIC_STANDINGS' docs/product/standings-read-telegram-presentation-contract-v3.md
+          grep -q 'NO_HORIZONTAL_SCROLL_IN_TELEGRAM_STANDINGS' docs/product/standings-read-telegram-presentation-contract-v3.md
+          grep -q 'IMPLEMENTED_PENDING_HUMAN_APPROVAL' docs/product/standings-read-telegram-presentation-contract-v3.md
           grep -q '@FutbolChepicaBot' docs/architecture/telegram-canonical-channel-v1.md
           grep -q 'CANONICAL_TELEGRAM_BOT_EQ_FUTBOLCHEPICABOT' docs/product/module-registry.json
-          grep -q 'HUMAN_OUTPUT_REQUIRES_PRESENTATION_MODEL' docs/product/module-registry.json
+          grep -q 'STANDINGS_PUBLIC_VIEW_EQ_ONE_CHAMPIONSHIP_ALL_GROUPS' docs/product/module-registry.json
+          grep -q 'NO_HORIZONTAL_SCROLL_IN_TELEGRAM_STANDINGS' docs/product/module-registry.json
           grep -q '"module_id": "STANDINGS-READ"' docs/product/module-registry.json
-          grep -q 'REAL_TELEGRAM_STANDINGS_PRESENTATION_V2_APPROVAL_ON_FUTBOLCHEPICABOT' docs/product/module-registry.json
+          grep -q 'REAL_TELEGRAM_STANDINGS_PRESENTATION_V3_APPROVAL_ON_FUTBOLCHEPICABOT' docs/product/module-registry.json
           grep -q "goal_difference_is_tiebreaker:false" sports-bus/worker/public-standings-entry.js
