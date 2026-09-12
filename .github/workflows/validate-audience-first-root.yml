@@ -1,0 +1,41 @@
+name: Validate Audience First Root
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+  push:
+    branches:
+      - refactor/audience-first-root-v1
+      - feature/sports-event-bus-v1
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/canonical-entry.js
+          node --check sports-bus/worker/telegram-audience-root.js
+          node --check sports-bus/worker/telegram-audience-root-entry.js
+          node --check qa/telegram/audience-root-harness.mjs
+      - name: Audience root deterministic contract
+        run: node qa/telegram/audience-root-harness.mjs
+      - name: ADN contract
+        run: |
+          set -euo pipefail
+          grep -q 'ROOT_MENU_REPRESENTS_AUDIENCES_NOT_CAPABILITIES' docs/architecture/audience-first-entry-adn-v1.md
+          grep -q 'AUDIENCE_CONTEXT_PRECEDES_CAPABILITY_SELECTION' docs/architecture/audience-first-entry-adn-v1.md
+          grep -q 'AUDIENCE_ENTRY_NEQ_AUTHORIZATION' docs/architecture/audience-first-entry-adn-v1.md
+          grep -q 'Público general' docs/product/telegram-root-audience-contract-v1.md
+          grep -q 'Dirigentes' docs/product/telegram-root-audience-contract-v1.md
+          grep -q 'Chépica Play' docs/product/telegram-root-audience-contract-v1.md
+          grep -q "callback_data:'mp:home'" sports-bus/worker/telegram-audience-root.js
+          grep -q 'handleTelegramAudienceRootRequest' sports-bus/canonical-entry.js
