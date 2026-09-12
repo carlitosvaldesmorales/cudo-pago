@@ -1,0 +1,60 @@
+name: Validate Canonical Telegram Channel
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+  push:
+    branches:
+      - refactor/championship-adn-canonical-bot
+      - feature/sports-event-bus-v1
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 24}
+      - name: Source contract
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { TELEGRAM_CHANNEL, canonicalTelegramDeepLink } from './sports-bus/worker/telegram-channel-contract.js';
+          if(TELEGRAM_CHANNEL.CANONICAL.username!=='FutbolChepicaBot') throw new Error('wrong_canonical_username');
+          if(TELEGRAM_CHANNEL.CANONICAL.role!=='CANONICAL') throw new Error('canonical_role_missing');
+          if(TELEGRAM_CHANNEL.CANONICAL.webhook_path!=='/webhook/telegram-next') throw new Error('compatibility_webhook_changed');
+          if(canonicalTelegramDeepLink('abc')!=='https://t.me/FutbolChepicaBot?start=abc') throw new Error('canonical_deep_link_invalid');
+          NODE
+          grep -q 'return coreWorker.fetch(rewritten, runtime, ctx)' sports-bus/telegram-migration-entry.js
+          grep -q 'same core capabilities as the legacy slot' sports-bus/telegram-migration-entry.js
+          grep -q '@FutbolChepicaBot' docs/architecture/telegram-canonical-channel-v1.md
+          echo 'PASS canonical Telegram channel is identity, not duplicated business logic'
+      - name: Runtime token points to exact canonical bot
+        env:
+          URL: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/health/telegram-next
+        run: |
+          set -euo pipefail
+          curl -fsS "$URL" -o /tmp/telegram-next.json
+          jq -e '.ok == true' /tmp/telegram-next.json
+          jq -e '(.bot_username | ascii_downcase) == "futbolchepicabot"' /tmp/telegram-next.json
+          echo 'PASS TELEGRAM_BOT_TOKEN_NEXT resolves exactly to @FutbolChepicaBot'
+      - name: Canonical health alias after merge/deploy
+        if: github.ref_name == 'feature/sports-event-bus-v1'
+        env:
+          URL: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/health/telegram-canonical
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "$URL" -o /tmp/telegram-canonical.json; then break; fi
+            if [ "$attempt" -eq 6 ]; then exit 1; fi
+            sleep 3
+          done
+          jq -e '.ok == true' /tmp/telegram-canonical.json
+          jq -e '.channel_role == "CANONICAL"' /tmp/telegram-canonical.json
+          jq -e '.canonical_username == "FutbolChepicaBot"' /tmp/telegram-canonical.json
+          jq -e '.bot_username == "FutbolChepicaBot"' /tmp/telegram-canonical.json
+          jq -e '.is_canonical_bot == true' /tmp/telegram-canonical.json
+          echo 'PASS canonical runtime alias and identity contract'
