@@ -3,6 +3,7 @@ import { handleResultsRegisterRequest } from './worker/results-register-entry.js
 import { handleResultsStreamRequest, ResultsStreamHub } from './worker/results-stream-entry.js';
 import { handlePublicCompetitionHubRequest } from './worker/public-competition-hub-entry.js';
 import { handlePublicStandingsRequest } from './worker/public-standings-entry.js';
+import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-root-entry.js';
 
 export { ResultsStreamHub };
 
@@ -66,6 +67,9 @@ export default {
 
     const stream=await handleResultsStreamRequest(request.clone(),env);
     if(stream) return withStreamCors(request,stream);
+
+    const audienceRoot=await handleTelegramAudienceRootRequest(request.clone(),env);
+    if(audienceRoot) return audienceRoot;
 
     const publicHub=await handlePublicCompetitionHubRequest(request.clone(),env);
     if(publicHub) return publicHub;
