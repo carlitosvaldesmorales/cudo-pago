@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - refactor/structured-access-intake-v1
+      - fix/structured-intake-confirm-runtime-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -26,9 +27,13 @@ jobs:
           node --check sports-bus/worker/audience-access-policy.js
           node --check sports-bus/worker/access-request-intake-model.js
           node --check sports-bus/worker/access-request-intake-entry.js
+          node --check sports-bus/worker/access-request-confirm-entry.js
           node --check qa/telegram/structured-access-intake-harness.mjs
+          node --check qa/telegram/governed-confirmation-harness.mjs
       - name: Deterministic intake contract
         run: node qa/telegram/structured-access-intake-harness.mjs
+      - name: Behavioral governed confirmation
+        run: node qa/telegram/governed-confirmation-harness.mjs
       - name: Root invariants
         run: |
           set -euo pipefail
@@ -37,6 +42,11 @@ jobs:
           grep -q 'CONFIRMATION_PRECEDES_PENDING' docs/architecture/human-transaction-intake-adn-v1.md
           grep -q 'TECHNICAL_IDENTITY_NEQ_DECLARED_PROFILE' docs/architecture/human-transaction-intake-adn-v1.md
           grep -q 'ForceReply' docs/architecture/human-transaction-intake-adn-v1.md
+          grep -q 'CHANNEL_ACK_NEQ_BUSINESS_TRANSITION' docs/architecture/governed-confirmation-adn-v1.md
+          grep -q 'DURABLE_TRANSITION_PRECEDES_SIDE_EFFECTS' docs/architecture/governed-confirmation-adn-v1.md
+          grep -q 'FAILED_TRANSITION_NEVER_SILENT' docs/architecture/governed-confirmation-adn-v1.md
+          grep -q 'BEHAVIORAL_QA_REQUIRED_FOR_HUMAN_TRANSITIONS' docs/architecture/governed-confirmation-adn-v1.md
           grep -q "intake_contract:ACCESS_INTAKE_CONTRACT" sports-bus/worker/audience-access-policy.js
           grep -q "submission_requires_confirmation:true" sports-bus/worker/audience-access-policy.js
+          grep -q 'handleAccessRequestConfirmation' sports-bus/canonical-entry.js
           grep -q 'handleAccessRequestIntake' sports-bus/canonical-entry.js
