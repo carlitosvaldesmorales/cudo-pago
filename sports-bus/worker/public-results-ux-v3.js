@@ -1,3 +1,5 @@
+import { NAVIGATION_ACTION, navigationButton } from './telegram-navigation-contract.js';
+
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { 'content-type': 'application/json; charset=utf-8' }
@@ -34,7 +36,7 @@ export async function handlePublicResultsUxV3(request, env) {
     const latest = await latestRound(env.DB);
     if (!latest) {
       await render(env, callback, '⚽ RESULTADOS OFICIALES\n\nTodavía no hay resultados verificados.', {
-        inline_keyboard: [[{ text: '🌐 Público', callback_data: 'p3:public' }]]
+        inline_keyboard: [[navigationButton(NAVIGATION_ACTION.BACK, 'nav:back')]]
       });
       return json({ ok: true, handled: 'public_results_ux_v3_empty' });
     }
@@ -54,15 +56,14 @@ export async function handlePublicResultsUxV3(request, env) {
     return json({ ok: true, handled: 'public_results_ux_v3_search' });
   }
 
+  // Compatibility for historical p3:public buttons. New surfaces use nav:back,
+  // which returns to the audience that opened this shared capability.
   if (data === 'p3:public') {
-    await answer(env, callback.id, 'Público');
-    await render(env, callback, '🌐 FÚTBOL CHÉPICA · PÚBLICO\n\nConsulta información verificada del campeonato.', {
-      inline_keyboard: [
-        [{ text: '⚽ Resultados verificados', callback_data: 'tp:public-results' }],
-        [{ text: '🏠 Volver', callback_data: 'tp:home' }]
-      ]
+    await answer(env, callback.id, 'Volver');
+    await render(env, callback, '↩️ Esta vista antigua ya no decide a qué audiencia volver.', {
+      inline_keyboard: [[navigationButton(NAVIGATION_ACTION.BACK, 'nav:back')]]
     });
-    return json({ ok: true, handled: 'public_results_ux_v3_public' });
+    return json({ ok: true, handled: 'public_results_ux_v3_legacy_public_bridge' });
   }
 
   if (data === 'p3:dates') {
@@ -159,7 +160,10 @@ async function showRound(env, callback, roundNo) {
       callback_data: `p3:m:${roundNo}:${match.home_id}`
     }];
   });
-  buttons.push([{ text: '🔎 Otros resultados', callback_data: 'p3:search' }, { text: '🌐 Público', callback_data: 'p3:public' }]);
+  buttons.push([
+    { text: '🔎 Otros resultados', callback_data: 'p3:search' },
+    navigationButton(NAVIGATION_ACTION.BACK, 'nav:back')
+  ]);
 
   await render(env, callback, `⚽ RESULTADOS OFICIALES · ${String(label).toUpperCase()}\n\nElige un partido:`, {
     inline_keyboard: buttons
