@@ -37,7 +37,7 @@ Dato correcto y runtime correcto no equivalen a experiencia terminada. Una capac
 
 `ONE_SCREEN_ONE_PRIMARY_CONTEXT`
 
-Una pantalla transaccional o informativa debe tener un contexto primario identificable. Si el usuario consulta una tabla, una pantalla no debe concatenar múltiples campeonatos y múltiples grupos sin una razón funcional aprobada.
+Una pantalla debe tener un contexto primario identificable. El contexto primario se define por la intención humana, no por la granularidad interna del dato. En `STANDINGS-READ`, el contexto primario público es el **campeonato**; sus grupos son secciones naturales de esa misma vista y no requieren navegación separada.
 
 `CHANNEL_RENDERER_NEQ_DOMAIN_POLICY`
 
@@ -45,7 +45,11 @@ El renderer de Telegram no conoce cómo se calculan los puntos, desempates o aut
 
 `TELEGRAM_STRUCTURED_NEQ_PLAIN_TEXT`
 
-Telegram no es una web, pero tampoco es texto plano. El renderer Telegram debe usar jerarquía, `parse_mode`, bloques monoespaciados cuando corresponda, navegación inline y edición del mensaje vivo cuando la API lo permita.
+Telegram no es una web, pero tampoco es texto plano. El renderer debe usar jerarquía, `parse_mode`, navegación inline y edición del mensaje vivo cuando la API lo permita. El formato no debe introducir artefactos de canal como desplazamiento horizontal innecesario.
+
+`CHANNEL_FORMAT_MUST_FIT_TARGET_DEVICE`
+
+La presentación debe respetar las limitaciones reales del canal y del dispositivo. En Telegram móvil, una tabla pública no puede depender de un bloque monoespaciado ancho que obligue al usuario a desplazarse horizontalmente o muestre indicadores de overflow.
 
 `TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED`
 
@@ -55,12 +59,15 @@ Cuando una interacción ocurre sobre un mensaje con botones inline, la navegaci�
 
 Para `STANDINGS-READ`:
 
-- una vista = un campeonato + un grupo;
-- Principal y Senior nunca se concatenan en la misma tabla visual;
-- Grupo A y Grupo B se navegan, no se apilan;
-- los empates se explican una vez al pie, no mediante símbolos repetidos en cada fila;
-- la tabla usa formato monoespaciado dentro de HTML;
-- la navegación mantiene contexto: campeonato, grupo, resultados y público;
+- una vista = un campeonato;
+- Principal y Senior nunca se mezclan en la misma pantalla;
+- cada campeonato muestra Grupo A y Grupo B juntos;
+- no existen botones públicos Grupo A / Grupo B;
+- el único selector competitivo es Principal / Senior;
+- los empates se explican una vez al pie;
+- no se usa `<pre>` ni `<code>` para forzar columnas en la clasificación pública;
+- no se requiere scroll horizontal;
+- la navegación mantiene acceso a Resultados y Público;
 - el dominio sigue siendo la única autoridad de puntos y desempates.
 
 ## Definition of Done humano
