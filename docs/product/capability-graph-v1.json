@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "product": "Fútbol Chépica",
+  "principles": [
+    "ACTOR_NEQ_MODULE",
+    "CHANNEL_NEQ_MODULE",
+    "HANDLER_NEQ_MODULE",
+    "TENANT_NEQ_MODULE",
+    "SAME_INTENT_SAME_SEMANTICS_ONE_CANONICAL_CAPABILITY",
+    "EVENT_DRIVEN_NO_PRIMARY_POLLING",
+    "PROJECTIONS_REFERENCE_CANONICAL_STATE"
+  ],
+  "primitives": [
+    "competition.select",
+    "round.select",
+    "match.select",
+    "series.select",
+    "score.select",
+    "action.confirm",
+    "result.read",
+    "result.submit",
+    "result.govern",
+    "content.publish"
+  ],
+  "capabilities": [
+    {
+      "id": "RESULTS-REGISTER",
+      "goal": "Registrar o informar un marcador de partido/serie",
+      "composition": [
+        "round.select",
+        "match.select",
+        "series.select",
+        "score.select",
+        "action.confirm",
+        "result.submit"
+      ],
+      "consumers": [
+        "PUBLIC",
+        "CLUB_ADMIN",
+        "CHEPICA_PLAY",
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": ["TELEGRAM"],
+      "policy_variants": [
+        "submission_status",
+        "scope",
+        "authority",
+        "provenance"
+      ],
+      "canonical": true
+    },
+    {
+      "id": "RESULTS-READ",
+      "goal": "Consultar resultados publicados",
+      "composition": ["round.select", "match.select", "series.select", "result.read"],
+      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
+      "channels": ["TELEGRAM", "WEB", "API", "STREAMING"],
+      "canonical": true
+    },
+    {
+      "id": "RESULTS-GOVERN",
+      "goal": "Validar, corregir, disputar, resolver, anular o restaurar un resultado según autoridad",
+      "composition": ["match.select", "series.select", "result.read", "result.govern", "action.confirm"],
+      "consumers": ["PLATFORM_OPERATOR", "SUPER_ADMIN"],
+      "channels": ["TELEGRAM"],
+      "canonical": true
+    }
+  ],
+  "projections": [
+    {
+      "id": "RESULTS-API",
+      "source": "RESULTS-READ",
+      "mode": "READ_MODEL"
+    },
+    {
+      "id": "RESULTS-STREAM",
+      "source": "RESULTS-READ",
+      "mode": "EVENT_PUSH",
+      "primary_polling": false
+    },
+    {
+      "id": "FUTBOLCHEPICA-WEB",
+      "source": "CANONICAL_SPORT_STATE",
+      "mode": "MATERIALIZED_PROJECTION"
+    },
+    {
+      "id": "CUDO-WEB",
+      "source": "CANONICAL_SPORT_STATE",
+      "mode": "TENANT_PROJECTION"
+    }
+  ],
+  "event_contracts": [
+    "result.submitted",
+    "result.updated",
+    "result.governance_changed"
+  ]
+}

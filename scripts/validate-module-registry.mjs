@@ -10,6 +10,12 @@ for(const m of modules.values()){
   if(!order.includes(m.stage)) errors.push(`${m.id}: invalid stage ${m.stage}`);
   const rank=order.indexOf(m.stage);
 
+  if(m.canonical!==true) errors.push(`${m.id}: product modules must be canonical capabilities`);
+  if(!m.capability_key || m.capability_key!==m.id) errors.push(`${m.id}: capability_key must equal canonical module id`);
+  if(Object.prototype.hasOwnProperty.call(m,'actor')) errors.push(`${m.id}: actor-specific module field is forbidden; use consumers[] + policy/scope/provenance`);
+  if(!Array.isArray(m.consumers) || m.consumers.length===0) errors.push(`${m.id}: canonical module requires at least one consumer`);
+  if(!Array.isArray(m.channels) || m.channels.length===0) errors.push(`${m.id}: canonical module requires at least one channel/projection`);
+
   if(m.human_facing && rank>=order.indexOf('PRODUCT_VALIDATED')){
     if(m.visual_contract!=='APPROVED') errors.push(`${m.id}: human-facing module cannot pass PRODUCT_VALIDATED without visual_contract=APPROVED`);
     if(m.product_validation!=='APPROVED') errors.push(`${m.id}: human-facing module cannot pass PRODUCT_VALIDATED without product_validation=APPROVED`);
@@ -59,7 +65,7 @@ if(changedFiles.length){
     const protectedPaths=Array.isArray(m.runtime_paths)?m.runtime_paths:[];
     const touched=changedFiles.filter(file=>protectedPaths.some(p=>file===p || file.startsWith(`${p}/`)));
     if(touched.length){
-      errors.push(`${m.id}: runtime change blocked while stage=${m.stage}; approve visual/product contract first. Touched: ${touched.join(', ')}`);
+      errors.push(`${m.id}: runtime change blocked while stage=${m.stage}; approve canonical visual/product contract first. Touched: ${touched.join(', ')}`);
     }
   }
 }
@@ -71,6 +77,6 @@ if(errors.length){
 }
 
 console.log('Consumable Module Gate: PASS');
-for(const m of modules.values()) console.log(`${m.id}: ${m.stage} · consumable=${m.consumable}`);
+for(const m of modules.values()) console.log(`${m.id}: ${m.stage} · consumable=${m.consumable} · consumers=${m.consumers.join(',')}`);
 console.log(`Frontier: ${registry.current_frontier.module_id} → ${registry.current_frontier.allowed_next_step}`);
 if(changedFiles.length) console.log(`Checked ${changedFiles.length} changed file(s) against pre-validation runtime locks.`);

@@ -1,64 +1,122 @@
 {
-  "version": 1,
+  "version": 2,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
     "CONTEXT_NEQ_REQUIREMENT",
     "DEPENDENCY_REQUIRES_CONSUMABLE_PROVIDER",
-    "PREVALIDATION_RUNTIME_CHANGES_BLOCKED"
+    "PREVALIDATION_RUNTIME_CHANGES_BLOCKED",
+    "ACTOR_NEQ_MODULE",
+    "CHANNEL_NEQ_MODULE",
+    "TENANT_NEQ_MODULE",
+    "CANONICAL_CAPABILITY_IS_REUSED_BY_CONSUMERS",
+    "EVENT_DRIVEN_PRIMARY_PROPAGATION"
   ],
   "modules": [
     {
-      "id": "CP-RESULTS-CONSUME",
-      "name": "Chépica Play · Consultar resultados",
-      "actor": "Identidad vinculada a Chépica Play",
-      "goal": "Consultar resultados del campeonato",
+      "id": "RESULTS-READ",
+      "capability_key": "RESULTS-READ",
+      "name": "Consultar resultados",
+      "goal": "Consultar resultados publicados del campeonato",
       "human_facing": true,
+      "canonical": true,
+      "consumers": [
+        "PUBLIC",
+        "CLUB_ADMIN",
+        "CHEPICA_PLAY",
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": ["TELEGRAM", "WEB", "API", "STREAMING"],
       "stage": "VISUAL_PENDING",
       "visual_contract": "PENDING",
       "product_validation": "PENDING",
-      "technical_implementation": "EXISTS",
+      "technical_implementation": "EXISTS_AHEAD_OF_GATE",
       "qa": "PARTIAL",
       "runtime_evidence": "TECHNICAL_ONLY",
       "consumable": false,
       "dependencies": [],
       "runtime_paths": [
-        "sports-bus/worker/portal-entry.js",
         "sports-bus/worker/public-results-ux-v3.js",
-        "sports-bus/worker/public-results-table-view.js"
+        "sports-bus/worker/public-results-table-view.js",
+        "sports-bus/worker/public-championship-entry.js"
       ],
-      "gap": "No existe evidencia registrada de aceptación del contrato visual completo por producto."
+      "gap": "La capacidad existe técnicamente en varias proyecciones, pero todavía no está certificada como módulo canónico consumible en todos sus canales."
     },
     {
-      "id": "CP-RESULTS-REGISTER",
-      "name": "Chépica Play · Registrar resultado",
-      "actor": "Identidad vinculada a Chépica Play",
-      "goal": "Ingresar el marcador de una serie/partido como aporte de Chépica Play",
+      "id": "RESULTS-REGISTER",
+      "capability_key": "RESULTS-REGISTER",
+      "name": "Registrar resultado",
+      "goal": "Registrar o informar el marcador de una serie/partido mediante una única experiencia canónica",
       "human_facing": true,
+      "canonical": true,
+      "consumers": [
+        "PUBLIC",
+        "CLUB_ADMIN",
+        "CHEPICA_PLAY",
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": ["TELEGRAM"],
+      "policy_variants": [
+        "scope",
+        "authority",
+        "submission_status",
+        "provenance"
+      ],
       "stage": "VISUAL_PENDING",
-      "visual_contract": "PENDING",
+      "visual_contract": "DRAFT:docs/product/results-register-visual-contract-v1.md",
       "product_validation": "PENDING",
-      "technical_implementation": "EXISTS_AHEAD_OF_GATE",
+      "technical_implementation": "EXISTS_AHEAD_OF_GATE_FRAGMENTED",
       "qa": "EXPERIMENTAL_AHEAD_OF_GATE",
       "runtime_evidence": "NOT_PRODUCT_CERTIFIED",
       "consumable": false,
       "dependencies": [],
       "runtime_paths": [
         "sports-bus/worker/contributor-observation-entry.js",
-        "sports-bus/worker/media-partner-enrollment-entry.js"
+        "sports-bus/worker/public-result-entry.js",
+        "sports-bus/worker/club-admin-series-entry.js",
+        "sports-bus/worker/global-admin-results-entry.js",
+        "sports-bus/worker/series-entry.js"
       ],
-      "gap": "Falta diseñar y validar la experiencia visual completa antes de considerar válida la implementación existente."
+      "gap": "Existen flujos separados por actor/canal para la misma intención. Deben converger en una UX canónica button-first después de validar el contrato visual."
+    },
+    {
+      "id": "RESULTS-GOVERN",
+      "capability_key": "RESULTS-GOVERN",
+      "name": "Gobernar resultado",
+      "goal": "Validar, corregir, disputar, resolver, anular o restaurar un resultado según autoridad",
+      "human_facing": true,
+      "canonical": true,
+      "consumers": ["PLATFORM_OPERATOR", "SUPER_ADMIN"],
+      "channels": ["TELEGRAM"],
+      "stage": "DEFINED",
+      "visual_contract": "PENDING",
+      "product_validation": "PENDING",
+      "technical_implementation": "EXISTS_AHEAD_OF_GATE",
+      "qa": "PARTIAL",
+      "runtime_evidence": "TECHNICAL_ONLY",
+      "consumable": false,
+      "dependencies": [],
+      "runtime_paths": [
+        "sports-bus/worker/result-governance-entry.js",
+        "sports-bus/worker/result-governance-ux-entry.js",
+        "sports-bus/worker/result-correction-flow-entry.js",
+        "sports-bus/worker/platform-operator-entry.js"
+      ],
+      "gap": "La capacidad existe técnicamente pero debe revisarse después de cerrar RESULTS-REGISTER para asegurar reutilización y separación de policy."
     }
   ],
   "current_frontier": {
-    "module_id": "CP-RESULTS-REGISTER",
-    "allowed_next_step": "DESIGN_VISUAL_CONTRACT",
+    "module_id": "RESULTS-REGISTER",
+    "allowed_next_step": "PRODUCT_VALIDATE_VISUAL_CONTRACT",
+    "visual_contract": "docs/product/results-register-visual-contract-v1.md",
     "blocked_steps": [
-      "RUNTIME_CHANGES_TO_FRONTIER_MODULE",
-      "NEW_DEPENDENT_MODULES",
+      "RUNTIME_CHANGES_TO_RESULTS_REGISTER",
+      "ACTOR_SPECIFIC_REGISTER_VARIANTS",
+      "POLLING_BASED_STREAMING_PROJECTION",
       "REAL_USER_ENROLLMENT",
-      "PRODUCT_CERTIFICATION",
-      "MERGE_EXPERIMENTAL_VISUAL_QA_AS_FINAL"
+      "PRODUCT_CERTIFICATION"
     ]
   }
 }
