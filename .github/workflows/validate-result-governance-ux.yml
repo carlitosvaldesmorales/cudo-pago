@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           node qa/telegram/result-governance-ux-harness.mjs | tee /tmp/governance-ux.log
-          grep -q 'PASS governance list groups by match and identifies clubs' /tmp/governance-ux.log
+          grep -q 'PASS governance list groups by fixture match and identifies clubs' /tmp/governance-ux.log
           grep -q 'PASS callback navigation reuses one Telegram message' /tmp/governance-ux.log
           grep -q 'PASS detail hides technical state/version jargon' /tmp/governance-ux.log
           grep -q 'PASS destructive action is visually distinguished' /tmp/governance-ux.log
