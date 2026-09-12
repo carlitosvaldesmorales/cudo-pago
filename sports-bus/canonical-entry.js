@@ -1,6 +1,7 @@
 import coreWorker from './telegram-route-clarity-entry.js';
 import { handleResultsRegisterRequest } from './worker/results-register-entry.js';
 import { handleResultsStreamRequest, ResultsStreamHub } from './worker/results-stream-entry.js';
+import { handlePublicCompetitionHubRequest } from './worker/public-competition-hub-entry.js';
 
 export { ResultsStreamHub };
 
@@ -61,6 +62,9 @@ export default {
   async fetch(request,env,ctx){
     const stream=await handleResultsStreamRequest(request.clone(),env);
     if(stream) return withStreamCors(request,stream);
+
+    const publicHub=await handlePublicCompetitionHubRequest(request.clone(),env);
+    if(publicHub) return publicHub;
 
     const canonical=await canonicalTelegramRuntime(request,env);
     if(canonical){
