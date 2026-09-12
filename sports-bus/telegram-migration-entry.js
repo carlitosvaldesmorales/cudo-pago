@@ -79,6 +79,7 @@ async function telegramNextRuntimeHealth(env) {
       bot_api_ok: false,
       bot_id: null,
       bot_username: null,
+      bot_username_shape_ok: false,
       is_canonical_bot: false,
       bot_name: null,
       bot_name_configured: false,
@@ -86,7 +87,8 @@ async function telegramNextRuntimeHealth(env) {
       native_menu_configured: false,
       default_commands_configured: false,
       public_results_ux_version: runtime.TELEGRAM_PUBLIC_UX_VERSION,
-      error: 'telegram_canonical_bot_token_missing'
+      error: 'telegram_next_bot_token_missing',
+      canonical_error: 'telegram_canonical_bot_token_missing'
     }), { status: 503, headers: { 'content-type': 'application/json; charset=utf-8' } });
   }
 
@@ -112,6 +114,7 @@ async function telegramNextRuntimeHealth(env) {
     const botName = String(name?.result?.name || '');
     const botNameOk = !!name?.ok && botName === TELEGRAM_PRODUCT_NAME;
     const username = String(me?.result?.username || '');
+    const usernameShapeOk = /^[A-Za-z0-9_]{5,32}$/.test(username) && /bot$/i.test(username);
     const canonicalUsernameOk = !!me?.ok && isCanonicalTelegramUsername(username);
     const webhookOk = !!wh?.ok && webhookUrl.endsWith(NEXT_WEBHOOK_PATH);
     const ok = !!me?.ok && secretConfigured && canonicalUsernameOk && webhookOk && nativeMenuOk && defaultCommandsOk && botNameOk;
@@ -124,6 +127,7 @@ async function telegramNextRuntimeHealth(env) {
       bot_api_ok: !!me?.ok,
       bot_id: me?.result?.id ?? null,
       bot_username: username || null,
+      bot_username_shape_ok: usernameShapeOk,
       is_canonical_bot: canonicalUsernameOk,
       bot_name: botName || null,
       bot_name_configured: botNameOk,
@@ -146,6 +150,7 @@ async function telegramNextRuntimeHealth(env) {
       bot_api_ok: false,
       bot_id: null,
       bot_username: null,
+      bot_username_shape_ok: false,
       is_canonical_bot: false,
       bot_name_configured: false,
       webhook_configured: false,
@@ -167,7 +172,7 @@ async function reconcileTelegramNext(request, env) {
 
   const runtime = nextRuntimeEnv(env);
   if (!runtime.TELEGRAM_BOT_TOKEN || !runtime.TELEGRAM_WEBHOOK_SECRET) {
-    return new Response(JSON.stringify({ ok: false, channel_role: 'CANONICAL', error: 'telegram_canonical_runtime_secret_missing' }), {
+    return new Response(JSON.stringify({ ok: false, slot: 'next', channel_role: 'CANONICAL', error: 'telegram_next_runtime_secret_missing' }), {
       status: 503,
       headers: { 'content-type': 'application/json; charset=utf-8' }
     });
@@ -186,6 +191,7 @@ async function reconcileTelegramNext(request, env) {
   if (!me?.ok || !isCanonicalTelegramUsername(username)) {
     return new Response(JSON.stringify({
       ok: false,
+      slot: 'next',
       channel_role: 'CANONICAL',
       expected_username: TELEGRAM_CHANNEL.CANONICAL.username,
       actual_username: username || null,
@@ -241,7 +247,7 @@ export default {
     if (url.pathname === NEXT_WEBHOOK_PATH && request.method === 'POST') {
       const runtime = nextRuntimeEnv(env);
       if (!runtime.TELEGRAM_BOT_TOKEN || !runtime.TELEGRAM_WEBHOOK_SECRET) {
-        return new Response(JSON.stringify({ ok: false, error: 'telegram_canonical_not_configured' }), {
+        return new Response(JSON.stringify({ ok: false, error: 'telegram_next_not_configured', canonical_error: 'telegram_canonical_not_configured' }), {
           status: 503,
           headers: { 'content-type': 'application/json; charset=utf-8' }
         });
