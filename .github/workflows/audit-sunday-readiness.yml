@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - ops/sunday-readiness-audit
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/**'
+      - '.github/workflows/audit-sunday-readiness.yml'
+      - '.github/workflows/deploy-sports-bus.yml'
 
 permissions:
   contents: read
@@ -23,6 +27,25 @@ jobs:
       - name: Install Wrangler
         run: npm install --no-save wrangler@latest
         working-directory: sports-bus
+      - name: Wait for deployed canonical contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 25); do
+            S_CODE="$(curl -sS -o /tmp/standings-ready.json -w '%{http_code}' "$BASE/api/v1/public-standings" || true)"
+            T_CODE="$(curl -sS -o /tmp/telegram-ready.json -w '%{http_code}' "$BASE/health/telegram-canonical" || true)"
+            if [ "$S_CODE" = "200" ] && [ "$T_CODE" = "200" ] && \
+              jq -e '.contract == "public-standings-v2"' /tmp/standings-ready.json >/dev/null 2>&1 && \
+              jq -e '.ok == true and .bot_username == "FutbolChepicaBot" and .channel_role == "CANONICAL"' /tmp/telegram-ready.json >/dev/null 2>&1; then
+              echo "Canonical contracts ready after attempt $attempt"
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "Canonical contracts did not become ready after deploy window"
+          cat /tmp/standings-ready.json || true
+          cat /tmp/telegram-ready.json || true
+          exit 1
       - name: Read-only operational state
         id: state
         working-directory: sports-bus
@@ -61,8 +84,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS "$BASE/health" -o /tmp/health.json
-          curl -fsS "$BASE/health/telegram" -o /tmp/telegram.json
-          curl -fsS "$BASE/health/telegram-next" -o /tmp/telegram-next.json
+          curl -fsS "$BASE/health/telegram-canonical" -o /tmp/telegram-canonical.json
           curl -fsS "$BASE/api/v1/rounds/3/results?mode=official" -o /tmp/official.json
           curl -fsS "$BASE/api/v1/rounds/3/results?mode=reported" -o /tmp/reported.json
           curl -fsS "$BASE/api/v1/public-standings" -o /tmp/standings.json
@@ -70,31 +92,31 @@ jobs:
           const fs=require('fs');
           const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
           const h=read('/tmp/health.json');
-          const t=read('/tmp/telegram.json');
-          const n=read('/tmp/telegram-next.json');
+          const t=read('/tmp/telegram-canonical.json');
           const o=read('/tmp/official.json');
           const r=read('/tmp/reported.json');
           const s=read('/tmp/standings.json');
           if(!h.ok) throw new Error('worker_health_failed');
-          if(!t.ok) throw new Error('primary_telegram_health_failed');
-          if(!n.ok) throw new Error('next_telegram_health_failed');
+          if(!t.ok||t.channel_role!=='CANONICAL'||t.bot_username!=='FutbolChepicaBot'||t.is_canonical_bot!==true) throw new Error('canonical_telegram_health_failed');
           if(!o.ok||o.mode!=='official'||Number(o.round_no)!==3) throw new Error('official_round3_failed');
           if(!r.ok||r.mode!=='reported'||Number(r.round_no)!==3) throw new Error('reported_round3_failed');
-          if(!s.ok||s.contract!=='public-standings-v1') throw new Error('standings_runtime_failed');
+          if(!s.ok||s.contract!=='public-standings-v2') throw new Error('standings_runtime_failed');
+          if(s.championships?.PRINCIPAL?.max_points_per_matchday!==9) throw new Error('principal_9_point_rule_failed');
+          if(s.championships?.SENIOR?.independent_from!=='PRINCIPAL') throw new Error('senior_independence_failed');
           console.log('RUNTIME_PROJECTIONS=PASS');
           NODE
       - name: READY — Chépica Play has an active real identity
         if: steps.state.outputs.active != '0'
-        run: echo "A real Chépica Play Telegram identity is already active."
-      - name: HUMAN GATE — real Chépica Play person must claim valid Telegram invite
+        run: echo "A real Chépica Play Telegram identity is already active on the shared domain."
+      - name: HUMAN GATE — real Chépica Play person must claim valid @FutbolChepicaBot invite
         if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites != '0'
         run: |
           echo "BLOCKED_BY_HUMAN"
-          echo "A valid single-use invitation exists, but no real Chépica Play Telegram identity is active."
-          echo "The irreducible next action is for a real Chépica Play person to claim that invitation from their own Telegram account."
-      - name: HUMAN GATE — admin must create fresh invite, then real person must claim it
+          echo "A valid single-use Chépica Play invitation exists, but no real Chépica Play Telegram identity is active."
+          echo "The irreducible next action is for a real Chépica Play person to claim that invitation from their own Telegram account through @FutbolChepicaBot."
+      - name: HUMAN GATE — admin must create fresh @FutbolChepicaBot invite, then real person must claim it
         if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites == '0'
         run: |
           echo "BLOCKED_BY_HUMAN"
           echo "No active Chépica Play identity and no valid pending invitation exist."
-          echo "An authorized administrator must create a fresh single-use invitation, then a real Chépica Play person must claim it."
+          echo "An authorized administrator must create a fresh single-use invitation for @FutbolChepicaBot, then a real Chépica Play person must claim it."
