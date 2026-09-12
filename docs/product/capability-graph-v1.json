@@ -1,12 +1,16 @@
 {
-  "version": 1,
+  "version": 2,
   "product": "Fútbol Chépica",
   "principles": [
     "ACTOR_NEQ_MODULE",
     "CHANNEL_NEQ_MODULE",
     "HANDLER_NEQ_MODULE",
     "TENANT_NEQ_MODULE",
+    "PERSON_NEQ_CAPABILITY_VALIDATION",
+    "POLICY_NEQ_FLOW",
     "SAME_INTENT_SAME_SEMANTICS_ONE_CANONICAL_CAPABILITY",
+    "ONE_SEMANTIC_SCOPE_ONE_CANONICAL_AUTHORITY",
+    "REFERENCE_OVER_COPY",
     "EVENT_DRIVEN_NO_PRIMARY_POLLING",
     "PROJECTIONS_REFERENCE_CANONICAL_STATE"
   ],
@@ -77,7 +81,8 @@
       "id": "RESULTS-STREAM",
       "source": "RESULTS-READ",
       "mode": "EVENT_PUSH",
-      "primary_polling": false
+      "primary_polling": false,
+      "consumer_software": ["OBS", "VMIX", "OTHER_BROWSER_SOURCE"]
     },
     {
       "id": "FUTBOLCHEPICA-WEB",
@@ -86,13 +91,19 @@
     },
     {
       "id": "CUDO-WEB",
-      "source": "CANONICAL_SPORT_STATE",
-      "mode": "TENANT_PROJECTION"
+      "source": "COMPOSED_PROJECTION",
+      "sources": [
+        "FUTBOL_CHEPICA_TENANT_PROJECTION:CUDO",
+        "CUDO_CONTENT_STATE"
+      ],
+      "mode": "REFERENCE_COMPOSITION",
+      "rule": "CUDO compone referencias a estado deportivo común con contenido propio del club; no copia ni se vuelve autoridad del campeonato."
     }
   ],
   "event_contracts": [
     "result.submitted",
     "result.updated",
     "result.governance_changed"
-  ]
+  ],
+  "authority_registry": "docs/architecture/system-authority-registry-v1.json"
 }

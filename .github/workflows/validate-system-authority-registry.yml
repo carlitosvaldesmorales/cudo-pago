@@ -1,0 +1,38 @@
+name: Validate System Authority Registry
+
+on:
+  pull_request:
+    paths:
+      - 'docs/architecture/system-authority-registry-v1.json'
+      - 'docs/architecture/canonical-capability-event-projection-v1.md'
+      - 'docs/product/module-registry.json'
+      - 'docs/product/capability-graph-v1.json'
+      - 'preview-v8/data/**'
+      - 'preview-v8/tools/**'
+      - 'sports-bus/**'
+      - 'scripts/validate-system-authority-registry.mjs'
+      - '.github/workflows/validate-system-authority-registry.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'docs/architecture/system-authority-registry-v1.json'
+      - 'docs/architecture/canonical-capability-event-projection-v1.md'
+      - 'docs/product/module-registry.json'
+      - 'docs/product/capability-graph-v1.json'
+      - 'preview-v8/data/**'
+      - 'preview-v8/tools/**'
+      - 'sports-bus/**'
+      - 'scripts/validate-system-authority-registry.mjs'
+      - '.github/workflows/validate-system-authority-registry.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate one canonical authority per semantic scope
+        run: node scripts/validate-system-authority-registry.mjs

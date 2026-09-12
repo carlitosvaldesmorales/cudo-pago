@@ -5,18 +5,40 @@ Estado: ACTIVO
 
 ## Problema estructural
 
-El producto acumuló flujos separados por actor y por canal para intenciones equivalentes. Eso genera duplicación de UX, handlers, QA y evolución.
+El producto acumuló flujos separados por actor y por canal para intenciones equivalentes. Eso genera duplicación de UX, handlers, QA, datos y evolución. La corrección no es sólo de software: es una regla de sistema.
 
-Los siguientes conceptos NO definen un módulo por sí solos:
+Los siguientes conceptos NO definen un módulo ni una autoridad por sí solos:
 
 - actor;
+- persona;
 - rol;
 - canal;
 - sitio;
+- software consumidor (OBS, vMix u otro);
 - handler;
 - endpoint;
 - tenant;
 - organización consumidora.
+
+## Orden obligatorio de diseño
+
+Antes de elegir software o tecnología:
+
+```text
+PROBLEMA SISTÉMICO
+        ↓
+PATRÓN CONOCIDO
+        ↓
+INVARIANTES
+        ↓
+MODELO LÓGICO
+        ↓
+CONTRATOS
+        ↓
+TECNOLOGÍA / SOFTWARE
+```
+
+No se diseña desde `Telegram`, `OBS`, `vMix`, `Cloudflare` o una pantalla concreta. Primero se identifica qué comportamiento sistémico se necesita y luego se conecta la tecnología como adaptador o proyección.
 
 ## Invariantes
 
@@ -28,9 +50,39 @@ Los siguientes conceptos NO definen un módulo por sí solos:
 
 **TENANT ≠ MÓDULO**
 
+**PERSONA REAL ≠ REQUISITO PARA VALIDAR UNA CAPACIDAD SIMULABLE**
+
+**POLICY ≠ FLUJO**
+
+**PROYECCIÓN ≠ AUTORIDAD**
+
 **MISMO SIGNIFICADO + MISMA INTENCIÓN HUMANA = UNA CAPACIDAD CANÓNICA**
 
+**UN SCOPE SEMÁNTICO = UNA AUTORIDAD CANÓNICA**
+
+**REFERENCE OVER COPY**: los consumidores referencian/componen estado y capacidades canónicas; no reciben una implementación semántica propia.
+
 Una capacidad canónica puede ser consumida por múltiples actores y proyectada por múltiples canales sin duplicar su semántica.
+
+## Control Plane / Data Plane / HMI
+
+Telegram o una web administrativa son interfaces humanas (HMI/adaptadores) para operar capacidades; no son el Control Plane por sí mismos.
+
+```text
+HMI / ADAPTER
+Telegram · Web · API
+        ↓
+CONTROL PLANE
+intención + policy + scope + autoridad
+        ↓
+DATA PLANE
+estado canónico + ejecución + eventos
+        ↓
+PROJECCIONES
+Web · Telegram · API · Streaming
+```
+
+Cambiar la HMI o el software consumidor no debe cambiar la semántica del sistema.
 
 ## Unidad canónica
 
@@ -83,6 +135,26 @@ Ejemplo:
 
 La UX de captura no se duplica por esa diferencia.
 
+Una sola identidad controlada puede recorrer escenarios distintos mediante contextos/policies sintéticos. Personas reales se reservan para certificación humana que no pueda simularse con suficiente fidelidad; no son un requisito artificial para probar el comportamiento canónico.
+
+## Autoridad canónica
+
+No basta con deduplicar UX o handlers. También debe existir una única autoridad por significado y scope.
+
+```text
+SIGNIFICADO + SCOPE
+        ↓
+AUTORIDAD CANÓNICA ÚNICA
+        ↓
+EVENTOS / SNAPSHOTS
+        ↓
+N PROYECCIONES
+```
+
+Una proyección JSON, una Sheet, un sitio, un tenant o un overlay no puede convertirse silenciosamente en una segunda fuente de verdad.
+
+El inventario ejecutable está en `docs/architecture/system-authority-registry-v1.json` y CI valida su unicidad estructural.
+
 ## Event-Driven Architecture
 
 No se usa polling como mecanismo principal de propagación.
@@ -118,7 +190,7 @@ result.updated
 }
 ```
 
-## Proyecciones
+## Proyecciones y late binding
 
 Web, Telegram, API y streaming son consumidores/proyecciones del mismo estado, no fuentes independientes de verdad.
 
@@ -131,9 +203,12 @@ Web, Telegram, API y streaming son consumidores/proyecciones del mismo estado, n
         │              │              │
       Web/API       Telegram       Streaming
     read model      UX adapter     live overlay
+                                      │
+                                  OBS / vMix /
+                                  consumidor futuro
 ```
 
-La proyección para streaming debe recibir cambios por push (por ejemplo WebSocket/SSE mediante un componente de broadcast), no consultar la API cada N segundos.
+La proyección para streaming recibe cambios por push (WebSocket/SSE o mecanismo equivalente), no consulta la API cada N segundos. OBS y vMix son consumidores intercambiables: ningún contrato de dominio depende de ellos.
 
 ## Snapshot / structural sharing
 
@@ -155,6 +230,20 @@ S43
 
 La implementación concreta puede usar materialized views, manifests/versiones o proyecciones derivadas. La regla es evitar duplicar semántica y estado por canal/tenant.
 
+Para QA se aplica el mismo principio:
+
+```text
+SNAPSHOT BASE
+     +
+CAPACIDAD CANÓNICA
+     +
+MATRIZ DE POLICY/SCOPE
+     ↓
+DELTAS ESPERADOS
+```
+
+No se requieren N implementaciones ni N personas para probar N policies.
+
 ## CUDO y futbolchepica.cl
 
 Fútbol Chépica es el dominio deportivo neutral. CUDO es un tenant/consumidor participante, no el centro del dominio común.
@@ -168,34 +257,44 @@ FÚTBOL CHÉPICA
   ├── series
   ├── resultados
   ├── tabla
-  ├── planteles deportivos
-  └── contenido deportivo
+  └── estado deportivo compartido
 
 CUDO
-  ├── administración interna del club
+  ├── contenido editorial del club
+  ├── plantel publicado por el club
   ├── socios
   ├── finanzas
   ├── infraestructura
   └── comunidad interna
 ```
 
-`cudo.cl` y `futbolchepica.cl` pueden proyectar datos compartidos, pero no deben duplicar las capacidades canónicas.
+Mismo sustantivo no implica mismo bounded context. Por ejemplo, `plantel CUDO` y un eventual registro de jugadores de campeonato sólo se unifican si significado, autoridad y objetivo son realmente iguales.
+
+`cudo.cl` y `futbolchepica.cl` pueden proyectar datos compartidos, pero no deben duplicar las capacidades ni las autoridades canónicas.
+
+## Evidencia de normalización del web V8
+
+El Campeonato V8 ya consume `GET /api/v1/public-championship` desde Sports Event Bus y usa `championship-fixture.json` sólo como fallback snapshot. Por tanto ese snapshot no es autoridad.
+
+El pipeline Google histórico todavía materializa `CUDO_WEB_PARTIDOS` y `CUDO_WEB_TABLA`. Se clasifican como `LEGACY_UNRESOLVED_NON_AUTHORITY`: no pueden competir con fixture/resultados/tabla canónicos de ANFA Chépica. No se eliminan hasta demostrar si resuelven un objetivo propio del club o si son material obsoleto.
 
 ## Regla para refactor
 
 Antes de crear o modificar un flujo:
 
-1. declarar la intención humana;
-2. buscar capacidad canónica equivalente;
-3. si existe, reutilizarla;
-4. expresar diferencias como policy/scope/provenance/adaptador;
-5. crear una capacidad nueva sólo si cambia el significado o el objetivo humano;
-6. publicar cambios mediante evento;
-7. actualizar únicamente las proyecciones afectadas.
+1. declarar el problema sistémico y la intención humana;
+2. identificar el bounded context y scope semántico;
+3. buscar la autoridad y capacidad canónica equivalentes;
+4. si existen, reutilizarlas por referencia;
+5. expresar diferencias como policy/scope/provenance/adaptador/proyección;
+6. crear autoridad o capacidad nueva sólo si cambia el significado real;
+7. publicar cambios mediante evento/delta;
+8. actualizar únicamente las proyecciones afectadas;
+9. falsar que no se creó una segunda autoridad, un segundo flujo o polling innecesario.
 
-## Frontera inmediata
+## Frontera
 
-La primera vertical canónica para producción es:
+`RESULTS_REGISTER` es la primera vertical canónica `CONSUMABLE`:
 
 ```text
 RESULTS_REGISTER
@@ -207,4 +306,4 @@ result.updated / result.submitted
 read projection + streaming projection
 ```
 
-No se implementan variantes `PUBLIC_RESULTS_REGISTER`, `CP_RESULTS_REGISTER` o `CLUB_ADMIN_RESULTS_REGISTER` como productos distintos.
+La siguiente frontera de producto es `RESULTS-READ`: debe validar su contrato humano canónico antes de modificar sus runtimes existentes.
