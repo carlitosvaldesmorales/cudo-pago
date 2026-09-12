@@ -16,6 +16,8 @@ export const AUDIENCE_ACCESS_STATE=Object.freeze({
   REQUESTABLE:'REQUESTABLE'
 });
 
+export const ACCESS_INTAKE_CONTRACT='HUMAN_REVIEWABLE_REQUEST_V1';
+
 const POLICIES=Object.freeze([
   Object.freeze({
     id:'PUBLIC_GENERAL',
@@ -42,7 +44,10 @@ const POLICIES=Object.freeze([
     approval_required:true,
     grants_on_entry:false,
     persistence_adapter:'access_requests',
-    enrollment_capture:'CLUB'
+    intake_contract:ACCESS_INTAKE_CONTRACT,
+    required_claims:Object.freeze(['DECLARED_NAME','REPRESENTED_ENTITY']),
+    represented_entity_capture:'CLUB_DIRECTORY',
+    submission_requires_confirmation:true
   }),
   Object.freeze({
     id:'CHEPICA_PLAY',
@@ -60,6 +65,10 @@ const POLICIES=Object.freeze([
     grants_on_entry:false,
     control_plane_bypass:false,
     persistence_adapter:'partner_access_requests',
+    intake_contract:ACCESS_INTAKE_CONTRACT,
+    required_claims:Object.freeze(['DECLARED_NAME','REPRESENTED_ENTITY']),
+    represented_entity_capture:'FREE_TEXT',
+    submission_requires_confirmation:true,
     scope_type:'COMPETITION',
     scope_id:'ANFA-CHEPICA-2026',
     capabilities:Object.freeze(['READ_COMPETITION','OBSERVE_RESULT']),
@@ -77,7 +86,12 @@ export const AUDIENCE_ACCESS_CONTRACT=Object.freeze({
   audience_entry_never_materializes_authority:true,
   scoped_grant_requires_explicit_membership:true,
   control_plane_authority_never_implies_scoped_audience_membership:true,
-  storage_adapter_is_not_access_semantics:true
+  storage_adapter_is_not_access_semantics:true,
+  draft_never_equals_pending:true,
+  human_claims_precede_submission:true,
+  confirmation_precedes_pending:true,
+  technical_identity_is_separate_from_declared_profile:true,
+  reviewer_receives_human_context:true
 });
 
 export function getAudienceAccessPolicy(id){
@@ -127,6 +141,15 @@ export function validateAudienceAccessPolicies(policies=POLICIES){
     if(policy.authorization_model===AUTHORIZATION_MODEL.NONE) errors.push(`restricted_audience_without_authority_model:${policy.id}`);
     if(policy.authorization_model===AUTHORIZATION_MODEL.SCOPED_GRANT&&policy.control_plane_bypass!==false){
       errors.push(`scoped_audience_control_plane_bypass_forbidden:${policy.id}`);
+    }
+
+    if(policy.requestable){
+      if(policy.intake_contract!==ACCESS_INTAKE_CONTRACT) errors.push(`structured_intake_missing:${policy.id}`);
+      if(!Array.isArray(policy.required_claims)||policy.required_claims.length===0) errors.push(`required_claims_missing:${policy.id}`);
+      if(!policy.required_claims?.includes('DECLARED_NAME')) errors.push(`declared_name_claim_missing:${policy.id}`);
+      if(!policy.required_claims?.includes('REPRESENTED_ENTITY')) errors.push(`represented_entity_claim_missing:${policy.id}`);
+      if(policy.submission_requires_confirmation!==true) errors.push(`confirmation_before_pending_missing:${policy.id}`);
+      if(!['FREE_TEXT','CLUB_DIRECTORY'].includes(policy.represented_entity_capture)) errors.push(`represented_entity_capture_invalid:${policy.id}`);
     }
   }
 
