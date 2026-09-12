@@ -33,11 +33,11 @@ jobs:
       - name: Self-test hard runtime lock
         run: |
           set -euo pipefail
-          # RESULTS-REGISTER is now PRODUCT_VALIDATED/QA_CERTIFIED, so its runtime is
-          # intentionally allowed to advance. Prove the gate still blocks a module
-          # that remains before PRODUCT_VALIDATED: RESULTS-READ.
-          if CHANGED_FILES='sports-bus/worker/public-results-ux-v3.js' node scripts/validate-module-registry.mjs; then
-            echo 'Gate failed: RESULTS-READ runtime advanced before PRODUCT_VALIDATED' >&2
+          # RESULTS-REGISTER ya es CONSUMABLE y RESULTS-READ recuperó su aprobación
+          # previa como PRODUCT_VALIDATED. Probar el bloqueo con el módulo que sí
+          # permanece antes de PRODUCT_VALIDATED: RESULTS-GOVERN.
+          if CHANGED_FILES='sports-bus/worker/result-governance-entry.js' node scripts/validate-module-registry.mjs; then
+            echo 'Gate failed: RESULTS-GOVERN runtime advanced before PRODUCT_VALIDATED' >&2
             exit 1
           fi
           CHANGED_FILES='docs/architecture/canonical-capability-event-projection-v1.md' node scripts/validate-module-registry.mjs
