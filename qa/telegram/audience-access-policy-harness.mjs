@@ -60,10 +60,11 @@ assert.equal(chepica.scope_type,'COMPETITION');
 assert.equal(chepica.scope_id,'ANFA-CHEPICA-2026');
 assert.deepEqual([...chepica.capabilities],['READ_COMPETITION','OBSERVE_RESULT']);
 assert.equal(chepica.grants_on_entry,false);
+assert.equal(chepica.control_plane_bypass,false);
 assert.equal(resolveAudienceAccessState(chepica,{authorized:true}),AUDIENCE_ACCESS_STATE.AUTHORIZED);
 assert.equal(resolveAudienceAccessState(chepica,{pending:true}),AUDIENCE_ACCESS_STATE.PENDING);
 assert.equal(resolveAudienceAccessState(chepica),AUDIENCE_ACCESS_STATE.REQUESTABLE);
-console.log('PASS Chépica Play is a restricted actionable SCOPED_GRANT enrollment policy');
+console.log('PASS Chépica Play requires explicit SCOPED_GRANT membership with no control-plane bypass');
 
 for(const policy of AUDIENCE_ACCESS_POLICIES){
   const rootItem=TELEGRAM_ROOT_AUDIENCES.find(item=>item.id===policy.id);
@@ -88,7 +89,12 @@ assert.ok(chepicaAdapter.includes('INSERT INTO partner_access_requests'));
 assert.ok(chepicaAdapter.includes('INSERT INTO actor_scope_grants'));
 assert.ok(chepicaAdapter.includes("'MEDIA_PARTNER','COMPETITION'"));
 assert.ok(chepicaAdapter.includes("[{text:'📝 Solicitar autorización',callback_data:'cp:access-request'}]"));
-console.log('PASS Chépica Play adapter implements request -> approval -> scoped grant materializer');
+assert.ok(!chepicaAdapter.includes('privilegedContext'));
+assert.ok(!chepicaAdapter.includes('canUsePrivilegedContext'));
+const contextAdapter=read('sports-bus/worker/telegram-entry-context.js');
+assert.ok(!contextAdapter.includes("['SUPER_ADMIN','PLATFORM_OPERATOR']"));
+assert.ok(contextAdapter.includes("membership?.partner_code==='CHEPICA_PLAY'"));
+console.log('PASS Chépica Play adapters require explicit membership and contain no admin bypass');
 
 const deadEnd=AUDIENCE_ACCESS_POLICIES.map(policy=>({...policy}));
 const cp=deadEnd.find(policy=>policy.id==='CHEPICA_PLAY');
@@ -99,6 +105,9 @@ assert.ok(validateAudienceAccessPolicies(deadEnd).includes('restricted_audience_
 const unsafe=AUDIENCE_ACCESS_POLICIES.map(policy=>({...policy}));
 unsafe.find(policy=>policy.id==='DIRIGENTES').grants_on_entry=true;
 assert.ok(validateAudienceAccessPolicies(unsafe).includes('entry_must_not_grant_authority:DIRIGENTES'));
-console.log('PASS policy fails closed on dead-end restricted audiences and authority-on-entry');
+const bypass=AUDIENCE_ACCESS_POLICIES.map(policy=>({...policy}));
+bypass.find(policy=>policy.id==='CHEPICA_PLAY').control_plane_bypass=true;
+assert.ok(validateAudienceAccessPolicies(bypass).includes('scoped_audience_control_plane_bypass_forbidden:CHEPICA_PLAY'));
+console.log('PASS policy fails closed on dead ends, authority-on-entry and scoped-audience admin bypass');
 
 console.log('RESULT: PASS');
