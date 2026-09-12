@@ -1,0 +1,30 @@
+name: Validate Access Review Presentation
+
+on:
+  pull_request:
+    paths:
+      - 'sports-bus/canonical-entry.js'
+      - 'sports-bus/worker/access-request-review-entry.js'
+      - 'qa/telegram/access-review-presentation-contract.mjs'
+      - '.github/workflows/validate-access-review-presentation.yml'
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+    paths:
+      - 'sports-bus/canonical-entry.js'
+      - 'sports-bus/worker/access-request-review-entry.js'
+      - 'qa/telegram/access-review-presentation-contract.mjs'
+      - '.github/workflows/validate-access-review-presentation.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check review renderer
+        run: node --check sports-bus/worker/access-request-review-entry.js
+      - name: Validate governed review presentation contract
+        run: node qa/telegram/access-review-presentation-contract.mjs
