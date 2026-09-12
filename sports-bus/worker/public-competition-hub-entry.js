@@ -94,11 +94,18 @@ async function present(token,callback,rendered){
 
 function standingsSelection(data){
   if(data==='tp:public-standings'){
-    return {championshipCode:'PRINCIPAL',groupId:null};
+    return {championshipCode:'PRINCIPAL'};
   }
-  const match=data.match(/^tp:standings:(PRINCIPAL|SENIOR):([A-Za-z0-9._-]+)$/);
-  if(!match) return null;
-  return {championshipCode:match[1],groupId:match[2]};
+
+  // v3 canonical callback: championship only.
+  let match=data.match(/^tp:standings:(PRINCIPAL|SENIOR)$/);
+  if(match) return {championshipCode:match[1]};
+
+  // Backward compatibility: old v2 buttons may still exist in a user's chat.
+  match=data.match(/^tp:standings:(PRINCIPAL|SENIOR):[A-Za-z0-9._-]+$/);
+  if(match) return {championshipCode:match[1]};
+
+  return null;
 }
 
 export async function handlePublicCompetitionHubRequest(request,env){
@@ -158,7 +165,7 @@ export async function handlePublicCompetitionHubRequest(request,env){
       screen_id:model.screen_id,
       contract:standings.contract,
       championship_code:model.championship_code,
-      group_id:model.group_id,
+      groups:model.groups.map(group=>group.group_id),
       channel_role:context.channel_role,
       presentation_mode
     });
