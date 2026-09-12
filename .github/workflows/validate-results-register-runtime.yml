@@ -1,0 +1,85 @@
+name: Validate Results Register Runtime
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+  push:
+    branches: [feature/sports-event-bus-v1]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    env:
+      BASE: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for deployed canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          READY=0
+          for i in $(seq 1 20); do
+            code=$(curl -sS -o /tmp/round.json -w '%{http_code}' "$BASE/api/v1/rounds/3/results?mode=reported" || true)
+            echo "Round projection HTTP $code (attempt $i/20)"
+            if [ "$code" = "200" ] && node -e 'const x=require("/tmp/round.json");if(!x.ok||x.round_no!==3||x.mode!=="reported"||!Array.isArray(x.matches))process.exit(1)' 2>/dev/null; then
+              READY=1
+              break
+            fi
+            sleep 3
+          done
+          test "$READY" -eq 1
+      - name: Validate health and read projections
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "$BASE/health" -o /tmp/health.json
+          node -e 'const x=require("/tmp/health.json");if(!x.ok)process.exit(1)'
+
+          curl -fsS "$BASE/api/v1/rounds/3/results?mode=official" -o /tmp/official.json
+          curl -fsS "$BASE/api/v1/rounds/3/results?mode=reported" -o /tmp/reported.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const official=JSON.parse(fs.readFileSync('/tmp/official.json'));
+          const reported=JSON.parse(fs.readFileSync('/tmp/reported.json'));
+          for(const [name,x,mode] of [['official',official,'official'],['reported',reported,'reported']]){
+            if(!x.ok||x.round_no!==3||x.mode!==mode||!Array.isArray(x.matches)||x.matches.length===0) throw new Error(`${name} projection invalid`);
+            for(const m of x.matches){
+              if(!Array.isArray(m.series)||m.series.length!==4) throw new Error(`${name} must expose four canonical series`);
+              for(const s of m.series){
+                if(!['TERCERA','SEGUNDA','SENIOR','PRIMERA'].includes(s.series_code)) throw new Error(`unexpected series ${s.series_code}`);
+                if(mode==='official' && s.status==='PENDIENTE') throw new Error('official projection leaked pending result');
+              }
+            }
+          }
+          console.log(`PASS official=${official.matches.length} matches reported=${reported.matches.length} matches`);
+          NODE
+      - name: Validate OBS HTML is push-based
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "$BASE/stream/fecha/3?mode=reported" -o /tmp/overlay.html
+          grep -q 'FECHA 3' /tmp/overlay.html
+          grep -q 'new WebSocket' /tmp/overlay.html
+          grep -q '/stream/ws/3' /tmp/overlay.html
+          if grep -Eq 'setInterval\s*\(|fetch\s*\([^)]*api/v1/rounds' /tmp/overlay.html; then
+            echo 'Polling detected in streaming overlay' >&2
+            exit 1
+          fi
+          echo 'PASS OBS overlay bootstraps once and listens by WebSocket without API polling'
+      - name: Validate WebSocket endpoint handshake
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const url='wss://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/stream/ws/3';
+          const ws=new WebSocket(url);
+          const timer=setTimeout(()=>{console.error('WebSocket timeout');process.exit(1)},10000);
+          ws.addEventListener('open',()=>{console.log('PASS WebSocket runtime connected');clearTimeout(timer);ws.close();setTimeout(()=>process.exit(0),100)});
+          ws.addEventListener('error',e=>{console.error('WebSocket error',e?.message||e);clearTimeout(timer);process.exit(1)});
+          NODE
