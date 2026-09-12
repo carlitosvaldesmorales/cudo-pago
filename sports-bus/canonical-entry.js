@@ -6,6 +6,29 @@ export { ResultsStreamHub };
 
 const PRIMARY='/webhook/telegram';
 const NEXT='/webhook/telegram-next';
+const ALLOWED_ORIGINS=new Set(['https://cudo.cl','https://www.cudo.cl','https://carlitosvaldesmorales.github.io']);
+
+function streamCorsHeaders(request){
+  const origin=request.headers.get('Origin');
+  if(!origin||!ALLOWED_ORIGINS.has(origin)) return null;
+  return {
+    'Access-Control-Allow-Origin':origin,
+    'Access-Control-Allow-Methods':'GET,OPTIONS',
+    'Access-Control-Allow-Headers':'Content-Type',
+    'Access-Control-Max-Age':'86400',
+    'Vary':'Origin'
+  };
+}
+
+function withStreamCors(request,response){
+  const url=new URL(request.url);
+  if(request.method!=='GET'||!/^\/api\/v1\/rounds\/\d+\/results$/.test(url.pathname)) return response;
+  const cors=streamCorsHeaders(request);
+  if(!cors) return response;
+  const headers=new Headers(response.headers);
+  for(const [key,value] of Object.entries(cors)) headers.set(key,value);
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
 
 async function sha256Hex(value){
   const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(value)));
@@ -37,7 +60,7 @@ async function canonicalTelegramRuntime(request,env){
 export default {
   async fetch(request,env,ctx){
     const stream=await handleResultsStreamRequest(request.clone(),env);
-    if(stream) return stream;
+    if(stream) return withStreamCors(request,stream);
 
     const canonical=await canonicalTelegramRuntime(request,env);
     if(canonical){
