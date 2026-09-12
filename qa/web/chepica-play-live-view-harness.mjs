@@ -5,6 +5,7 @@ const BASE='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const ORIGIN='https://carlitosvaldesmorales.github.io';
 const page=fs.readFileSync('preview-v8/chepica-play/index.html','utf8');
 const live=fs.readFileSync('preview-v8/chepica-play/live.js','utf8');
+const runtimeCheck=process.env.RUNTIME_CHECK==='1';
 
 assert.match(page,/Chépica Play · En cancha/);
 assert.match(page,/INFORMADO todavía no es un resultado OFICIAL/);
@@ -16,9 +17,27 @@ assert.doesNotMatch(live,/setInterval\s*\(/);
 assert.doesNotMatch(live,/api\/v1\/public-championship/);
 console.log('PASS static: vista usa proyección reported + WebSocket, sin polling ni segunda autoridad');
 
-const reportedRes=await fetch(`${BASE}/api/v1/rounds/3/results?mode=reported`,{headers:{Origin:ORIGIN}});
-assert.equal(reportedRes.status,200);
-assert.equal(reportedRes.headers.get('access-control-allow-origin'),ORIGIN);
+if(!runtimeCheck){
+  console.log('RESULT: PASS (static PR gate)');
+  process.exit(0);
+}
+
+async function waitForCors(){
+  let last=null;
+  for(let i=1;i<=30;i++){
+    const response=await fetch(`${BASE}/api/v1/rounds/3/results?mode=reported`,{headers:{Origin:ORIGIN}});
+    last=response;
+    const cors=response.headers.get('access-control-allow-origin');
+    console.log(`Runtime attempt ${i}/30: HTTP ${response.status}, CORS ${cors||'missing'}`);
+    if(response.status===200&&cors===ORIGIN) return response;
+    await new Promise(resolve=>setTimeout(resolve,3000));
+  }
+  return last;
+}
+
+const reportedRes=await waitForCors();
+assert.equal(reportedRes?.status,200);
+assert.equal(reportedRes?.headers.get('access-control-allow-origin'),ORIGIN);
 const reported=await reportedRes.json();
 assert.equal(reported.ok,true);
 assert.equal(reported.mode,'reported');
@@ -36,6 +55,7 @@ console.log(`PASS runtime: reported fecha 3 accesible desde GitHub Pages (${repo
 
 const officialRes=await fetch(`${BASE}/api/v1/rounds/3/results?mode=official`,{headers:{Origin:ORIGIN}});
 assert.equal(officialRes.status,200);
+assert.equal(officialRes.headers.get('access-control-allow-origin'),ORIGIN);
 const official=await officialRes.json();
 assert.equal(official.mode,'official');
 for(const match of official.matches){
