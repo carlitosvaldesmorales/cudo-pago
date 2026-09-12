@@ -1,0 +1,49 @@
+name: Validate Public Standings Runtime
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+  push:
+    branches:
+      - qa/public-standings-runtime-smoke
+      - feature/sports-event-bus-v1
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate deployed standings API
+        env:
+          URL: https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/api/v1/public-standings
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 20 "$URL" -o standings.json; then
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "Runtime standings endpoint did not respond successfully"
+              exit 1
+            fi
+            sleep 3
+          done
+
+          jq -e '.ok == true' standings.json
+          jq -e '.contract == "public-standings-v1"' standings.json
+          jq -e '.competition_id == "ANFA-CHEPICA-2026"' standings.json
+          jq -e '.rules.table_general == ["TERCERA","SEGUNDA","PRIMERA"]' standings.json
+          jq -e '.rules.table_senior == ["SENIOR"]' standings.json
+          jq -e '.rules.points_by_series.TERCERA == {"win":2,"draw":1,"loss":0}' standings.json
+          jq -e '.rules.points_by_series.SEGUNDA == {"win":3,"draw":1,"loss":0}' standings.json
+          jq -e '.rules.points_by_series.SENIOR == {"win":3,"draw":1,"loss":0}' standings.json
+          jq -e '.rules.points_by_series.PRIMERA == {"win":4,"draw":2,"loss":0}' standings.json
+          jq -e '.rules.goal_difference_is_tiebreaker == false' standings.json
+          jq -e '.rules.only_verified_results == true' standings.json
+          jq -e '(.groups | length) == 2' standings.json
+          jq -e 'all(.groups[]; ([.tables[].table_code] | sort) == ["GENERAL","SENIOR"])' standings.json
+
+          echo "PASS deployed public standings contract"
+          jq '{contract,competition_id,rules,groups:[.groups[]|{group_id,tables:[.tables[]|{table_code,rows:(.rows|length)}]}]}' standings.json
