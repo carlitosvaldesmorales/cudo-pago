@@ -1,3 +1,5 @@
+import { NAVIGATION_ACTION, navigationButton } from './telegram-navigation-contract.js';
+
 const json = (body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json; charset=utf-8'}});
 
 export async function handlePortalRequest(request, env) {
@@ -45,7 +47,7 @@ export async function handlePortalRequest(request, env) {
     await send(env, chatId, '🌐 FÚTBOL CHÉPICA · PÚBLICO\n\nConsulta información verificada del campeonato.', {
       inline_keyboard:[
         [{text:'⚽ Resultados verificados',callback_data:'tp:public-results'}],
-        [{text:'🏠 Volver',callback_data:'tp:home'}]
+        [navigationButton(NAVIGATION_ACTION.BACK,'tp:home')]
       ]
     });
     return json({ok:true,handled:'portal_public'});
@@ -102,7 +104,7 @@ export async function handlePortalRequest(request, env) {
     await send(env, chatId, `🕒 Solicitud enviada\n\nClub: ${team.canonical_name}\nAcceso: Dirigente / administrador del club\nEstado: PENDIENTE\n\nUn administrador global debe aprobarla antes de habilitar funciones administrativas.`, {
       inline_keyboard:[
         [{text:'🔎 Ver estado',callback_data:'tp:reqstatus'}],
-        [{text:'🏠 Inicio',callback_data:'tp:home'}]
+        [{text:'⬅️ Volver a Dirigentes',callback_data:'tp:leaders'}]
       ]
     });
     return json({ok:true,handled:'portal_request_created',club_id:team.team_id});
@@ -147,8 +149,8 @@ export async function handlePortalRequest(request, env) {
     ]);
     const team = await env.DB.prepare('SELECT canonical_name FROM teams WHERE team_id=?').bind(row.requested_club_id).first();
     await answerCallback(env, callback.id, 'Aprobado');
-    await send(env, chatId, `✅ Acceso aprobado\n${row.display_name || row.telegram_user_id} → ${team?.canonical_name || row.requested_club_id} · CLUB_ADMIN`);
-    await send(env, row.telegram_user_id, `✅ Tu acceso de dirigente fue aprobado.\n\nClub: ${team?.canonical_name || row.requested_club_id}\nYa puedes entrar a 🔐 Dirigentes desde el portal.`);
+    await send(env, chatId, `✅ Acceso aprobado\n${row.display_name || row.telegram_user_id} → ${team?.canonical_name || row.requested_club_id} · CLUB_ADMIN`, {inline_keyboard:[[{text:'⬅️ Volver a solicitudes',callback_data:'tp:requests'}]]});
+    await send(env, row.telegram_user_id, `✅ Tu acceso de dirigente fue aprobado.\n\nClub: ${team?.canonical_name || row.requested_club_id}\nYa puedes entrar a 🔐 Dirigentes desde el portal.`, {inline_keyboard:[[{text:'🔐 Entrar a Dirigentes',callback_data:'tp:leaders'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
     return json({ok:true,handled:'portal_request_approved'});
   }
 
@@ -168,8 +170,8 @@ export async function handlePortalRequest(request, env) {
         .bind(`access-${row.request_id}-reject`,actorId,reporter.role,row.requested_club_id,row.request_id,now)
     ]);
     await answerCallback(env, callback.id, 'Rechazado');
-    await send(env, chatId, `❌ Solicitud rechazada\n${row.display_name || row.telegram_user_id} · ${row.requested_club_id}`);
-    await send(env, row.telegram_user_id, '❌ Tu solicitud de acceso de dirigente fue rechazada. Si corresponde, contacta al administrador del campeonato.');
+    await send(env, chatId, `❌ Solicitud rechazada\n${row.display_name || row.telegram_user_id} · ${row.requested_club_id}`, {inline_keyboard:[[{text:'⬅️ Volver a solicitudes',callback_data:'tp:requests'}]]});
+    await send(env, row.telegram_user_id, '❌ Tu solicitud de acceso de dirigente fue rechazada. Si corresponde, contacta al administrador del campeonato.', {inline_keyboard:[[{text:'⬅️ Volver a Dirigentes',callback_data:'tp:leaders'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
     return json({ok:true,handled:'portal_request_rejected'});
   }
 
@@ -236,23 +238,23 @@ async function showLeaderPortal(env, chatId, reporter) {
 async function showClubPicker(env, chatId) {
   const q = await env.DB.prepare("SELECT team_id,canonical_name FROM teams ORDER BY canonical_name").all();
   const rows = (q.results || []).map(t=>[{text:`🏟 ${t.canonical_name}`,callback_data:`tp:reqclub:${t.team_id}`}]);
-  rows.push([{text:'🏠 Volver',callback_data:'tp:leaders'}]);
+  rows.push([{text:'⬅️ Volver',callback_data:'tp:leaders'}]);
   await send(env, chatId, '📝 SOLICITAR ACCESO DE DIRIGENTE\n\nSelecciona el club que representas. Esto crea una solicitud; no entrega permisos automáticamente.', {inline_keyboard:rows});
 }
 
 async function showRequestStatus(env, chatId, actorId) {
   const row = await env.DB.prepare("SELECT a.*,t.canonical_name FROM access_requests a LEFT JOIN teams t ON t.team_id=a.requested_club_id WHERE a.telegram_user_id=? ORDER BY a.created_at DESC LIMIT 1").bind(actorId).first();
   if (!row) {
-    await send(env, chatId, 'No tienes solicitudes de acceso registradas.', {inline_keyboard:[[{text:'📝 Solicitar acceso',callback_data:'tp:req'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+    await send(env, chatId, 'No tienes solicitudes de acceso registradas.', {inline_keyboard:[[{text:'📝 Solicitar acceso',callback_data:'tp:req'}],[{text:'⬅️ Volver a Dirigentes',callback_data:'tp:leaders'}]]});
     return;
   }
-  await send(env, chatId, `🔎 ESTADO DE SOLICITUD\n\nClub: ${row.canonical_name || row.requested_club_id}\nRol: ${row.requested_role}\nEstado: ${row.status}\nFecha: ${row.created_at}`, {inline_keyboard:[[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+  await send(env, chatId, `🔎 ESTADO DE SOLICITUD\n\nClub: ${row.canonical_name || row.requested_club_id}\nRol: ${row.requested_role}\nEstado: ${row.status}\nFecha: ${row.created_at}`, {inline_keyboard:[[{text:'⬅️ Volver a Dirigentes',callback_data:'tp:leaders'}]]});
 }
 
 async function showPendingRequests(env, chatId) {
   const q = await env.DB.prepare("SELECT a.request_id,a.display_name,a.requested_club_id,t.canonical_name FROM access_requests a LEFT JOIN teams t ON t.team_id=a.requested_club_id WHERE a.status='PENDING' ORDER BY a.created_at LIMIT 20").all();
   const rows = (q.results || []).map(r=>[{text:`${r.canonical_name || r.requested_club_id} · ${r.display_name || r.request_id}`,callback_data:`tp:review:${r.request_id}`}]);
-  rows.push([{text:'🏠 Volver',callback_data:'tp:leaders'}]);
+  rows.push([{text:'⬅️ Volver',callback_data:'tp:leaders'}]);
   await send(env, chatId, rows.length===1 ? '✅ No hay solicitudes de dirigentes pendientes.' : '🔔 SOLICITUDES PENDIENTES\n\nSelecciona una solicitud para revisarla.', {inline_keyboard:rows});
 }
 
@@ -282,11 +284,11 @@ async function showRegisteredResults(env, chatId, reporter, leaderView) {
   const q = await stmt.all();
   const rows = q.results || [];
   if (!rows.length) {
-    await send(env, chatId, 'No hay resultados verificados disponibles todavía.', {inline_keyboard:[[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+    await send(env, chatId, 'No hay resultados verificados disponibles todavía.', {inline_keyboard:[[navigationButton(NAVIGATION_ACTION.BACK,'nav:back')]]});
     return;
   }
   const lines = rows.map(r=>`${r.round_label || 'Fecha'} · ${r.series_code}\n${r.home_name} ${r.home_score}-${r.away_score} ${r.away_name}`);
-  await send(env, chatId, `📋 RESULTADOS REGISTRADOS\n\n${lines.join('\n\n')}`, {inline_keyboard:[[{text:leaderView?'🔐 Dirigentes':'🌐 Público',callback_data:leaderView?'tp:leaders':'tp:public'}],[{text:'🏠 Inicio',callback_data:'tp:home'}]]});
+  await send(env, chatId, `📋 RESULTADOS REGISTRADOS\n\n${lines.join('\n\n')}`, {inline_keyboard:[[navigationButton(NAVIGATION_ACTION.BACK,'nav:back')]]});
 }
 
 async function showMyMatchesBridge(env, chatId, reporter) {
@@ -294,7 +296,7 @@ async function showMyMatchesBridge(env, chatId, reporter) {
   if (!team) return send(env, chatId, 'No encontré el club asociado a tu cuenta.');
   const q = await env.DB.prepare("SELECT match_id,round_no,round_label,home_name,away_name FROM matches WHERE competition_id='ANFA-CHEPICA-2026' AND (home_id=? OR away_id=?) ORDER BY round_no,match_id").bind(reporter.club_id,reporter.club_id).all();
   const buttons = (q.results || []).map(m=>[{text:`${m.round_label} · ${m.home_name} vs ${m.away_name}`,callback_data:`rs:date:${m.round_no}`}]);
-  buttons.push([{text:'🔐 Volver a Dirigentes',callback_data:'tp:leaders'}]);
+  buttons.push([{text:'⬅️ Volver a Dirigentes',callback_data:'tp:leaders'}]);
   await send(env, chatId, `⚽ MIS PARTIDOS\nClub: ${team.canonical_name}\nGrupo: ${team.group_id}\n\nSelecciona una fecha:`, {inline_keyboard:buttons});
 }
 
@@ -319,7 +321,7 @@ function isVerifiedAdmin(r) { return !!r && r.active===1 && r.trust_level==='VER
 
 async function deny(env, chatId, callback) {
   if (callback) await answerCallback(env, callback.id, 'No autorizado');
-  await send(env, chatId, '🔒 No tienes permisos para esta función.');
+  await send(env, chatId, '🔒 No tienes permisos para esta función.', {inline_keyboard:[[navigationButton(NAVIGATION_ACTION.BACK,'nav:back')]]});
   return json({ok:true,handled:'portal_denied'});
 }
 
