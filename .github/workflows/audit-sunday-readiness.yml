@@ -2,9 +2,15 @@ name: Audit Sunday Readiness
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/**'
+      - '.github/workflows/audit-sunday-readiness.yml'
   push:
     branches:
       - feature/sports-event-bus-v1
+      - ops/audit-admin-chepica-play-context-v1
     paths:
       - 'sports-bus/**'
       - '.github/workflows/audit-sunday-readiness.yml'
@@ -43,8 +49,6 @@ jobs:
             sleep 4
           done
           echo "Canonical contracts did not become ready after deploy window"
-          cat /tmp/standings-ready.json || true
-          cat /tmp/telegram-ready.json || true
           exit 1
       - name: Read-only operational state
         id: state
@@ -55,7 +59,8 @@ jobs:
           SQL="SELECT
             (SELECT COUNT(*) FROM actor_scope_grants WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND active=1) AS active_chepica_play_identities,
             (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at>datetime('now')) AS valid_pending_invites,
-            (SELECT COUNT(*) FROM partner_scope_invites WHERE partner_code='CHEPICA_PLAY' AND role='MEDIA_PARTNER' AND scope_type='COMPETITION' AND scope_id='ANFA-CHEPICA-2026' AND status='PENDING' AND expires_at<=datetime('now')) AS expired_pending_invites,
+            (SELECT COUNT(*) FROM reporters WHERE active=1 AND trust_level='VERIFIED' AND role IN ('SUPER_ADMIN','PLATFORM_OPERATOR')) AS privileged_context_testers,
+            (SELECT COUNT(*) FROM public_result_submissions p JOIN reporters r ON r.telegram_user_id=p.submitter_id WHERE p.entry_context='CHEPICA_PLAY' AND p.source_channel='telegram:chepica_play' AND r.active=1 AND r.trust_level='VERIFIED' AND r.role IN ('SUPER_ADMIN','PLATFORM_OPERATOR')) AS privileged_chepica_play_submissions,
             (SELECT COUNT(*) FROM matches WHERE competition_id='ANFA-CHEPICA-2026' AND round_no=3) AS round3_matches,
             (SELECT COUNT(*) FROM byes WHERE competition_id='ANFA-CHEPICA-2026' AND round_no=3) AS round3_byes,
             (SELECT COUNT(*) FROM public_result_submissions WHERE status='SUBMITTED') AS pending_result_submissions,
@@ -71,7 +76,8 @@ jobs:
           if(Number(r.round3_byes)!==1) throw new Error('round3_bye_not_ready');
           console.log(`active=${Number(r.active_chepica_play_identities)}`);
           console.log(`valid_invites=${Number(r.valid_pending_invites)}`);
-          console.log(`expired_invites=${Number(r.expired_pending_invites)}`);
+          console.log(`privileged_testers=${Number(r.privileged_context_testers)}`);
+          console.log(`privileged_context_submissions=${Number(r.privileged_chepica_play_submissions)}`);
           console.log(`round3_matches=${Number(r.round3_matches)}`);
           console.log(`round3_byes=${Number(r.round3_byes)}`);
           console.log(`pending_submissions=${Number(r.pending_result_submissions)}`);
@@ -105,18 +111,26 @@ jobs:
           if(s.championships?.SENIOR?.independent_from!=='PRINCIPAL') throw new Error('senior_independence_failed');
           console.log('RUNTIME_PROJECTIONS=PASS');
           NODE
-      - name: READY — Chépica Play has an active real identity
-        if: steps.state.outputs.active != '0'
-        run: echo "A real Chépica Play Telegram identity is already active on the shared domain."
-      - name: HUMAN GATE — real Chépica Play person must claim valid @FutbolChepicaBot invite
+      - name: HUMAN GATE — privileged admin must prove Chépica Play context in real Telegram
+        if: steps.state.outputs.privileged_testers != '0' && steps.state.outputs.privileged_context_submissions == '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "A verified privileged actor exists and can test Chépica Play without becoming a partner identity."
+          echo "Next irreducible action: open @FutbolChepicaBot -> Chépica Play -> Ingresar resultados and submit one controlled result observation."
+          echo "After that, audit must show the real actor plus entry_context=CHEPICA_PLAY and source_channel=telegram:chepica_play."
+      - name: READY — privileged Chépica Play context proven end-to-end
+        if: steps.state.outputs.privileged_context_submissions != '0'
+        run: echo "Privileged actor -> Chépica Play context -> audited submission is proven in runtime."
+      - name: HUMAN GATE — no privileged tester exists
+        if: steps.state.outputs.privileged_testers == '0'
+        run: |
+          echo "BLOCKED_BY_HUMAN"
+          echo "No verified SUPER_ADMIN or PLATFORM_OPERATOR exists to perform privileged context UAT."
+      - name: INFO — partner onboarding still pending
         if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites != '0'
         run: |
-          echo "BLOCKED_BY_HUMAN"
-          echo "A valid single-use Chépica Play invitation exists, but no real Chépica Play Telegram identity is active."
-          echo "The irreducible next action is for a real Chépica Play person to claim that invitation from their own Telegram account through @FutbolChepicaBot."
-      - name: HUMAN GATE — admin must create fresh @FutbolChepicaBot invite, then real person must claim it
-        if: steps.state.outputs.active == '0' && steps.state.outputs.valid_invites == '0'
-        run: |
-          echo "BLOCKED_BY_HUMAN"
-          echo "No active Chépica Play identity and no valid pending invitation exist."
-          echo "An authorized administrator must create a fresh single-use invitation for @FutbolChepicaBot, then a real Chépica Play person must claim it."
+          echo "ONBOARDING_PENDING_NOT_ADMIN_UAT_BLOCKER"
+          echo "A valid Chépica Play invitation exists. A real Chépica Play person can claim it later; this no longer blocks Admin Global testing."
+      - name: INFO — Chépica Play real identity already active
+        if: steps.state.outputs.active != '0'
+        run: echo "At least one real Chépica Play identity is already linked."
