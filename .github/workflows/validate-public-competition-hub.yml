@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - feature/public-competition-hub-v1
+      - feature/standings-2026-official-rules
       - feature/sports-event-bus-v1
 
 permissions:
@@ -24,12 +25,18 @@ jobs:
           set -euo pipefail
           node --check sports-bus/canonical-entry.js
           node --check sports-bus/worker/public-competition-hub-entry.js
+          node --check sports-bus/worker/public-standings-entry.js
           node --check qa/telegram/public-competition-hub-harness.mjs
+          node --check qa/web/public-standings-harness.mjs
       - name: Competition Hub contract
         run: node qa/telegram/public-competition-hub-harness.mjs
-      - name: Standings source gap remains explicit
+      - name: Official standings rules
+        run: node qa/web/public-standings-harness.mjs
+      - name: Standings source gap is resolved
         run: |
           set -euo pipefail
-          grep -q 'NO IMPLEMENTAR TABLA HASTA RESOLVER' ops/STANDINGS-RULES-GAP-01.md
-          grep -q 'No calcularemos una tabla usando supuestos' sports-bus/worker/public-competition-hub-entry.js
-          ! grep -Eq 'victoria.{0,20}=.{0,20}3|empate.{0,20}=.{0,20}1' sports-bus/worker/public-competition-hub-entry.js
+          grep -q 'Estado: \*\*RESUELTO\*\*' ops/STANDINGS-RULES-GAP-01.md
+          grep -q 'Tercera: victoria 2 puntos' ops/STANDINGS-RULES-GAP-01.md
+          grep -q 'Primera: victoria 4 puntos; empate 2 puntos' ops/STANDINGS-RULES-GAP-01.md
+          grep -q 'Tabla General = Tercera + Segunda + Primera' ops/STANDINGS-RULES-GAP-01.md
+          grep -q "goal_difference_is_tiebreaker:false" sports-bus/worker/public-standings-entry.js
