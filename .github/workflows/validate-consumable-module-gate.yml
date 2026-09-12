@@ -10,6 +10,7 @@ on:
       - architecture/consumable-module-gate-v1
       - fix/consumable-module-runtime-gate-v2
       - architecture/canonical-modules-event-driven-v1
+      - feature/results-register-canonical-stream-v1
 
 permissions:
   contents: read
@@ -32,12 +33,15 @@ jobs:
       - name: Self-test hard runtime lock
         run: |
           set -euo pipefail
-          if CHANGED_FILES='sports-bus/worker/contributor-observation-entry.js' node scripts/validate-module-registry.mjs; then
-            echo 'Gate failed: RESULTS-REGISTER runtime advanced before PRODUCT_VALIDATED' >&2
+          # RESULTS-REGISTER is now PRODUCT_VALIDATED/QA_CERTIFIED, so its runtime is
+          # intentionally allowed to advance. Prove the gate still blocks a module
+          # that remains before PRODUCT_VALIDATED: RESULTS-READ.
+          if CHANGED_FILES='sports-bus/worker/public-results-ux-v3.js' node scripts/validate-module-registry.mjs; then
+            echo 'Gate failed: RESULTS-READ runtime advanced before PRODUCT_VALIDATED' >&2
             exit 1
           fi
           CHANGED_FILES='docs/architecture/canonical-capability-event-projection-v1.md' node scripts/validate-module-registry.mjs
-          echo 'PASS canonical gate blocks pre-validation runtime work and allows architecture/product-contract work'
+          echo 'PASS canonical gate blocks pre-validation runtime work and allows validated module implementation'
       - name: Block PR runtime changes ahead of product validation
         if: github.event_name == 'pull_request'
         run: |

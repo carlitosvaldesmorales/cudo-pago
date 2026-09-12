@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 4,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -20,14 +20,8 @@
       "goal": "Consultar resultados publicados del campeonato",
       "human_facing": true,
       "canonical": true,
-      "consumers": [
-        "PUBLIC",
-        "CLUB_ADMIN",
-        "CHEPICA_PLAY",
-        "PLATFORM_OPERATOR",
-        "SUPER_ADMIN"
-      ],
-      "channels": ["TELEGRAM", "WEB", "API", "STREAMING"],
+      "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
+      "channels": ["TELEGRAM","WEB","API","STREAMING"],
       "stage": "VISUAL_PENDING",
       "visual_contract": "PENDING",
       "product_validation": "PENDING",
@@ -50,36 +44,32 @@
       "goal": "Registrar o informar el marcador de una serie/partido mediante una única experiencia canónica",
       "human_facing": true,
       "canonical": true,
-      "consumers": [
-        "PUBLIC",
-        "CLUB_ADMIN",
-        "CHEPICA_PLAY",
-        "PLATFORM_OPERATOR",
-        "SUPER_ADMIN"
-      ],
+      "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
-      "policy_variants": [
-        "scope",
-        "authority",
-        "submission_status",
-        "provenance"
-      ],
-      "stage": "VISUAL_PENDING",
-      "visual_contract": "DRAFT:docs/product/results-register-visual-contract-v1.md",
-      "product_validation": "PENDING",
-      "technical_implementation": "EXISTS_AHEAD_OF_GATE_FRAGMENTED",
-      "qa": "EXPERIMENTAL_AHEAD_OF_GATE",
-      "runtime_evidence": "NOT_PRODUCT_CERTIFIED",
+      "policy_variants": ["scope","authority","submission_status","provenance"],
+      "stage": "QA_CERTIFIED",
+      "visual_contract": "APPROVED",
+      "visual_contract_ref": "docs/product/results-register-visual-contract-v1.md",
+      "product_validation": "APPROVED",
+      "product_validation_evidence": "docs/product/results-register-product-approval-2026-09-11.md",
+      "technical_implementation": "DONE",
+      "implementation_entry": "sports-bus/worker/results-register-entry.js",
+      "qa": "PASS",
+      "qa_evidence": "GitHub Actions 34664361335 · Validate Canonical Results Register",
+      "runtime_evidence": "NOT_DEPLOYED",
       "consumable": false,
       "dependencies": [],
       "runtime_paths": [
+        "sports-bus/worker/results-register-entry.js",
+        "sports-bus/worker/results-stream-entry.js",
+        "sports-bus/canonical-entry.js",
         "sports-bus/worker/contributor-observation-entry.js",
         "sports-bus/worker/public-result-entry.js",
         "sports-bus/worker/club-admin-series-entry.js",
         "sports-bus/worker/global-admin-results-entry.js",
         "sports-bus/worker/series-entry.js"
       ],
-      "gap": "Existen flujos separados por actor/canal para la misma intención. Deben converger en una UX canónica button-first después de validar el contrato visual."
+      "gap": "Implementación canónica y QA sintético aprobados. Falta merge, deploy y validación del runtime desplegado antes de CONSUMABLE."
     },
     {
       "id": "RESULTS-GOVERN",
@@ -88,7 +78,7 @@
       "goal": "Validar, corregir, disputar, resolver, anular o restaurar un resultado según autoridad",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PLATFORM_OPERATOR", "SUPER_ADMIN"],
+      "consumers": ["PLATFORM_OPERATOR","SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
       "stage": "DEFINED",
       "visual_contract": "PENDING",
@@ -109,10 +99,9 @@
   ],
   "current_frontier": {
     "module_id": "RESULTS-REGISTER",
-    "allowed_next_step": "PRODUCT_VALIDATE_VISUAL_CONTRACT",
+    "allowed_next_step": "MERGE_DEPLOY_RUNTIME_VALIDATE",
     "visual_contract": "docs/product/results-register-visual-contract-v1.md",
     "blocked_steps": [
-      "RUNTIME_CHANGES_TO_RESULTS_REGISTER",
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",
       "POLLING_BASED_STREAMING_PROJECTION",
       "REAL_USER_ENROLLMENT",
