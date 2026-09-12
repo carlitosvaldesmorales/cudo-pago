@@ -4,7 +4,7 @@ Fecha: 2026-09-12
 Estado: IMPLEMENTED_PENDING_HUMAN_APPROVAL
 Canal canónico: **@FutbolChepicaBot**
 
-## Pantalla raíz aprobada conceptualmente
+## Pantalla raíz aprobada
 
 ```text
 ⚽ FÚTBOL CHÉPICA
@@ -34,42 +34,53 @@ Consume el portal de dirigentes existente. El acceso real sigue condicionado por
 
 Callback: `mp:home`
 
-Consume el espacio de media partner existente. El botón no vincula una identidad ni concede capacidades.
+Chépica Play es un **contexto operativo**, no una identidad sustitutiva.
 
-Una identidad **vinculada** a Chépica Play debe ver exactamente las dos capacidades aprobadas para esa audiencia:
+La superficie aprobada tiene exactamente:
 
 1. 📝 **Ingresar resultados**
 2. ⚽ **Consultar resultados**
+3. 🏠 **Inicio**
 
-Una identidad **no vinculada** no puede registrar como Chépica Play. Debe ver un gate de acceso que explique las dos capacidades y, si además posee autoridad de administración de accesos, debe ofrecer la entrada a la administración de identidades/invitaciones. Nunca se debe presentar una vista "Chépica Play" parcialmente habilitada que parezca reducir el producto a una sola capacidad.
+Pueden acceder a esa superficie:
 
-La lectura pública sigue disponible para cualquier persona, pero fuera de la identidad operativa Chépica Play.
+- una identidad vinculada a Chépica Play;
+- un `SUPER_ADMIN` o `PLATFORM_OPERATOR` verificado que ya posee autoridad de observación.
+
+Para un administrador global, entrar a Chépica Play NO lo convierte en media partner. El registro conserva su `submitter_id`, rol y provenance reales, y agrega el contexto de entrada `CHEPICA_PLAY`. En las escrituras Telegram de ese contexto el canal auditable queda `telegram:chepica_play`.
+
+Una identidad pública no vinculada y sin autoridad suficiente no obtiene acceso de escritura por seleccionar la audiencia.
+
+El ingreso de resultados desde esta superficie usa `cp:observe`, que activa el contexto y delega inmediatamente en la capacidad canónica `OBSERVE_RESULT`; no existe un segundo motor de resultados para Chépica Play.
 
 ## Invariantes de producto
 
 - `ROOT_HAS_EXACTLY_THREE_AUDIENCES`
 - `PUBLIC_LABEL_EQ_PUBLICO_GENERAL`
 - `DIRIGENTES_REUSES_EXISTING_PORTAL`
-- `CHEPICA_PLAY_REUSES_MEDIA_PARTNER_HOME`
-- `CHEPICA_PLAY_LINKED_HOME_EQ_ENTER_PLUS_READ_RESULTS`
-- `CHEPICA_PLAY_UNLINKED_IDENTITY_CANNOT_IMPERSONATE_PARTNER`
-- `CHEPICA_PLAY_UNLINKED_GATE_MUST_EXPLAIN_TWO_CAPABILITIES`
+- `CHEPICA_PLAY_HOME_EQ_ENTER_PLUS_READ_RESULTS`
+- `CHEPICA_PLAY_REUSES_OBSERVE_RESULT`
+- `ACTOR_IDENTITY_NEQ_ENTRY_CONTEXT`
+- `AUTHORIZATION_FOLLOWS_ACTOR`
+- `UX_FOLLOWS_CONTEXT`
+- `AUDIT_RECORDS_ACTOR_AND_CONTEXT`
+- `CONTEXT_SWITCH_NEQ_IMPERSONATION`
 - `ROOT_SELECTION_DOES_NOT_GRANT_AUTHORIZATION`
-- `START_PORTAL_INICIO_MENU_HOME_SHARE_ROOT`
 - `CANONICAL_BOT_EQ_FUTBOLCHEPICABOT`
 
 ## Gate humano
 
-Después del despliegue, el usuario debe abrir el inicio real de **@FutbolChepicaBot** y confirmar que la pantalla muestra exactamente:
-
-1. 🌐 Público general
-2. 🔐 Dirigentes
-3. 🎥 Chépica Play
-
-Luego, una identidad real vinculada a Chépica Play debe confirmar que su home muestra exactamente:
+Después del despliegue, un Admin Global debe poder abrir **@FutbolChepicaBot → Chépica Play** y ver:
 
 1. 📝 Ingresar resultados
 2. ⚽ Consultar resultados
 3. 🏠 Inicio
 
-Hasta esa validación: `ROOT_ENTRY.presentation_validation = PENDING_HUMAN_RUNTIME`.
+Al ingresar un resultado de prueba, el backend debe demostrar después que:
+
+- el actor sigue siendo la cuenta real del Admin Global;
+- `entry_context = CHEPICA_PLAY`;
+- `source_channel = telegram:chepica_play`;
+- no se creó ningún grant o membresía Chépica Play para el administrador.
+
+Hasta esa prueba humana de runtime: `CHEPICA_PLAY_ADMIN_CONTEXT.presentation_validation = PENDING_HUMAN_RUNTIME`.
