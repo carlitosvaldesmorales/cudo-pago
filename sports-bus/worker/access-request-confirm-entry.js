@@ -15,7 +15,8 @@ export const GOVERNED_CONFIRMATION_CONTRACT=Object.freeze({
   presentation_failure_does_not_revert_submission:true,
   persistence_failure_preserves_draft:true,
   repeated_confirmation_is_idempotent:true,
-  failures_must_not_be_silent:true
+  failures_must_not_be_silent:true,
+  sql_bind_arity_verified:true
 });
 
 const json=(body,status=200)=>new Response(JSON.stringify(body),{
@@ -162,7 +163,7 @@ async function persistSubmission(db,actor,draft){
     await db.batch([
       db.prepare(`INSERT INTO partner_access_requests
         (request_id,telegram_user_id,display_name,username,partner_code,requested_role,scope_type,scope_id,status,created_at,declared_name,represented_entity,intake_id,submitted_at)
-        VALUES (?,?,?,?,?,'MEDIA_PARTNER','COMPETITION',?,'PENDING',?,?,?,?,?,?)`)
+        VALUES (?,?,?,?,?,'MEDIA_PARTNER','COMPETITION',?,'PENDING',?,?,?,?,?)`)
         .bind(requestId,actorId,telegramDisplayName(actor),actor.username||null,PARTNER_CODE,COMPETITION_ID,now,draft.declared_name,draft.represented_entity_label,draft.intake_id,now),
       db.prepare(`INSERT OR REPLACE INTO events
         (event_id,event_type,occurred_at,received_at,competition_id,season_id,actor_id,actor_name,validation_status,payload_json)
@@ -178,7 +179,7 @@ async function persistSubmission(db,actor,draft){
   await db.batch([
     db.prepare(`INSERT INTO access_requests
       (request_id,telegram_user_id,display_name,username,requested_club_id,requested_role,status,created_at,declared_name,represented_entity_label,intake_id,submitted_at)
-      VALUES (?,?,?,?,?,'CLUB_ADMIN','PENDING',?,?,?,?,?,?)`)
+      VALUES (?,?,?,?,?,'CLUB_ADMIN','PENDING',?,?,?,?,?)`)
       .bind(requestId,actorId,telegramDisplayName(actor),actor.username||null,draft.represented_entity_id,now,draft.declared_name,draft.represented_entity_label,draft.intake_id,now),
     db.prepare(`INSERT OR REPLACE INTO events
       (event_id,event_type,occurred_at,received_at,actor_id,actor_name,club_id,validation_status,payload_json)

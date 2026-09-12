@@ -1,0 +1,28 @@
+name: Validate Access Request SQL Bind Contract
+
+on:
+  pull_request:
+    branches:
+      - feature/sports-event-bus-v1
+  push:
+    branches:
+      - feature/sports-event-bus-v1
+      - fix/access-request-sql-bind-contract-v1
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax check governed confirmation
+        run: node --check sports-bus/worker/access-request-confirm-entry.js
+
+      - name: Validate SQL placeholder/bind arity
+        run: node qa/telegram/access-request-sql-bind-contract.mjs
