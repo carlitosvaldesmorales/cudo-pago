@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -16,7 +16,11 @@
     "ONE_SEMANTIC_SCOPE_ONE_CANONICAL_AUTHORITY",
     "CANONICAL_CAPABILITY_IS_REUSED_BY_CONSUMERS",
     "EVENT_DRIVEN_PRIMARY_PROPAGATION",
-    "BOT_SLOT_NEQ_CAPABILITY_SEMANTICS"
+    "BOT_SLOT_NEQ_CAPABILITY_SEMANTICS",
+    "HUMAN_WORK_UNIT_NEQ_PERSISTENCE_UNIT",
+    "INTENT_BEFORE_ADAPTER",
+    "HUMAN_CONTEXT_PERSISTS_ACROSS_FIELD_CAPTURE",
+    "TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED"
   ],
   "modules": [
     {
@@ -26,18 +30,18 @@
       "goal": "Consultar resultados publicados del campeonato",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
-      "channels": ["TELEGRAM","WEB","API","STREAMING"],
-      "stage": "PRODUCT_VALIDATED",
+      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
+      "channels": ["TELEGRAM", "WEB", "API", "STREAMING"],
+      "stage": "CONSUMABLE",
       "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/results-read-visual-contract-v1.md",
       "product_validation": "APPROVED",
       "product_validation_evidence": "docs/product/results-read-product-approval-restore-2026-09-11.md",
       "runtime_audit_ref": "docs/product/results-read-runtime-audit-2026-09-11.md",
-      "technical_implementation": "EXISTS_AHEAD_OF_GATE",
-      "qa": "PARTIAL",
-      "runtime_evidence": "TECHNICAL_ONLY",
-      "consumable": false,
+      "technical_implementation": "DONE",
+      "qa": "PASS",
+      "runtime_evidence": "VERIFIED",
+      "consumable": true,
       "dependencies": [],
       "runtime_paths": [
         "sports-bus/worker/public-results-ux-v3.js",
@@ -47,32 +51,35 @@
         "sports-bus/telegram-route-clarity-entry.js",
         "sports-bus/telegram-migration-entry.js"
       ],
-      "gap": "Restaurar el runtime contra el contrato previamente aprobado: /resultados no puede depender del slot blue/green ni caer en la vista administrativa de resultados registrados."
+      "gap": null
     },
     {
       "id": "RESULTS-REGISTER",
       "capability_key": "RESULTS-REGISTER",
       "name": "Registrar resultado",
-      "goal": "Registrar o informar el marcador de una serie/partido mediante una única experiencia canónica",
+      "goal": "Completar resultados de un partido mediante una única experiencia canónica, persistiendo cada serie de forma independiente",
+      "human_work_unit": "MATCH",
+      "persistence_unit": "MATCH_SERIES",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
+      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
-      "policy_variants": ["scope","authority","submission_status","provenance"],
-      "stage": "CONSUMABLE",
+      "policy_variants": ["scope", "authority", "submission_status", "provenance"],
+      "stage": "PRODUCT_VALIDATED",
       "visual_contract": "APPROVED",
-      "visual_contract_ref": "docs/product/results-register-visual-contract-v1.md",
+      "visual_contract_ref": "docs/product/results-register-visual-contract-v2.md",
+      "superseded_visual_contract_ref": "docs/product/results-register-visual-contract-v1.md",
       "product_validation": "APPROVED",
-      "product_validation_evidence": "docs/product/results-register-product-approval-2026-09-11.md",
-      "technical_implementation": "DONE",
+      "product_validation_evidence": "docs/product/results-register-product-approval-v2-2026-09-12.md",
+      "architecture_gate": "docs/architecture/human-intent-adapter-gate-v1.md",
+      "technical_implementation": "IN_PROGRESS_V2",
       "implementation_entry": "sports-bus/worker/results-register-entry.js",
-      "qa": "PASS",
-      "qa_evidence": [
-        "GitHub Actions 34664361335 · Validate Canonical Results Register",
-        "GitHub Actions 34664680950 · Validate Results Register Runtime"
-      ],
-      "deployment_evidence": "GitHub Actions 34664573260 · Deploy Sports Event Bus · success",
-      "runtime_evidence": "VERIFIED",
+      "implementation_v2": "sports-bus/worker/results-register-v2-entry.js",
+      "policy_entry": "sports-bus/worker/results-register-policy.js",
+      "qa": "PENDING_V2",
+      "qa_evidence": [],
+      "deployment_evidence": null,
+      "runtime_evidence": "PENDING_V2",
       "runtime_smoke": [
         "/health",
         "/api/v1/rounds/3/results?mode=official",
@@ -80,19 +87,16 @@
         "/stream/fecha/3?mode=reported",
         "wss /stream/ws/3"
       ],
-      "consumable": true,
+      "consumable": false,
       "dependencies": [],
       "runtime_paths": [
         "sports-bus/worker/results-register-entry.js",
+        "sports-bus/worker/results-register-v2-entry.js",
+        "sports-bus/worker/results-register-policy.js",
         "sports-bus/worker/results-stream-entry.js",
-        "sports-bus/canonical-entry.js",
-        "sports-bus/worker/contributor-observation-entry.js",
-        "sports-bus/worker/public-result-entry.js",
-        "sports-bus/worker/club-admin-series-entry.js",
-        "sports-bus/worker/global-admin-results-entry.js",
-        "sports-bus/worker/series-entry.js"
+        "sports-bus/canonical-entry.js"
       ],
-      "gap": null
+      "gap": "Completar QA, deploy y evidencia runtime del contrato v2; luego requiere una única validación humana real de fluidez Telegram."
     },
     {
       "id": "RESULTS-GOVERN",
@@ -101,7 +105,7 @@
       "goal": "Validar, corregir, disputar, resolver, anular o restaurar un resultado según autoridad",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PLATFORM_OPERATOR","SUPER_ADMIN"],
+      "consumers": ["PLATFORM_OPERATOR", "SUPER_ADMIN"],
       "channels": ["TELEGRAM"],
       "stage": "DEFINED",
       "visual_contract": "PENDING",
@@ -117,12 +121,12 @@
         "sports-bus/worker/result-correction-flow-entry.js",
         "sports-bus/worker/platform-operator-entry.js"
       ],
-      "gap": "La capacidad existe técnicamente pero debe revisarse después de cerrar RESULTS-READ para asegurar reutilización y separación de policy."
+      "gap": "La capacidad existe técnicamente pero su contrato de producto sigue pendiente."
     }
   ],
   "current_frontier": {
-    "module_id": "RESULTS-READ",
-    "allowed_next_step": "ALIGN_RUNTIME_TO_APPROVED_CONTRACT",
+    "module_id": "RESULTS-REGISTER",
+    "allowed_next_step": "IMPLEMENT_TEST_DEPLOY_MATCH_WORK_UNIT_V2",
     "human_gate": null,
     "blocked_steps": [
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",

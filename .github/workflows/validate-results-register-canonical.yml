@@ -5,7 +5,7 @@ on:
     branches: [feature/sports-event-bus-v1]
   push:
     branches:
-      - feature/results-register-canonical-stream-v1
+      - fix/results-register-match-work-unit-v2
       - feature/sports-event-bus-v1
 
 permissions:
@@ -24,13 +24,21 @@ jobs:
           set -euo pipefail
           node --check sports-bus/canonical-entry.js
           node --check sports-bus/worker/results-register-entry.js
+          node --check sports-bus/worker/results-register-v2-entry.js
+          node --check sports-bus/worker/results-register-policy.js
           node --check sports-bus/worker/results-stream-entry.js
           node --check qa/telegram/results-register-canonical-harness.mjs
-      - name: Canonical vertical
+      - name: Canonical vertical v2
         run: node qa/telegram/results-register-canonical-harness.mjs
-      - name: Contract assertions
+      - name: Root contract assertions
         run: |
           set -euo pipefail
           grep -q 'RESULT: PASS' <(node qa/telegram/results-register-canonical-harness.mjs)
-          grep -q 'EVENT_DRIVEN_PRIMARY_PROPAGATION' docs/product/module-registry.json
-          ! grep -q 'Escribe el marcador LOCAL-VISITA' sports-bus/worker/results-register-entry.js
+          grep -q 'HUMAN_WORK_UNIT_NEQ_PERSISTENCE_UNIT' docs/product/module-registry.json
+          grep -q 'TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED' docs/product/module-registry.json
+          grep -q 'results-register-visual-contract-v2.md' docs/product/module-registry.json
+          grep -q 'editMessageText' sports-bus/worker/results-register-v2-entry.js
+          grep -q 'RESULTADOS DEL PARTIDO' sports-bus/worker/results-register-v2-entry.js
+          grep -q 'showMatchDashboard' sports-bus/worker/results-register-v2-entry.js
+          ! grep -q 'Escribe el marcador LOCAL-VISITA' sports-bus/worker/results-register-v2-entry.js
+          test "$(grep -c "export { handleResultsRegisterRequest }" sports-bus/worker/results-register-entry.js)" -eq 1
