@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - qa/public-standings-runtime-smoke
+      - refactor/championship-adn-canonical-bot
       - feature/sports-event-bus-v1
 
 permissions:
@@ -32,18 +33,21 @@ jobs:
           done
 
           jq -e '.ok == true' standings.json
-          jq -e '.contract == "public-standings-v1"' standings.json
+          jq -e '.contract == "public-standings-v2"' standings.json
           jq -e '.competition_id == "ANFA-CHEPICA-2026"' standings.json
-          jq -e '.rules.table_general == ["TERCERA","SEGUNDA","PRIMERA"]' standings.json
-          jq -e '.rules.table_senior == ["SENIOR"]' standings.json
-          jq -e '.rules.points_by_series.TERCERA == {"win":2,"draw":1,"loss":0}' standings.json
-          jq -e '.rules.points_by_series.SEGUNDA == {"win":3,"draw":1,"loss":0}' standings.json
-          jq -e '.rules.points_by_series.SENIOR == {"win":3,"draw":1,"loss":0}' standings.json
-          jq -e '.rules.points_by_series.PRIMERA == {"win":4,"draw":2,"loss":0}' standings.json
+          jq -e '.competition_model == "TWO_INDEPENDENT_CHAMPIONSHIPS_SHARED_MATCHDAY"' standings.json
+          jq -e '.championships.PRINCIPAL.included_series == ["TERCERA","SEGUNDA","PRIMERA"]' standings.json
+          jq -e '.championships.PRINCIPAL.max_points_per_matchday == 9' standings.json
+          jq -e '.championships.SENIOR.included_series == ["SENIOR"]' standings.json
+          jq -e '.championships.SENIOR.independent_from == "PRINCIPAL"' standings.json
+          jq -e '.rules.points_by_series.TERCERA == {"win":2,"draw":1,"loss":0,"championship_code":"PRINCIPAL"}' standings.json
+          jq -e '.rules.points_by_series.SEGUNDA == {"win":3,"draw":1,"loss":0,"championship_code":"PRINCIPAL"}' standings.json
+          jq -e '.rules.points_by_series.PRIMERA == {"win":4,"draw":2,"loss":0,"championship_code":"PRINCIPAL"}' standings.json
+          jq -e '.rules.points_by_series.SENIOR == {"win":3,"draw":1,"loss":0,"championship_code":"SENIOR"}' standings.json
           jq -e '.rules.goal_difference_is_tiebreaker == false' standings.json
           jq -e '.rules.only_verified_results == true' standings.json
           jq -e '(.groups | length) == 2' standings.json
-          jq -e 'all(.groups[]; ([.tables[].table_code] | sort) == ["GENERAL","SENIOR"])' standings.json
+          jq -e 'all(.groups[]; ([.championships[].championship_code] | sort) == ["PRINCIPAL","SENIOR"])' standings.json
 
-          echo "PASS deployed public standings contract"
-          jq '{contract,competition_id,rules,groups:[.groups[]|{group_id,tables:[.tables[]|{table_code,rows:(.rows|length)}]}]}' standings.json
+          echo "PASS deployed principal + Senior championship contract"
+          jq '{contract,competition_id,competition_model,championships,groups:[.groups[]|{group_id,championships:[.championships[]|{championship_code,max_points_per_matchday,rows:(.rows|length)}]}]}' standings.json
