@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 import worker from '../../sports-bus/telegram-migration-entry.js';
 import { D1SqliteAdapter } from './d1-sqlite-adapter.mjs';
 import { PUBLIC_NATIVE_COMMANDS } from '../../sports-bus/worker/telegram-native-menu-entry.js';
+import { TELEGRAM_CHANNEL, TELEGRAM_PRODUCT_NAME } from '../../sports-bus/worker/telegram-channel-contract.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
 const migrationsDir = path.join(repoRoot, 'sports-bus', 'migrations');
-const TARGET_BOT_NAME = 'Fútbol Chépica';
 
 const env = {
   DB: new D1SqliteAdapter(),
@@ -35,10 +35,10 @@ globalThis.fetch = async (url, init = {}) => {
   let result = true;
   if (method === 'getMe') {
     result = slot === 'primary'
-      ? { id: 111111, is_bot: true, first_name: TARGET_BOT_NAME, username: 'CUDODeportesBot' }
-      : { id: 222222, is_bot: true, first_name: TARGET_BOT_NAME, username: 'FutbolChepicaBot' };
+      ? { id: 111111, is_bot: true, first_name: TELEGRAM_PRODUCT_NAME, username: 'CUDODeportesBot' }
+      : { id: 222222, is_bot: true, first_name: TELEGRAM_PRODUCT_NAME, username: TELEGRAM_CHANNEL.CANONICAL.username };
   }
-  if (method === 'getMyName') result = { name: TARGET_BOT_NAME };
+  if (method === 'getMyName') result = { name: TELEGRAM_PRODUCT_NAME };
   if (method === 'getWebhookInfo') {
     result = {
       url: slot === 'primary'
@@ -50,6 +50,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (method === 'getChatMenuButton') result = { type: 'commands' };
   if (method === 'getMyCommands') result = PUBLIC_NATIVE_COMMANDS;
   if (method === 'sendMessage') result = { message_id: calls.length };
+  if (method === 'setWebhook' || method === 'setChatMenuButton' || method === 'setMyCommands' || method === 'setMyName') result = true;
 
   return new Response(JSON.stringify({ ok: true, result }), {
     status: 200,
@@ -97,12 +98,17 @@ function slotCalls(slot, method) { return calls.filter(x => x.slot === slot && (
 async function row(sql, ...params) { return env.DB.prepare(sql).bind(...params).first(); }
 
 async function run() {
-  console.log('TELEGRAM-BOT-MIGRATION-01');
+  console.log('TELEGRAM-CANONICAL-CHANNEL-01');
   applyMigrations();
+
+  assert.equal(TELEGRAM_CHANNEL.CANONICAL.username,'FutbolChepicaBot');
+  assert.equal(TELEGRAM_CHANNEL.CANONICAL.role,'CANONICAL');
+  assert.equal(TELEGRAM_CHANNEL.LEGACY.role,'LEGACY_COMPATIBILITY');
+  console.log('PASS product identity fixes @FutbolChepicaBot as canonical Telegram channel');
 
   assert.ok(await row("SELECT name FROM sqlite_master WHERE type='table' AND name='telegram_menu_state'"));
   assert.ok(await row("SELECT name FROM sqlite_master WHERE type='table' AND name='telegram_menu_state_next'"));
-  console.log('PASS independent next-bot menu cache schema');
+  console.log('PASS canonical and legacy adapters keep independent menu cache state');
 
   resetCalls();
   let response = await telegramMessage('/webhook/telegram-next', `${env.TELEGRAM_WEBHOOK_SECRET}:next`, '/ayuda');
@@ -116,28 +122,28 @@ async function run() {
   assert.ok(await row('SELECT telegram_user_id FROM telegram_menu_state_next WHERE telegram_user_id=?', String(actor.id)));
   assert.equal(await row('SELECT telegram_user_id FROM telegram_menu_state WHERE telegram_user_id=?', String(actor.id)), null);
   assert.ok(await row('SELECT telegram_user_id FROM reporters WHERE telegram_user_id=?', String(actor.id)));
-  console.log('PASS next webhook reuses core logic, D1 identity and next token only');
+  console.log('PASS canonical bot reuses core logic and shared D1 identity while using its own adapter/token');
 
   resetCalls();
   response = await telegramMessage('/webhook/telegram-next', `${env.TELEGRAM_WEBHOOK_SECRET}:next`, '/inicio');
   assert.equal(response.status, 200);
   payload = await response.json();
   assert.equal(payload.profile, 'PUBLIC');
-  assert.equal(slotCalls('next', 'setMyCommands').length, 0, 'next bot menu cache must be idempotent');
-  console.log('PASS next-bot menu sync idempotence');
+  assert.equal(slotCalls('next', 'setMyCommands').length, 0, 'canonical bot menu cache must be idempotent');
+  console.log('PASS canonical menu sync idempotence');
 
   resetCalls();
   response = await telegramMessage('/webhook/telegram', env.TELEGRAM_WEBHOOK_SECRET, '/inicio');
   assert.equal(response.status, 200);
   payload = await response.json();
   assert.equal(payload.profile, 'PUBLIC');
-  assert.ok(slotCalls('primary', 'setMyCommands').length >= 1, 'primary bot must maintain its own menu cache');
+  assert.ok(slotCalls('primary', 'setMyCommands').length >= 1, 'legacy bot must maintain its own menu cache');
   assert.ok(await row('SELECT telegram_user_id FROM telegram_menu_state WHERE telegram_user_id=?', String(actor.id)));
   assert.ok(await row('SELECT telegram_user_id FROM telegram_menu_state_next WHERE telegram_user_id=?', String(actor.id)));
-  console.log('PASS primary and next menu caches are independent');
+  console.log('PASS legacy adapter can remain compatible without becoming the product authority');
 
   resetCalls();
-  response = await worker.fetch(new Request('https://qa.invalid/ops/telegram-next/reconcile', {
+  response = await worker.fetch(new Request('https://qa.invalid/ops/telegram-canonical/reconcile', {
     method: 'POST',
     headers: { 'X-CUDO-Repair': 'reconcile-webhook' }
   }), env, {});
@@ -145,27 +151,40 @@ async function run() {
   payload = await response.json();
   assert.equal(payload.ok, true);
   assert.equal(payload.slot, 'next');
+  assert.equal(payload.channel_role, 'CANONICAL');
+  assert.equal(payload.bot_username, 'FutbolChepicaBot');
   const webhookCall = slotCalls('next', 'setWebhook').at(-1);
   assert.ok(webhookCall);
   assert.equal(webhookCall.body.url, 'https://qa.invalid/webhook/telegram-next');
   assert.equal(webhookCall.body.drop_pending_updates, false);
-  assert.equal(slotCalls('next', 'setMyName').at(-1).body.name, TARGET_BOT_NAME);
-  console.log('PASS next reconcile configures isolated webhook, menu and branding');
+  assert.equal(slotCalls('next', 'setMyName').at(-1).body.name, TELEGRAM_PRODUCT_NAME);
+  console.log('PASS canonical reconcile refuses identity drift and configures the canonical adapter');
+
+  resetCalls();
+  response = await worker.fetch(new Request('https://qa.invalid/health/telegram-canonical'), env, {});
+  assert.equal(response.status, 200);
+  payload = await response.json();
+  assert.equal(payload.ok, true);
+  assert.equal(payload.slot, 'next');
+  assert.equal(payload.channel_role, 'CANONICAL');
+  assert.equal(payload.canonical_username, 'FutbolChepicaBot');
+  assert.equal(payload.bot_id, 222222);
+  assert.equal(payload.bot_username, 'FutbolChepicaBot');
+  assert.equal(payload.bot_username_shape_ok, true);
+  assert.equal(payload.is_canonical_bot, true);
+  assert.equal(payload.bot_name, TELEGRAM_PRODUCT_NAME);
+  assert.equal(payload.webhook_configured, true);
+  assert.equal(payload.native_menu_configured, true);
+  assert.equal(payload.default_commands_configured, true);
+  console.log('PASS canonical runtime health contract');
 
   resetCalls();
   response = await worker.fetch(new Request('https://qa.invalid/health/telegram-next'), env, {});
   assert.equal(response.status, 200);
   payload = await response.json();
-  assert.equal(payload.ok, true);
-  assert.equal(payload.slot, 'next');
-  assert.equal(payload.bot_id, 222222);
+  assert.equal(payload.channel_role, 'CANONICAL');
   assert.equal(payload.bot_username, 'FutbolChepicaBot');
-  assert.equal(payload.bot_username_shape_ok, true);
-  assert.equal(payload.bot_name, TARGET_BOT_NAME);
-  assert.equal(payload.webhook_configured, true);
-  assert.equal(payload.native_menu_configured, true);
-  assert.equal(payload.default_commands_configured, true);
-  console.log('PASS next runtime health contract');
+  console.log('PASS old /health/telegram-next path remains a compatibility alias for the canonical bot');
 
   resetCalls();
   response = await worker.fetch(new Request('https://qa.invalid/health/telegram'), env, {});
@@ -174,20 +193,20 @@ async function run() {
   assert.equal(payload.bot_id, 111111);
   assert.equal(payload.bot_username, 'CUDODeportesBot');
   assert.equal(payload.webhook_configured, true);
-  console.log('PASS primary bot remains untouched during blue green migration');
+  console.log('PASS legacy CUDO bot remains technically compatible but is not canonical');
 
   const noNext = { ...env, TELEGRAM_BOT_TOKEN_NEXT: undefined };
   resetCalls();
-  response = await worker.fetch(new Request('https://qa.invalid/health/telegram-next'), noNext, {});
+  response = await worker.fetch(new Request('https://qa.invalid/health/telegram-canonical'), noNext, {});
   assert.equal(response.status, 503);
   payload = await response.json();
   assert.equal(payload.error, 'telegram_next_bot_token_missing');
+  assert.equal(payload.canonical_error, 'telegram_canonical_bot_token_missing');
   assert.equal(payload.bot_token_configured, false);
-  assert.equal(calls.length, 0, 'dormant next slot must not call Telegram');
-  console.log('PASS migration slot stays safely dormant without next token');
+  assert.equal(calls.length, 0, 'missing canonical token must not call Telegram');
+  console.log('PASS canonical channel fails closed without its token');
 
   console.log('RESULT: PASS');
-  console.log('Human-only blocker: create the destination bot in @BotFather and store its token as TELEGRAM_BOT_TOKEN_NEXT.');
 }
 
 try {
