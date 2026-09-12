@@ -2,7 +2,7 @@
 
 Estado: ACTIVO
 Ámbito: Fútbol Chépica / CUDO Sports Event Bus
-Objetivo: impedir que el proyecto avance por piezas técnicas mientras el producto humano todavía no existe de forma consumible.
+Objetivo: impedir que el proyecto avance por piezas técnicas, actores o canales mientras el producto humano todavía no existe de forma consumible.
 
 ## Problema estructural corregido
 
@@ -10,13 +10,25 @@ La existencia de backend, permisos, persistencia, pruebas o deploy NO demuestra 
 
 **CAPACIDAD TÉCNICA ≠ MÓDULO CONSUMIBLE**
 
-Un módulo humano sólo está terminado cuando una persona puede entrar, entender qué hacer, completar la tarea y reconocer el estado final sin conocer la arquitectura interna.
+Además, una identidad o canal tampoco define un módulo:
+
+**ACTOR ≠ MÓDULO**
+
+**ROL ≠ MÓDULO**
+
+**CANAL ≠ MÓDULO**
+
+**HANDLER ≠ MÓDULO**
+
+**TENANT ≠ MÓDULO**
+
+Un módulo canónico se define por una intención humana estable y un resultado reconocible. Si distintos actores intentan lograr lo mismo con la misma semántica, consumen el mismo módulo y las diferencias se expresan como policy, scope, authority y provenance.
 
 ## Unidad oficial de progreso
 
-La unidad de avance del producto es el **MÓDULO CONSUMIBLE**, no el PR, endpoint, handler, tabla, permiso, test ni deploy.
+La unidad de avance del producto es el **MÓDULO CANÓNICO CONSUMIBLE**, no el PR, endpoint, handler, actor, tabla, permiso, test, deploy o sitio.
 
-Un cambio técnico puede existir como soporte o deuda histórica, pero no habilita avance funcional hasta que el módulo llegue a `CONSUMIBLE`.
+Un cambio técnico puede existir como soporte o deuda histórica, pero no habilita avance funcional hasta que el módulo llegue a `CONSUMABLE`.
 
 ## Secuencia obligatoria
 
@@ -24,7 +36,11 @@ Para cada módulo humano:
 
 ```text
 AFINACIÓN
-alcance + actor + objetivo + límites
+intención + significado + límites
+        ↓
+NORMALIZACIÓN CANÓNICA
+¿ya existe esta capacidad?
+¿es una variante de actor/canal o una intención nueva?
         ↓
 PROTOTIPO / CONTRATO VISUAL
 pantallas + botones + navegación + estados
@@ -48,9 +64,7 @@ recién entonces puede habilitar módulos dependientes
 
 ## Estados de madurez
 
-Estados válidos, en orden:
-
-1. `DEFINED` — intención, actor, objetivo y alcance declarados.
+1. `DEFINED` — intención, objetivo y alcance declarados.
 2. `VISUAL_PENDING` — falta resolver o validar la experiencia visual/interactiva.
 3. `PRODUCT_VALIDATED` — contrato visual/operacional aprobado por producto.
 4. `IMPLEMENTED` — runtime implementado contra el contrato aprobado.
@@ -70,13 +84,23 @@ Se permite construir infraestructura interna reusable, pero esa infraestructura:
 - no autoriza construir funcionalidades dependientes;
 - no sustituye visual, validación de producto ni experiencia final.
 
+## Gate de deduplicación semántica
+
+Antes de crear un módulo nuevo se debe responder:
+
+1. ¿qué intenta lograr la persona?
+2. ¿qué estado final reconoce como éxito?
+3. ¿existe ya una capacidad con el mismo significado?
+4. ¿la diferencia observada es sólo actor, canal, organización, scope, authority o provenance?
+
+Si las respuestas 1 y 2 son equivalentes a una capacidad existente, NO se crea otro módulo.
+
 ## Gate visual obligatorio
 
 Para módulos consumidos por personas, la visual es parte del contrato funcional y ocurre ANTES de implementar.
 
 El contrato visual debe mostrar, como mínimo:
 
-- actor que entra;
 - punto de entrada;
 - pantalla/estado inicial;
 - acciones disponibles;
@@ -127,8 +151,10 @@ No se parchea hacia adelante para evitar volver atrás.
 Cada módulo debe poder responder:
 
 ```text
-MÓDULO:
-ACTOR:
+MÓDULO CANÓNICO:
+INTENCIÓN:
+CONSUMIDORES:
+CANALES:
 OBJETIVO:
 ESTADO DE MADUREZ:
 CONTRATO VISUAL:
@@ -142,24 +168,27 @@ ESTADO FINAL CONSUMIBLE:
 
 Cualquier campo desconocido se declara GAP. Un GAP en una etapa obligatoria impide promover el módulo.
 
-## Aplicación inmediata: Chépica Play
+## Aplicación inmediata
 
-Chépica Play tiene actualmente dos módulos de producto declarados:
+Los módulos de resultados se normalizan por capacidad, no por actor:
 
 ```text
-CP-RESULTS-CONSUME
+RESULTS-READ
 → consultar resultados
 
-CP-RESULTS-REGISTER
-→ registrar resultados
+RESULTS-REGISTER
+→ registrar/informar resultado
+
+RESULTS-GOVERN
+→ gobernar resultado
 ```
 
-La existencia de handlers, RBAC, invitaciones, persistencia o pruebas para estos flujos no los convierte automáticamente en consumibles.
+Chépica Play, público, dirigentes y operadores son consumidores de esas capacidades según policy/scope/provenance; no generan módulos paralelos.
 
-Especialmente `CP-RESULTS-REGISTER` no puede avanzar más allá de `VISUAL_PENDING` mientras no exista y se acepte la experiencia visual completa de registro.
+`RESULTS-REGISTER` permanece en `VISUAL_PENDING` hasta aprobar `docs/product/results-register-visual-contract-v1.md`.
 
-Todo trabajo posterior que dependa de ese módulo queda bloqueado hasta su certificación `CONSUMABLE`.
+Todo runtime fragmentado existente queda congelado como evidencia/deuda hasta esa validación.
 
 ## Invariante operativo
 
-> **Diseñar el módulo que una persona consumirá, validarlo, implementarlo y certificarlo. Recién entonces construir lo que depende de él.**
+> **Normalizar primero la intención en una capacidad canónica; diseñar el módulo que una persona consumirá; validarlo; implementarlo una sola vez; proyectarlo por múltiples actores y canales; certificarlo; recién entonces construir lo que depende de él.**
