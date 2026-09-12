@@ -7,6 +7,7 @@ on:
     branches:
       - fix/chepica-play-audience-gate-v1
       - fix/admin-chepica-play-context-v1
+      - fix/chepica-play-access-request-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -28,16 +29,19 @@ jobs:
           node --check sports-bus/worker/telegram-entry-context.js
           node --check qa/telegram/chepica-play-audience-harness.mjs
           node --check qa/telegram/chepica-play-admin-context-harness.mjs
-      - name: Chépica Play audience contract
+      - name: Chépica Play audience and authorization lifecycle
         run: node qa/telegram/chepica-play-audience-harness.mjs
       - name: Chépica Play actor-context audit contract
         run: node qa/telegram/chepica-play-admin-context-harness.mjs
-      - name: Preserve existing two-capability contract
+      - name: Preserve two-capability and authorization contracts
         run: |
           set -euo pipefail
           grep -q "PARTNER_CAPABILITIES=\[CAPABILITY.READ_COMPETITION,CAPABILITY.OBSERVE_RESULT\]" sports-bus/worker/media-partner-enrollment-entry.js
+          grep -q "Solicitar autorización" sports-bus/worker/telegram-chepica-play-home-entry.js
+          grep -q "partner_access_requests" sports-bus/worker/telegram-chepica-play-home-entry.js
           grep -q "Ingresar resultados" sports-bus/worker/telegram-chepica-play-home-entry.js
           grep -q "Consultar resultados" sports-bus/worker/telegram-chepica-play-home-entry.js
           grep -q "callback_data:'cp:observe'" sports-bus/worker/telegram-chepica-play-home-entry.js
           grep -q "prepareTelegramEntryContext" sports-bus/canonical-entry.js
           grep -q "telegram:chepica_play" sports-bus/migrations/0025_telegram_entry_context.sql
+          grep -q "CREATE TABLE IF NOT EXISTS partner_access_requests" sports-bus/migrations/0026_chepica_play_access_requests.sql

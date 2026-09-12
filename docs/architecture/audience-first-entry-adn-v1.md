@@ -6,7 +6,7 @@ Canal producto: **@FutbolChepicaBot**
 
 ## Causa raíz
 
-El menú raíz de Fútbol Chépica estaba modelado como una mezcla de funciones y accesos. Luego apareció un segundo desvío: se confundió **entrar a una audiencia** con **adoptar la identidad de esa audiencia**.
+El menú raíz de Fútbol Chépica estaba modelado como una mezcla de funciones y accesos. Luego aparecieron dos desvíos adicionales: se confundió **entrar a una audiencia** con **adoptar la identidad de esa audiencia**, y se mostró una audiencia restringida sin ofrecer una ruta operativa para obtener autorización.
 
 La entrada canónica es:
 
@@ -17,7 +17,7 @@ FÚTBOL CHÉPICA
 └── 🎥 Chépica Play
 ```
 
-La identidad del actor y el contexto de entrada son dimensiones distintas.
+La identidad del actor, el contexto de entrada y la autorización son dimensiones distintas.
 
 ## Invariantes
 
@@ -32,6 +32,21 @@ Primero se selecciona el contexto humano; después se presentan las capacidades 
 `AUDIENCE_ENTRY_NEQ_AUTHORIZATION`
 
 Pulsar Público general, Dirigentes o Chépica Play no concede permisos. Cada capacidad sigue validando identidad, scope, rol, trust y autoridad según su policy canónica.
+
+`RESTRICTED_AUDIENCE_MUST_HAVE_ACTIONABLE_ENROLLMENT_PATH`
+
+Si una audiencia requiere autorización y el actor todavía no la posee, el gate no puede limitarse a decir “no tienes acceso”. Debe ofrecer al menos una vía real y trazable para obtenerlo. Para Chépica Play existen dos patrones válidos y reutilizados:
+
+1. solicitud de autorización desde la propia identidad Telegram;
+2. vínculo mediante invitación individual de un solo uso.
+
+`REQUEST_NEQ_GRANT`
+
+Crear una solicitud nunca concede capacidades. La solicitud queda `PENDING` hasta que una identidad con `MANAGE_ACCESS` la aprueba explícitamente.
+
+`APPROVAL_CREATES_SCOPED_GRANT`
+
+La aprobación crea o reactiva un grant `MEDIA_PARTNER` limitado a `ANFA-CHEPICA-2026`, con exactamente `READ_COMPETITION` + `OBSERVE_RESULT`. No reemplaza el rol base del actor ni modifica su identidad.
 
 `ACTOR_IDENTITY_NEQ_ENTRY_CONTEXT`
 
@@ -104,12 +119,12 @@ No se crea un segundo flujo de negocio. La audiencia conserva exactamente dos fu
 1. consultar resultados;
 2. ingresar resultados mediante la capacidad de observación existente.
 
-Pueden usar esa superficie:
+Pueden usar esa superficie directamente:
 
 - una identidad real vinculada a Chépica Play;
 - un `SUPER_ADMIN` o `PLATFORM_OPERATOR` verificado para operación, prueba y soporte.
 
-En el segundo caso la experiencia visual es Chépica Play, pero la auditoría sigue atribuyendo la acción al administrador real. Una persona pública no vinculada y sin privilegio no obtiene autoridad por pulsar el botón.
+Una persona pública no vinculada ve un gate de autorización accionable. Puede solicitar acceso; la solicitud notifica a los administradores autorizados y permanece pendiente hasta aprobación. Si ya recibió una invitación personal, puede vincularse mediante el deep link existente. En ningún caso navegar o solicitar acceso concede permisos automáticamente.
 
 ## Definition of Done
 
@@ -118,6 +133,10 @@ La raíz/contexto sólo puede considerarse consumible cuando:
 - aparecen exactamente las tres audiencias aprobadas;
 - Chépica Play reutiliza el flujo existente;
 - seleccionar una audiencia no crea permisos;
+- una identidad no vinculada puede solicitar autorización o usar una invitación;
+- una solicitud pendiente no crea grants;
+- un administrador autorizado puede aprobar/rechazar y la persona es notificada;
+- la aprobación crea sólo el grant de competencia con las dos capacidades aprobadas;
 - Admin Global puede probar la UX Chépica Play sin convertirse en media partner;
 - una escritura de prueba conserva actor real + contexto Chépica Play por separado;
 - QA determinista pasa;
