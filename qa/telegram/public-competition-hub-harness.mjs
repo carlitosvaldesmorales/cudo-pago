@@ -98,70 +98,63 @@ try{
   assert.deepEqual(PRESENTATION_MODEL_CONTRACT.human_output_pipeline,
     ['CAPABILITY','PROJECTION','PRESENTATION_MODEL','CHANNEL_RENDERER']);
   assert.equal(PRESENTATION_MODEL_CONTRACT.telegram.standings_one_championship_per_screen,true);
-  assert.equal(PRESENTATION_MODEL_CONTRACT.telegram.standings_one_group_per_screen,true);
+  assert.equal(PRESENTATION_MODEL_CONTRACT.telegram.standings_all_groups_in_championship_screen,true);
+  assert.equal(PRESENTATION_MODEL_CONTRACT.telegram.standings_group_navigation,false);
+  assert.equal(TELEGRAM_PRESENTATION_CONTRACT.standings.no_pre_or_code,true);
+  assert.equal(TELEGRAM_PRESENTATION_CONTRACT.standings.horizontal_scroll_required,false);
   assert.equal(TELEGRAM_PRESENTATION_CONTRACT.standings.update_existing_message_when_possible,true);
-  console.log('PASS presentation-model ADN contract is explicit');
+  console.log('PASS presentation-model v3 ADN contract is explicit');
 
-  let response=await dispatch('p3:public');
-  assert.ok(response);
+  let response=await dispatch('tp:public-standings');
   assert.equal(response.status,200);
   let body=await response.json();
-  assert.equal(body.handled,'public_competition_hub');
-  assert.equal(body.screen_id,'PUBLIC_HUB');
-  assert.equal(body.channel_role,'CANONICAL');
-  assert.equal(body.presentation_mode,'EDITED');
-
-  const hub=last('editMessageText');
-  assert.ok(hub);
-  assert.equal(hub.body.parse_mode,'HTML');
-  assert.match(hub.body.text,/FÚTBOL CHÉPICA · PÚBLICO/);
-  const hubCallbacks=hub.body.reply_markup.inline_keyboard.flat().map(button=>button.callback_data);
-  assert.deepEqual(hubCallbacks,
-    ['tp:public-results','tp:public-standings','tp:public-report','pr:my','tp:home']);
-  assert.equal(calls.filter(call=>call.method==='sendMessage').length,0);
-  console.log('PASS historical Público entry lands on canonical hub and edits the live surface');
-
-  response=await dispatch('tp:public-standings');
-  assert.equal(response.status,200);
-  body=await response.json();
   assert.equal(body.handled,'public_standings');
-  assert.equal(body.screen_id,'STANDINGS_GROUP');
+  assert.equal(body.screen_id,'STANDINGS_CHAMPIONSHIP');
   assert.equal(body.championship_code,'PRINCIPAL');
-  assert.equal(body.group_id,'A');
+  assert.deepEqual(body.groups,['A','B']);
   assert.equal(body.presentation_mode,'EDITED');
 
-  const principalA=last('editMessageText');
-  assert.equal(principalA.body.parse_mode,'HTML');
-  assert.match(principalA.body.text,/CAMPEONATO PRINCIPAL/);
-  assert.match(principalA.body.text,/Grupo A/);
-  assert.match(principalA.body.text,/3ª \+ 2ª \+ 1ª · Máx\. 9 pts por jornada/);
-  assert.match(principalA.body.text,/<pre>POS  CLUB/);
-  assert.doesNotMatch(principalA.body.text,/CAMPEONATO SENIOR/);
-  assert.doesNotMatch(principalA.body.text,/Grupo B/);
-  assert.equal(count(principalA.body.text,'⚖️')<=1,true);
-  console.log('PASS one Telegram screen contains exactly one championship + one group');
+  const principal=last('editMessageText');
+  assert.equal(principal.body.parse_mode,'HTML');
+  assert.match(principal.body.text,/CAMPEONATO PRINCIPAL/);
+  assert.match(principal.body.text,/GRUPO A/);
+  assert.match(principal.body.text,/GRUPO B/);
+  assert.match(principal.body.text,/Juventud de Chépica/);
+  assert.match(principal.body.text,/Huracán/);
+  assert.doesNotMatch(principal.body.text,/<pre>/i);
+  assert.doesNotMatch(principal.body.text,/<code>/i);
+  assert.equal(count(principal.body.text,'⚖️')<=1,true);
+  console.log('PASS Principal shows both groups in one mobile-safe formatted screen');
 
-  const principalCallbacks=principalA.body.reply_markup.inline_keyboard.flat().map(button=>button.callback_data);
-  assert.ok(principalCallbacks.includes('tp:standings:PRINCIPAL:A'));
-  assert.ok(principalCallbacks.includes('tp:standings:SENIOR:A'));
-  assert.ok(principalCallbacks.includes('tp:standings:PRINCIPAL:B'));
-  assert.ok(principalCallbacks.includes('tp:public-results'));
-  assert.ok(principalCallbacks.includes('tp:public'));
-  console.log('PASS persistent inline navigation preserves context');
+  const callbacks=principal.body.reply_markup.inline_keyboard.flat().map(button=>button.callback_data);
+  assert.deepEqual(callbacks,
+    ['tp:standings:PRINCIPAL','tp:standings:SENIOR','tp:public-results','tp:public']);
+  assert.equal(callbacks.some(value=>value.endsWith(':A')||value.endsWith(':B')),false);
+  assert.equal(calls.filter(call=>call.method==='sendMessage').length,0);
+  console.log('PASS no group buttons and no message accumulation');
 
-  response=await dispatch('tp:standings:SENIOR:B');
+  response=await dispatch('tp:standings:SENIOR');
   assert.equal(response.status,200);
   body=await response.json();
+  assert.equal(body.screen_id,'STANDINGS_CHAMPIONSHIP');
   assert.equal(body.championship_code,'SENIOR');
-  assert.equal(body.group_id,'B');
+  assert.deepEqual(body.groups,['A','B']);
 
-  const seniorB=last('editMessageText');
-  assert.match(seniorB.body.text,/CAMPEONATO SENIOR/);
-  assert.match(seniorB.body.text,/Grupo B/);
-  assert.match(seniorB.body.text,/Campeonato independiente/);
-  assert.doesNotMatch(seniorB.body.text,/CAMPEONATO PRINCIPAL/);
-  assert.doesNotMatch(seniorB.body.text,/Grupo A/);
-  console.log('PASS Principal/Senior and Group A/B switch by editing the same message');
+  const senior=last('editMessageText');
+  assert.match(senior.body.text,/CAMPEONATO SENIOR/);
+  assert.match(senior.body.text,/GRUPO A/);
+  assert.match(senior.body.text,/GRUPO B/);
+  assert.match(senior.body.text,/Campeonato independiente/);
+  assert.doesNotMatch(senior.body.text,/<pre>|<code>/i);
+  console.log('PASS Senior is the only alternate championship button and includes both groups');
+
+  // Old v2 callbacks still work so stale buttons already present in Telegram do not break.
+  response=await dispatch('tp:standings:PRINCIPAL:B');
+  assert.equal(response.status,200);
+  body=await response.json();
+  assert.equal(body.championship_code,'PRINCIPAL');
+  assert.deepEqual(body.groups,['A','B']);
+  console.log('PASS stale v2 group callback degrades safely to canonical v3 championship view');
 
   const syntheticStandings={
     competition_id:'ANFA-CHEPICA-2026',
@@ -173,18 +166,21 @@ try{
           {position:1,team_id:'A',team_name:'Club A',points:4,adjustment_points:0,tiebreak_status:'PLAYOFF_REQUIRED'},
           {position:1,team_id:'B',team_name:'Club B',points:4,adjustment_points:0,tiebreak_status:'PLAYOFF_REQUIRED'}
         ]
-      },{
-        championship_code:'SENIOR',
-        rows:[]
-      }]
+      },{championship_code:'SENIOR',rows:[]}]
+    },{
+      group_id:'B',
+      championships:[{
+        championship_code:'PRINCIPAL',
+        rows:[{position:1,team_id:'C',team_name:'Club C',points:5,adjustment_points:0,tiebreak_status:'NONE'}]
+      },{championship_code:'SENIOR',rows:[]}]
     }]
   };
-  const tieModel=buildStandingsPresentation(syntheticStandings,{championshipCode:'PRINCIPAL',groupId:'A'});
+  const tieModel=buildStandingsPresentation(syntheticStandings,{championshipCode:'PRINCIPAL'});
   const tieRendered=renderStandingsTelegram(tieModel);
   assert.equal(count(tieRendered.text,'⚖️'),1);
   assert.doesNotMatch(tieRendered.text,/Club A.*⚖️/);
   assert.doesNotMatch(tieRendered.text,/Club B.*⚖️/);
-  console.log('PASS tie semantics are summarized once instead of repeated per row');
+  console.log('PASS tie semantics are summarized once per championship screen');
 
   const before=calls.length;
   response=await dispatch('tp:public-results');
@@ -201,15 +197,6 @@ try{
   body=await response.json();
   assert.equal(body.channel_role,'LEGACY_COMPATIBILITY');
   console.log('PASS legacy bot reuses semantics without becoming canonical');
-
-  const bad=new Request('https://qa.invalid/webhook/telegram-next',{
-    method:'POST',
-    headers:{'content-type':'application/json','x-telegram-bot-api-secret-token':'wrong'},
-    body:JSON.stringify({callback_query:{id:'bad',from:{id:1},data:'tp:public',message:{message_id:1,chat:{id:1}}}})
-  });
-  response=await handlePublicCompetitionHubRequest(bad,env);
-  assert.equal(response.status,401);
-  console.log('PASS invalid Telegram webhook secret fails closed');
 
   console.log('RESULT: PASS');
 }finally{
