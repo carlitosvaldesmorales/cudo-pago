@@ -4,6 +4,7 @@ import { handleResultsStreamRequest, ResultsStreamHub } from './worker/results-s
 import { handlePublicCompetitionHubRequest } from './worker/public-competition-hub-entry.js';
 import { handlePublicStandingsRequest } from './worker/public-standings-entry.js';
 import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-root-entry.js';
+import { handleTelegramChepicaPlayHomeRequest } from './worker/telegram-chepica-play-home-entry.js';
 
 export { ResultsStreamHub };
 
@@ -70,6 +71,9 @@ export default {
 
     const audienceRoot=await handleTelegramAudienceRootRequest(request.clone(),env);
     if(audienceRoot) return audienceRoot;
+
+    const chepicaPlayHome=await handleTelegramChepicaPlayHomeRequest(request.clone(),env);
+    if(chepicaPlayHome) return chepicaPlayHome;
 
     const publicHub=await handlePublicCompetitionHubRequest(request.clone(),env);
     if(publicHub) return publicHub;
