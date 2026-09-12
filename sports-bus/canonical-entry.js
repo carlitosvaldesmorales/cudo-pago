@@ -6,6 +6,7 @@ import { handlePublicStandingsRequest } from './worker/public-standings-entry.js
 import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-root-entry.js';
 import { handleTelegramChepicaPlayHomeRequest } from './worker/telegram-chepica-play-home-entry.js';
 import { handleAccessRequestIntake } from './worker/access-request-intake-entry.js';
+import { handleAccessRequestConfirmation } from './worker/access-request-confirm-entry.js';
 import { prepareTelegramEntryContext } from './worker/telegram-entry-context.js';
 
 export { ResultsStreamHub };
@@ -74,6 +75,9 @@ export default {
     const prepared=await prepareTelegramEntryContext(request.clone(),env);
     if(prepared.response) return prepared.response;
     request=prepared.request;
+
+    const confirmation=await handleAccessRequestConfirmation(request.clone(),env);
+    if(confirmation) return confirmation;
 
     const intake=await handleAccessRequestIntake(request.clone(),env);
     if(intake) return intake;
