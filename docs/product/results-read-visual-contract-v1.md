@@ -1,124 +1,104 @@
 # RESULTS-READ · Contrato visual canónico v1
 
-Estado: **DRAFT / REQUIERE VALIDACIÓN DE PRODUCTO**
+Estado: **APPROVED / APROBACIÓN PREVIA RECUPERADA**
 Módulo: `RESULTS-READ`
-Objetivo humano: **consultar rápidamente los resultados publicados del campeonato sin interpretar estados internos ni escribir texto**.
+Objetivo humano: **ver rápidamente los resultados verificados del campeonato sin navegar partido por partido para descubrirlos**.
+
+## Fuente de decisión
+
+Este contrato no es un rediseño nuevo. Recupera la decisión ya materializada y validada visualmente en PR #21, #22, #23 y #24. La evidencia de restauración está en `docs/product/results-read-product-approval-restore-2026-09-11.md`.
 
 ## Principio
 
-El módulo es uno. Público, dirigente, Chépica Play, operador y administrador consumen la misma semántica. Actor, canal o tenant no crean otro módulo.
+`RESULTS-READ` es una capacidad canónica. Actor, rol, bot, slot, canal o tenant no cambian su significado.
 
-Los canales pueden adaptar la presentación a su espacio, pero deben conservar la misma jerarquía de información y la misma verdad pública.
+La HMI puede adaptar contexto y accesos secundarios, pero no puede cambiar la semántica de `/resultados` ni ocultar la vista pública detrás de una superficie administrativa.
 
-## Golden Path humano
+## Telegram · vista principal aprobada
+
+La primera vista muestra **todos los resultados VERIFIED disponibles**, agrupados por fecha y partido, sin drilldown obligatorio.
+
+Patrón aprobado:
 
 ```text
-⚽ RESULTADOS
-      ↓
-📅 Fecha más reciente con información publicable
-      ↓
-[🏟 Club A vs Club B]
-[🏟 Club C vs Club D]
-[🏟 Club E vs Club F]
-      ↓
-seleccionar partido
-      ↓
-⚽ FECHA 3 · GRUPO A
-🏟 Club A vs Club B
+⚽ RESULTADOS OFICIALES
 
-3ª       2 — 1   ✅ Oficial
-2ª       —       Pendiente
-Senior   —       En revisión
-1ª       1 — 1   ✅ Oficial
+📅 FECHA II
+🏟 Unión Orilla — San Juan
+3ª  2–3    2ª  1–0
+S   0–0    1ª  3–0
 
-[⬅️ Fecha 3]   [🔎 Buscar]
+📅 FECHA I
+🏟 Santa Elena La Ruda — Unión Orilla
+3ª  1–0    2ª  2–1
+S   0–2    1ª  1–2
+
+[🔎 Buscar / filtrar]   [🌐 Público]
 ```
 
-No se muestra un marcador cuando el estado no autoriza publicarlo.
+La matriz usa texto monoespaciado inline (`<code>`), no bloques `<pre>`, para evitar el control nativo `</>` observado en Telegram iOS.
 
-## Navegación alternativa
+## Navegación secundaria
 
-Desde `🔎 Buscar`:
+`🔎 Buscar / filtrar` es una acción secundaria. Puede ofrecer:
 
 ```text
-🔎 OTROS RESULTADOS
-
 [📅 Por fecha]   [🏟 Por club]
 [🏆 Por serie]
-[⬅️ Última fecha]
+[⬅️ Volver]
 ```
 
-Todo se selecciona con botones. No se exige escribir nombres de clubes, fechas ni series.
+La búsqueda no reemplaza la vista principal ni obliga a navegar partido por partido para conocer los resultados.
 
-## Estados visibles
+## Semántica de comandos y accesos
 
-La representación humana debe distinguir como mínimo:
+- `/resultados` → `RESULTS-READ` público/canónico.
+- `Resultados verificados` → misma capacidad `RESULTS-READ`.
+- `📋 Resultados registrados` → superficie administrativa contextual distinta, accesible por acción explícita dentro de Dirigentes/Admin (`tp:registered`).
+- Un bot o slot blue/green no puede reasignar `/resultados` a otra semántica.
 
-- `OFFICIAL` → marcador visible + `✅ Oficial`;
-- `PENDING` → sin marcador + `Pendiente`;
-- `IN_REVIEW` → sin marcador + `En revisión`;
-- `ANNULLED` → sin marcador + `Anulado`.
+## Estados y publicación
 
-Un estado interno nunca debe obligar al usuario a conocer nombres de tablas, workflows o mecanismos de gobernanza.
+La vista principal sólo publica marcadores `VERIFIED`.
 
-## Contrato semántico entre canales
+- resultado VERIFIED → marcador visible;
+- pendiente, disputado, anulado o no publicable → no debe presentarse como marcador oficial en esta vista;
+- la ausencia de un marcador nunca se rellena por inferencia.
+
+Los estados operativos detallados pertenecen a gobierno/administración y no contaminan la vista pública principal.
+
+## Contrato entre canales
 
 ### Telegram
 
-- botón `⚽ Resultados` abre directamente la fecha más reciente con información publicable;
-- partidos se eligen mediante botones;
-- detalle muestra las cuatro series siempre en orden `3ª → 2ª → Senior → 1ª`;
-- búsqueda por fecha, club o serie sólo mediante selección.
+Matriz compacta de resultados verificados + búsqueda secundaria.
 
 ### Web
 
-- puede mostrar varios partidos simultáneamente en tarjetas;
-- cada tarjeta mantiene las cuatro series en el mismo orden;
-- los mismos estados y reglas de visibilidad de marcador aplican;
-- filtros/fechas/grupos son proyecciones de la misma capacidad, no otra fuente de verdad.
+Puede usar tarjetas, tablas u otra HMI adecuada al navegador, siempre proyectando la misma autoridad canónica y las mismas reglas de publicación.
 
 ### API / Streaming
 
-Son contratos de máquina/proyecciones de `RESULTS-READ`; no definen una UX humana separada y no cambian la autoridad del dato.
+Son proyecciones de máquina de la misma capacidad/estado. No crean otra verdad ni obligan a copiar el modelo Telegram.
 
-## Carga cognitiva
+## Invariantes de carga cognitiva
 
-Reglas obligatorias:
-
-1. fecha más útil primero;
-2. botones antes que escritura libre;
-3. partido y serie siempre identificables;
-4. marcador oficial inequívoco;
-5. estados no oficiales nunca parecen resultado oficial;
-6. máximo una decisión principal por pantalla de Telegram;
-7. volver/buscar siempre visible cuando corresponda.
-
-## Errores / vacíos
-
-Sin resultados publicables:
-
-```text
-⚽ RESULTADOS
-
-Todavía no hay resultados publicados para esta selección.
-
-[📅 Otras fechas]
-[🔎 Buscar]
-[🏠 Inicio]
-```
-
-Un error técnico se comunica como indisponibilidad temporal; nunca se rellena con un marcador inferido.
+1. resultados visibles de inmediato;
+2. no drilldown obligatorio para descubrir resultados;
+3. agrupación clara por fecha y partido;
+4. cuatro series compactas por partido cuando están verificadas;
+5. filtros como opción secundaria;
+6. sin jerga técnica interna;
+7. mismo significado de `/resultados` en cualquier adapter Telegram activo.
 
 ## No incluido
 
 - registrar resultados (`RESULTS-REGISTER`);
 - gobernar/corregir resultados (`RESULTS-GOVERN`);
 - tabla de posiciones;
-- eventos en vivo del partido;
+- eventos en vivo;
 - lógica específica de OBS/vMix.
 
 ## Gate
 
-Este documento NO autoriza todavía cambios al runtime protegido de `RESULTS-READ`.
-
-Para avanzar a `PRODUCT_VALIDATED` se necesita validar visualmente este contrato como experiencia humana canónica. Después, los runtimes existentes de Telegram/Web se alinean contra él y MOF+ certifica el mismo módulo con sus distintas proyecciones.
+La aprobación visual no está pendiente: fue recuperada de la historia del producto. El trabajo pendiente es **restaurar y certificar el runtime contra este contrato**, no rediseñarlo.
