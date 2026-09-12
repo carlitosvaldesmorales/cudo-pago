@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "product": "Fútbol Chépica",
   "invariants": [
     "TECHNICAL_CAPABILITY_NEQ_CONSUMABLE_MODULE",
@@ -15,7 +15,8 @@
     "REFERENCE_OVER_COPY",
     "ONE_SEMANTIC_SCOPE_ONE_CANONICAL_AUTHORITY",
     "CANONICAL_CAPABILITY_IS_REUSED_BY_CONSUMERS",
-    "EVENT_DRIVEN_PRIMARY_PROPAGATION"
+    "EVENT_DRIVEN_PRIMARY_PROPAGATION",
+    "BOT_SLOT_NEQ_CAPABILITY_SEMANTICS"
   ],
   "modules": [
     {
@@ -27,11 +28,12 @@
       "canonical": true,
       "consumers": ["PUBLIC","CLUB_ADMIN","CHEPICA_PLAY","PLATFORM_OPERATOR","SUPER_ADMIN"],
       "channels": ["TELEGRAM","WEB","API","STREAMING"],
-      "stage": "VISUAL_PENDING",
-      "visual_contract": "DRAFT",
+      "stage": "PRODUCT_VALIDATED",
+      "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/results-read-visual-contract-v1.md",
+      "product_validation": "APPROVED",
+      "product_validation_evidence": "docs/product/results-read-product-approval-restore-2026-09-11.md",
       "runtime_audit_ref": "docs/product/results-read-runtime-audit-2026-09-11.md",
-      "product_validation": "PENDING",
       "technical_implementation": "EXISTS_AHEAD_OF_GATE",
       "qa": "PARTIAL",
       "runtime_evidence": "TECHNICAL_ONLY",
@@ -45,7 +47,7 @@
         "sports-bus/telegram-route-clarity-entry.js",
         "sports-bus/telegram-migration-entry.js"
       ],
-      "gap": "Evidencia real de Telegram confirma tres UX divergentes para la misma intención de consultar resultados, incluida /resultados como listado largo. Requiere aprobación del contrato visual canónico antes de consolidar el runtime."
+      "gap": "Restaurar el runtime contra el contrato previamente aprobado: /resultados no puede depender del slot blue/green ni caer en la vista administrativa de resultados registrados."
     },
     {
       "id": "RESULTS-REGISTER",
@@ -120,10 +122,9 @@
   ],
   "current_frontier": {
     "module_id": "RESULTS-READ",
-    "allowed_next_step": "PRODUCT_VALIDATE_VISUAL_CONTRACT",
-    "human_gate": "RESULTS_READ_VISUAL_PRODUCT_APPROVAL",
+    "allowed_next_step": "ALIGN_RUNTIME_TO_APPROVED_CONTRACT",
+    "human_gate": null,
     "blocked_steps": [
-      "RESULTS_READ_RUNTIME_CHANGE_BEFORE_APPROVAL",
       "ACTOR_SPECIFIC_REGISTER_VARIANTS",
       "POLLING_BASED_STREAMING_PROJECTION",
       "REAL_USER_ENROLLMENT_WITHOUT_EXPLICIT_APPROVAL"
