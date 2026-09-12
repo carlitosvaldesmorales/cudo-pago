@@ -9,6 +9,7 @@ on:
       - feature/sports-event-bus-v1
       - architecture/consumable-module-gate-v1
       - fix/consumable-module-runtime-gate-v2
+      - architecture/canonical-modules-event-driven-v1
 
 permissions:
   contents: read
@@ -32,11 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           if CHANGED_FILES='sports-bus/worker/contributor-observation-entry.js' node scripts/validate-module-registry.mjs; then
-            echo 'Gate failed: CP-RESULTS-REGISTER runtime advanced before PRODUCT_VALIDATED' >&2
+            echo 'Gate failed: RESULTS-REGISTER runtime advanced before PRODUCT_VALIDATED' >&2
             exit 1
           fi
-          CHANGED_FILES='docs/architecture/consumable-module-gate-v1.md' node scripts/validate-module-registry.mjs
-          echo 'PASS hard gate blocks pre-validation runtime work and allows architecture work'
+          CHANGED_FILES='docs/architecture/canonical-capability-event-projection-v1.md' node scripts/validate-module-registry.mjs
+          echo 'PASS canonical gate blocks pre-validation runtime work and allows architecture/product-contract work'
       - name: Block PR runtime changes ahead of product validation
         if: github.event_name == 'pull_request'
         run: |
