@@ -1,4 +1,4 @@
-import { CAPABILITY, getActivePartnerMembership, hasCapability } from './access-control.js';
+import { getActivePartnerMembership } from './access-control.js';
 import { TELEGRAM_CHANNEL } from './telegram-channel-contract.js';
 
 const PRIMARY=TELEGRAM_CHANNEL.LEGACY.webhook_path;
@@ -55,14 +55,9 @@ async function clearContext(db,actorId){
   await db.prepare('DELETE FROM telegram_entry_contexts WHERE telegram_user_id=?').bind(String(actorId)).run();
 }
 
-async function canUseChepicaPlayContext(db,reporter,actorId){
+async function canUseChepicaPlayContext(db,actorId){
   const membership=await getActivePartnerMembership(db,String(actorId),COMPETITION_ID);
-  if(membership?.partner_code==='CHEPICA_PLAY') return true;
-  return !!reporter
-    && Number(reporter.active)===1
-    && reporter.trust_level==='VERIFIED'
-    && ['SUPER_ADMIN','PLATFORM_OPERATOR'].includes(reporter.role)
-    && hasCapability(reporter,CAPABILITY.OBSERVE_RESULT);
+  return membership?.partner_code==='CHEPICA_PLAY';
 }
 
 function rewriteCallback(request,update,newData){
@@ -111,8 +106,7 @@ export async function prepareTelegramEntryContext(request,env){
   }
 
   if(data==='cp:observe'){
-    const reporter=await env.DB.prepare('SELECT * FROM reporters WHERE telegram_user_id=?').bind(actorId).first();
-    const allowed=await canUseChepicaPlayContext(env.DB,reporter,actorId);
+    const allowed=await canUseChepicaPlayContext(env.DB,actorId);
     if(!allowed){
       const callbackId=update?.callback_query?.id;
       const chatId=update?.callback_query?.message?.chat?.id;
