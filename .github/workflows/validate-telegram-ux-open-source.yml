@@ -5,9 +5,11 @@ on:
   pull_request:
     branches: [feature/sports-event-bus-v1]
     paths:
+      # Este validador pertenece sólo al contrato histórico V2. No se dispara
+      # por cambios de otros validadores dentro de ops/ux-validator/.
       - 'sports-bus/worker/public-results-ux-v2.js'
-      - 'ops/ux-validator/**'
-      - '.github/workflows/validate-telegram-ux-open-source.yml'
+      - 'ops/ux-validator/evidence-v2.md'
+      - 'ops/ux-validator/run-open-validator.mjs'
 
 permissions:
   contents: read
