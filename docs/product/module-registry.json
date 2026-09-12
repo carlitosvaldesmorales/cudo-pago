@@ -96,7 +96,7 @@
       "channels": ["TELEGRAM", "API", "WEB"],
       "canonical_telegram": "@FutbolChepicaBot",
       "domain_contract": "docs/architecture/competition-domain-adn-v2.md",
-      "stage": "QA_CERTIFIED",
+      "stage": "CONSUMABLE",
       "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/standings-read-product-approval-2026-09-12.md",
       "product_validation": "APPROVED",
@@ -105,15 +105,23 @@
       "implementation_entry": "sports-bus/worker/public-standings-entry.js",
       "api_contract": "public-standings-v2",
       "qa": "PASS",
-      "runtime_evidence": "PENDING_DEPLOY",
-      "consumable": false,
+      "deployment_evidence": "Deploy Sports Event Bus run 34703434427: success; D1 migration, Worker deploy, public API and both Telegram runtime checks passed",
+      "runtime_evidence": "VERIFIED",
+      "runtime_smoke": [
+        "Validate Public Standings Runtime run 34703434425: success",
+        "Audit Sunday Readiness run 34703434385: success",
+        "/api/v1/public-standings contract=public-standings-v2",
+        "PRINCIPAL max_points_per_matchday=9",
+        "SENIOR independent_from=PRINCIPAL"
+      ],
+      "consumable": true,
       "dependencies": ["RESULTS-READ"],
       "runtime_paths": [
         "sports-bus/worker/competition-domain.js",
         "sports-bus/worker/public-standings-entry.js",
         "sports-bus/worker/public-competition-hub-entry.js"
       ],
-      "gap": "Requiere deploy y smoke runtime de public-standings-v2 antes de marcar CONSUMABLE."
+      "gap": null
     },
     {
       "id": "RESULTS-REGISTER",
