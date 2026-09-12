@@ -1,4 +1,5 @@
 import { handlePublicResultsUxV3 } from './public-results-ux-v3.js';
+import { NAVIGATION_ACTION, navigationButton } from './telegram-navigation-contract.js';
 
 const COMPETITION_ID = 'ANFA-CHEPICA-2026';
 const SERIES = ['TERCERA', 'SEGUNDA', 'SENIOR', 'PRIMERA'];
@@ -67,7 +68,7 @@ export async function handlePublicResultsTableView(request, env) {
   const rows = q.results || [];
   if (!rows.length) {
     await render(token, message, '⚽ <b>RESULTADOS OFICIALES</b>\n\nTodavía no hay resultados verificados.', {
-      inline_keyboard: [[{ text: '🌐 Público', callback_data: 'p3:public' }]]
+      inline_keyboard: [[navigationButton(NAVIGATION_ACTION.BACK, 'nav:back')]]
     });
     return json({ ok: true, handled: 'public_results_table_empty', match_count: 0 });
   }
@@ -77,7 +78,7 @@ export async function handlePublicResultsTableView(request, env) {
   await render(token, message, text, {
     inline_keyboard: [[
       { text: '🔎 Buscar / filtrar', callback_data: 'p3:search' },
-      { text: '🌐 Público', callback_data: 'p3:public' }
+      navigationButton(NAVIGATION_ACTION.BACK, 'nav:back')
     ]]
   });
 
