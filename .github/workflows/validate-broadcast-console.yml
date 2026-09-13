@@ -1,0 +1,47 @@
+name: Validate Broadcast Console
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'broadcast/**'
+      - 'tools/validate-broadcast-console.mjs'
+      - '.github/workflows/validate-broadcast-console.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'broadcast/**'
+      - 'tools/validate-broadcast-console.mjs'
+      - '.github/workflows/validate-broadcast-console.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax and read-only console contract
+        run: |
+          set -euo pipefail
+          node --check broadcast/broadcast.js
+          node tools/validate-broadcast-console.mjs
+      - name: Validate live Fecha III feed consumed by the console
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/vmix/fecha/3.json'
+          curl --fail --silent --show-error --location "$URL" -o /tmp/vmix-fecha3.json
+          node <<'NODE'
+          const rows=require('/tmp/vmix-fecha3.json');
+          if(!Array.isArray(rows)||rows.length!==20) throw new Error(`expected 20 rows, got ${Array.isArray(rows)?rows.length:'non-array'}`);
+          if(new Set(rows.map(r=>r.match_id)).size!==5) throw new Error('expected 5 Fecha III matches');
+          if(rows.some(r=>String(r.round_no)!=='3'||!r.home_crest_url||!r.away_crest_url)) throw new Error('invalid console feed row');
+          console.log('BROADCAST_CONSOLE_LIVE_FEED_OK');
+          NODE
