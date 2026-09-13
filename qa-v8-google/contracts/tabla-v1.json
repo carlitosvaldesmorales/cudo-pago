@@ -1,0 +1,40 @@
+{
+  "contract_id": "CUDO-TABLA-V1",
+  "schema_version": "1.0",
+  "module": "tabla",
+  "source": "CUDO_WEB_TABLA",
+  "pipeline": {
+    "public_json": "preview-v8/data/tabla.json"
+  },
+  "public_contract": {
+    "required": ["id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"],
+    "allowed": ["id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"],
+    "unique": ["id"],
+    "integer_fields": {
+      "posicion": {"minimum": 1},
+      "pj": {"minimum": 0},
+      "pg": {"minimum": 0},
+      "pe": {"minimum": 0},
+      "pp": {"minimum": 0},
+      "gf": {"minimum": 0},
+      "gc": {"minimum": 0},
+      "dg": {},
+      "pts": {"minimum": 0}
+    },
+    "constraints": [
+      {
+        "type": "sum_lte",
+        "left": ["pg", "pe", "pp"],
+        "right": "pj",
+        "message": "PG+PE+PP no puede superar PJ"
+      },
+      {
+        "type": "difference_equals",
+        "left": "gf",
+        "minus": "gc",
+        "right": "dg",
+        "message": "DG debe ser igual a GF-GC"
+      }
+    ]
+  }
+}

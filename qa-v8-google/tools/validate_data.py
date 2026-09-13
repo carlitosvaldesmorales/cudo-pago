@@ -256,11 +256,84 @@ def load_equipos_contract() -> tuple[dict, dict]:
     return contract, spec
 
 
+def load_tabla_contract() -> tuple[dict, dict]:
+    path = CONTRACTS / "tabla-v1.json"
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeError("tabla-v1.json no existe") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"tabla-v1.json inválido: {exc}") from exc
+
+    if contract.get("contract_id") != "CUDO-TABLA-V1":
+        raise RuntimeError("tabla-v1.json contract_id inválido")
+    if contract.get("schema_version") != "1.0":
+        raise RuntimeError("tabla-v1.json schema_version inválido")
+
+    public = contract.get("public_contract")
+    if not isinstance(public, dict):
+        raise RuntimeError("tabla-v1.json public_contract inválido")
+    for key in ("required", "allowed", "unique"):
+        if not isinstance(public.get(key), list) or not public[key]:
+            raise RuntimeError(f"tabla-v1.json public_contract.{key} inválido")
+
+    integer_fields = public.get("integer_fields")
+    constraints = public.get("constraints")
+    if not isinstance(integer_fields, dict) or not integer_fields:
+        raise RuntimeError("tabla-v1.json public_contract.integer_fields inválido")
+    if not isinstance(constraints, list) or not constraints:
+        raise RuntimeError("tabla-v1.json public_contract.constraints inválido")
+
+    spec = {
+        "source": contract.get("source"),
+        "required": set(public["required"]),
+        "allowed": set(public["allowed"]),
+        "unique": tuple(public["unique"]),
+        "integer_fields": dict(integer_fields),
+        "constraints": tuple(constraints),
+    }
+    if not spec["source"]:
+        raise RuntimeError("tabla-v1.json source inválido")
+    if not spec["required"].issubset(spec["allowed"]):
+        raise RuntimeError("tabla-v1.json required debe ser subconjunto de allowed")
+
+    for field, rule in spec["integer_fields"].items():
+        if field not in spec["allowed"] or not isinstance(rule, dict):
+            raise RuntimeError(f"tabla-v1.json regla integer inválida: {field}")
+        minimum = rule.get("minimum")
+        if minimum is not None and (isinstance(minimum, bool) or not isinstance(minimum, int)):
+            raise RuntimeError(f"tabla-v1.json minimum inválido: {field}")
+
+    for constraint in spec["constraints"]:
+        if not isinstance(constraint, dict):
+            raise RuntimeError("tabla-v1.json constraint debe ser objeto")
+        kind = constraint.get("type")
+        message = constraint.get("message")
+        if not isinstance(message, str) or not message:
+            raise RuntimeError("tabla-v1.json constraint sin message")
+        if kind == "sum_lte":
+            left = constraint.get("left")
+            right = constraint.get("right")
+            if not isinstance(left, list) or not left or not all(field in spec["allowed"] for field in left):
+                raise RuntimeError("tabla-v1.json sum_lte.left inválido")
+            if right not in spec["allowed"]:
+                raise RuntimeError("tabla-v1.json sum_lte.right inválido")
+        elif kind == "difference_equals":
+            fields = (constraint.get("left"), constraint.get("minus"), constraint.get("right"))
+            if not all(field in spec["allowed"] for field in fields):
+                raise RuntimeError("tabla-v1.json difference_equals inválido")
+        else:
+            raise RuntimeError(f"tabla-v1.json constraint type no soportado: {kind}")
+
+    return contract, spec
+
+
 PARTIDOS_CONTRACT, PARTIDOS_SPEC = load_partidos_contract()
 GALERIA_CONTRACT, GALERIA_SPEC = load_galeria_contract()
 PLANTEL_CONTRACT, PLANTEL_SPEC = load_plantel_contract()
 NOTICIAS_CONTRACT, NOTICIAS_SPEC = load_noticias_contract()
 EQUIPOS_CONTRACT, EQUIPOS_SPEC = load_equipos_contract()
+TABLA_CONTRACT, TABLA_SPEC = load_tabla_contract()
 
 SPECS = {
     "noticias.json": NOTICIAS_SPEC,
@@ -268,12 +341,7 @@ SPECS = {
     "plantel.json": PLANTEL_SPEC,
     "galeria.json": GALERIA_SPEC,
     "partidos.json": PARTIDOS_SPEC,
-    "tabla.json": {
-        "source": "CUDO_WEB_TABLA",
-        "required": {"id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"},
-        "allowed": {"id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"},
-        "unique": ("id",),
-    },
+    "tabla.json": TABLA_SPEC,
 }
 
 TOP_LEVEL = {"schema_version", "generated_at", "source", "items"}
@@ -430,6 +498,15 @@ def validate_file(filename: str, spec: dict) -> None:
             if key in item and not isinstance(item[key], bool):
                 fail(f"{where}: {key} debe ser booleano")
 
+        for constraint in spec.get("constraints", ()):
+            kind = constraint["type"]
+            if kind == "sum_lte":
+                if sum(item[key] for key in constraint["left"]) > item[constraint["right"]]:
+                    fail(f"{where}: {constraint['message']}")
+            elif kind == "difference_equals":
+                if item[constraint["left"]] - item[constraint["minus"]] != item[constraint["right"]]:
+                    fail(f"{where}: {constraint['message']}")
+
         if filename == "partidos.json":
             if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
                 fail(f"{where}: fecha debe usar formato YYYY-MM-DD")
@@ -447,16 +524,6 @@ def validate_file(filename: str, spec: dict) -> None:
                 for score_key in ("goles_local", "goles_visita"):
                     if score_key in item and item[score_key] is not None:
                         validate_int(item[score_key], where, score_key, minimum=0)
-
-        if filename == "tabla.json":
-            validate_int(item["posicion"], where, "posicion", minimum=1)
-            for key in ("pj", "pg", "pe", "pp", "gf", "gc", "pts"):
-                validate_int(item[key], where, key, minimum=0)
-            validate_int(item["dg"], where, "dg")
-            if item["pg"] + item["pe"] + item["pp"] > item["pj"]:
-                fail(f"{where}: PG+PE+PP no puede superar PJ")
-            if item["dg"] != item["gf"] - item["gc"]:
-                fail(f"{where}: DG debe ser igual a GF-GC")
 
     print(f"OK  {filename}: {len(doc['items'])} item(s)")
 
