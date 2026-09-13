@@ -1,10 +1,18 @@
 # CUDO App · Identificadores públicos v1
 
-Estado: **CANDIDATO QA**
+Estado: **ACTIVO EN QA**
+
+## Certificación QA
+
+Certificado el 2026-09-13 por el pipeline canónico `CUDO V8 - sync QA Google data`, run **34774122168**.
+
+El live sync tomó `PUBLICO_EXPORT.album_id = "Santa Elena vs CUDO"`, lo transformó a `santa-elena-vs-cudo`, mantuvo el nombre visible del álbum y completó contratos + E2E + publicación en `main` sin corrección manual de la Sheet.
+
+`qa-v8-google-data/preview-v8/data/galeria.json` y `main/qa-v8-google/data/galeria.json` contienen cuatro items publicados bajo el mismo `album_id` canónico.
 
 ## Evidencia
 
-El live sync de medios v2 materializó correctamente las imágenes actuales de Tally y generó cuatro items de Galería, pero el contrato detuvo la publicación porque `PUBLICO_EXPORT.album_id` contenía el valor humano `Santa Elena vs CUDO`, mientras el contrato público exige un identificador técnico estable con minúsculas, números y guiones.
+El live sync de medios v2 materializó correctamente las imágenes actuales de Tally y generó cuatro items de Galería, pero el contrato había detenido una ejecución anterior porque `PUBLICO_EXPORT.album_id` contenía el valor humano `Santa Elena vs CUDO`, mientras el contrato público exige un identificador técnico estable con minúsculas, números y guiones.
 
 El nombre visible del álbum no está en conflicto. El problema corresponde únicamente al identificador público.
 
