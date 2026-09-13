@@ -10,6 +10,7 @@ on:
     paths:
       - 'preview-v8/**'
       - '!preview-v8/data/**'
+      - '!preview-v8/media/**'
       - '.github/workflows/sync-qa-google-data.yml'
       - '.github/workflows/publish-qa-google.yml'
 
@@ -57,7 +58,7 @@ jobs:
         working-directory: source
         run: python3 preview-v8/tools/validate_qa_pipeline.py
 
-      - name: Sincronizar PUBLICO_EXPORT y validar Sheet contra contrato
+      - name: Sincronizar PUBLICO_EXPORT y materializar medios seguros
         working-directory: source
         run: node preview-v8/tools/sync_google_publico.mjs
 
@@ -108,7 +109,7 @@ jobs:
         working-directory: source
         run: node preview-v8/tools/qa_google_render.mjs
 
-      - name: Commit datos QA sólo si cambiaron
+      - name: Commit datos y medios QA sólo si cambiaron
         working-directory: source
         shell: bash
         run: |
@@ -116,10 +117,11 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add preview-v8/data/*.json
+          if [ -d preview-v8/media ]; then git add preview-v8/media; fi
           if git diff --cached --quiet; then
-            echo 'PUBLICO_EXPORT sin cambios; rama QA no requiere commit.'
+            echo 'PUBLICO_EXPORT y medios sin cambios; rama QA no requiere commit.'
           else
-            git commit -m "QA data sync: Google PUBLICO_EXPORT"
+            git commit -m "QA data/media sync: Google PUBLICO_EXPORT"
             git push origin HEAD:qa-v8-google-data
           fi
 
