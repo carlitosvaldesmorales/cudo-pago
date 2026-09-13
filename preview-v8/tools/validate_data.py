@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validador sin dependencias para las proyecciones públicas de C.U.D.O. V7."""
+"""Validador sin dependencias para las proyecciones públicas de C.U.D.O. V8."""
 
 from __future__ import annotations
 
@@ -11,6 +11,45 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
+CONTRACTS = ROOT / "contracts"
+
+
+def load_partidos_contract() -> tuple[dict, dict]:
+    path = CONTRACTS / "partidos-v1.json"
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeError("partidos-v1.json no existe") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"partidos-v1.json inválido: {exc}") from exc
+
+    if contract.get("contract_id") != "CUDO-PARTIDOS-V1":
+        raise RuntimeError("partidos-v1.json contract_id inválido")
+    if contract.get("schema_version") != "1.0":
+        raise RuntimeError("partidos-v1.json schema_version inválido")
+
+    public = contract.get("public_contract")
+    if not isinstance(public, dict):
+        raise RuntimeError("partidos-v1.json public_contract inválido")
+
+    for key in ("required", "allowed", "unique", "states"):
+        if not isinstance(public.get(key), list) or not public[key]:
+            raise RuntimeError(f"partidos-v1.json public_contract.{key} inválido")
+
+    spec = {
+        "source": contract.get("source"),
+        "required": set(public["required"]),
+        "allowed": set(public["allowed"]),
+        "unique": tuple(public["unique"]),
+    }
+    if not spec["source"]:
+        raise RuntimeError("partidos-v1.json source inválido")
+    if not spec["required"].issubset(spec["allowed"]):
+        raise RuntimeError("partidos-v1.json required debe ser subconjunto de allowed")
+    return contract, spec
+
+
+PARTIDOS_CONTRACT, PARTIDOS_SPEC = load_partidos_contract()
 
 SPECS = {
     "noticias.json": {
@@ -37,12 +76,7 @@ SPECS = {
         "allowed": {"id", "fecha", "titulo", "descripcion", "imagen_ref", "alt", "album_id", "album", "categoria"},
         "unique": ("id",),
     },
-    "partidos.json": {
-        "source": "CUDO_WEB_PARTIDOS",
-        "required": {"id", "fecha", "local", "visita", "estado_partido"},
-        "allowed": {"id", "fecha", "hora", "local", "visita", "recinto", "categoria", "competencia", "estado_partido", "goles_local", "goles_visita"},
-        "unique": ("id",),
-    },
+    "partidos.json": PARTIDOS_SPEC,
     "tabla.json": {
         "source": "CUDO_WEB_TABLA",
         "required": {"id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"},
@@ -59,7 +93,7 @@ PRIVATE_KEYS = {
     "contacto_emergencia", "documento", "ficha_medica", "ficha_médica", "autorizado",
     "autorizada", "autorizacion", "autorización", "consentimiento", "es_menor", "menor_edad",
 }
-MATCH_STATES = {"PROGRAMADO", "FINALIZADO", "SUSPENDIDO", "CANCELADO"}
+MATCH_STATES = set(PARTIDOS_CONTRACT["public_contract"]["states"])
 PLAYER_POSITIONS = {"ARQUERO", "DEFENSA", "VOLANTE", "DELANTERO"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -179,7 +213,7 @@ def validate_file(filename: str, spec: dict) -> None:
             state = str(item["estado_partido"]).strip().upper()
             if state not in MATCH_STATES:
                 fail(f"{where}: estado_partido inválido: {state}")
-            if state == "FINALIZADO":
+            if state == "FINALIZADO" and PARTIDOS_CONTRACT["public_contract"].get("finalizado_requires_scores", True):
                 if "goles_local" not in item or "goles_visita" not in item:
                     fail(f"{where}: un partido FINALIZADO debe incluir ambos marcadores")
                 validate_int(item["goles_local"], where, "goles_local", minimum=0)
@@ -206,10 +240,10 @@ def main() -> int:
     try:
         for filename, spec in SPECS.items():
             validate_file(filename, spec)
-    except ValueError as exc:
+    except (RuntimeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-    print("OK  CUDO V7: contratos públicos válidos")
+    print("OK  CUDO V8: contratos públicos válidos")
     return 0
 
 
