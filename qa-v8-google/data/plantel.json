@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-13T17:57:03.942Z",
+  "generated_at": "2026-09-13T18:16:40.996Z",
   "source": "CUDO_WEB_PLANTEL",
   "items": [
     {
@@ -9,7 +9,7 @@
       "numero": 11,
       "posicion": "DELANTERO",
       "categoria": "PRIMERA",
-      "foto_ref": "",
+      "foto_ref": "media/plantel/tally-eab8b33642e082920788.png",
       "capitan": false
     }
   ]

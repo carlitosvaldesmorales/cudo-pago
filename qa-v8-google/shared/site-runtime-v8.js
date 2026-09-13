@@ -1,4 +1,7 @@
 (()=>{
+  const runtimeScript=document.currentScript;
+  const publicBase=runtimeScript?new URL('../',runtimeScript.src).href:new URL('../',location.href).href;
+
   document.addEventListener('DOMContentLoaded',()=>{
     const button=document.getElementById('menuBtn');
     const panel=document.getElementById('mobilePanel');
@@ -15,7 +18,7 @@
   const empty=(root,title,msg)=>{root.replaceChildren();const box=document.createElement('div');box.className='empty';box.style.gridColumn='1/-1';box.append(text('strong',title),text('span',msg));root.append(box)};
   const safeImage=(ref,alt)=>{
     if(!ref)return null;
-    try{const u=new URL(String(ref),location.href);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['127.0.0.1','localhost'].includes(u.hostname)))return null;const img=document.createElement('img');img.src=u.href;img.alt=String(alt||'C.U.D.O.');img.loading='lazy';img.decoding='async';return img}catch{return null}
+    try{const u=new URL(String(ref),publicBase);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['127.0.0.1','localhost'].includes(u.hostname)))return null;const img=document.createElement('img');img.src=u.href;img.alt=String(alt||'C.U.D.O.');img.loading='lazy';img.decoding='async';return img}catch{return null}
   };
 
   window.cudoBindPlayerFilters=function(filterId,gridId){

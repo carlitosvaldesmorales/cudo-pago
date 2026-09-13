@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 const CLIENT_ID = process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET;
@@ -10,16 +11,25 @@ for (const [name, value] of Object.entries({CLIENT_ID, CLIENT_SECRET, REFRESH_TO
 
 const ROOT = path.resolve(process.cwd());
 const OUT_DIR = path.join(ROOT, 'preview-v8', 'data');
+const MEDIA_DIR = path.join(ROOT, 'preview-v8', 'media');
 const CONTRACT_DIR = path.join(ROOT, 'preview-v8', 'contracts');
 const PARTIDOS_CONTRACT = JSON.parse(fs.readFileSync(path.join(CONTRACT_DIR, 'partidos-v1.json'), 'utf8'));
+const MAX_MEDIA_BYTES = 10 * 1024 * 1024;
+const IMAGE_EXT = new Map([
+  ['image/jpeg','jpg'],
+  ['image/png','png'],
+  ['image/webp','webp'],
+  ['image/gif','gif'],
+  ['image/avif','avif']
+]);
 
 const MODULES = [
-  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],date:['fecha'],time:[],publicRefs:['imagen_ref'],requiredPublicRefs:[]},
-  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],date:[],time:[],publicRefs:[],requiredPublicRefs:[]},
-  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],date:[],time:[],publicRefs:['foto_ref'],requiredPublicRefs:[]},
-  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],date:['fecha'],time:['hora'],publicRefs:[],requiredPublicRefs:[]},
-  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],date:[],time:[],publicRefs:[],requiredPublicRefs:[]},
-  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],date:['fecha'],time:[],publicRefs:['imagen_ref'],requiredPublicRefs:['imagen_ref']}
+  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],date:['fecha'],time:[],media:{field:'imagen_ref',multi:false,required:false}},
+  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],date:[],time:[],media:null},
+  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],date:[],time:[],media:{field:'foto_ref',multi:false,required:false}},
+  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],date:['fecha'],time:['hora'],media:null},
+  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],date:[],time:[],media:null},
+  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],date:['fecha'],time:[],media:{field:'imagen_ref',multi:true,required:true}}
 ].map(module => ({...module,sheet:'PUBLICO_EXPORT'}));
 
 async function getAccessToken() {
@@ -186,6 +196,100 @@ function sanitizePublicRef(v, field) {
   return value;
 }
 
+function extractTallyPrivateUrls(value) {
+  const source = clean(value);
+  if (!source) return [];
+  const matches = source.match(/https:\/\/storage\.tally\.so\/[^\s,]+/gi) || [];
+  const urls = [];
+  for (const candidate of matches) {
+    try {
+      const u = new URL(candidate);
+      if (u.protocol !== 'https:' || u.hostname !== 'storage.tally.so' || !u.pathname.startsWith('/private/')) continue;
+      if (!urls.includes(u.toString())) urls.push(u.toString());
+    } catch {
+      // Un token que no sea URL válida no se transforma.
+    }
+  }
+  return urls;
+}
+
+function imageBytesMatchMime(buffer, mime) {
+  if (mime === 'image/jpeg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (mime === 'image/png') return buffer.length >= 8 && buffer.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]));
+  if (mime === 'image/gif') return buffer.length >= 6 && ['GIF87a','GIF89a'].includes(buffer.subarray(0,6).toString('ascii'));
+  if (mime === 'image/webp') return buffer.length >= 12 && buffer.subarray(0,4).toString('ascii') === 'RIFF' && buffer.subarray(8,12).toString('ascii') === 'WEBP';
+  if (mime === 'image/avif') return buffer.length >= 12 && buffer.subarray(4,8).toString('ascii') === 'ftyp' && ['avif','avis'].includes(buffer.subarray(8,12).toString('ascii'));
+  return false;
+}
+
+async function materializeTallyImage(moduleKey, itemId, url) {
+  let response;
+  try {
+    response = await fetch(url,{redirect:'follow',signal:AbortSignal.timeout(20000)});
+  } catch {
+    throw new Error(`${moduleKey}: no se pudo descargar el medio privado de ${itemId || 'registro sin id'}`);
+  }
+  if (!response.ok) throw new Error(`${moduleKey}: medio privado no disponible para ${itemId || 'registro sin id'} (HTTP ${response.status})`);
+
+  const declaredLength = Number(response.headers.get('content-length') || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_MEDIA_BYTES) {
+    throw new Error(`${moduleKey}: medio de ${itemId || 'registro sin id'} excede 10 MiB`);
+  }
+
+  const mime = clean(response.headers.get('content-type')).split(';')[0].toLowerCase();
+  const ext = IMAGE_EXT.get(mime);
+  if (!ext) throw new Error(`${moduleKey}: medio de ${itemId || 'registro sin id'} usa tipo no permitido ${mime || 'desconocido'}`);
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length === 0 || buffer.length > MAX_MEDIA_BYTES) {
+    throw new Error(`${moduleKey}: medio de ${itemId || 'registro sin id'} tiene tamaño inválido`);
+  }
+  if (!imageBytesMatchMime(buffer,mime)) {
+    throw new Error(`${moduleKey}: medio de ${itemId || 'registro sin id'} no coincide con su tipo de imagen declarado`);
+  }
+
+  const digest = crypto.createHash('sha256').update(buffer).digest('hex').slice(0,20);
+  const dir = path.join(MEDIA_DIR,moduleKey);
+  fs.mkdirSync(dir,{recursive:true});
+  const filename = `tally-${digest}.${ext}`;
+  const target = path.join(dir,filename);
+  if (!fs.existsSync(target)) fs.writeFileSync(target,buffer,{flag:'wx'});
+  return `media/${moduleKey}/${filename}`;
+}
+
+async function materializeMedia(module, items) {
+  if (!module.media) return items;
+  const out = [];
+  const field = module.media.field;
+
+  for (const item of items) {
+    const raw = clean(item[field]);
+    const tallyUrls = extractTallyPrivateUrls(raw);
+
+    if (tallyUrls.length) {
+      if (!module.media.multi && tallyUrls.length > 1) {
+        throw new Error(`${module.key}: ${item.id || 'registro sin id'} contiene más de una imagen en ${field}`);
+      }
+      const paths = [];
+      for (const url of tallyUrls) paths.push(await materializeTallyImage(module.key,item.id,url));
+      if (module.media.multi && paths.length > 1) {
+        paths.forEach((mediaPath,index)=>out.push({...item,id:`${item.id}-${String(index+1).padStart(2,'0')}`,[field]:mediaPath}));
+      } else {
+        out.push({...item,[field]:paths[0]});
+      }
+      continue;
+    }
+
+    const safeRef = sanitizePublicRef(raw,`${module.key}.${field}`);
+    if (!safeRef && module.media.required) {
+      console.warn(`PUBLIC_ROW_SKIPPED module=${module.key} reason=missing_safe_required_ref field=${field}`);
+      continue;
+    }
+    out.push({...item,[field]:safeRef});
+  }
+  return out;
+}
+
 function rowToItem(row,headers,module) {
   return Object.fromEntries(headers.map((h,i)=>{
     const raw = row[i] ?? '';
@@ -194,7 +298,6 @@ function rowToItem(row,headers,module) {
     if (module.time.includes(h)) return [h,toHHMM(raw,`${module.key}.${h}`)];
     if (module.numeric.includes(h)) return [h,toNumber(raw)];
     if (module.boolean.includes(h)) return [h,toBoolean(raw,`${module.key}.${h}`)];
-    if (module.publicRefs.includes(h)) return [h,sanitizePublicRef(raw,`${module.key}.${h}`)];
     return [h,raw];
   }));
 }
@@ -203,18 +306,9 @@ function rowsToItems(values,module) {
   if (!values.length) throw new Error('PUBLICO_EXPORT no tiene encabezados');
   const headers = values[0].map(v=>String(v).trim()).filter(Boolean);
   if (!headers.length) throw new Error('PUBLICO_EXPORT tiene encabezados vacíos');
-
-  const items = [];
-  for (const row of values.slice(1).filter(row=>row.some(v=>String(v??'').trim()!==''))) {
-    const item = rowToItem(row,headers,module);
-    const missingRequiredRef = module.requiredPublicRefs.find(field => !clean(item[field]));
-    if (missingRequiredRef) {
-      console.warn(`PUBLIC_ROW_SKIPPED module=${module.key} reason=missing_safe_required_ref field=${missingRequiredRef}`);
-      continue;
-    }
-    items.push(item);
-  }
-  return items;
+  return values.slice(1)
+    .filter(row=>row.some(v=>String(v??'').trim()!==''))
+    .map(row=>rowToItem(row,headers,module));
 }
 
 function readExisting(out) {
@@ -226,6 +320,7 @@ function sameItems(a,b) { return JSON.stringify(a ?? []) === JSON.stringify(b ??
 
 const token = await getAccessToken();
 fs.mkdirSync(OUT_DIR,{recursive:true});
+fs.mkdirSync(MEDIA_DIR,{recursive:true});
 const summary = {};
 for (const module of MODULES) {
   const publicValues = await readSheet(token,module.spreadsheetId,module.sheet);
@@ -235,7 +330,8 @@ for (const module of MODULES) {
     validatePartidosFormSpec(formValues);
   }
 
-  const items = rowsToItems(publicValues,module);
+  const normalized = rowsToItems(publicValues,module);
+  const items = await materializeMedia(module,normalized);
   const out = path.join(OUT_DIR,`${module.key}.json`);
   const previous = readExisting(out);
   const changed = !previous || previous.schema_version !== '1.0' || previous.source !== module.source || !sameItems(previous.items,items);
@@ -248,4 +344,4 @@ for (const module of MODULES) {
   fs.writeFileSync(out,JSON.stringify(doc,null,2)+'\n','utf8');
   summary[module.key]={items:items.length,changed,spreadsheetId:module.spreadsheetId};
 }
-console.log(JSON.stringify({ok:true,contract_guard:'CUDO-PARTIDOS-V1',modules:summary},null,2));
+console.log(JSON.stringify({ok:true,contract_guard:'CUDO-PARTIDOS-V1',media_materialization:'TALLY-PRIVATE-TO-LOCAL-V2',modules:summary},null,2));
