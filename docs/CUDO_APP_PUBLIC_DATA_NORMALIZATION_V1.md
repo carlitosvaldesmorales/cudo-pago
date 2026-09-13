@@ -12,6 +12,7 @@ El sync QA de 2026-09-13 expuso diferencias reales entre la planilla y el contra
 - campos públicos de medios contenían referencias privadas firmadas de Tally. Una URL privada con token/firma no puede formar parte de un JSON público.
 - Galería exige `imagen_ref`; después de retirar una referencia privada, una entrada de galería sin imagen deja de cumplir su propio contrato.
 - una corrección de Partidos vía `VLOOKUP` puede devolver fecha y hora como valores nativos de Sheets: fecha serial y hora como fracción de día. El contrato público exige `YYYY-MM-DD` y `HH:MM`.
+- la captura humana puede escribir la identidad del club como `Cudo`, `cudo` o `CUDO`, pero el contrato del renderer declara `CUDO` como identidad canónica.
 
 ## Regla de tipos
 
@@ -32,6 +33,19 @@ Para campos temporales públicos:
 - cualquier valor temporal no reconocible hace fallar el sync; no se adivina una fecha ni una hora.
 
 El validador `preview-v8/tools/validate_data.py` mantiene el contrato final. En Partidos, `fecha` debe usar `YYYY-MM-DD` y `hora`, cuando existe, `HH:MM`.
+
+## Regla de identidad canónica en Partidos
+
+El contrato `preview-v8/contracts/partidos-v1.json` define `renderer.cudo_identity = "CUDO"`.
+
+En los campos `local` y `visita` del módulo Partidos:
+
+- la comparación de la identidad propia es insensible a mayúsculas/minúsculas y elimina espacios exteriores;
+- si el valor representa a CUDO, la salida pública se reescribe exactamente como `CUDO`;
+- los nombres de rivales no se renombrarán ni se corregirán por inferencia;
+- la identidad canónica se obtiene del contrato, no de una cadena duplicada en el test E2E.
+
+Esto permite que la captura humana siga siendo tolerante sin trasladar variantes de escritura al JSON público ni al renderer.
 
 ## Regla de referencias públicas
 
@@ -63,4 +77,5 @@ La solución definitiva de medios pertenece al cierre de imágenes de CUDO App: 
 - Un módulo con media opcional puede publicarse sin ella; un módulo cuya media es requerida debe excluir la fila hasta tener una referencia segura.
 - Mantener contratos estrictos en CI; corregir el adaptador antes que relajar el schema.
 - Normalizar tipos en la frontera pública, no obligar al operador humano a transformar seriales ni formatos internos de Sheets.
+- Canonizar sólo identidades declaradas por contrato; no corregir nombres de terceros por inferencia.
 - La normalización es parte de la generación de la app, no una limpieza manual posterior.
