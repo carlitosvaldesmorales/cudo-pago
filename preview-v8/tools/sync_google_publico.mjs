@@ -161,6 +161,13 @@ function toHHMM(v, field) {
   throw new Error(`${field}: hora pública no reconocida: ${JSON.stringify(v)}`);
 }
 
+function canonicalizePartidosIdentity(v) {
+  const value = clean(v);
+  const canonical = clean(PARTIDOS_CONTRACT.renderer.cudo_identity);
+  if (!value || !canonical) return value;
+  return value.toLocaleUpperCase('es') === canonical.toLocaleUpperCase('es') ? canonical : value;
+}
+
 function sanitizePublicRef(v, field) {
   const value = clean(v);
   if (!value) return '';
@@ -182,6 +189,7 @@ function sanitizePublicRef(v, field) {
 function rowToItem(row,headers,module) {
   return Object.fromEntries(headers.map((h,i)=>{
     const raw = row[i] ?? '';
+    if (module.key === 'partidos' && (h === 'local' || h === 'visita')) return [h,canonicalizePartidosIdentity(raw)];
     if (module.date.includes(h)) return [h,toIsoDate(raw,`${module.key}.${h}`)];
     if (module.time.includes(h)) return [h,toHHMM(raw,`${module.key}.${h}`)];
     if (module.numeric.includes(h)) return [h,toNumber(raw)];
