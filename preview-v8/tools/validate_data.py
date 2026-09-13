@@ -488,11 +488,9 @@ def validate_file(filename: str, spec: dict) -> None:
         if missing:
             fail(f"{where}: faltan campos requeridos: {sorted(missing)}")
 
-        integer_required = {"numero", "posicion_tabla", "posicion", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"}
+        typed_required = set(spec.get("integer_fields", {}))
         for key in spec["required"]:
-            if key in integer_required and isinstance(item.get(key), int) and not isinstance(item.get(key), bool):
-                continue
-            if key in {"posicion", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts", "numero"}:
+            if key in typed_required:
                 continue
             if not nonblank(item.get(key)):
                 fail(f"{where}: {key} no puede estar vacío")
