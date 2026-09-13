@@ -115,8 +115,78 @@ def load_galeria_contract() -> tuple[dict, dict]:
     return contract, spec
 
 
+def load_plantel_contract() -> tuple[dict, dict]:
+    path = CONTRACTS / "plantel-v1.json"
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeError("plantel-v1.json no existe") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"plantel-v1.json inválido: {exc}") from exc
+
+    if contract.get("contract_id") != "CUDO-PLANTEL-V1":
+        raise RuntimeError("plantel-v1.json contract_id inválido")
+    if contract.get("schema_version") != "1.0":
+        raise RuntimeError("plantel-v1.json schema_version inválido")
+
+    public = contract.get("public_contract")
+    if not isinstance(public, dict):
+        raise RuntimeError("plantel-v1.json public_contract inválido")
+
+    for key in ("required", "allowed", "unique", "image_fields", "boolean_fields"):
+        if not isinstance(public.get(key), list) or not public[key]:
+            raise RuntimeError(f"plantel-v1.json public_contract.{key} inválido")
+
+    integer_fields = public.get("integer_fields")
+    enum_fields = public.get("enum_fields")
+    if not isinstance(integer_fields, dict) or not integer_fields:
+        raise RuntimeError("plantel-v1.json public_contract.integer_fields inválido")
+    if not isinstance(enum_fields, dict) or not enum_fields:
+        raise RuntimeError("plantel-v1.json public_contract.enum_fields inválido")
+
+    spec = {
+        "source": contract.get("source"),
+        "required": set(public["required"]),
+        "allowed": set(public["allowed"]),
+        "unique": tuple(public["unique"]),
+        "image_fields": tuple(public["image_fields"]),
+        "integer_fields": dict(integer_fields),
+        "enum_fields": dict(enum_fields),
+        "boolean_fields": tuple(public["boolean_fields"]),
+    }
+    if not spec["source"]:
+        raise RuntimeError("plantel-v1.json source inválido")
+    if not spec["required"].issubset(spec["allowed"]):
+        raise RuntimeError("plantel-v1.json required debe ser subconjunto de allowed")
+
+    for field in spec["image_fields"]:
+        if field not in spec["allowed"]:
+            raise RuntimeError(f"plantel-v1.json image_field no permitido: {field}")
+    for field, rule in spec["integer_fields"].items():
+        if field not in spec["allowed"] or not isinstance(rule, dict):
+            raise RuntimeError(f"plantel-v1.json regla integer inválida: {field}")
+        minimum = rule.get("minimum")
+        if minimum is not None and (isinstance(minimum, bool) or not isinstance(minimum, int)):
+            raise RuntimeError(f"plantel-v1.json minimum inválido: {field}")
+    for field, rule in spec["enum_fields"].items():
+        if field not in spec["allowed"] or not isinstance(rule, dict):
+            raise RuntimeError(f"plantel-v1.json regla enum inválida: {field}")
+        values = rule.get("values")
+        normalize = rule.get("normalize")
+        if not isinstance(values, list) or not values or not all(isinstance(value, str) and value for value in values):
+            raise RuntimeError(f"plantel-v1.json values enum inválidos: {field}")
+        if normalize not in (None, "upper"):
+            raise RuntimeError(f"plantel-v1.json normalize enum inválido: {field}")
+    for field in spec["boolean_fields"]:
+        if field not in spec["allowed"]:
+            raise RuntimeError(f"plantel-v1.json boolean_field no permitido: {field}")
+
+    return contract, spec
+
+
 PARTIDOS_CONTRACT, PARTIDOS_SPEC = load_partidos_contract()
 GALERIA_CONTRACT, GALERIA_SPEC = load_galeria_contract()
+PLANTEL_CONTRACT, PLANTEL_SPEC = load_plantel_contract()
 
 SPECS = {
     "noticias.json": {
@@ -131,12 +201,7 @@ SPECS = {
         "allowed": {"id", "nombre", "categoria", "descripcion"},
         "unique": ("id",),
     },
-    "plantel.json": {
-        "source": "CUDO_WEB_PLANTEL",
-        "required": {"id", "nombre_deportivo", "numero", "posicion", "categoria"},
-        "allowed": {"id", "nombre_deportivo", "numero", "posicion", "categoria", "foto_ref", "capitan"},
-        "unique": ("id",),
-    },
+    "plantel.json": PLANTEL_SPEC,
     "galeria.json": GALERIA_SPEC,
     "partidos.json": PARTIDOS_SPEC,
     "tabla.json": {
@@ -156,7 +221,6 @@ PRIVATE_KEYS = {
     "autorizada", "autorizacion", "autorización", "consentimiento", "es_menor", "menor_edad",
 }
 MATCH_STATES = set(PARTIDOS_CONTRACT["public_contract"]["states"])
-PLAYER_POSITIONS = {"ARQUERO", "DEFENSA", "VOLANTE", "DELANTERO"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -285,13 +349,22 @@ def validate_file(filename: str, spec: dict) -> None:
             if not re.fullmatch(rule["pattern"], value):
                 fail(f"{where}: {rule['message']}")
 
-        if filename == "plantel.json":
-            validate_int(item["numero"], where, "numero", minimum=1)
-            position = str(item["posicion"]).strip().upper()
-            if position not in PLAYER_POSITIONS:
-                fail(f"{where}: posicion inválida: {position}")
-            if "capitan" in item and not isinstance(item["capitan"], bool):
-                fail(f"{where}: capitan debe ser booleano")
+        for key, rule in spec.get("integer_fields", {}).items():
+            if key in item:
+                validate_int(item[key], where, key, minimum=rule.get("minimum"))
+
+        for key, rule in spec.get("enum_fields", {}).items():
+            if key not in item:
+                continue
+            value = str(item[key]).strip()
+            if rule.get("normalize") == "upper":
+                value = value.upper()
+            if value not in rule["values"]:
+                fail(f"{where}: {key} inválida: {value}")
+
+        for key in spec.get("boolean_fields", ()):
+            if key in item and not isinstance(item[key], bool):
+                fail(f"{where}: {key} debe ser booleano")
 
         if filename == "partidos.json":
             if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
