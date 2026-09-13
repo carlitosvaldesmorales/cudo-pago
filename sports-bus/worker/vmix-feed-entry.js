@@ -1,18 +1,32 @@
 import { buildRoundSnapshots } from './results-stream-entry.js';
 
 const CREST_BASE='https://cudo.cl/preview-v8/media/clubes/';
+
+// Canonical ids come from the ANFA Chépica fixture seed. Legacy aliases remain
+// accepted only at this presentation boundary so old callers do not lose crests.
 const CREST_BY_CLUB=Object.freeze({
-  CUDO:'union-orilla.png',
-  SANTA_ELENA:'santa-elena-la-ruda.png',
-  JUVENTUD_CHEPICA:'juventud-chepica.png',
-  INDEPENDIENTE:'independiente.png',
-  SAN_JUAN:'san-juan.png',
-  PENAROL_LA_MINA:'penarol-la-mina.png',
-  HURACAN:'huracan.png',
-  SAN_AGUSTIN:'san-agustin.png',
-  SAN_RAMON:'san-ramon.png',
-  LAS_PALMERAS:'las-palmeras.png',
-  LAS_CRUCES:'las-cruces.png'
+  'JUV-CHEPICA':'juventud-chepica.png',
+  'SANTA-ELENA':'santa-elena-la-ruda.png',
+  'INDEPENDIENTE':'independiente.png',
+  'UNION-ORILLA':'union-orilla.png',
+  'SAN-JUAN':'san-juan.png',
+  'PENAROL-LA-MINA':'penarol-la-mina.png',
+  'HURACAN':'huracan.png',
+  'SAN-AGUSTIN':'san-agustin.png',
+  'SAN-RAMON':'san-ramon.png',
+  'LAS-PALMERAS':'las-palmeras.png',
+  'LAS-CRUCES':'las-cruces.png',
+
+  // Compatibility aliases used by older CUDO/web integrations.
+  'CUDO':'union-orilla.png',
+  'JUVENTUD_CHEPICA':'juventud-chepica.png',
+  'SANTA_ELENA':'santa-elena-la-ruda.png',
+  'SAN_JUAN':'san-juan.png',
+  'PENAROL_LA_MINA':'penarol-la-mina.png',
+  'SAN_AGUSTIN':'san-agustin.png',
+  'SAN_RAMON':'san-ramon.png',
+  'LAS_PALMERAS':'las-palmeras.png',
+  'LAS_CRUCES':'las-cruces.png'
 });
 
 const SERIES_ORDER=Object.freeze({TERCERA:1,SEGUNDA:2,SENIOR:3,PRIMERA:4});
