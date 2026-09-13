@@ -1,6 +1,7 @@
 import coreWorker from './telegram-route-clarity-entry.js';
 import { handleResultsRegisterRequest } from './worker/results-register-entry.js';
 import { handleResultsStreamRequest, ResultsStreamHub } from './worker/results-stream-entry.js';
+import { handleVmixFeedRequest } from './worker/vmix-feed-entry.js';
 import { handlePublicCompetitionHubRequest } from './worker/public-competition-hub-entry.js';
 import { handlePublicStandingsRequest } from './worker/public-standings-entry.js';
 import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-root-entry.js';
@@ -67,6 +68,9 @@ async function canonicalTelegramRuntime(request,env){
 
 export default {
   async fetch(request,env,ctx){
+    const vmix=await handleVmixFeedRequest(request.clone(),env);
+    if(vmix) return vmix;
+
     const standings=await handlePublicStandingsRequest(request.clone(),env);
     if(standings) return standings;
 

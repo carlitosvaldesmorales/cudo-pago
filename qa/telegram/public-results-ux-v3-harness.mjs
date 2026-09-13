@@ -119,8 +119,9 @@ async function run() {
   assert.ok(buttonTexts(edited).some(x => /Unión Orilla vs San Juan/.test(x)));
   assert.ok(buttonTexts(edited).every(x => !/4\/4/.test(x)));
   assert.ok(buttonData(edited).includes('p3:search'));
-  assert.ok(buttonData(edited).includes('p3:public'));
-  console.log('PASS entry goes directly to latest round and edits the existing panel');
+  assert.ok(buttonData(edited).includes('nav:back'));
+  assert.ok(!buttonData(edited).includes('p3:public'));
+  console.log('PASS entry goes directly to latest round and exposes canonical Back navigation');
 
   reset();
   response = await callback('/webhook/telegram-next', `${env.TELEGRAM_WEBHOOK_SECRET}:next`, 'p3:m:2:UNION-ORILLA', 5001);
@@ -153,11 +154,13 @@ async function run() {
   reset();
   response = await callback('/webhook/telegram-next', `${env.TELEGRAM_WEBHOOK_SECRET}:next`, 'p3:public', 5001);
   assert.equal(response.status, 200);
+  payload = await response.json();
+  assert.equal(payload.handled, 'public_results_ux_v3_legacy_public_bridge');
   edited = lastCall('next', 'editMessageText');
-  assert.match(edited.text, /FÚTBOL CHÉPICA · PÚBLICO/);
-  assert.ok(buttonData(edited).includes('tp:public-results'));
+  assert.match(edited.text, /vista antigua/);
+  assert.ok(buttonData(edited).includes('nav:back'));
   assert.equal(slotCalls('next', 'sendMessage').length, 0);
-  console.log('PASS return to Public also reuses the current panel');
+  console.log('PASS historical p3:public is a compatibility bridge to canonical Back navigation');
 
   reset();
   response = await callback('/webhook/telegram-next', `${env.TELEGRAM_WEBHOOK_SECRET}:next`, 'px:latest', 5001);
