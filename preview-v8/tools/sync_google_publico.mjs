@@ -14,12 +14,12 @@ const CONTRACT_DIR = path.join(ROOT, 'preview-v8', 'contracts');
 const PARTIDOS_CONTRACT = JSON.parse(fs.readFileSync(path.join(CONTRACT_DIR, 'partidos-v1.json'), 'utf8'));
 
 const MODULES = [
-  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],publicRefs:['imagen_ref'],requiredPublicRefs:[]},
-  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],publicRefs:[],requiredPublicRefs:[]},
-  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],publicRefs:['foto_ref'],requiredPublicRefs:[]},
-  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],publicRefs:[],requiredPublicRefs:[]},
-  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],publicRefs:[],requiredPublicRefs:[]},
-  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],publicRefs:['imagen_ref'],requiredPublicRefs:['imagen_ref']}
+  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],date:['fecha'],time:[],publicRefs:['imagen_ref'],requiredPublicRefs:[]},
+  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],date:[],time:[],publicRefs:[],requiredPublicRefs:[]},
+  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],date:[],time:[],publicRefs:['foto_ref'],requiredPublicRefs:[]},
+  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],date:['fecha'],time:['hora'],publicRefs:[],requiredPublicRefs:[]},
+  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],date:[],time:[],publicRefs:[],requiredPublicRefs:[]},
+  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],date:['fecha'],time:[],publicRefs:['imagen_ref'],requiredPublicRefs:['imagen_ref']}
 ].map(module => ({...module,sheet:'PUBLICO_EXPORT'}));
 
 async function getAccessToken() {
@@ -99,10 +99,16 @@ function validatePartidosFormSpec(values) {
   }
 }
 
+function parseLocaleNumber(v) {
+  const raw = clean(v).replace(',', '.');
+  if (!/^[-+]?\d+(?:\.\d+)?$/.test(raw)) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
 function toNumber(v) {
   if (v === '' || v === null || v === undefined) return null;
-  const n = Number(String(v).replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
+  return parseLocaleNumber(v);
 }
 
 function toBoolean(v, field) {
@@ -111,6 +117,48 @@ function toBoolean(v, field) {
   if (normalized === 'NO') return false;
   if (normalized === '') return null;
   throw new Error(`${field}: valor booleano público no reconocido: ${JSON.stringify(v)}`);
+}
+
+function toIsoDate(v, field) {
+  const value = clean(v);
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const dmy = value.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (dmy) {
+    const [,day,month,year] = dmy;
+    const iso = `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
+    const check = new Date(`${iso}T00:00:00Z`);
+    if (!Number.isNaN(check.getTime()) && check.toISOString().slice(0,10) === iso) return iso;
+  }
+
+  const serial = parseLocaleNumber(value);
+  if (serial !== null && serial >= 1 && serial < 100000) {
+    const milliseconds = Date.UTC(1899,11,30) + Math.floor(serial) * 86400000;
+    const date = new Date(milliseconds);
+    if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0,10);
+  }
+
+  throw new Error(`${field}: fecha pública no reconocida: ${JSON.stringify(v)}`);
+}
+
+function toHHMM(v, field) {
+  const value = clean(v);
+  if (!value) return '';
+  if (/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return value;
+  const hms = value.match(/^((?:[01]?\d|2[0-3])):([0-5]\d):[0-5]\d$/);
+  if (hms) return `${hms[1].padStart(2,'0')}:${hms[2]}`;
+
+  const serial = parseLocaleNumber(value);
+  if (serial !== null && serial >= 0) {
+    const fraction = serial - Math.floor(serial);
+    const totalMinutes = Math.round(fraction * 1440) % 1440;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+  }
+
+  throw new Error(`${field}: hora pública no reconocida: ${JSON.stringify(v)}`);
 }
 
 function sanitizePublicRef(v, field) {
@@ -134,6 +182,8 @@ function sanitizePublicRef(v, field) {
 function rowToItem(row,headers,module) {
   return Object.fromEntries(headers.map((h,i)=>{
     const raw = row[i] ?? '';
+    if (module.date.includes(h)) return [h,toIsoDate(raw,`${module.key}.${h}`)];
+    if (module.time.includes(h)) return [h,toHHMM(raw,`${module.key}.${h}`)];
     if (module.numeric.includes(h)) return [h,toNumber(raw)];
     if (module.boolean.includes(h)) return [h,toBoolean(raw,`${module.key}.${h}`)];
     if (module.publicRefs.includes(h)) return [h,sanitizePublicRef(raw,`${module.key}.${h}`)];
