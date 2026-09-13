@@ -1,0 +1,28 @@
+{
+  "contract_id": "CUDO-PLANTEL-V1",
+  "schema_version": "1.0",
+  "module": "plantel",
+  "source": "CUDO_WEB_PLANTEL",
+  "pipeline": {
+    "public_json": "preview-v8/data/plantel.json",
+    "media_root": "preview-v8/media/plantel"
+  },
+  "public_contract": {
+    "required": ["id", "nombre_deportivo", "numero", "posicion", "categoria"],
+    "allowed": ["id", "nombre_deportivo", "numero", "posicion", "categoria", "foto_ref", "capitan"],
+    "unique": ["id"],
+    "image_fields": ["foto_ref"],
+    "integer_fields": {
+      "numero": {
+        "minimum": 1
+      }
+    },
+    "enum_fields": {
+      "posicion": {
+        "values": ["ARQUERO", "DEFENSA", "VOLANTE", "DELANTERO"],
+        "normalize": "upper"
+      }
+    },
+    "boolean_fields": ["capitan"]
+  }
+}
