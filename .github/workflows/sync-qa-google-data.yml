@@ -60,7 +60,9 @@ jobs:
 
       - name: Sincronizar PUBLICO_EXPORT y materializar medios seguros
         working-directory: source
-        run: node preview-v8/tools/sync_google_publico.mjs
+        run: |
+          node preview-v8/tools/sync_google_publico.mjs
+          node preview-v8/tools/normalize_public_ids.mjs
 
       - name: Validar contratos públicos y renderer Partidos
         working-directory: source
@@ -77,6 +79,7 @@ jobs:
           node --check preview-v8/shared/page-ux.js
           node --check preview-v8/tools/qa_google_render.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
+          node --check preview-v8/tools/normalize_public_ids.mjs
           python3 - <<'PY'
           from pathlib import Path
           adapter=Path('preview-v8/shared/data-source.js').read_text(encoding='utf-8')
