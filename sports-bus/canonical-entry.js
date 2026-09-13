@@ -6,6 +6,7 @@ import { handlePublicCompetitionHubRequest } from './worker/public-competition-h
 import { handlePublicStandingsRequest } from './worker/public-standings-entry.js';
 import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-root-entry.js';
 import { handleTelegramChepicaPlayHomeRequest } from './worker/telegram-chepica-play-home-entry.js';
+import { handleAccessRequestStart } from './worker/access-request-start-entry.js';
 import { handleAccessRequestIntake } from './worker/access-request-intake-entry.js';
 import { handleAccessRequestConfirmation } from './worker/access-request-confirm-entry.js';
 import { handleAccessRequestReview } from './worker/access-request-review-entry.js';
@@ -83,6 +84,9 @@ export default {
 
     const confirmation=await handleAccessRequestConfirmation(request.clone(),env);
     if(confirmation) return confirmation;
+
+    const accessStart=await handleAccessRequestStart(request.clone(),env);
+    if(accessStart) return accessStart;
 
     const intake=await handleAccessRequestIntake(request.clone(),env);
     if(intake) return intake;
