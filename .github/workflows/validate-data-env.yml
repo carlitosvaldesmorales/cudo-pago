@@ -7,6 +7,18 @@ on:
       - prod-v8-google-data
     paths:
       - 'preview-v8/data/**'
+      - 'preview-v8/contracts/**'
+      - 'preview-v8/shared/data-source.js'
+      - 'preview-v8/shared/seed-data.js'
+      - 'preview-v8/tools/validate_data.py'
+      - '.github/workflows/validate-data-env.yml'
+  pull_request:
+    branches:
+      - qa-v8-google-data
+      - prod-v8-google-data
+    paths:
+      - 'preview-v8/data/**'
+      - 'preview-v8/contracts/**'
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/tools/validate_data.py'
@@ -30,7 +42,7 @@ jobs:
           node --check preview-v8/shared/data-source.js
       - name: Garantizar separación QA/PROD y ausencia de mock
         env:
-          BRANCH_NAME: ${{ github.ref_name }}
+          BRANCH_NAME: ${{ github.base_ref || github.ref_name }}
         run: |
           python3 - <<'PY'
           import os
