@@ -1,0 +1,36 @@
+name: Validate vMix Broadcast Adapter
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/worker/vmix-feed-entry.js'
+      - 'sports-bus/canonical-entry.js'
+      - 'qa/sports/vmix-broadcast-adapter-harness.mjs'
+      - 'docs/architecture/vmix-broadcast-adapter-adn-v1.md'
+      - '.github/workflows/validate-vmix-broadcast-adapter.yml'
+  push:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/worker/vmix-feed-entry.js'
+      - 'sports-bus/canonical-entry.js'
+      - 'qa/sports/vmix-broadcast-adapter-harness.mjs'
+      - 'docs/architecture/vmix-broadcast-adapter-adn-v1.md'
+      - '.github/workflows/validate-vmix-broadcast-adapter.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Syntax
+        run: node --check sports-bus/worker/vmix-feed-entry.js && node --check sports-bus/canonical-entry.js && node --check qa/sports/vmix-broadcast-adapter-harness.mjs
+      - name: vMix feed contract
+        run: node qa/sports/vmix-broadcast-adapter-harness.mjs
