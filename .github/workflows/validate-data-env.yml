@@ -12,6 +12,7 @@ on:
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'preview-v8/tools/normalize_public_ids.mjs'
       - 'preview-v8/tools/validate_data.py'
       - 'preview-v8/tools/validate_partidos_vertical.py'
       - 'preview-v8/tools/validate_qa_pipeline.py'
@@ -29,6 +30,7 @@ on:
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'preview-v8/tools/normalize_public_ids.mjs'
       - 'preview-v8/tools/validate_data.py'
       - 'preview-v8/tools/validate_partidos_vertical.py'
       - 'preview-v8/tools/validate_qa_pipeline.py'
@@ -58,6 +60,7 @@ jobs:
           node --check preview-v8/shared/data-source.js
           node --check preview-v8/shared/page-ux.js
           node --check preview-v8/tools/sync_google_publico.mjs
+          node --check preview-v8/tools/normalize_public_ids.mjs
       - name: Garantizar separación QA/PROD y ausencia de mock
         env:
           BRANCH_NAME: ${{ github.base_ref || github.ref_name }}
