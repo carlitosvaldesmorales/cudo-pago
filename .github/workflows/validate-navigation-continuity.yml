@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - refactor/navigation-continuity-v1
+      - fix/dirigentes-home-canonical-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -22,15 +23,20 @@ jobs:
       - name: Syntax
         run: |
           set -euo pipefail
+          node --check sports-bus/canonical-entry.js
           node --check sports-bus/worker/telegram-navigation-contract.js
           node --check sports-bus/worker/telegram-entry-context.js
+          node --check sports-bus/worker/telegram-dirigentes-home-entry.js
           node --check sports-bus/worker/results-register-v2-entry.js
           node --check sports-bus/worker/public-results-table-view.js
           node --check sports-bus/worker/public-results-ux-v3.js
           node --check sports-bus/worker/portal-entry.js
           node --check qa/telegram/navigation-continuity-harness.mjs
+          node --check qa/telegram/dirigentes-home-canonical-harness.mjs
       - name: Navigation continuity contract
         run: node qa/telegram/navigation-continuity-harness.mjs
+      - name: Behavioral Dirigentes home
+        run: node qa/telegram/dirigentes-home-canonical-harness.mjs
       - name: ADN invariants
         run: |
           set -euo pipefail
