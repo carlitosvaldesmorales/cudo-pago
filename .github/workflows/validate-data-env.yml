@@ -8,6 +8,7 @@ on:
     paths:
       - 'preview-v8/data/**'
       - 'preview-v8/contracts/**'
+      - 'preview-v8/shared/site-runtime-v8.js'
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/shared/page-ux.js'
@@ -26,6 +27,7 @@ on:
     paths:
       - 'preview-v8/data/**'
       - 'preview-v8/contracts/**'
+      - 'preview-v8/shared/site-runtime-v8.js'
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/shared/page-ux.js'
@@ -53,9 +55,10 @@ jobs:
         run: |
           python3 preview-v8/tools/validate_data.py
           python3 preview-v8/tools/validate_partidos_vertical.py
-      - name: Validar Javascript del adapter y generador
+      - name: Validar Javascript del runtime, adapter y generador
         run: |
           node --check preview-v8/shared/site.js
+          node --check preview-v8/shared/site-runtime-v8.js
           node --check preview-v8/shared/seed-data.js
           node --check preview-v8/shared/data-source.js
           node --check preview-v8/shared/page-ux.js
