@@ -87,7 +87,8 @@ try{
   await cb(ACTOR.SUPER,`rr:series:${target.match_id}:${target.series_code}`);
   let session=await one('SELECT nonce,state FROM telegram_result_register_sessions WHERE telegram_user_id=?',String(ACTOR.SUPER.id));
   assert.equal(session?.state,'HOME_SCORE');
-  assert.match(String(lastScreen().text||''),/MARCADOR LOCAL/);
+  assert.match(String(lastScreen().text||''),/Goles de /);
+  assert.match(String(lastScreen().text||''),/Marcador:/);
   assert.ok(callbacks().some(x=>x.startsWith(`rr:h:${session.nonce}:`)));
   await cb(ACTOR.SUPER,`rr:h:${session.nonce}:2`);
   await cb(ACTOR.SUPER,`rr:a:${session.nonce}:1`);
