@@ -11,6 +11,7 @@ El sync QA de 2026-09-13 expuso diferencias reales entre la planilla y el contra
 - `PLANTEL_CONTROL.CAPITAN` / `PUBLICO_EXPORT.capitan` usa el vocabulario humano `SI|NO`, mientras V8 exige un booleano JSON.
 - campos públicos de medios contenían referencias privadas firmadas de Tally. Una URL privada con token/firma no puede formar parte de un JSON público.
 - Galería exige `imagen_ref`; después de retirar una referencia privada, una entrada de galería sin imagen deja de cumplir su propio contrato.
+- una corrección de Partidos vía `VLOOKUP` puede devolver fecha y hora como valores nativos de Sheets: fecha serial y hora como fracción de día. El contrato público exige `YYYY-MM-DD` y `HH:MM`.
 
 ## Regla de tipos
 
@@ -22,7 +23,15 @@ Para Plantel:
 - `capitan`: `SI` -> `true`; `NO` -> `false`.
 - cualquier otro valor no reconocido para `capitan` hace fallar el sync; no se inventa un valor por defecto.
 
-El validador `preview-v8/tools/validate_data.py` mantiene la regla de que `capitan`, si está presente, debe ser booleano JSON.
+Para campos temporales públicos:
+
+- `fecha` -> siempre `YYYY-MM-DD`.
+- `hora` -> siempre `HH:MM` en 24 horas.
+- el adaptador acepta el formato contractual ya normalizado, fecha humana `DD/MM/YYYY` o `DD-MM-YYYY`, y el serial numérico nativo de Google Sheets cuando el campo está declarado como fecha.
+- para hora, acepta `HH:MM`, `HH:MM:SS` o la fracción numérica nativa de un día de Google Sheets.
+- cualquier valor temporal no reconocible hace fallar el sync; no se adivina una fecha ni una hora.
+
+El validador `preview-v8/tools/validate_data.py` mantiene el contrato final. En Partidos, `fecha` debe usar `YYYY-MM-DD` y `hora`, cuando existe, `HH:MM`.
 
 ## Regla de referencias públicas
 
@@ -53,4 +62,5 @@ La solución definitiva de medios pertenece al cierre de imágenes de CUDO App: 
 - Nunca fabricar una imagen o placeholder para hacer pasar el contrato.
 - Un módulo con media opcional puede publicarse sin ella; un módulo cuya media es requerida debe excluir la fila hasta tener una referencia segura.
 - Mantener contratos estrictos en CI; corregir el adaptador antes que relajar el schema.
+- Normalizar tipos en la frontera pública, no obligar al operador humano a transformar seriales ni formatos internos de Sheets.
 - La normalización es parte de la generación de la app, no una limpieza manual posterior.
