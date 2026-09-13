@@ -1,0 +1,62 @@
+{
+  "contract_id": "CUDO-PARTIDOS-V1",
+  "schema_version": "1.0",
+  "module": "partidos",
+  "source": "CUDO_WEB_PARTIDOS",
+  "pipeline": {
+    "form_spec_sheet": "FORM_SPEC",
+    "raw_sheet": "RAW_FORM_PARTIDOS",
+    "control_sheet": "CONTROL",
+    "public_sheet": "PUBLICO_EXPORT",
+    "public_json": "preview-v8/data/partidos.json",
+    "publication_gate": {
+      "ESTADO_REGISTRO": "PUBLICADO",
+      "PUBLICAR": "SI",
+      "PRIVACIDAD": "PUBLICO"
+    }
+  },
+  "public_contract": {
+    "required": ["id", "fecha", "local", "visita", "estado_partido"],
+    "allowed": [
+      "id",
+      "competencia",
+      "fecha",
+      "hora",
+      "categoria",
+      "local",
+      "visita",
+      "recinto",
+      "estado_partido",
+      "goles_local",
+      "goles_visita"
+    ],
+    "unique": ["id"],
+    "numeric": ["goles_local", "goles_visita"],
+    "states": ["PROGRAMADO", "FINALIZADO", "SUSPENDIDO", "CANCELADO"],
+    "date_format": "YYYY-MM-DD",
+    "time_format": "HH:MM",
+    "finalizado_requires_scores": true
+  },
+  "renderer": {
+    "cudo_identity": "CUDO",
+    "group_by": ["fecha", "rival", "estado_partido"],
+    "category_order": ["TERCERA", "SEGUNDA", "SENIOR", "PRIMERA"],
+    "featured_rule": "preferir PROGRAMADO; si no existe, mostrar ultimo FINALIZADO"
+  },
+  "form_mapping": [
+    {"order": 1, "question": "Competencia", "raw": "COMPETENCIA", "required": true},
+    {"order": 2, "question": "Jornada o fecha del campeonato", "raw": "JORNADA", "required": true, "public": false},
+    {"order": 3, "question": "Fecha del partido", "raw": "FECHA", "required": true, "public": "fecha"},
+    {"order": 4, "question": "Hora del partido", "raw": "HORA", "required": true, "public": "hora"},
+    {"order": 5, "question": "Serie o categoría", "raw": "CATEGORIA", "required": true, "public": "categoria"},
+    {"order": 6, "question": "Equipo local", "raw": "LOCAL", "required": true, "public": "local"},
+    {"order": 7, "question": "Equipo visitante", "raw": "VISITA", "required": true, "public": "visita"},
+    {"order": 8, "question": "Cancha o recinto", "raw": "RECINTO", "required": true, "public": "recinto"},
+    {"order": 9, "question": "Estado del partido", "raw": "ESTADO_PARTIDO", "required": true, "public": "estado_partido"},
+    {"order": 10, "question": "Goles del equipo local", "raw": "GOLES_LOCAL", "required": false, "public": "goles_local"},
+    {"order": 11, "question": "Goles del equipo visitante", "raw": "GOLES_VISITA", "required": false, "public": "goles_visita"},
+    {"order": 12, "question": "¿De dónde proviene esta información?", "raw": "FUENTE", "required": true, "public": false},
+    {"order": 13, "question": "Nombre de quien registra la información", "raw": "RESPONSABLE", "required": true, "public": false},
+    {"order": 14, "question": "Cambio, suspensión u observación para revisión", "raw": "OBSERVACIONES", "required": false, "public": false}
+  ]
+}
