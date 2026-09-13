@@ -1,0 +1,16 @@
+{
+  "contract_id": "CUDO-NOTICIAS-V1",
+  "schema_version": "1.0",
+  "module": "noticias",
+  "source": "CUDO_WEB_NOTICIAS",
+  "pipeline": {
+    "public_json": "preview-v8/data/noticias.json",
+    "media_root": "preview-v8/media/noticias"
+  },
+  "public_contract": {
+    "required": ["id", "fecha", "slug", "titulo", "resumen"],
+    "allowed": ["id", "fecha", "slug", "titulo", "resumen", "cuerpo", "imagen_ref"],
+    "unique": ["id", "slug"],
+    "image_fields": ["imagen_ref"]
+  }
+}

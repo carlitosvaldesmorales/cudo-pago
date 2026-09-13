@@ -184,17 +184,51 @@ def load_plantel_contract() -> tuple[dict, dict]:
     return contract, spec
 
 
+def load_noticias_contract() -> tuple[dict, dict]:
+    path = CONTRACTS / "noticias-v1.json"
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeError("noticias-v1.json no existe") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"noticias-v1.json inválido: {exc}") from exc
+
+    if contract.get("contract_id") != "CUDO-NOTICIAS-V1":
+        raise RuntimeError("noticias-v1.json contract_id inválido")
+    if contract.get("schema_version") != "1.0":
+        raise RuntimeError("noticias-v1.json schema_version inválido")
+
+    public = contract.get("public_contract")
+    if not isinstance(public, dict):
+        raise RuntimeError("noticias-v1.json public_contract inválido")
+    for key in ("required", "allowed", "unique", "image_fields"):
+        if not isinstance(public.get(key), list) or not public[key]:
+            raise RuntimeError(f"noticias-v1.json public_contract.{key} inválido")
+
+    spec = {
+        "source": contract.get("source"),
+        "required": set(public["required"]),
+        "allowed": set(public["allowed"]),
+        "unique": tuple(public["unique"]),
+        "image_fields": tuple(public["image_fields"]),
+    }
+    if not spec["source"]:
+        raise RuntimeError("noticias-v1.json source inválido")
+    if not spec["required"].issubset(spec["allowed"]):
+        raise RuntimeError("noticias-v1.json required debe ser subconjunto de allowed")
+    for field in spec["image_fields"]:
+        if field not in spec["allowed"]:
+            raise RuntimeError(f"noticias-v1.json image_field no permitido: {field}")
+    return contract, spec
+
+
 PARTIDOS_CONTRACT, PARTIDOS_SPEC = load_partidos_contract()
 GALERIA_CONTRACT, GALERIA_SPEC = load_galeria_contract()
 PLANTEL_CONTRACT, PLANTEL_SPEC = load_plantel_contract()
+NOTICIAS_CONTRACT, NOTICIAS_SPEC = load_noticias_contract()
 
 SPECS = {
-    "noticias.json": {
-        "source": "CUDO_WEB_NOTICIAS",
-        "required": {"id", "fecha", "slug", "titulo", "resumen"},
-        "allowed": {"id", "fecha", "slug", "titulo", "resumen", "cuerpo", "imagen_ref"},
-        "unique": ("id", "slug"),
-    },
+    "noticias.json": NOTICIAS_SPEC,
     "equipos.json": {
         "source": "CUDO_WEB_EQUIPOS",
         "required": {"id", "nombre", "categoria"},
