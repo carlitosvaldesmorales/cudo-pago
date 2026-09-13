@@ -5,6 +5,7 @@ import { handleVmixFeedRequest } from './worker/vmix-feed-entry.js';
 import { handlePublicCompetitionHubRequest } from './worker/public-competition-hub-entry.js';
 import { handlePublicStandingsRequest } from './worker/public-standings-entry.js';
 import { handleTelegramAudienceRootRequest } from './worker/telegram-audience-root-entry.js';
+import { handleTelegramDirigentesHomeRequest } from './worker/telegram-dirigentes-home-entry.js';
 import { handleTelegramChepicaPlayHomeRequest } from './worker/telegram-chepica-play-home-entry.js';
 import { handleAccessRequestStart } from './worker/access-request-start-entry.js';
 import { handleAccessRequestIntake } from './worker/access-request-intake-entry.js';
@@ -81,6 +82,9 @@ export default {
     const prepared=await prepareTelegramEntryContext(request.clone(),env);
     if(prepared.response) return prepared.response;
     request=prepared.request;
+
+    const dirigentesHome=await handleTelegramDirigentesHomeRequest(request.clone(),env);
+    if(dirigentesHome) return dirigentesHome;
 
     const confirmation=await handleAccessRequestConfirmation(request.clone(),env);
     if(confirmation) return confirmation;
