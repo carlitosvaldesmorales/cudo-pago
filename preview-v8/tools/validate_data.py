@@ -12,6 +12,8 @@ from urllib.parse import parse_qsl, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 CONTRACTS = ROOT / "contracts"
+ROOT_RESOLVED = ROOT.resolve()
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"}
 
 
 def load_partidos_contract() -> tuple[dict, dict]:
@@ -120,6 +122,19 @@ def validate_image_ref(value: object, where: str, key: str = "imagen_ref") -> No
             fail(f"{where}: {key} no puede publicar una referencia privada de Tally")
         if {"accesstoken", "signature"} & query_keys:
             fail(f"{where}: {key} no puede contener credenciales o firma privada en la URL")
+        return
+
+    if parsed.netloc or parsed.path.startswith("/"):
+        fail(f"{where}: {key} debe usar una ruta relativa segura")
+    try:
+        target = (ROOT / parsed.path).resolve()
+        target.relative_to(ROOT_RESOLVED)
+    except (ValueError, OSError):
+        fail(f"{where}: {key} intenta salir del árbol público V8")
+    if target.suffix.lower() not in IMAGE_SUFFIXES:
+        fail(f"{where}: {key} local debe apuntar a una imagen web permitida")
+    if not target.is_file():
+        fail(f"{where}: {key} apunta a un archivo local inexistente: {parsed.path}")
 
 
 def validate_int(value: object, where: str, key: str, *, minimum: int | None = None) -> None:
