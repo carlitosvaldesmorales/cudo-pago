@@ -10,7 +10,9 @@ on:
       - 'preview-v8/contracts/**'
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
+      - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/tools/validate_data.py'
+      - 'preview-v8/tools/validate_partidos_vertical.py'
       - '.github/workflows/validate-data-env.yml'
   pull_request:
     branches:
@@ -21,7 +23,9 @@ on:
       - 'preview-v8/contracts/**'
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
+      - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/tools/validate_data.py'
+      - 'preview-v8/tools/validate_partidos_vertical.py'
       - '.github/workflows/validate-data-env.yml'
   workflow_dispatch:
 
@@ -33,13 +37,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validar contrato público JSON
-        run: python3 preview-v8/tools/validate_data.py
+      - name: Validar contratos públicos JSON
+        run: |
+          python3 preview-v8/tools/validate_data.py
+          python3 preview-v8/tools/validate_partidos_vertical.py
       - name: Validar Javascript del adapter
         run: |
           node --check preview-v8/shared/site.js
           node --check preview-v8/shared/seed-data.js
           node --check preview-v8/shared/data-source.js
+          node --check preview-v8/shared/page-ux.js
       - name: Garantizar separación QA/PROD y ausencia de mock
         env:
           BRANCH_NAME: ${{ github.base_ref || github.ref_name }}

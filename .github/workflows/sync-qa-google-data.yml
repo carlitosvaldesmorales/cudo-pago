@@ -8,7 +8,11 @@ on:
     branches:
       - qa-v8-google-data
     paths:
+      - 'preview-v8/contracts/**'
+      - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'preview-v8/tools/validate_data.py'
+      - 'preview-v8/tools/validate_partidos_vertical.py'
       - '.github/workflows/sync-qa-google-data.yml'
 
 permissions:
@@ -51,13 +55,15 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Sincronizar PUBLICO_EXPORT hacia JSON V8
+      - name: Sincronizar PUBLICO_EXPORT y validar Sheet contra contrato
         working-directory: source
         run: node preview-v8/tools/sync_google_publico.mjs
 
-      - name: Validar contrato público
+      - name: Validar contratos públicos y renderer Partidos
         working-directory: source
-        run: python3 preview-v8/tools/validate_data.py
+        run: |
+          python3 preview-v8/tools/validate_data.py
+          python3 preview-v8/tools/validate_partidos_vertical.py
 
       - name: Validar adapter QA sin mock
         working-directory: source
@@ -65,6 +71,7 @@ jobs:
           node --check preview-v8/shared/site.js
           node --check preview-v8/shared/seed-data.js
           node --check preview-v8/shared/data-source.js
+          node --check preview-v8/shared/page-ux.js
           node --check preview-v8/tools/qa_google_render.mjs
           python3 - <<'PY'
           from pathlib import Path
