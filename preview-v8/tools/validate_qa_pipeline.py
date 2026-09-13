@@ -17,6 +17,8 @@ required_sync_tokens = [
     "git push origin HEAD:qa-v8-google-data",
     "git push origin HEAD:main",
     "'!preview-v8/data/**'",
+    "'!preview-v8/media/**'",
+    'git add preview-v8/media',
 ]
 for token in required_sync_tokens:
     if token not in sync:
@@ -33,4 +35,4 @@ for forbidden in [
 if 'workflow_dispatch:' not in legacy:
     raise SystemExit('QA PIPELINE: workflow legacy debe quedar sólo como diagnóstico manual')
 
-print('OK  QA pipeline: un solo escritor canónico hacia main')
+print('OK  QA pipeline: un solo escritor canónico hacia main y medios generados sin bucle')
