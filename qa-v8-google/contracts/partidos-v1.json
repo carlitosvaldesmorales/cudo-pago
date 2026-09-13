@@ -44,7 +44,7 @@
     "featured_rule": "preferir PROGRAMADO; si no existe, mostrar ultimo FINALIZADO"
   },
   "form_mapping": [
-    {"order": 1, "question": "Competencia", "raw": "COMPETENCIA", "required": true},
+    {"order": 1, "question": "Competencia", "raw": "COMPETENCIA", "required": true, "public": "competencia"},
     {"order": 2, "question": "Jornada o fecha del campeonato", "raw": "JORNADA", "required": true, "public": false},
     {"order": 3, "question": "Fecha del partido", "raw": "FECHA", "required": true, "public": "fecha"},
     {"order": 4, "question": "Hora del partido", "raw": "HORA", "required": true, "public": "hora"},
