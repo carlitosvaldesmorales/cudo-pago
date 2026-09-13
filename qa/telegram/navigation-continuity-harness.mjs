@@ -23,6 +23,7 @@ assert.equal(NAVIGATION_SEMANTICS.FINISH.destroys_navigation_context,false);
 assert.equal(NAVIGATION_SEMANTICS.HOME.explicit_context_exit,true);
 assert.equal(NAVIGATION_SEMANTICS.HOME.destroys_navigation_context,true);
 assert.ok(NAVIGATION_CONTRACT.invariants.includes('SHARED_CAPABILITY_RETURNS_TO_ORIGIN_AUDIENCE'));
+assert.ok(NAVIGATION_CONTRACT.invariants.includes('NAVIGATION_METADATA_FAILURE_NEVER_BLOCKS_AUDIENCE_ENTRY'));
 assert.deepEqual(navigationButton(NAVIGATION_ACTION.BACK,'nav:back'),{text:'⬅️ Volver',callback_data:'nav:back'});
 console.log('PASS canonical Back / Cancel / Finish / Home semantics');
 
@@ -40,11 +41,13 @@ assert.match(entry,/AUDIENCE_CONTEXT\.DIRIGENTES/);
 assert.match(entry,/data==='mp:home'/);
 assert.match(entry,/AUDIENCE_CONTEXT\.CHEPICA_PLAY/);
 assert.match(entry,/data==='nav:back'/);
-assert.match(entry,/audienceHomeCallback\(contextCode\)/);
+assert.match(entry,/audienceHomeCallback\(context\.context_code\)/);
+assert.match(entry,/bestEffortSetContext/);
+assert.match(entry,/bestEffortActiveContext/);
 assert.match(entry,/data==='rr:cancel-menu'/);
 assert.match(entry,/data==='p3:public'/);
-assert.match(entry,/if\(data==='tp:home'\)[\s\S]*clearContext/);
-console.log('PASS navigation context persists by audience and Home alone exits context');
+assert.match(entry,/if\(data==='tp:home'\)[\s\S]*bestEffortClearContext/);
+console.log('PASS navigation context persists by audience and metadata failure is isolated from routing');
 
 const register=read('sports-bus/worker/results-register-v2-entry.js');
 assert.ok(!register.includes("text:'❌ Salir'"),'new result-registration surfaces must not emit Salir');
