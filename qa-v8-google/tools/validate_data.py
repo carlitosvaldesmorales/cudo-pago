@@ -51,7 +51,72 @@ def load_partidos_contract() -> tuple[dict, dict]:
     return contract, spec
 
 
+def load_galeria_contract() -> tuple[dict, dict]:
+    path = CONTRACTS / "galeria-v1.json"
+    try:
+        contract = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeError("galeria-v1.json no existe") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"galeria-v1.json inválido: {exc}") from exc
+
+    if contract.get("contract_id") != "CUDO-GALERIA-V1":
+        raise RuntimeError("galeria-v1.json contract_id inválido")
+    if contract.get("schema_version") != "1.0":
+        raise RuntimeError("galeria-v1.json schema_version inválido")
+
+    public = contract.get("public_contract")
+    if not isinstance(public, dict):
+        raise RuntimeError("galeria-v1.json public_contract inválido")
+
+    for key in ("required", "allowed", "unique", "image_fields"):
+        if not isinstance(public.get(key), list) or not public[key]:
+            raise RuntimeError(f"galeria-v1.json public_contract.{key} inválido")
+
+    date_fields = public.get("date_fields")
+    slug_fields = public.get("slug_fields")
+    if not isinstance(date_fields, dict) or not date_fields:
+        raise RuntimeError("galeria-v1.json public_contract.date_fields inválido")
+    if not isinstance(slug_fields, dict) or not slug_fields:
+        raise RuntimeError("galeria-v1.json public_contract.slug_fields inválido")
+
+    spec = {
+        "source": contract.get("source"),
+        "required": set(public["required"]),
+        "allowed": set(public["allowed"]),
+        "unique": tuple(public["unique"]),
+        "date_fields": dict(date_fields),
+        "image_fields": tuple(public["image_fields"]),
+        "slug_fields": dict(slug_fields),
+    }
+    if not spec["source"]:
+        raise RuntimeError("galeria-v1.json source inválido")
+    if not spec["required"].issubset(spec["allowed"]):
+        raise RuntimeError("galeria-v1.json required debe ser subconjunto de allowed")
+
+    for field, date_format in spec["date_fields"].items():
+        if field not in spec["allowed"] or date_format != "YYYY-MM-DD":
+            raise RuntimeError(f"galeria-v1.json regla de fecha inválida: {field}")
+    for field in spec["image_fields"]:
+        if field not in spec["allowed"]:
+            raise RuntimeError(f"galeria-v1.json image_field no permitido: {field}")
+    for field, rule in spec["slug_fields"].items():
+        if field not in spec["allowed"] or not isinstance(rule, dict):
+            raise RuntimeError(f"galeria-v1.json regla slug inválida: {field}")
+        pattern = rule.get("pattern")
+        message = rule.get("message")
+        if not isinstance(pattern, str) or not pattern or not isinstance(message, str) or not message:
+            raise RuntimeError(f"galeria-v1.json regla slug incompleta: {field}")
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise RuntimeError(f"galeria-v1.json patrón slug inválido: {field}: {exc}") from exc
+
+    return contract, spec
+
+
 PARTIDOS_CONTRACT, PARTIDOS_SPEC = load_partidos_contract()
+GALERIA_CONTRACT, GALERIA_SPEC = load_galeria_contract()
 
 SPECS = {
     "noticias.json": {
@@ -72,12 +137,7 @@ SPECS = {
         "allowed": {"id", "nombre_deportivo", "numero", "posicion", "categoria", "foto_ref", "capitan"},
         "unique": ("id",),
     },
-    "galeria.json": {
-        "source": "CUDO_WEB_GALERIA",
-        "required": {"id", "fecha", "titulo", "imagen_ref", "alt", "album_id", "album", "categoria"},
-        "allowed": {"id", "fecha", "titulo", "descripcion", "imagen_ref", "alt", "album_id", "album", "categoria"},
-        "unique": ("id",),
-    },
+    "galeria.json": GALERIA_SPEC,
     "partidos.json": PARTIDOS_SPEC,
     "tabla.json": {
         "source": "CUDO_WEB_TABLA",
@@ -99,7 +159,6 @@ MATCH_STATES = set(PARTIDOS_CONTRACT["public_contract"]["states"])
 PLAYER_POSITIONS = {"ARQUERO", "DEFENSA", "VOLANTE", "DELANTERO"}
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-ALBUM_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
 def fail(message: str) -> None:
@@ -206,10 +265,25 @@ def validate_file(filename: str, spec: dict) -> None:
                 fail(f"{where}: {key} duplicado: {value}")
             seen[key].add(value)
 
-        if "imagen_ref" in item and item["imagen_ref"] not in (None, ""):
-            validate_image_ref(item["imagen_ref"], where)
-        if "foto_ref" in item and item["foto_ref"] not in (None, ""):
-            validate_image_ref(item["foto_ref"], where, "foto_ref")
+        image_fields = spec.get("image_fields")
+        if image_fields:
+            for key in image_fields:
+                if key in item and item[key] not in (None, ""):
+                    validate_image_ref(item[key], where, key)
+        else:
+            if "imagen_ref" in item and item["imagen_ref"] not in (None, ""):
+                validate_image_ref(item["imagen_ref"], where)
+            if "foto_ref" in item and item["foto_ref"] not in (None, ""):
+                validate_image_ref(item["foto_ref"], where, "foto_ref")
+
+        for key, date_format in spec.get("date_fields", {}).items():
+            if date_format == "YYYY-MM-DD" and not DATE_RE.fullmatch(str(item[key]).strip()):
+                fail(f"{where}: {key} debe usar formato YYYY-MM-DD")
+
+        for key, rule in spec.get("slug_fields", {}).items():
+            value = str(item[key]).strip()
+            if not re.fullmatch(rule["pattern"], value):
+                fail(f"{where}: {rule['message']}")
 
         if filename == "plantel.json":
             validate_int(item["numero"], where, "numero", minimum=1)
@@ -218,13 +292,6 @@ def validate_file(filename: str, spec: dict) -> None:
                 fail(f"{where}: posicion inválida: {position}")
             if "capitan" in item and not isinstance(item["capitan"], bool):
                 fail(f"{where}: capitan debe ser booleano")
-
-        if filename == "galeria.json":
-            if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
-                fail(f"{where}: fecha debe usar formato YYYY-MM-DD")
-            album_id = str(item["album_id"]).strip()
-            if not ALBUM_ID_RE.fullmatch(album_id):
-                fail(f"{where}: album_id debe usar minúsculas, números y guiones")
 
         if filename == "partidos.json":
             if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
