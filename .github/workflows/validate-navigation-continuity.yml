@@ -7,6 +7,7 @@ on:
     branches:
       - refactor/navigation-continuity-v1
       - fix/dirigentes-home-canonical-v1
+      - fix/telegram-callback-plane-root-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -33,8 +34,11 @@ jobs:
           node --check sports-bus/worker/portal-entry.js
           node --check qa/telegram/navigation-continuity-harness.mjs
           node --check qa/telegram/dirigentes-home-canonical-harness.mjs
+          node --check qa/telegram/telegram-callback-plane-harness.mjs
       - name: Navigation continuity contract
         run: node qa/telegram/navigation-continuity-harness.mjs
+      - name: Telegram callback plane
+        run: node qa/telegram/telegram-callback-plane-harness.mjs
       - name: Behavioral Dirigentes home
         run: node qa/telegram/dirigentes-home-canonical-harness.mjs
       - name: ADN invariants
@@ -45,3 +49,4 @@ jobs:
           grep -q 'CANCEL_ONLY_DISCARDS_UNCONFIRMED_WORK' docs/architecture/navigation-continuity-adn-v1.md
           grep -q 'HOME_IS_EXPLICIT_CONTEXT_EXIT' docs/architecture/navigation-continuity-adn-v1.md
           grep -q 'SHARED_CAPABILITY_RETURNS_TO_ORIGIN_AUDIENCE' docs/architecture/navigation-continuity-adn-v1.md
+          grep -q 'NAVIGATION_METADATA_FAILURE_NEVER_BLOCKS_AUDIENCE_ENTRY' docs/architecture/navigation-continuity-adn-v1.md
