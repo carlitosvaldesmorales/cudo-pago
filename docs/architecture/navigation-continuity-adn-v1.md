@@ -71,7 +71,13 @@ SUBPANTALLAS
 
 `AUDIENCE_CONTEXT_NEQ_AUTHORIZATION`
 
+`NAVIGATION_METADATA_FAILURE_NEVER_BLOCKS_AUDIENCE_ENTRY`
+
 Conservar `CHEPICA_PLAY`, `DIRIGENTES` o `PUBLIC_GENERAL` es estado de navegación, no una autorización. Cada capacidad sigue comprobando su policy real.
+
+El estado de navegación es además **metadata auxiliar**. Una falla al guardar, leer o limpiar `telegram_entry_contexts` puede degradar la continuidad de `Volver`, pero no puede convertir un callback de audiencia válido en un error 500 ni impedir que la persona entre a Público general, Dirigentes o Chépica Play. Las comprobaciones de autorización permanecen estrictas y separadas: sólo la metadata de navegación es fail-safe.
+
+La persistencia debe aceptar exactamente los mismos contextos declarados por `AUDIENCE_CONTEXT`. El contrato de código y el `CHECK` de D1 no pueden evolucionar por separado.
 
 ## Aplicación a Chépica Play
 
@@ -123,5 +129,7 @@ Una navegación humana sólo se considera consumible cuando:
 - una capacidad compartida vuelve a la audiencia de origen;
 - no hay botones nuevos `❌ Salir`;
 - volver un paso no borra valores ya capturados salvo que el usuario pulse explícitamente `Cancelar` o `Cambiar`;
+- los tres contextos canónicos de audiencia existen también en la restricción de persistencia;
+- una falla de metadata de navegación no bloquea la entrada de audiencia ni produce un 500 del webhook;
 - QA determinista valida el contrato;
 - una prueba humana confirma la continuidad real en Telegram.
