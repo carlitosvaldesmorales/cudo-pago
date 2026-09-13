@@ -1,0 +1,14 @@
+{
+  "contract_id": "CUDO-EQUIPOS-V1",
+  "schema_version": "1.0",
+  "module": "equipos",
+  "source": "CUDO_WEB_EQUIPOS",
+  "pipeline": {
+    "public_json": "preview-v8/data/equipos.json"
+  },
+  "public_contract": {
+    "required": ["id", "nombre", "categoria"],
+    "allowed": ["id", "nombre", "categoria", "descripcion"],
+    "unique": ["id"]
+  }
+}
