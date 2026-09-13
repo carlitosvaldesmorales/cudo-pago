@@ -92,13 +92,15 @@ Para Partidos, el sync:
 - ejecuta validación E2E Google -> V8;
 - publica el snapshot validado en `main/qa-v8-google`.
 
+El gate de integración también valida pull requests hacia `qa-v8-google-data` y `prod-v8-google-data` cuando cambian datos, contratos, adapter o validador. Así el contrato se prueba antes del merge y no sólo después de escribir en la rama de integración.
+
 ## Contrato público ejecutable
 
 Fuente canónica de esta vertical:
 
 `preview-v8/contracts/partidos-v1.json`
 
-El validador debe obtener desde ese archivo:
+El validador obtiene desde ese archivo:
 
 - campos requeridos y permitidos;
 - estados válidos;
