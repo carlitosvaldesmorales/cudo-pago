@@ -4,10 +4,12 @@ import { TELEGRAM_CHANNEL } from './telegram-channel-contract.js';
 const PRIMARY=TELEGRAM_CHANNEL.LEGACY.webhook_path;
 const CANONICAL=TELEGRAM_CHANNEL.CANONICAL.webhook_path;
 const POLICY=getAudienceAccessPolicy('DIRIGENTES');
+const CANONICAL_RESULTS_ENTRY='rr:dates';
 
 export const DIRIGENTES_HOME_CONTRACT=Object.freeze({
   id:'DIRIGENTES_HOME_V1',
   shared_entrypoint:'tp:leaders',
+  results_entry_callback:CANONICAL_RESULTS_ENTRY,
   callback_ack_is_best_effort:true,
   presentation_must_survive_ack_failure:true,
   entry_never_changes_permissions:true,
@@ -131,8 +133,8 @@ async function renderDirigentesHome(db,reporter,actorId){
       keyboard:[
         [{text:`🔔 Solicitudes (${pendingN})`,callback_data:'tp:requests'}],
         [{text:`👥 Dirigentes (${activeN}/${totalN})`,callback_data:'tp:admins'}],
+        [{text:'⚽ Registrar resultados',callback_data:CANONICAL_RESULTS_ENTRY}],
         [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
-        [{text:'⚽ Mis partidos de club',callback_data:'tp:mymatches'}],
         [{text:'🏠 Inicio',callback_data:'tp:home'}]
       ]
     };
@@ -144,7 +146,7 @@ async function renderDirigentesHome(db,reporter,actorId){
       state:'AUTHORIZED_CLUB',
       text:`🔐 PORTAL DIRIGENTES\n\n🏟 ${team?.canonical_name||reporter.club_id}\nRol: Administrador del club`,
       keyboard:[
-        [{text:'⚽ Mis partidos',callback_data:'tp:mymatches'}],
+        [{text:'⚽ Registrar resultados',callback_data:CANONICAL_RESULTS_ENTRY}],
         [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
         [{text:'🏠 Inicio',callback_data:'tp:home'}]
       ]
