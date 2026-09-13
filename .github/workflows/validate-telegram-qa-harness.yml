@@ -115,10 +115,10 @@ jobs:
         run: |
           set -euo pipefail
           node qa/telegram/public-results-ux-v3-harness.mjs | tee /tmp/telegram-public-ux-v3.log
-          grep -q 'PASS entry goes directly to latest round and edits the existing panel' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS entry goes directly to latest round and exposes canonical Back navigation' /tmp/telegram-public-ux-v3.log
           grep -q 'PASS match detail replaces the same panel with compact four-series score' /tmp/telegram-public-ux-v3.log
           grep -q 'PASS secondary filters are hidden behind one explicit search action' /tmp/telegram-public-ux-v3.log
-          grep -q 'PASS return to Public also reuses the current panel' /tmp/telegram-public-ux-v3.log
+          grep -q 'PASS historical p3:public is a compatibility bridge to canonical Back navigation' /tmp/telegram-public-ux-v3.log
           grep -q 'PASS historical V2 callback namespace remains compatible' /tmp/telegram-public-ux-v3.log
           grep -q 'PASS primary rollback bot remains untouched' /tmp/telegram-public-ux-v3.log
           grep -q 'PASS destination runtime advertises UX contract version 3' /tmp/telegram-public-ux-v3.log
