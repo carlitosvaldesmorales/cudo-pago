@@ -14,13 +14,13 @@ const CONTRACT_DIR = path.join(ROOT, 'preview-v8', 'contracts');
 const PARTIDOS_CONTRACT = JSON.parse(fs.readFileSync(path.join(CONTRACT_DIR, 'partidos-v1.json'), 'utf8'));
 
 const MODULES = [
-  ['noticias','14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI','CUDO_WEB_NOTICIAS',[]],
-  ['equipos','1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI','CUDO_WEB_EQUIPOS',[]],
-  ['plantel','1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94','CUDO_WEB_PLANTEL',['numero']],
-  ['partidos','1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI','CUDO_WEB_PARTIDOS',['goles_local','goles_visita']],
-  ['tabla','1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY','CUDO_WEB_TABLA',['posicion','pj','pg','pe','pp','gf','gc','dg','pts']],
-  ['galeria','1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c','CUDO_WEB_GALERIA',[]]
-].map(([key,spreadsheetId,source,numeric]) => ({key,spreadsheetId,source,numeric,sheet:'PUBLICO_EXPORT'}));
+  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],publicRefs:['imagen_ref']},
+  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],publicRefs:[]},
+  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],publicRefs:['foto_ref']},
+  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],publicRefs:[]},
+  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],publicRefs:[]},
+  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],publicRefs:['imagen_ref']}
+].map(module => ({...module,sheet:'PUBLICO_EXPORT'}));
 
 async function getAccessToken() {
   const body = new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:REFRESH_TOKEN,grant_type:'refresh_token'});
@@ -105,11 +105,45 @@ function toNumber(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function rowsToItems(values,numeric) {
+function toBoolean(v, field) {
+  const normalized = clean(v).toUpperCase();
+  if (normalized === 'SI') return true;
+  if (normalized === 'NO') return false;
+  if (normalized === '') return null;
+  throw new Error(`${field}: valor booleano público no reconocido: ${JSON.stringify(v)}`);
+}
+
+function sanitizePublicRef(v, field) {
+  const value = clean(v);
+  if (!value) return '';
+  try {
+    const parsed = new URL(value);
+    const queryKeys = [...parsed.searchParams.keys()].map(key => key.toLowerCase());
+    const privateTally = parsed.hostname === 'storage.tally.so' && parsed.pathname.startsWith('/private/');
+    const credentialLike = queryKeys.includes('accesstoken') || queryKeys.includes('signature');
+    if (privateTally || credentialLike) {
+      console.warn(`PUBLIC_REF_STRIPPED module_field=${field} reason=private_or_signed_reference`);
+      return '';
+    }
+  } catch {
+    // Las rutas relativas siguen siendo válidas; el validador público decide su formato.
+  }
+  return value;
+}
+
+function rowsToItems(values,module) {
   if (!values.length) throw new Error('PUBLICO_EXPORT no tiene encabezados');
   const headers = values[0].map(v=>String(v).trim()).filter(Boolean);
   if (!headers.length) throw new Error('PUBLICO_EXPORT tiene encabezados vacíos');
-  return values.slice(1).filter(row=>row.some(v=>String(v??'').trim()!=='')).map(row=>Object.fromEntries(headers.map((h,i)=>[h,numeric.includes(h)?toNumber(row[i]??''):row[i]??''])));
+  return values.slice(1)
+    .filter(row=>row.some(v=>String(v??'').trim()!==''))
+    .map(row=>Object.fromEntries(headers.map((h,i)=>{
+      const raw = row[i] ?? '';
+      if (module.numeric.includes(h)) return [h,toNumber(raw)];
+      if (module.boolean.includes(h)) return [h,toBoolean(raw,`${module.key}.${h}`)];
+      if (module.publicRefs.includes(h)) return [h,sanitizePublicRef(raw,`${module.key}.${h}`)];
+      return [h,raw];
+    })));
 }
 
 function readExisting(out) {
@@ -130,7 +164,7 @@ for (const module of MODULES) {
     validatePartidosFormSpec(formValues);
   }
 
-  const items = rowsToItems(publicValues,module.numeric);
+  const items = rowsToItems(publicValues,module);
   const out = path.join(OUT_DIR,`${module.key}.json`);
   const previous = readExisting(out);
   const changed = !previous || previous.schema_version !== '1.0' || previous.source !== module.source || !sameItems(previous.items,items);

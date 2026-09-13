@@ -7,7 +7,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -114,6 +114,12 @@ def validate_image_ref(value: object, where: str, key: str = "imagen_ref") -> No
     parsed = urlparse(value.strip())
     if parsed.scheme and parsed.scheme != "https":
         fail(f"{where}: {key} solo admite HTTPS o ruta relativa")
+    if parsed.scheme:
+        query_keys = {name.lower() for name, _ in parse_qsl(parsed.query, keep_blank_values=True)}
+        if parsed.hostname == "storage.tally.so" and parsed.path.startswith("/private/"):
+            fail(f"{where}: {key} no puede publicar una referencia privada de Tally")
+        if {"accesstoken", "signature"} & query_keys:
+            fail(f"{where}: {key} no puede contener credenciales o firma privada en la URL")
 
 
 def validate_int(value: object, where: str, key: str, *, minimum: int | None = None) -> None:
