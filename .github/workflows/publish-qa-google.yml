@@ -1,110 +1,32 @@
-name: CUDO V8 - publicar QA Google
+name: CUDO V8 - publicar QA Google (legacy read-only)
 
 on:
-  push:
-    branches:
-      - qa-v8-google-data
-    paths:
-      - 'preview-v8/**'
-      - '.github/workflows/publish-qa-google.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: cudo-v8-publish-qa-google
-  cancel-in-progress: true
+  group: cudo-v8-qa-pipeline
+  cancel-in-progress: false
 
 jobs:
-  validate-and-publish:
+  legacy-diagnostic:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - name: Checkout QA Google
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: qa-v8-google-data
-          path: source
 
-      - name: Validar contrato público JSON
-        run: python3 source/preview-v8/tools/validate_data.py
-
-      - name: Validar adapter QA sin mock
+      - name: Avisar autoridad canónica
         run: |
-          node --check source/preview-v8/shared/site.js
-          node --check source/preview-v8/shared/seed-data.js
-          node --check source/preview-v8/shared/data-source.js
-          node --check source/preview-v8/tools/qa_google_render.mjs
-          python3 - <<'PY'
-          from pathlib import Path
-          adapter=Path('source/preview-v8/shared/data-source.js').read_text(encoding='utf-8')
-          shim=Path('source/preview-v8/shared/seed-data.js').read_text(encoding='utf-8')
-          assert "environment:'QA'" in adapter
-          assert 'mock:false' in adapter
-          for token in ['CUDO_SEED_DATA','randomuser.me','VISTA DEMOSTRATIVA','FOTO MOCK']:
-              assert token not in adapter+'\n'+shim, token
-          print('QA Google sin fallback mock: OK')
-          PY
+          echo 'Workflow legacy en modo sólo lectura.'
+          echo 'La única autoridad de sincronización, E2E y publicación QA es .github/workflows/sync-qa-google-data.yml.'
 
-      - name: Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Instalar Playwright
-        working-directory: source
+      - name: Validar contrato público sin publicar
         run: |
-          npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
-
-      - name: Levantar preview QA real
-        working-directory: source
-        run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-qa-google-http.log 2>&1 &
-          echo $! > /tmp/cudo-qa-google-http.pid
-          for i in $(seq 1 20); do
-            curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null && exit 0
-            sleep 1
-          done
-          cat /tmp/cudo-qa-google-http.log
-          exit 1
-
-      - name: Validar render E2E Google → V8
-        working-directory: source
-        run: node preview-v8/tools/qa_google_render.mjs
-
-      - name: Checkout main como destino de publicación
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          path: publish
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Publicar snapshot QA aislado
-        run: |
-          rm -rf publish/qa-v8-google
-          mkdir -p publish/qa-v8-google
-          rsync -a --delete source/preview-v8/ publish/qa-v8-google/
-          cat > publish/qa-v8-google/QA_BUILD.json <<EOF
-          {
-            "environment": "QA",
-            "source_branch": "qa-v8-google-data",
-            "source_commit": "${GITHUB_SHA}",
-            "published_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          }
-          EOF
-
-      - name: Commit de publicación solo si cambió QA
-        working-directory: publish
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add qa-v8-google
-          if git diff --cached --quiet; then
-            echo 'Sin cambios QA para publicar.'
-            exit 0
-          fi
-          git commit -m "QA publish: ${GITHUB_SHA::8}"
-          git push origin HEAD:main
+          python3 preview-v8/tools/validate_qa_pipeline.py
+          python3 preview-v8/tools/validate_data.py
+          python3 preview-v8/tools/validate_partidos_vertical.py
