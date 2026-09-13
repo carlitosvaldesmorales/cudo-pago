@@ -7,6 +7,7 @@ on:
     branches:
       - refactor/structured-access-intake-v1
       - fix/structured-intake-confirm-runtime-v1
+      - fix/global-access-intake-start-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -26,12 +27,16 @@ jobs:
           node --check sports-bus/canonical-entry.js
           node --check sports-bus/worker/audience-access-policy.js
           node --check sports-bus/worker/access-request-intake-model.js
+          node --check sports-bus/worker/access-request-start-entry.js
           node --check sports-bus/worker/access-request-intake-entry.js
           node --check sports-bus/worker/access-request-confirm-entry.js
           node --check qa/telegram/structured-access-intake-harness.mjs
+          node --check qa/telegram/governed-access-start-harness.mjs
           node --check qa/telegram/governed-confirmation-harness.mjs
       - name: Deterministic intake contract
         run: node qa/telegram/structured-access-intake-harness.mjs
+      - name: Behavioral governed request start
+        run: node qa/telegram/governed-access-start-harness.mjs
       - name: Behavioral governed confirmation
         run: node qa/telegram/governed-confirmation-harness.mjs
       - name: Root invariants
@@ -48,5 +53,6 @@ jobs:
           grep -q 'BEHAVIORAL_QA_REQUIRED_FOR_HUMAN_TRANSITIONS' docs/architecture/governed-confirmation-adn-v1.md
           grep -q "intake_contract:ACCESS_INTAKE_CONTRACT" sports-bus/worker/audience-access-policy.js
           grep -q "submission_requires_confirmation:true" sports-bus/worker/audience-access-policy.js
+          grep -q 'handleAccessRequestStart' sports-bus/canonical-entry.js
           grep -q 'handleAccessRequestConfirmation' sports-bus/canonical-entry.js
           grep -q 'handleAccessRequestIntake' sports-bus/canonical-entry.js
