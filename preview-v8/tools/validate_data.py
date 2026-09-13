@@ -34,20 +34,56 @@ def load_partidos_contract() -> tuple[dict, dict]:
     if not isinstance(public, dict):
         raise RuntimeError("partidos-v1.json public_contract inválido")
 
-    for key in ("required", "allowed", "unique", "states"):
+    for key in ("required", "allowed", "unique", "numeric", "states"):
         if not isinstance(public.get(key), list) or not public[key]:
             raise RuntimeError(f"partidos-v1.json public_contract.{key} inválido")
 
+    date_format = public.get("date_format")
+    time_format = public.get("time_format")
+    finalizado_requires_scores = public.get("finalizado_requires_scores")
+    if date_format != "YYYY-MM-DD":
+        raise RuntimeError("partidos-v1.json date_format inválido")
+    if time_format != "HH:MM":
+        raise RuntimeError("partidos-v1.json time_format inválido")
+    if not isinstance(finalizado_requires_scores, bool):
+        raise RuntimeError("partidos-v1.json finalizado_requires_scores inválido")
+
+    allowed = set(public["allowed"])
+    required = set(public["required"])
+    numeric = tuple(public["numeric"])
+    states = tuple(public["states"])
+    if not required.issubset(allowed):
+        raise RuntimeError("partidos-v1.json required debe ser subconjunto de allowed")
+    if not all(field in allowed for field in numeric):
+        raise RuntimeError("partidos-v1.json numeric contiene campos no permitidos")
+    if "fecha" not in allowed or "hora" not in allowed or "estado_partido" not in allowed:
+        raise RuntimeError("partidos-v1.json campos de fecha/hora/estado incompletos")
+
     spec = {
         "source": contract.get("source"),
-        "required": set(public["required"]),
-        "allowed": set(public["allowed"]),
+        "required": required,
+        "allowed": allowed,
         "unique": tuple(public["unique"]),
+        "date_fields": {"fecha": date_format},
+        "time_fields": {"hora": time_format},
+        "enum_fields": {
+            "estado_partido": {"values": list(states), "normalize": "upper"}
+        },
+        "integer_fields": {
+            field: {"minimum": 0, "nullable": True} for field in numeric
+        },
+        "required_when": (
+            {
+                "field": "estado_partido",
+                "normalize": "upper",
+                "equals": "FINALIZADO",
+                "required": numeric,
+                "message": "un partido FINALIZADO debe incluir ambos marcadores",
+            },
+        ) if finalizado_requires_scores else (),
     }
     if not spec["source"]:
         raise RuntimeError("partidos-v1.json source inválido")
-    if not spec["required"].issubset(spec["allowed"]):
-        raise RuntimeError("partidos-v1.json required debe ser subconjunto de allowed")
     return contract, spec
 
 
@@ -352,7 +388,6 @@ PRIVATE_KEYS = {
     "contacto_emergencia", "documento", "ficha_medica", "ficha_médica", "autorizado",
     "autorizada", "autorizacion", "autorización", "consentimiento", "es_menor", "menor_edad",
 }
-MATCH_STATES = set(PARTIDOS_CONTRACT["public_contract"]["states"])
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
@@ -397,6 +432,13 @@ def validate_int(value: object, where: str, key: str, *, minimum: int | None = N
         fail(f"{where}: {key} debe ser entero")
     if minimum is not None and value < minimum:
         fail(f"{where}: {key} debe ser mayor o igual a {minimum}")
+
+
+def normalize_rule_value(value: object, rule: dict) -> str:
+    normalized = str(value).strip()
+    if rule.get("normalize") == "upper":
+        normalized = normalized.upper()
+    return normalized
 
 
 def validate_file(filename: str, spec: dict) -> None:
@@ -476,27 +518,41 @@ def validate_file(filename: str, spec: dict) -> None:
             if date_format == "YYYY-MM-DD" and not DATE_RE.fullmatch(str(item[key]).strip()):
                 fail(f"{where}: {key} debe usar formato YYYY-MM-DD")
 
+        for key, time_format in spec.get("time_fields", {}).items():
+            if key in item and item[key] not in (None, ""):
+                if time_format == "HH:MM" and not TIME_RE.fullmatch(str(item[key]).strip()):
+                    fail(f"{where}: {key} debe usar formato HH:MM de 24 horas")
+
         for key, rule in spec.get("slug_fields", {}).items():
             value = str(item[key]).strip()
             if not re.fullmatch(rule["pattern"], value):
                 fail(f"{where}: {rule['message']}")
 
         for key, rule in spec.get("integer_fields", {}).items():
-            if key in item:
-                validate_int(item[key], where, key, minimum=rule.get("minimum"))
+            if key not in item:
+                continue
+            if item[key] is None and rule.get("nullable"):
+                continue
+            validate_int(item[key], where, key, minimum=rule.get("minimum"))
 
         for key, rule in spec.get("enum_fields", {}).items():
             if key not in item:
                 continue
-            value = str(item[key]).strip()
-            if rule.get("normalize") == "upper":
-                value = value.upper()
+            value = normalize_rule_value(item[key], rule)
             if value not in rule["values"]:
                 fail(f"{where}: {key} inválida: {value}")
 
         for key in spec.get("boolean_fields", ()):
             if key in item and not isinstance(item[key], bool):
                 fail(f"{where}: {key} debe ser booleano")
+
+        for rule in spec.get("required_when", ()):
+            value = str(item.get(rule["field"], "")).strip()
+            if rule.get("normalize") == "upper":
+                value = value.upper()
+            if value == rule["equals"]:
+                if any(key not in item or item[key] is None for key in rule["required"]):
+                    fail(f"{where}: {rule['message']}")
 
         for constraint in spec.get("constraints", ()):
             kind = constraint["type"]
@@ -506,24 +562,6 @@ def validate_file(filename: str, spec: dict) -> None:
             elif kind == "difference_equals":
                 if item[constraint["left"]] - item[constraint["minus"]] != item[constraint["right"]]:
                     fail(f"{where}: {constraint['message']}")
-
-        if filename == "partidos.json":
-            if not DATE_RE.fullmatch(str(item["fecha"]).strip()):
-                fail(f"{where}: fecha debe usar formato YYYY-MM-DD")
-            if item.get("hora") not in (None, "") and not TIME_RE.fullmatch(str(item["hora"]).strip()):
-                fail(f"{where}: hora debe usar formato HH:MM de 24 horas")
-            state = str(item["estado_partido"]).strip().upper()
-            if state not in MATCH_STATES:
-                fail(f"{where}: estado_partido inválido: {state}")
-            if state == "FINALIZADO" and PARTIDOS_CONTRACT["public_contract"].get("finalizado_requires_scores", True):
-                if "goles_local" not in item or "goles_visita" not in item:
-                    fail(f"{where}: un partido FINALIZADO debe incluir ambos marcadores")
-                validate_int(item["goles_local"], where, "goles_local", minimum=0)
-                validate_int(item["goles_visita"], where, "goles_visita", minimum=0)
-            else:
-                for score_key in ("goles_local", "goles_visita"):
-                    if score_key in item and item[score_key] is not None:
-                        validate_int(item[score_key], where, score_key, minimum=0)
 
     print(f"OK  {filename}: {len(doc['items'])} item(s)")
 
