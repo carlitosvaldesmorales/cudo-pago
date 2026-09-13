@@ -66,6 +66,44 @@ async function activeContext(db,actorId){
   return row?.context_code||null;
 }
 
+function navigationContextFailure(operation,actorId,error,contextCode=null){
+  console.error('telegram_navigation_context_failure',{
+    operation,
+    actor_id:String(actorId),
+    context_code:contextCode,
+    message:String(error?.message||error)
+  });
+}
+
+async function bestEffortSetContext(db,actorId,contextCode){
+  try{
+    await setContext(db,actorId,contextCode);
+    return true;
+  }catch(error){
+    navigationContextFailure('SET',actorId,error,contextCode);
+    return false;
+  }
+}
+
+async function bestEffortClearContext(db,actorId){
+  try{
+    await clearContext(db,actorId);
+    return true;
+  }catch(error){
+    navigationContextFailure('CLEAR',actorId,error);
+    return false;
+  }
+}
+
+async function bestEffortActiveContext(db,actorId){
+  try{
+    return {ok:true,context_code:await activeContext(db,actorId)};
+  }catch(error){
+    navigationContextFailure('READ',actorId,error);
+    return {ok:false,context_code:null};
+  }
+}
+
 async function canUseChepicaPlayContext(db,actorId){
   const membership=await getActivePartnerMembership(db,String(actorId),COMPETITION_ID);
   return membership?.partner_code==='CHEPICA_PLAY';
@@ -116,41 +154,43 @@ export async function prepareTelegramEntryContext(request,env){
 
   const actorId=String(actor.id);
 
+  // Audience context is navigation/audit metadata, not authorization. A metadata
+  // persistence failure must never make an otherwise valid audience callback die.
   if(data==='tp:home'){
-    await clearContext(env.DB,actorId);
+    await bestEffortClearContext(env.DB,actorId);
     return {request,response:null};
   }
 
   if(data==='tp:public'){
-    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.PUBLIC_GENERAL);
+    await bestEffortSetContext(env.DB,actorId,AUDIENCE_CONTEXT.PUBLIC_GENERAL);
     return {request,response:null};
   }
 
   if(data==='tp:leaders'){
-    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.DIRIGENTES);
+    await bestEffortSetContext(env.DB,actorId,AUDIENCE_CONTEXT.DIRIGENTES);
     return {request,response:null};
   }
 
   if(data==='mp:home'){
-    // Entry context is navigation state only; authorization is still enforced
-    // by the Chépica Play capability handler.
-    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.CHEPICA_PLAY);
+    await bestEffortSetContext(env.DB,actorId,AUDIENCE_CONTEXT.CHEPICA_PLAY);
     return {request,response:null};
   }
 
   if(data==='nav:back'||data==='rr:cancel-menu'||data==='p3:public'){
-    const contextCode=await activeContext(env.DB,actorId);
-    const parent=audienceHomeCallback(contextCode);
-    if(parent==='tp:home') await clearContext(env.DB,actorId);
+    const context=await bestEffortActiveContext(env.DB,actorId);
+    const parent=audienceHomeCallback(context.context_code);
+    if(parent==='tp:home') await bestEffortClearContext(env.DB,actorId);
     return {request:rewriteCallback(request,update,parent),response:null};
   }
 
   if(data==='tp:public-report'||/^\/informar(?:@\w+)?$/i.test(text)){
-    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.PUBLIC_GENERAL);
+    await bestEffortSetContext(env.DB,actorId,AUDIENCE_CONTEXT.PUBLIC_GENERAL);
     return {request,response:null};
   }
 
   if(data==='cp:observe'){
+    // This lookup is authorization, not navigation metadata. It remains strict:
+    // a failure here must never be converted into an allow decision.
     const allowed=await canUseChepicaPlayContext(env.DB,actorId);
     if(!allowed){
       const callbackId=update?.callback_query?.id;
@@ -164,7 +204,7 @@ export async function prepareTelegramEntryContext(request,env){
       return {request,response:json({ok:true,handled:'chepica_play_context_denied',permission_change:false})};
     }
 
-    await setContext(env.DB,actorId,AUDIENCE_CONTEXT.CHEPICA_PLAY);
+    await bestEffortSetContext(env.DB,actorId,AUDIENCE_CONTEXT.CHEPICA_PLAY);
     return {
       request:rewriteCallback(request,update,'obs:dates'),
       response:null
@@ -176,5 +216,6 @@ export async function prepareTelegramEntryContext(request,env){
 
 export async function getTelegramEntryContext(db,actorId){
   if(!db||!actorId) return AUDIENCE_CONTEXT.PUBLIC_GENERAL;
-  return (await activeContext(db,actorId))||AUDIENCE_CONTEXT.PUBLIC_GENERAL;
+  const context=await bestEffortActiveContext(db,actorId);
+  return context.context_code||AUDIENCE_CONTEXT.PUBLIC_GENERAL;
 }
