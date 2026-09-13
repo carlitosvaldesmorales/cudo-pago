@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - fix/results-register-match-work-unit-v2
+      - fix/unified-results-entry-all-roles-v1
       - feature/sports-event-bus-v1
 
 permissions:
@@ -27,18 +28,28 @@ jobs:
           node --check sports-bus/worker/results-register-v2-entry.js
           node --check sports-bus/worker/results-register-policy.js
           node --check sports-bus/worker/results-stream-entry.js
+          node --check sports-bus/worker/telegram-dirigentes-home-entry.js
           node --check qa/telegram/results-register-canonical-harness.mjs
+          node --check qa/telegram/results-register-role-parity-harness.mjs
       - name: Canonical vertical v2
         run: node qa/telegram/results-register-canonical-harness.mjs
+      - name: Role parity contract
+        run: node qa/telegram/results-register-role-parity-harness.mjs
       - name: Root contract assertions
         run: |
           set -euo pipefail
           grep -q 'RESULT: PASS' <(node qa/telegram/results-register-canonical-harness.mjs)
+          grep -q 'RESULT: PASS' <(node qa/telegram/results-register-role-parity-harness.mjs)
           grep -q 'HUMAN_WORK_UNIT_NEQ_PERSISTENCE_UNIT' docs/product/module-registry.json
           grep -q 'TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED' docs/product/module-registry.json
           grep -q 'results-register-visual-contract-v2.md' docs/product/module-registry.json
+          grep -q 'ONE_RESULT_CAPTURE_CAPABILITY_ALL_IDENTITIES' docs/architecture/results-register-role-parity-adn-v1.md
+          grep -q 'ROLE_CHANGES_SCOPE_AND_AUTHORITY_NOT_CAPTURE_UX' docs/architecture/results-register-role-parity-adn-v1.md
           grep -q 'editMessageText' sports-bus/worker/results-register-v2-entry.js
           grep -q 'RESULTADOS DEL PARTIDO' sports-bus/worker/results-register-v2-entry.js
           grep -q 'showMatchDashboard' sports-bus/worker/results-register-v2-entry.js
           ! grep -q 'Escribe el marcador LOCAL-VISITA' sports-bus/worker/results-register-v2-entry.js
-          test "$(grep -c "export { handleResultsRegisterRequest }" sports-bus/worker/results-register-entry.js)" -eq 1
+          grep -q "tp:mymatches" sports-bus/worker/results-register-entry.js
+          grep -q "data:'rr:dates'" sports-bus/worker/results-register-entry.js
+          grep -q "CANONICAL_RESULTS_ENTRY='rr:dates'" sports-bus/worker/telegram-dirigentes-home-entry.js
+          ! grep -q "callback_data:'tp:mymatches'" sports-bus/worker/telegram-dirigentes-home-entry.js
