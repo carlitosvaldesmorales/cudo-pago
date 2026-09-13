@@ -74,6 +74,9 @@ function last(method){return calls.findLast(call=>call.method===method);}
 function callbacks(call){
   return (call?.body?.reply_markup?.inline_keyboard||[]).flat().map(button=>button.callback_data).filter(Boolean);
 }
+function labels(call){
+  return (call?.body?.reply_markup?.inline_keyboard||[]).flat().map(button=>button.text).filter(Boolean);
+}
 
 try{
   applyMigrations();
@@ -100,9 +103,11 @@ try{
   assert.ok(screen,'Dirigentes must render even when callback ACK fails');
   assert.match(screen.body.text,/PORTAL DIRIGENTES/);
   assert.match(screen.body.text,new RegExp(club.canonical_name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
-  assert.ok(callbacks(screen).includes('tp:mymatches'));
+  assert.ok(callbacks(screen).includes('rr:dates'));
+  assert.ok(!callbacks(screen).includes('tp:mymatches'),'new club-admin surfaces must use the canonical result entrypoint');
+  assert.ok(labels(screen).includes('⚽ Registrar resultados'));
   assert.ok(callbacks(screen).includes('tp:registered'));
-  console.log('PASS canonical approved CLUB_ADMIN enters Dirigentes even when Telegram callback ACK fails');
+  console.log('PASS canonical approved CLUB_ADMIN uses the shared result-entry capability');
 
   reset();
   request=await callbackRequest({actor:PUBLIC,pathName:'/webhook/telegram'})();
@@ -131,13 +136,18 @@ try{
   assert.match(screen.body.text,/ADMIN GLOBAL/);
   assert.ok(callbacks(screen).includes('tp:requests'));
   assert.ok(callbacks(screen).includes('tp:admins'));
-  console.log('PASS SUPER_ADMIN keeps the existing global Dirigentes control surface');
+  assert.ok(callbacks(screen).includes('rr:dates'));
+  assert.ok(!callbacks(screen).includes('tp:mymatches'),'SUPER_ADMIN must not fork into the legacy club/global result capture');
+  assert.ok(labels(screen).includes('⚽ Registrar resultados'));
+  assert.ok(!labels(screen).some(label=>/Mis partidos de club/.test(label)));
+  console.log('PASS SUPER_ADMIN uses the exact same canonical result-entry capability as CLUB_ADMIN');
 
   const canonical=fs.readFileSync(path.join(root,'sports-bus','canonical-entry.js'),'utf8');
   const homeIndex=canonical.indexOf('handleTelegramDirigentesHomeRequest(request.clone(),env)');
+  const registerIndex=canonical.indexOf('handleResultsRegisterRequest(canonical.request,canonical.env,ctx)');
   const coreIndex=canonical.indexOf('return coreWorker.fetch(request,env,ctx)');
-  assert.ok(homeIndex>0&&coreIndex>homeIndex,'Dirigentes home must be canonical before legacy fallback');
-  console.log('PASS canonical router owns tp:leaders before the legacy fallback chain');
+  assert.ok(homeIndex>0&&registerIndex>homeIndex&&coreIndex>registerIndex,'Dirigentes and canonical result register must both own routing before legacy fallback');
+  console.log('PASS canonical router owns Dirigentes and shared result capture before the legacy fallback chain');
 
   console.log('RESULT: PASS');
 }finally{
