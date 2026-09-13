@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#07152b">
+  <title>Chépica Play · Broadcast</title>
+  <link rel="stylesheet" href="./broadcast.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">FÚTBOL CHÉPICA · OPERACIÓN EN VIVO</p>
+        <h1>🎥 Chépica Play · Broadcast</h1>
+        <p class="subtitle">Vista de control de la misma fuente de resultados que consume vMix. Esta pantalla es sólo lectura.</p>
+      </div>
+      <div class="live-state" aria-live="polite">
+        <span id="connectionDot" class="dot dot-wait"></span>
+        <strong id="connection">CONECTANDO</strong>
+      </div>
+    </header>
+
+    <section class="source-card" aria-label="Fuente de datos para vMix">
+      <div class="source-head">
+        <div>
+          <span class="label">FUENTE NATIVA VMIX</span>
+          <strong>JSON · Data Sources</strong>
+        </div>
+        <div class="round-picker">
+          <label for="round">Fecha</label>
+          <select id="round" aria-label="Seleccionar fecha"></select>
+        </div>
+      </div>
+      <div class="url-row">
+        <code id="feedUrl"></code>
+        <button id="copyUrl" type="button">Copiar URL</button>
+      </div>
+      <div class="source-meta">
+        <span id="updated">Sin datos todavía</span>
+        <span>Actualización automática · 3 s</span>
+        <span>vMix: consumidor de sólo lectura</span>
+      </div>
+    </section>
+
+    <section class="summary" aria-label="Resumen de la fecha">
+      <article><strong id="matchesCount">0</strong><span>partidos</span></article>
+      <article><strong id="seriesCount">0</strong><span>series</span></article>
+      <article><strong id="reportedCount">0</strong><span>informados</span></article>
+      <article><strong id="officialCount">0</strong><span>oficiales</span></article>
+    </section>
+
+    <section class="legend" aria-label="Estados de resultados">
+      <span class="chip chip-reported">INFORMADO</span><span>dato recibido, aún no oficial</span>
+      <span class="chip chip-official">OFICIAL</span><span>resultado verificado</span>
+    </section>
+
+    <section id="content" class="content" aria-live="polite">
+      <div class="empty">Cargando Fecha III…</div>
+    </section>
+
+    <footer>
+      <strong>CUDO · Fútbol Chépica</strong>
+      <span>Telegram gobierna el dato → Worker lo proyecta → vMix lo presenta.</span>
+    </footer>
+  </main>
+  <script type="module" src="./broadcast.js"></script>
+</body>
+</html>
