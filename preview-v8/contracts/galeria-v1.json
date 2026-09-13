@@ -1,0 +1,44 @@
+{
+  "contract_id": "CUDO-GALERIA-V1",
+  "schema_version": "1.0",
+  "module": "galeria",
+  "source": "CUDO_WEB_GALERIA",
+  "pipeline": {
+    "public_json": "preview-v8/data/galeria.json",
+    "media_root": "preview-v8/media/galeria"
+  },
+  "public_contract": {
+    "required": [
+      "id",
+      "fecha",
+      "titulo",
+      "imagen_ref",
+      "alt",
+      "album_id",
+      "album",
+      "categoria"
+    ],
+    "allowed": [
+      "id",
+      "fecha",
+      "titulo",
+      "descripcion",
+      "imagen_ref",
+      "alt",
+      "album_id",
+      "album",
+      "categoria"
+    ],
+    "unique": ["id"],
+    "date_fields": {
+      "fecha": "YYYY-MM-DD"
+    },
+    "image_fields": ["imagen_ref"],
+    "slug_fields": {
+      "album_id": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        "message": "album_id debe usar minúsculas, números y guiones"
+      }
+    }
+  }
+}
