@@ -14,12 +14,12 @@ const CONTRACT_DIR = path.join(ROOT, 'preview-v8', 'contracts');
 const PARTIDOS_CONTRACT = JSON.parse(fs.readFileSync(path.join(CONTRACT_DIR, 'partidos-v1.json'), 'utf8'));
 
 const MODULES = [
-  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],publicRefs:['imagen_ref']},
-  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],publicRefs:[]},
-  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],publicRefs:['foto_ref']},
-  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],publicRefs:[]},
-  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],publicRefs:[]},
-  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],publicRefs:['imagen_ref']}
+  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],publicRefs:['imagen_ref'],requiredPublicRefs:[]},
+  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],publicRefs:[],requiredPublicRefs:[]},
+  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],publicRefs:['foto_ref'],requiredPublicRefs:[]},
+  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],publicRefs:[],requiredPublicRefs:[]},
+  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],publicRefs:[],requiredPublicRefs:[]},
+  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],publicRefs:['imagen_ref'],requiredPublicRefs:['imagen_ref']}
 ].map(module => ({...module,sheet:'PUBLICO_EXPORT'}));
 
 async function getAccessToken() {
@@ -131,19 +131,32 @@ function sanitizePublicRef(v, field) {
   return value;
 }
 
+function rowToItem(row,headers,module) {
+  return Object.fromEntries(headers.map((h,i)=>{
+    const raw = row[i] ?? '';
+    if (module.numeric.includes(h)) return [h,toNumber(raw)];
+    if (module.boolean.includes(h)) return [h,toBoolean(raw,`${module.key}.${h}`)];
+    if (module.publicRefs.includes(h)) return [h,sanitizePublicRef(raw,`${module.key}.${h}`)];
+    return [h,raw];
+  }));
+}
+
 function rowsToItems(values,module) {
   if (!values.length) throw new Error('PUBLICO_EXPORT no tiene encabezados');
   const headers = values[0].map(v=>String(v).trim()).filter(Boolean);
   if (!headers.length) throw new Error('PUBLICO_EXPORT tiene encabezados vacíos');
-  return values.slice(1)
-    .filter(row=>row.some(v=>String(v??'').trim()!==''))
-    .map(row=>Object.fromEntries(headers.map((h,i)=>{
-      const raw = row[i] ?? '';
-      if (module.numeric.includes(h)) return [h,toNumber(raw)];
-      if (module.boolean.includes(h)) return [h,toBoolean(raw,`${module.key}.${h}`)];
-      if (module.publicRefs.includes(h)) return [h,sanitizePublicRef(raw,`${module.key}.${h}`)];
-      return [h,raw];
-    })));
+
+  const items = [];
+  for (const row of values.slice(1).filter(row=>row.some(v=>String(v??'').trim()!==''))) {
+    const item = rowToItem(row,headers,module);
+    const missingRequiredRef = module.requiredPublicRefs.find(field => !clean(item[field]));
+    if (missingRequiredRef) {
+      console.warn(`PUBLIC_ROW_SKIPPED module=${module.key} reason=missing_safe_required_ref field=${missingRequiredRef}`);
+      continue;
+    }
+    items.push(item);
+  }
+  return items;
 }
 
 function readExisting(out) {
