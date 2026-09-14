@@ -29,16 +29,21 @@ jobs:
         run: |
           node --check preview-v8/shared/site.js
           node --check preview-v8/shared/seed-data.js
-      - name: Validar volumen seed
+          node --check preview-v8/shared/data-source.js
+      - name: Validar modo de datos real sin fallback mock
         run: |
-          node <<'NODE'
-          global.window={};
-          require('./preview-v8/shared/seed-data.js');
-          const s=window.CUDO_SEED_SUMMARY;
-          if(!s||s.jugadores!==84||s.partidos!==108||s.filas_tabla!==44||s.noticias!==6||s.fotos!==15) throw new Error('Seed V8 incompleto');
-          if(s.por_categoria.SENIOR!==30||s.por_categoria.TERCERA!==18||s.por_categoria.SEGUNDA!==18||s.por_categoria.PRIMERA!==18) throw new Error('Volumen por categoría incorrecto');
-          console.log('V8 seed OK',s);
-          NODE
+          python3 - <<'PY'
+          from pathlib import Path
+          adapter=Path('preview-v8/shared/data-source.js').read_text(encoding='utf-8')
+          shim=Path('preview-v8/shared/seed-data.js').read_text(encoding='utf-8')
+          combined=adapter+'\n'+shim
+          assert 'mock:false' in adapter, 'El adapter V8 debe declarar mock:false'
+          assert 'cudoResolveDataUrl' in adapter, 'Falta resolver datos públicos'
+          assert 'data-source.js' in shim, 'seed-data.js debe ser sólo shim hacia data-source.js'
+          for token in ['CUDO_SEED_DATA','CUDO_SEED_SUMMARY','randomuser.me','VISTA DEMOSTRATIVA','FOTO MOCK']:
+              assert token not in combined, f'Fallback mock/seed prohibido: {token}'
+          print('V8 real-data mode OK: contratos reales y sin fallback mock')
+          PY
       - name: Validar paquete visual
         run: |
           python3 - <<'PY'
