@@ -54,8 +54,9 @@ jobs:
               text=(root/p).read_text(encoding='utf-8')
               assert 'site.css' in text, p
               assert 'logo-cudo.png' in text, p
-              assert 'PARTIDOS' in text, p
               assert 'C.U.D.O.' in text, p
+              championship_links=['href="partidos/"','href="../partidos/"','href="./">CAMPEONATO']
+              assert any(token in text for token in championship_links), f'{p}: falta navegación al campeonato'
           css=(root/'shared/site.css').read_text(encoding='utf-8')
           for token in ['--navy','--red','--gold','.pagehead','.playergrid','.matchgrid','.gallerygrid']:
               assert token in css, token
