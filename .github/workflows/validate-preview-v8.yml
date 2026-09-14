@@ -23,23 +23,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout fuente visual canónica QA
+        uses: actions/checkout@v4
+        with:
+          ref: qa-v8-google-data
+          path: qa-style-source
+          fetch-depth: 1
+
       - name: Validar contratos V8
         run: python3 preview-v8/tools/validate_data.py
+
       - name: Validar Javascript
         run: |
           node --check preview-v8/shared/site.js
           node --check preview-v8/shared/seed-data.js
-      - name: Validar volumen seed
+          node --check preview-v8/shared/data-source.js
+
+      - name: Validar modo de datos real sin fallback mock
         run: |
-          node <<'NODE'
-          global.window={};
-          require('./preview-v8/shared/seed-data.js');
-          const s=window.CUDO_SEED_SUMMARY;
-          if(!s||s.jugadores!==84||s.partidos!==108||s.filas_tabla!==44||s.noticias!==6||s.fotos!==15) throw new Error('Seed V8 incompleto');
-          if(s.por_categoria.SENIOR!==30||s.por_categoria.TERCERA!==18||s.por_categoria.SEGUNDA!==18||s.por_categoria.PRIMERA!==18) throw new Error('Volumen por categoría incorrecto');
-          console.log('V8 seed OK',s);
-          NODE
-      - name: Validar paquete visual
+          python3 - <<'PY'
+          from pathlib import Path
+          adapter=Path('preview-v8/shared/data-source.js').read_text(encoding='utf-8')
+          shim=Path('preview-v8/shared/seed-data.js').read_text(encoding='utf-8')
+          combined=adapter+'\n'+shim
+          assert 'mock:false' in adapter, 'El adapter V8 debe declarar mock:false'
+          assert 'cudoResolveDataUrl' in adapter, 'Falta resolver datos públicos'
+          assert 'data-source.js' in shim, 'seed-data.js debe ser sólo shim hacia data-source.js'
+          for token in ['CUDO_SEED_DATA','CUDO_SEED_SUMMARY','randomuser.me','VISTA DEMOSTRATIVA','FOTO MOCK']:
+              assert token not in combined, f'Fallback mock/seed prohibido: {token}'
+          print('V8 real-data mode OK: contratos reales y sin fallback mock')
+          PY
+
+      - name: Validar paquete visual contra fuente canónica
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -49,10 +65,16 @@ jobs:
               text=(root/p).read_text(encoding='utf-8')
               assert 'site.css' in text, p
               assert 'logo-cudo.png' in text, p
-              assert 'PARTIDOS' in text, p
               assert 'C.U.D.O.' in text, p
-          css=(root/'shared/site.css').read_text(encoding='utf-8')
+              championship_links=['href="partidos/"','href="../partidos/"','href="./">CAMPEONATO']
+              assert any(token in text for token in championship_links), f'{p}: falta navegación al campeonato'
+
+          wrapper=(root/'shared/site.css').read_text(encoding='utf-8')
+          canonical_import='carlitosvaldesmorales/cudo-pago@qa-v8-google-data/preview-v8/shared/site.css'
+          assert canonical_import in wrapper, 'site.css productivo dejó de apuntar a fuente visual canónica QA'
+
+          canonical=Path('qa-style-source/preview-v8/shared/site.css').read_text(encoding='utf-8')
           for token in ['--navy','--red','--gold','.pagehead','.playergrid','.matchgrid','.gallerygrid']:
-              assert token in css, token
-          print('Paquete visual V8 OK')
+              assert token in canonical, f'Fuente visual canónica incompleta: {token}'
+          print('Paquete visual V8 OK: wrapper + fuente canónica QA')
           PY
