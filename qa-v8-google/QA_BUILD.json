@@ -1,7 +1,7 @@
 {
   "environment": "QA",
   "source_branch": "qa-v8-google-data",
-  "source_commit": "7dc6092839f7e4f8755707ac5a84f9139af0cfd6",
-  "workflow_run": "34851139816",
-  "published_at": "2026-09-14T13:46:59Z"
+  "source_commit": "2109d715f1881ea37872ae6c84946ad9b5bf9a37",
+  "workflow_run": "34866881892",
+  "published_at": "2026-09-14T16:12:13Z"
 }
