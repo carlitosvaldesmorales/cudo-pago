@@ -9,6 +9,9 @@ fs.mkdirSync(outDir,{recursive:true});
 const requiredPages=['','noticias/','partidos/','equipos/','galeria/','admin/'];
 const publicData=['noticias','equipos','plantel','partidos','tabla','galeria'];
 const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signature='];
+const sportsApi='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
+const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
+const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 
 const profile=(name,engine,deviceName,fallback)=>({
   name,engine,
@@ -26,6 +29,9 @@ const report={
   generated_at:new Date().toISOString(),
   profiles:[],
   data_contract:{},
+  controlled_external_dependencies:{
+    sports_event_bus:'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS'
+  },
   failures:[]
 };
 
@@ -44,20 +50,49 @@ async function validatePublicData(request){
   }
 }
 
+function installControlledExternalRoutes(context){
+  return Promise.all([
+    context.route(`${sportsApi}/api/v1/matches**`,route=>route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify({ok:true,matches:fixture.matches||[],byes:fixture.byes||[]})
+    })),
+    context.route(`${sportsApi}/api/v1/series-results**`,route=>route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify({ok:true,results:series.results||[]})
+    }))
+  ]);
+}
+
+// La privacidad/contrato de datos es un gate propio. Aunque falle, los journeys siguen
+// ejecutándose para dejar evidencia completa del producto y no ocultar defectos secundarios.
+{
+  const browser=await chromium.launch({headless:true});
+  const context=await browser.newContext();
+  try{
+    await validatePublicData(context.request);
+  }catch(error){
+    report.failures.push(String(error?.message||error));
+  }finally{
+    await browser.close();
+  }
+}
+
 for(const p of profiles){
   const browser=await p.engine.launch({headless:true});
   const context=await browser.newContext({...p.context,locale:'es-CL',timezoneId:'America/Santiago'});
+  await installControlledExternalRoutes(context);
   const page=await context.newPage();
   const result={name:p.name,pages:[],console_errors:[]};
   page.on('console',msg=>{if(msg.type()==='error') result.console_errors.push(msg.text())});
   page.on('pageerror',error=>result.console_errors.push(error.message));
   try{
-    if(p===profiles[0]) await validatePublicData(context.request);
     for(const relative of requiredPages){
       const url=new URL(relative,baseUrl).href;
       const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
       if(!response||!response.ok()) throw new Error(`${p.name} ${relative||'/'}: HTTP ${response?.status()}`);
-      await page.waitForTimeout(250);
+      await page.waitForTimeout(300);
       const metrics=await page.evaluate(()=>({
         title:document.title,
         width:document.documentElement.scrollWidth,
@@ -71,6 +106,10 @@ for(const p of profiles){
         const manifest=await page.locator('link[rel="manifest"]').getAttribute('href');
         if(!manifest) throw new Error(`${p.name}: falta manifest en inicio`);
         await page.screenshot({path:path.join(outDir,`${p.name}-home.png`),fullPage:true});
+      }
+      if(relative==='partidos/'){
+        const cards=await page.locator('.champ-match-card').count();
+        if(cards<1) throw new Error(`${p.name}: campeonato no renderizo partidos`);
       }
       if(relative==='admin/'){
         const cards=page.locator('a.admincard');
