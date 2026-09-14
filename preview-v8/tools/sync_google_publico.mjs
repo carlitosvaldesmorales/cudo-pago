@@ -13,7 +13,17 @@ const ROOT = path.resolve(process.cwd());
 const OUT_DIR = path.join(ROOT, 'preview-v8', 'data');
 const MEDIA_DIR = path.join(ROOT, 'preview-v8', 'media');
 const CONTRACT_DIR = path.join(ROOT, 'preview-v8', 'contracts');
-const PARTIDOS_CONTRACT = JSON.parse(fs.readFileSync(path.join(CONTRACT_DIR, 'partidos-v1.json'), 'utf8'));
+const CONTRACT_FILES = [
+  'noticias-v1.json',
+  'equipos-v1.json',
+  'plantel-v1.json',
+  'partidos-v1.json',
+  'tabla-v1.json',
+  'galeria-v1.json'
+];
+const CONTRACTS = CONTRACT_FILES.map(file => JSON.parse(fs.readFileSync(path.join(CONTRACT_DIR, file), 'utf8')));
+const CONTRACT_BY_MODULE = new Map(CONTRACTS.map(contract => [contract.module, contract]));
+const PARTIDOS_CONTRACT = CONTRACT_BY_MODULE.get('partidos');
 const MAX_MEDIA_BYTES = 10 * 1024 * 1024;
 const IMAGE_EXT = new Map([
   ['image/jpeg','jpg'],
@@ -23,14 +33,63 @@ const IMAGE_EXT = new Map([
   ['image/avif','avif']
 ]);
 
-const MODULES = [
-  {key:'noticias',spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',source:'CUDO_WEB_NOTICIAS',numeric:[],boolean:[],date:['fecha'],time:[],media:{field:'imagen_ref',multi:false,required:false}},
-  {key:'equipos',spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',source:'CUDO_WEB_EQUIPOS',numeric:[],boolean:[],date:[],time:[],media:null},
-  {key:'plantel',spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',source:'CUDO_WEB_PLANTEL',numeric:['numero'],boolean:['capitan'],date:[],time:[],media:{field:'foto_ref',multi:false,required:false}},
-  {key:'partidos',spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',source:'CUDO_WEB_PARTIDOS',numeric:['goles_local','goles_visita'],boolean:[],date:['fecha'],time:['hora'],media:null},
-  {key:'tabla',spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',source:'CUDO_WEB_TABLA',numeric:['posicion','pj','pg','pe','pp','gf','gc','dg','pts'],boolean:[],date:[],time:[],media:null},
-  {key:'galeria',spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',source:'CUDO_WEB_GALERIA',numeric:[],boolean:[],date:['fecha'],time:[],media:{field:'imagen_ref',multi:true,required:true}}
-].map(module => ({...module,sheet:'PUBLICO_EXPORT'}));
+function buildModuleFromContract(contract) {
+  const publicContract = contract?.public_contract;
+  const sync = contract?.sync;
+  if (!contract?.module || !contract?.source || !publicContract || !sync?.spreadsheet_id) {
+    throw new Error(`SYNC CONTRACT inválido: ${contract?.contract_id || contract?.module || 'desconocido'}`);
+  }
+
+  const allowed = Array.isArray(publicContract.allowed) ? publicContract.allowed : [];
+  const required = new Set(Array.isArray(publicContract.required) ? publicContract.required : []);
+  const numeric = Array.isArray(publicContract.numeric)
+    ? [...publicContract.numeric]
+    : Object.keys(publicContract.integer_fields || {});
+  const boolean = Array.isArray(publicContract.boolean_fields) ? [...publicContract.boolean_fields] : [];
+
+  let date = Array.isArray(sync.date_fields) ? [...sync.date_fields] : Object.keys(publicContract.date_fields || {});
+  if (!date.length && publicContract.date_format === 'YYYY-MM-DD' && allowed.includes('fecha')) date = ['fecha'];
+
+  let time = Array.isArray(sync.time_fields) ? [...sync.time_fields] : Object.keys(publicContract.time_fields || {});
+  if (!time.length && publicContract.time_format === 'HH:MM' && allowed.includes('hora')) time = ['hora'];
+
+  const typedFields = [...numeric, ...boolean, ...date, ...time];
+  if (typedFields.some(field => !allowed.includes(field))) {
+    throw new Error(`SYNC CONTRACT ${contract.contract_id}: normalización referencia campos no permitidos`);
+  }
+
+  const imageFields = Array.isArray(publicContract.image_fields) ? [...publicContract.image_fields] : [];
+  if (imageFields.length > 1) {
+    throw new Error(`SYNC CONTRACT ${contract.contract_id}: sync actual admite un único image_field`);
+  }
+  const mediaMultiFields = Array.isArray(sync.media_multi_fields) ? sync.media_multi_fields : [];
+  if (mediaMultiFields.some(field => !imageFields.includes(field))) {
+    throw new Error(`SYNC CONTRACT ${contract.contract_id}: media_multi_fields fuera de image_fields`);
+  }
+  const mediaField = imageFields[0] || null;
+
+  return {
+    key: contract.module,
+    spreadsheetId: sync.spreadsheet_id,
+    source: contract.source,
+    numeric,
+    boolean,
+    date,
+    time,
+    media: mediaField ? {
+      field: mediaField,
+      multi: mediaMultiFields.includes(mediaField),
+      required: required.has(mediaField)
+    } : null,
+    sheet: contract.pipeline?.public_sheet || 'PUBLICO_EXPORT',
+    contract
+  };
+}
+
+const MODULES = CONTRACTS.map(buildModuleFromContract);
+if (new Set(MODULES.map(module => module.key)).size !== MODULES.length) {
+  throw new Error('SYNC CONTRACT: módulos duplicados');
+}
 
 async function getAccessToken() {
   const body = new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:REFRESH_TOKEN,grant_type:'refresh_token'});
