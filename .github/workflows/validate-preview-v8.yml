@@ -23,13 +23,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout fuente visual canónica QA
+        uses: actions/checkout@v4
+        with:
+          ref: qa-v8-google-data
+          path: qa-style-source
+          fetch-depth: 1
+
       - name: Validar contratos V8
         run: python3 preview-v8/tools/validate_data.py
+
       - name: Validar Javascript
         run: |
           node --check preview-v8/shared/site.js
           node --check preview-v8/shared/seed-data.js
           node --check preview-v8/shared/data-source.js
+
       - name: Validar modo de datos real sin fallback mock
         run: |
           python3 - <<'PY'
@@ -44,7 +54,8 @@ jobs:
               assert token not in combined, f'Fallback mock/seed prohibido: {token}'
           print('V8 real-data mode OK: contratos reales y sin fallback mock')
           PY
-      - name: Validar paquete visual
+
+      - name: Validar paquete visual contra fuente canónica
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -57,8 +68,13 @@ jobs:
               assert 'C.U.D.O.' in text, p
               championship_links=['href="partidos/"','href="../partidos/"','href="./">CAMPEONATO']
               assert any(token in text for token in championship_links), f'{p}: falta navegación al campeonato'
-          css=(root/'shared/site.css').read_text(encoding='utf-8')
+
+          wrapper=(root/'shared/site.css').read_text(encoding='utf-8')
+          canonical_import='carlitosvaldesmorales/cudo-pago@qa-v8-google-data/preview-v8/shared/site.css'
+          assert canonical_import in wrapper, 'site.css productivo dejó de apuntar a fuente visual canónica QA'
+
+          canonical=Path('qa-style-source/preview-v8/shared/site.css').read_text(encoding='utf-8')
           for token in ['--navy','--red','--gold','.pagehead','.playergrid','.matchgrid','.gallerygrid']:
-              assert token in css, token
-          print('Paquete visual V8 OK')
+              assert token in canonical, f'Fuente visual canónica incompleta: {token}'
+          print('Paquete visual V8 OK: wrapper + fuente canónica QA')
           PY
