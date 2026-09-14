@@ -3,7 +3,9 @@
   "invariant": "NO_CAPABILITY_WITHOUT_AUTOMATED_CERTIFICATION",
   "release_rule": "AUTOMATED_EVIDENCE_REQUIRED_BEFORE_RELEASE",
   "human_test_policy": "NOT_A_NORMAL_RELEASE_GATE",
-  "description": "Cada capacidad activa de CUDO debe nacer asociada a pruebas ejecutables y evidencia CI. Una capacidad sin certificacion automatica se considera incompleta y no liberable.",
+  "certification_subject": "PULL_REQUEST_MERGE_RESULT",
+  "integration_target": "main",
+  "description": "Cada capacidad activa de CUDO debe nacer asociada a pruebas ejecutables y evidencia CI. Una capacidad sin certificacion automatica se considera incompleta y no liberable. La certificacion pre-release se ejecuta sobre el resultado integrable main + PR, no sobre una rama aislada.",
   "automation_catalog": {
     "PWA_SHELL_CONTRACT": {
       "source": "local",
