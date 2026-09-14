@@ -32,6 +32,9 @@ required_sync_tokens = [
     'preview-v8/media/plantel',
     'preview-v8/media/galeria',
     'QA publish E2E + preview projection',
+    'for attempt in 1 2 3',
+    'Sync Google attempt ${attempt}/3',
+    'Sync Google falló tras 3 intentos',
 ]
 for token in required_sync_tokens:
     if token not in sync:
@@ -57,4 +60,4 @@ for forbidden in [
 if 'workflow_dispatch:' not in legacy:
     raise SystemExit('QA PIPELINE: workflow legacy debe quedar sólo como diagnóstico manual')
 
-print('OK  QA pipeline: un solo escritor canónico publica snapshot QA + proyección segura preview-v8')
+print('OK  QA pipeline: un solo escritor canónico publica snapshot QA + proyección segura preview-v8 + retry Google acotado')
