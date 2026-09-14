@@ -4,7 +4,17 @@
   "module": "equipos",
   "source": "CUDO_WEB_EQUIPOS",
   "pipeline": {
-    "public_json": "preview-v8/data/equipos.json"
+    "form_spec_sheet": "FORM_SPEC",
+    "raw_sheet": "RAW_FORM_EQUIPOS",
+    "control_sheet": "CONTROL",
+    "public_sheet": "PUBLICO_EXPORT",
+    "public_json": "preview-v8/data/equipos.json",
+    "publication_gate": {
+      "ESTADO_REGISTRO": "PUBLICADO",
+      "PUBLICAR": "SI",
+      "PRIVACIDAD": "PUBLICO",
+      "AUTORIZACION_PUBLICACION": "AUTORIZADO"
+    }
   },
   "sync": {
     "spreadsheet_id": "1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI"
@@ -13,5 +23,22 @@
     "required": ["id", "nombre", "categoria"],
     "allowed": ["id", "nombre", "categoria", "descripcion"],
     "unique": ["id"]
-  }
+  },
+  "renderer": {
+    "page": "preview-v8/equipos/index.html",
+    "function": "cudoRenderCollection",
+    "type": "equipos"
+  },
+  "derived_fields": [
+    {"public": "id", "control": "ID_EQUIPO", "transform": "generated_from_submission_timestamp_and_row"}
+  ],
+  "form_mapping": [
+    {"order": 1, "question": "Nombre público del equipo o serie", "raw": "NOMBRE", "required": true, "public": "nombre"},
+    {"order": 2, "question": "Serie o categoría", "raw": "CATEGORIA", "required": true, "public": "categoria"},
+    {"order": 3, "question": "Presentación pública de la serie", "raw": "DESCRIPCION", "required": true, "public": "descripcion"},
+    {"order": 4, "question": "Estado actual de la serie", "raw": "ESTADO_SERIE", "required": true, "public": false},
+    {"order": 5, "question": "¿La información fue confirmada por el club?", "raw": "CONFIRMACION_CLUB", "required": true, "public": false},
+    {"order": 6, "question": "Nombre de quien registra la información", "raw": "RESPONSABLE", "required": true, "public": false},
+    {"order": 7, "question": "Nota para revisión", "raw": "OBSERVACIONES", "required": false, "public": false}
+  ]
 }
