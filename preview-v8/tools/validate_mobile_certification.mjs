@@ -9,10 +9,12 @@ const fail=message=>{throw new Error(`MOBILE CERTIFICATION: ${message}`)};
 if(!fs.existsSync(contractPath)) fail('falta mobile-capabilities.json');
 const contract=JSON.parse(fs.readFileSync(contractPath,'utf8'));
 if(contract.invariant!=='NO_CAPABILITY_WITHOUT_AUTOMATED_CERTIFICATION') fail('invariante inesperada');
-if(contract.release_rule!=='AUTOMATED_EVIDENCE_REQUIRED_BEFORE_RELEASE') fail('release_rule inesperada');
+if(contract.release_rule!=='PREMERGE_AND_POSTDEPLOY_AUTOMATED_EVIDENCE_REQUIRED') fail('release_rule inesperada');
 if(contract.human_test_policy!=='NOT_A_NORMAL_RELEASE_GATE') fail('la prueba humana no puede ser gate normal');
-if(contract.certification_subject!=='PULL_REQUEST_MERGE_RESULT') fail('la certificacion debe ejecutarse sobre main + PR');
+if(contract.certification_subject!=='PULL_REQUEST_MERGE_RESULT') fail('la certificacion pre-merge debe ejecutarse sobre main + PR');
 if(contract.integration_target!=='main') fail('integration_target debe ser main');
+if(contract.production_certification_subject!=='DEPLOYED_CUDO_CL_RUNTIME') fail('falta sujeto de certificacion productiva');
+if(contract.production_base_url!=='https://cudo.cl/preview-v8/') fail('production_base_url inesperada');
 
 const catalog=contract.automation_catalog||{};
 const capabilities=contract.capabilities||[];
@@ -37,13 +39,14 @@ for(const capability of capabilities){
   for(const testId of capability.tests){
     if(!catalog[testId]) fail(`${capability.id}: referencia prueba inexistente ${testId}`);
   }
+  if(!capability.tests.includes('LIVE_PRODUCTION_E2E')) fail(`${capability.id}: falta certificacion post-deploy real`);
 }
 
 const expectedDomains=['noticias','equipos_series','plantel_jugadores','partidos_resultados','tabla_posiciones','galeria'];
 for(const id of expectedDomains){
   const capability=capabilities.find(c=>c.id===id);
   if(!capability) fail(`falta capacidad obligatoria ${id}`);
-  for(const required of ['PUBLIC_CONTRACTS','GOOGLE_TO_V8_E2E','MOBILE_WEBKIT_CHROMIUM_E2E']){
+  for(const required of ['PUBLIC_CONTRACTS','GOOGLE_TO_V8_E2E','MOBILE_WEBKIT_CHROMIUM_E2E','LIVE_PRODUCTION_E2E']){
     if(!capability.tests.includes(required)) fail(`${id}: falta ${required}`);
   }
 }
@@ -53,7 +56,10 @@ if(contract.escalation_rule?.forbidden_default!=='ASK_CARLOS_TO_BE_THE_TEST_RUNN
 console.log(JSON.stringify({
   ok:true,
   invariant:contract.invariant,
+  release_rule:contract.release_rule,
   certification_subject:contract.certification_subject,
+  production_certification_subject:contract.production_certification_subject,
+  production_base_url:contract.production_base_url,
   integration_target:contract.integration_target,
   active_capabilities:capabilities.filter(c=>c.status==='active').map(c=>c.id),
   automation_tests:Object.keys(catalog),
