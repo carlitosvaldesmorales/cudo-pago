@@ -11,6 +11,8 @@ const contract=JSON.parse(fs.readFileSync(contractPath,'utf8'));
 if(contract.invariant!=='NO_CAPABILITY_WITHOUT_AUTOMATED_CERTIFICATION') fail('invariante inesperada');
 if(contract.release_rule!=='AUTOMATED_EVIDENCE_REQUIRED_BEFORE_RELEASE') fail('release_rule inesperada');
 if(contract.human_test_policy!=='NOT_A_NORMAL_RELEASE_GATE') fail('la prueba humana no puede ser gate normal');
+if(contract.certification_subject!=='PULL_REQUEST_MERGE_RESULT') fail('la certificacion debe ejecutarse sobre main + PR');
+if(contract.integration_target!=='main') fail('integration_target debe ser main');
 
 const catalog=contract.automation_catalog||{};
 const capabilities=contract.capabilities||[];
@@ -51,6 +53,8 @@ if(contract.escalation_rule?.forbidden_default!=='ASK_CARLOS_TO_BE_THE_TEST_RUNN
 console.log(JSON.stringify({
   ok:true,
   invariant:contract.invariant,
+  certification_subject:contract.certification_subject,
+  integration_target:contract.integration_target,
   active_capabilities:capabilities.filter(c=>c.status==='active').map(c=>c.id),
   automation_tests:Object.keys(catalog),
   human_test_policy:contract.human_test_policy
