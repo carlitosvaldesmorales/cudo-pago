@@ -1,0 +1,118 @@
+name: Certify CUDO Mobile Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/certify-cudo-mobile-production.yml'
+      - '.github/workflows/validate-cudo-mobile-pwa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-production:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CUDO_BASE_URL: https://cudo.cl/preview-v8/
+      CUDO_LIVE_MODE: '1'
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate live journey syntax
+        run: node --check preview-v8/tools/mobile_product_journey.mjs
+
+      - name: Wait for production deployment convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            manifest.webmanifest
+            sw.js
+            offline.html
+            shared/pwa.js
+            index.html
+            admin/index.html
+            icons/apple-touch-icon.png
+            icons/icon-192.png
+            icons/icon-512.png
+          )
+          mkdir -p qa-mobile-production/deploy
+          converged=0
+          for attempt in $(seq 1 50); do
+            ok=1
+            for f in "${files[@]}"; do
+              mkdir -p "qa-mobile-production/deploy/$(dirname "$f")"
+              if ! curl -LfsS -H 'Cache-Control: no-cache' "${CUDO_BASE_URL}${f}?qa=${GITHUB_SHA}-${attempt}" -o "qa-mobile-production/deploy/${f}"; then
+                ok=0
+                break
+              fi
+              if ! cmp -s "preview-v8/${f}" "qa-mobile-production/deploy/${f}"; then
+                ok=0
+                break
+              fi
+            done
+            if [ "$ok" -eq 1 ]; then
+              converged=1
+              break
+            fi
+            sleep 6
+          done
+          if [ "$converged" -ne 1 ]; then
+            echo 'Producción no convergió al contenido esperado del release dentro de la ventana.' >&2
+            exit 1
+          fi
+          printf 'release_sha=%s\nbase_url=%s\n' "$GITHUB_SHA" "$CUDO_BASE_URL" > qa-mobile-production/deploy/convergence.txt
+
+      - name: Probe real Sports Event Bus
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qa-mobile-production/runtime
+          curl -LfsS 'https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/api/v1/matches' -o qa-mobile-production/runtime/matches.json
+          curl -LfsS 'https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev/api/v1/series-results' -o qa-mobile-production/runtime/series-results.json
+          node - <<'NODE'
+          const fs=require('fs');
+          for(const file of ['matches.json','series-results.json']){
+            const data=JSON.parse(fs.readFileSync(`qa-mobile-production/runtime/${file}`,'utf8'));
+            if(!data || data.ok!==true) throw new Error(`${file}: runtime no conforme`);
+          }
+          console.log('Sports Event Bus real OK');
+          NODE
+
+      - name: Install mobile browsers
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Run live mobile certification against cudo.cl
+        run: node preview-v8/tools/mobile_product_journey.mjs
+
+      - name: Preserve live certification evidence
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p qa-mobile-production
+          if [ -d qa-mobile-certification ]; then
+            cp -R qa-mobile-certification qa-mobile-production/mobile-certification
+          fi
+          printf 'release_sha=%s\nrun_id=%s\nbase_url=%s\nmode=LIVE_PRODUCTION\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$CUDO_BASE_URL" > qa-mobile-production/CERTIFICATE.txt
+
+      - name: Upload production certification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-production-${{ github.run_id }}
+          path: qa-mobile-production/
+          if-no-files-found: error
+          retention-days: 30

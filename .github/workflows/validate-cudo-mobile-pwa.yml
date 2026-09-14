@@ -1,0 +1,169 @@
+name: Validate CUDO Mobile PWA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview-v8/manifest.webmanifest'
+      - 'preview-v8/sw.js'
+      - 'preview-v8/offline.html'
+      - 'preview-v8/icons/**'
+      - 'preview-v8/shared/pwa.js'
+      - 'preview-v8/index.html'
+      - 'preview-v8/admin/index.html'
+      - 'preview-v8/certification/**'
+      - 'preview-v8/tools/validate_pwa_shell.mjs'
+      - 'preview-v8/tools/validate_mobile_certification.mjs'
+      - 'preview-v8/tools/mobile_product_journey.mjs'
+      - '.github/workflows/validate-cudo-mobile-pwa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pwa-shell:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout resultado integrable main + PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout autoridad QA para certificacion cruzada
+        uses: actions/checkout@v4
+        with:
+          ref: qa-v8-google-data
+          path: qa-source
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validar sintaxis de shell y certificacion movil
+        run: |
+          set -euo pipefail
+          node --check preview-v8/sw.js
+          node --check preview-v8/shared/pwa.js
+          node --check preview-v8/tools/validate_pwa_shell.mjs
+          node --check preview-v8/tools/validate_mobile_certification.mjs
+          node --check preview-v8/tools/mobile_product_journey.mjs
+
+      - name: Validar contrato obligatorio de certificacion por capacidad
+        env:
+          CUDO_QA_ROOT: qa-source
+        run: node preview-v8/tools/validate_mobile_certification.mjs
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generar iconos determinísticos desde escudo oficial
+        run: |
+          set -euo pipefail
+          pip install pillow==11.3.0
+          mkdir -p generated-pwa-icons
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          src=Path('preview-v8/media/clubes/union-orilla.png')
+          if not src.exists():
+              raise SystemExit('No existe el escudo oficial preview-v8/media/clubes/union-orilla.png')
+          image=Image.open(src).convert('RGBA')
+          if image.size != (512,512):
+              raise SystemExit(f'Escudo oficial inesperado: {image.size}')
+          for size,name in [(180,'apple-touch-icon.png'),(192,'icon-192.png'),(512,'icon-512.png')]:
+              out=image if size==512 else image.resize((size,size),Image.Resampling.LANCZOS)
+              out.save(Path('generated-pwa-icons')/name,optimize=True)
+              print(name,out.size)
+          PY
+
+      - name: Publicar iconos generados como evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-pwa-icons-${{ github.run_id }}
+          path: generated-pwa-icons/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Verificar iconos versionados contra fuente oficial
+        run: |
+          set -euo pipefail
+          for f in apple-touch-icon.png icon-192.png icon-512.png; do
+            test -f "preview-v8/icons/$f" || { echo "::error::Falta preview-v8/icons/$f"; exit 1; }
+            cmp "generated-pwa-icons/$f" "preview-v8/icons/$f"
+          done
+
+      - name: Validar contrato PWA
+        run: node preview-v8/tools/validate_pwa_shell.mjs
+
+      - name: Instalar Playwright Chromium y WebKit
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+
+      - name: Validar registro Service Worker en navegador real
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-pwa-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/cudo-pwa-http.log; exit 1; fi
+          cat > .cudo-pwa-check.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:390,height:844}});
+          const errors=[];
+          page.on('pageerror',e=>errors.push(e.message));
+          await page.goto('http://127.0.0.1:4173/preview-v8/',{waitUntil:'networkidle'});
+          await page.waitForFunction(()=>window.CUDO_PWA&&window.CUDO_PWA.ready,{timeout:15000});
+          await page.evaluate(()=>window.CUDO_PWA.ready);
+          const state=await page.evaluate(async()=>{
+            const manifestLink=document.querySelector('link[rel="manifest"]')?.getAttribute('href');
+            const manifest=await fetch(manifestLink).then(r=>r.json());
+            const reg=await navigator.serviceWorker.ready;
+            return {manifestLink,scope:reg.scope,startUrl:manifest.start_url,display:manifest.display,error:window.CUDO_PWA.error};
+          });
+          console.log(JSON.stringify(state,null,2));
+          if(errors.length) throw new Error(`page errors: ${errors.join(' | ')}`);
+          if(state.error) throw new Error(state.error);
+          if(state.scope!=='http://127.0.0.1:4173/preview-v8/') throw new Error(`scope inválido ${state.scope}`);
+          if(state.startUrl!=='/preview-v8/'||state.display!=='standalone') throw new Error('manifest runtime inválido');
+          await browser.close();
+          NODE
+          node .cudo-pwa-check.mjs
+          rm -f .cudo-pwa-check.mjs
+
+      - name: Ejecutar journey movil automatico multi-browser
+        shell: bash
+        env:
+          CUDO_BASE_URL: http://127.0.0.1:4173/preview-v8/
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-mobile-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 20); do
+            if curl -fsS "$CUDO_BASE_URL" >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then cat /tmp/cudo-mobile-http.log; exit 1; fi
+          node preview-v8/tools/mobile_product_journey.mjs
+
+      - name: Guardar evidencia de certificacion movil
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-certification-${{ github.run_id }}
+          path: qa-mobile-certification/
+          if-no-files-found: warn
+          retention-days: 14

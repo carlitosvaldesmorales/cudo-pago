@@ -1,0 +1,111 @@
+{
+  "schema_version": "1.1",
+  "invariant": "NO_CAPABILITY_WITHOUT_AUTOMATED_CERTIFICATION",
+  "release_rule": "PREMERGE_AND_POSTDEPLOY_AUTOMATED_EVIDENCE_REQUIRED",
+  "human_test_policy": "NOT_A_NORMAL_RELEASE_GATE",
+  "certification_subject": "PULL_REQUEST_MERGE_RESULT",
+  "integration_target": "main",
+  "production_certification_subject": "DEPLOYED_CUDO_CL_RUNTIME",
+  "production_base_url": "https://cudo.cl/preview-v8/",
+  "description": "Cada capacidad activa de CUDO nace asociada a pruebas ejecutables y evidencia CI. Pre-merge se certifica el resultado integrable main + PR. Post-deploy se certifica el runtime real publicado en cudo.cl, incluyendo datos públicos y dependencias deportivas reales. Una capacidad sin ambas evidencias aplicables se considera incompleta.",
+  "automation_catalog": {
+    "PWA_SHELL_CONTRACT": {
+      "source": "local",
+      "runner": "node preview-v8/tools/validate_pwa_shell.mjs",
+      "workflow": ".github/workflows/validate-cudo-mobile-pwa.yml",
+      "evidence": "github_actions"
+    },
+    "MOBILE_WEBKIT_CHROMIUM_E2E": {
+      "source": "local",
+      "runner": "node preview-v8/tools/mobile_product_journey.mjs",
+      "workflow": ".github/workflows/validate-cudo-mobile-pwa.yml",
+      "evidence": "cudo-mobile-certification-${GITHUB_RUN_ID}"
+    },
+    "LIVE_PRODUCTION_E2E": {
+      "source": "local",
+      "runner": "node preview-v8/tools/mobile_product_journey.mjs",
+      "workflow": ".github/workflows/certify-cudo-mobile-production.yml",
+      "evidence": "cudo-mobile-production-${GITHUB_RUN_ID}"
+    },
+    "PUBLIC_CONTRACTS": {
+      "source": "qa-v8-google-data",
+      "runner": "python3 preview-v8/tools/validate_data.py",
+      "workflow": ".github/workflows/sync-qa-google-data.yml",
+      "evidence": "github_actions"
+    },
+    "GOOGLE_TO_V8_E2E": {
+      "source": "qa-v8-google-data",
+      "runner": "node preview-v8/tools/qa_google_render.mjs",
+      "workflow": ".github/workflows/sync-qa-google-data.yml",
+      "evidence": "github_actions"
+    },
+    "RESPONSIVE_MEDIA_E2E": {
+      "source": "qa-v8-google-data",
+      "runner": "node preview-v8/tools/visual_qa.mjs",
+      "workflow": ".github/workflows/sync-qa-google-data.yml",
+      "evidence": "cudo-v8-responsive-media-${GITHUB_RUN_ID}"
+    }
+  },
+  "capabilities": [
+    {
+      "id": "mobile_app_shell",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PWA_SHELL_CONTRACT", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "mobile_admin_entry",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "noticias",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "equipos_series",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "plantel_jugadores",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "partidos_resultados",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "tabla_posiciones",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "galeria",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    }
+  ],
+  "escalation_rule": {
+    "native_or_hardware_specific_feature": "REQUIRE_AUTOMATED_REAL_DEVICE_LANE_OR_CLASSIFY_NONBLOCKING_EDGE_EVIDENCE",
+    "forbidden_default": "ASK_CARLOS_TO_BE_THE_TEST_RUNNER"
+  }
+}
