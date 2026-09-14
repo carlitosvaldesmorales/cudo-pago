@@ -115,7 +115,17 @@ jobs:
 
       - name: Validar responsive y dimensiones de medios reales
         working-directory: source
-        run: node preview-v8/tools/visual_qa.mjs
+        shell: bash
+        run: |
+          set +e
+          node preview-v8/tools/visual_qa.mjs
+          rc=$?
+          if [ -f qa-v8-artifacts/qa-report.json ]; then
+            echo '--- QA responsive/media report ---'
+            cat qa-v8-artifacts/qa-report.json
+            echo '--- fin report ---'
+          fi
+          exit "$rc"
 
       - name: Guardar evidencia visual E2E
         if: always()
