@@ -74,6 +74,17 @@ jobs:
           python3 preview-v8/tools/validate_data.py
           python3 preview-v8/tools/validate_partidos_vertical.py
 
+      - name: Validar que la proyección pública no contenga referencias privadas
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -n -E 'storage\.tally\.so/private|accessToken=|signature=' preview-v8/data/*.json; then
+            echo '::error::La proyección pública contiene una referencia privada firmada'
+            exit 1
+          fi
+          echo 'Proyección pública sin referencias privadas firmadas: OK'
+
       - name: Validar adapter QA sin mock
         working-directory: source
         run: |
@@ -165,10 +176,12 @@ jobs:
           path: publish
           fetch-depth: 0
 
-      - name: Publicar snapshot QA validado
+      - name: Publicar snapshot QA y proyección segura de preview V8
         shell: bash
         run: |
           set -euo pipefail
+
+          # Snapshot QA completo: evidencia reproducible del build validado.
           rm -rf publish/qa-v8-google
           mkdir -p publish/qa-v8-google
           rsync -a --delete source/preview-v8/ publish/qa-v8-google/
@@ -182,6 +195,31 @@ jobs:
           }
           EOF
 
+          # preview-v8 mantiene la UI/product surface. Sus seis JSON públicos y los medios
+          # humanos derivados son una PROYECCIÓN GENERADA del mismo source validado, no otra autoridad.
+          mkdir -p publish/preview-v8/data publish/preview-v8/media
+          for module in noticias equipos plantel partidos tabla galeria; do
+            cp "source/preview-v8/data/${module}.json" "publish/preview-v8/data/${module}.json"
+          done
+          for media_module in noticias plantel galeria; do
+            rm -rf "publish/preview-v8/media/${media_module}"
+            if [ -d "source/preview-v8/media/${media_module}" ]; then
+              mkdir -p "publish/preview-v8/media/${media_module}"
+              rsync -a --delete "source/preview-v8/media/${media_module}/" "publish/preview-v8/media/${media_module}/"
+            fi
+          done
+
+          if grep -R -n -E 'storage\.tally\.so/private|accessToken=|signature=' \
+              publish/preview-v8/data/noticias.json \
+              publish/preview-v8/data/equipos.json \
+              publish/preview-v8/data/plantel.json \
+              publish/preview-v8/data/partidos.json \
+              publish/preview-v8/data/tabla.json \
+              publish/preview-v8/data/galeria.json; then
+            echo '::error::preview-v8 recibiría una referencia privada firmada'
+            exit 1
+          fi
+
       - name: Commit publicación main sólo si cambió
         working-directory: publish
         shell: bash
@@ -189,12 +227,21 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add qa-v8-google
+          git add qa-v8-google \
+            preview-v8/data/noticias.json \
+            preview-v8/data/equipos.json \
+            preview-v8/data/plantel.json \
+            preview-v8/data/partidos.json \
+            preview-v8/data/tabla.json \
+            preview-v8/data/galeria.json \
+            preview-v8/media/noticias \
+            preview-v8/media/plantel \
+            preview-v8/media/galeria
           if git diff --cached --quiet; then
-            echo 'Snapshot QA sin cambios; main no requiere commit.'
+            echo 'Snapshot QA y proyección preview-v8 sin cambios; main no requiere commit.'
             exit 0
           fi
-          git commit -m "QA publish E2E: ${GITHUB_RUN_ID}"
+          git commit -m "QA publish E2E + preview projection: ${GITHUB_RUN_ID}"
 
           for attempt in 1 2 3; do
             git fetch origin main
@@ -204,7 +251,7 @@ jobs:
               exit 1
             fi
             if git push origin HEAD:main; then
-              echo "Publicación QA integrada en main en intento ${attempt}."
+              echo "Publicación QA y proyección preview-v8 integradas en main en intento ${attempt}."
               exit 0
             fi
             echo "main avanzó durante publicación; reintentando (${attempt}/3)..."
