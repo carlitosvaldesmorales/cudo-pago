@@ -7,6 +7,9 @@
     "public_json": "preview-v8/data/plantel.json",
     "media_root": "preview-v8/media/plantel"
   },
+  "sync": {
+    "spreadsheet_id": "1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94"
+  },
   "public_contract": {
     "required": ["id", "nombre_deportivo", "numero", "posicion", "categoria"],
     "allowed": ["id", "nombre_deportivo", "numero", "posicion", "categoria", "foto_ref", "capitan"],

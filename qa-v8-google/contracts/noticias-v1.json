@@ -7,6 +7,10 @@
     "public_json": "preview-v8/data/noticias.json",
     "media_root": "preview-v8/media/noticias"
   },
+  "sync": {
+    "spreadsheet_id": "14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI",
+    "date_fields": ["fecha"]
+  },
   "public_contract": {
     "required": ["id", "fecha", "slug", "titulo", "resumen"],
     "allowed": ["id", "fecha", "slug", "titulo", "resumen", "cuerpo", "imagen_ref"],

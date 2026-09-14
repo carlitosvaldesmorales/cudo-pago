@@ -6,6 +6,9 @@
   "pipeline": {
     "public_json": "preview-v8/data/equipos.json"
   },
+  "sync": {
+    "spreadsheet_id": "1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI"
+  },
   "public_contract": {
     "required": ["id", "nombre", "categoria"],
     "allowed": ["id", "nombre", "categoria", "descripcion"],
