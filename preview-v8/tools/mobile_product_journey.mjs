@@ -3,6 +3,7 @@ import path from 'node:path';
 import { chromium, webkit, devices } from 'playwright';
 
 const baseUrl=process.env.CUDO_BASE_URL||'http://127.0.0.1:4173/preview-v8/';
+const liveMode=process.env.CUDO_LIVE_MODE==='1';
 const outDir=path.resolve('qa-mobile-certification');
 fs.mkdirSync(outDir,{recursive:true});
 
@@ -25,13 +26,14 @@ const profiles=[
 
 const report={
   ok:false,
+  mode:liveMode?'LIVE_PRODUCTION':'CONTROLLED_PREMERGE',
   base_url:baseUrl,
   generated_at:new Date().toISOString(),
   profiles:[],
   data_contract:{},
   controlled_external_dependencies:{
-    sports_event_bus:'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
-    service_worker:'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
+    sports_event_bus:liveMode?'LIVE_REAL_DEPENDENCY':'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
+    service_worker:liveMode?'LIVE_REAL_SERVICE_WORKER':'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
   },
   failures:[]
 };
@@ -39,7 +41,7 @@ const report={
 async function validatePublicData(request){
   for(const domain of publicData){
     const url=new URL(`data/${domain}.json`,baseUrl).href;
-    const response=await request.get(url,{timeout:15000});
+    const response=await request.get(url,{timeout:20000});
     if(!response.ok()) throw new Error(`${domain}: HTTP ${response.status()}`);
     const text=await response.text();
     for(const token of forbiddenPublicTokens){
@@ -52,6 +54,7 @@ async function validatePublicData(request){
 }
 
 function installControlledExternalRoutes(context){
+  if(liveMode) return Promise.resolve();
   const matches=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/matches(?:\?|$)/;
   const seriesResults=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/series-results(?:\?|$)/;
   return Promise.all([
@@ -84,7 +87,9 @@ function installControlledExternalRoutes(context){
 
 for(const p of profiles){
   const browser=await p.engine.launch({headless:true});
-  const context=await browser.newContext({...p.context,locale:'es-CL',timezoneId:'America/Santiago',serviceWorkers:'block'});
+  const contextOptions={...p.context,locale:'es-CL',timezoneId:'America/Santiago'};
+  if(!liveMode) contextOptions.serviceWorkers='block';
+  const context=await browser.newContext(contextOptions);
   await installControlledExternalRoutes(context);
   const page=await context.newPage();
   const result={name:p.name,pages:[],console_errors:[]};
@@ -93,9 +98,9 @@ for(const p of profiles){
   try{
     for(const relative of requiredPages){
       const url=new URL(relative,baseUrl).href;
-      const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
+      const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
       if(!response||!response.ok()) throw new Error(`${p.name} ${relative||'/'}: HTTP ${response?.status()}`);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(liveMode?800:300);
       const metrics=await page.evaluate(()=>({
         title:document.title,
         width:document.documentElement.scrollWidth,
@@ -111,8 +116,12 @@ for(const p of profiles){
         await page.screenshot({path:path.join(outDir,`${p.name}-home.png`),fullPage:true});
       }
       if(relative==='partidos/'){
-        const cards=await page.locator('.champ-match-card').count();
-        if(cards<1) throw new Error(`${p.name}: campeonato no renderizo partidos`);
+        try{
+          await page.locator('.champ-match-card').first().waitFor({state:'visible',timeout:liveMode?15000:5000});
+        }catch{
+          const cards=await page.locator('.champ-match-card').count();
+          if(cards<1) throw new Error(`${p.name}: campeonato no renderizo partidos`);
+        }
       }
       if(relative==='admin/'){
         const cards=page.locator('a.admincard');
