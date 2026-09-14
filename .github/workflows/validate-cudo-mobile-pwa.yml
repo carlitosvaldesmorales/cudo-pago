@@ -18,16 +18,16 @@ on:
       - '.github/workflows/validate-cudo-mobile-pwa.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   pwa-shell:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout resultado integrable main + PR
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
       - name: Checkout autoridad QA para certificacion cruzada
@@ -87,25 +87,6 @@ jobs:
           path: generated-pwa-icons/
           if-no-files-found: warn
           retention-days: 7
-
-      - name: Bootstrap versionado de iconos oficiales
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p preview-v8/icons
-          cp generated-pwa-icons/apple-touch-icon.png preview-v8/icons/apple-touch-icon.png
-          cp generated-pwa-icons/icon-192.png preview-v8/icons/icon-192.png
-          cp generated-pwa-icons/icon-512.png preview-v8/icons/icon-512.png
-          git add preview-v8/icons
-          if git diff --cached --quiet; then
-            echo 'Iconos PWA ya coinciden con el escudo oficial.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'CUDO App: generar iconos PWA desde escudo oficial'
-          git push origin HEAD:${GITHUB_HEAD_REF}
 
       - name: Verificar iconos versionados contra fuente oficial
         run: |
