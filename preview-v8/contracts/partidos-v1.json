@@ -15,6 +15,9 @@
       "PRIVACIDAD": "PUBLICO"
     }
   },
+  "sync": {
+    "spreadsheet_id": "1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI"
+  },
   "public_contract": {
     "required": ["id", "fecha", "local", "visita", "estado_partido"],
     "allowed": [

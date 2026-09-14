@@ -7,6 +7,10 @@
     "public_json": "preview-v8/data/galeria.json",
     "media_root": "preview-v8/media/galeria"
   },
+  "sync": {
+    "spreadsheet_id": "1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c",
+    "media_multi_fields": ["imagen_ref"]
+  },
   "public_contract": {
     "required": [
       "id",

@@ -6,6 +6,9 @@
   "pipeline": {
     "public_json": "preview-v8/data/tabla.json"
   },
+  "sync": {
+    "spreadsheet_id": "1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY"
+  },
   "public_contract": {
     "required": ["id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"],
     "allowed": ["id", "competencia", "categoria", "posicion", "equipo", "pj", "pg", "pe", "pp", "gf", "gc", "dg", "pts"],
