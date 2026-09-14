@@ -4,7 +4,16 @@
   "module": "tabla",
   "source": "CUDO_WEB_TABLA",
   "pipeline": {
-    "public_json": "preview-v8/data/tabla.json"
+    "form_spec_sheet": "FORM_SPEC",
+    "raw_sheet": "RAW_FORM_TABLA",
+    "control_sheet": "CONTROL",
+    "public_sheet": "PUBLICO_EXPORT",
+    "public_json": "preview-v8/data/tabla.json",
+    "publication_gate": {
+      "ESTADO_REGISTRO": "PUBLICADO",
+      "PUBLICAR": "SI",
+      "PRIVACIDAD": "PUBLICO"
+    }
   },
   "sync": {
     "spreadsheet_id": "1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY"
@@ -39,5 +48,31 @@
         "message": "DG debe ser igual a GF-GC"
       }
     ]
-  }
+  },
+  "renderer": {
+    "page": "preview-v8/partidos/index.html",
+    "function": "cudoRenderCollection",
+    "type": "tabla"
+  },
+  "derived_fields": [
+    {"public": "id", "control": "ID_TABLA", "transform": "generated_from_submission_timestamp_and_row"},
+    {"public": "dg", "control": "DG", "transform": "GF-GC"}
+  ],
+  "form_mapping": [
+    {"order": 1, "question": "Competencia", "raw": "COMPETENCIA", "required": true, "public": "competencia"},
+    {"order": 2, "question": "Serie o categoría", "raw": "CATEGORIA", "required": true, "public": "categoria"},
+    {"order": 3, "question": "Posición en la tabla", "raw": "POSICION", "required": true, "public": "posicion"},
+    {"order": 4, "question": "Nombre del equipo", "raw": "EQUIPO", "required": true, "public": "equipo"},
+    {"order": 5, "question": "Partidos jugados (PJ)", "raw": "PJ", "required": true, "public": "pj"},
+    {"order": 6, "question": "Partidos ganados (PG)", "raw": "PG", "required": true, "public": "pg"},
+    {"order": 7, "question": "Partidos empatados (PE)", "raw": "PE", "required": true, "public": "pe"},
+    {"order": 8, "question": "Partidos perdidos (PP)", "raw": "PP", "required": true, "public": "pp"},
+    {"order": 9, "question": "Goles a favor (GF)", "raw": "GF", "required": true, "public": "gf"},
+    {"order": 10, "question": "Goles en contra (GC)", "raw": "GC", "required": true, "public": "gc"},
+    {"order": 11, "question": "Jornada o fecha hasta la que está actualizada la tabla", "raw": "JORNADA_ACTUALIZACION", "required": false, "public": false},
+    {"order": 12, "question": "Puntos (PTS)", "raw": "PTS", "required": true, "public": "pts"},
+    {"order": 13, "question": "Fuente oficial de la tabla", "raw": "FUENTE", "required": true, "public": false},
+    {"order": 14, "question": "Nombre de quien registra la información", "raw": "RESPONSABLE", "required": true, "public": false},
+    {"order": 15, "question": "Nota para revisión", "raw": "OBSERVACIONES", "required": false, "public": false}
+  ]
 }
