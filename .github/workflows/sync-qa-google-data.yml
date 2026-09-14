@@ -78,6 +78,7 @@ jobs:
           node --check preview-v8/shared/data-source.js
           node --check preview-v8/shared/page-ux.js
           node --check preview-v8/tools/qa_google_render.mjs
+          node --check preview-v8/tools/visual_qa.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
           node --check preview-v8/tools/normalize_public_ids.mjs
           python3 - <<'PY'
@@ -111,6 +112,19 @@ jobs:
       - name: Validar render E2E Google a V8
         working-directory: source
         run: node preview-v8/tools/qa_google_render.mjs
+
+      - name: Validar responsive y dimensiones de medios reales
+        working-directory: source
+        run: node preview-v8/tools/visual_qa.mjs
+
+      - name: Guardar evidencia visual E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-v8-responsive-media-${{ github.run_id }}
+          path: source/qa-v8-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Commit datos y medios QA sólo si cambiaron
         working-directory: source
