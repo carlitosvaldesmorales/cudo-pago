@@ -4,8 +4,18 @@
   "module": "galeria",
   "source": "CUDO_WEB_GALERIA",
   "pipeline": {
+    "form_spec_sheet": "FORM_SPEC",
+    "raw_sheet": "RAW_FORM_GALERIA",
+    "control_sheet": "CONTROL",
+    "public_sheet": "PUBLICO_EXPORT",
     "public_json": "preview-v8/data/galeria.json",
-    "media_root": "preview-v8/media/galeria"
+    "media_root": "preview-v8/media/galeria",
+    "publication_gate": {
+      "ESTADO_REGISTRO": "PUBLICADO",
+      "PUBLICAR": "SI",
+      "PRIVACIDAD": "PUBLICO",
+      "AUTORIZACION_PUBLICACION": "AUTORIZADO"
+    }
   },
   "sync": {
     "spreadsheet_id": "1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c",
@@ -44,5 +54,24 @@
         "message": "album_id debe usar minúsculas, números y guiones"
       }
     }
-  }
+  },
+  "renderer": {
+    "page": "preview-v8/galeria/index.html",
+    "function": "cudoRenderCollection",
+    "type": "galeria"
+  },
+  "form_mapping": [
+    {"order": 1, "question": "Nombre corto del álbum", "raw": "ALBUM_ID", "required": true, "public": "album_id"},
+    {"order": 2, "question": "Nombre del partido o actividad", "raw": "ALBUM", "required": true, "public": "album"},
+    {"order": 3, "question": "Fecha del partido o actividad", "raw": "FECHA", "required": true, "public": "fecha"},
+    {"order": 4, "question": "Serie o tipo de actividad", "raw": "CATEGORIA", "required": true, "public": "categoria"},
+    {"order": 5, "question": "Título de la fotografía", "raw": "TITULO", "required": true, "public": "titulo"},
+    {"order": 6, "question": "Descripción", "raw": "DESCRIPCION", "required": false, "public": "descripcion"},
+    {"order": 7, "question": "Fotografía", "raw": "IMAGEN_REF", "required": true, "public": "imagen_ref"},
+    {"order": 8, "question": "Descripción accesible de la fotografía", "raw": "ALT", "required": true, "public": "alt"},
+    {"order": 9, "question": "¿Aparecen menores de edad?", "raw": "CONTIENE_MENORES", "required": true, "public": false},
+    {"order": 10, "question": "¿De dónde provienen estas fotografías?", "raw": "FUENTE", "required": true, "public": false},
+    {"order": 11, "question": "Nombre de quien registra las fotografías", "raw": "RESPONSABLE", "required": true, "public": false},
+    {"order": 12, "question": "Nota especial para revisión", "raw": "OBSERVACIONES", "required": false, "public": false}
+  ]
 }
