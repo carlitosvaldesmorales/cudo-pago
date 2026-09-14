@@ -111,11 +111,15 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-pwa-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
           for i in $(seq 1 20); do
-            curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null && break
+            if curl -fsS http://127.0.0.1:4173/preview-v8/ >/dev/null; then ready=1; break; fi
             sleep 1
           done
-          cat > /tmp/cudo-pwa-check.mjs <<'NODE'
+          if [ "$ready" -ne 1 ]; then cat /tmp/cudo-pwa-http.log; exit 1; fi
+          cat > .cudo-pwa-check.mjs <<'NODE'
           import { chromium } from 'playwright';
           const browser=await chromium.launch({headless:true});
           const page=await browser.newPage({viewport:{width:390,height:844}});
@@ -137,4 +141,5 @@ jobs:
           if(state.startUrl!=='/preview-v8/'||state.display!=='standalone') throw new Error('manifest runtime inválido');
           await browser.close();
           NODE
-          node /tmp/cudo-pwa-check.mjs
+          node .cudo-pwa-check.mjs
+          rm -f .cudo-pwa-check.mjs
