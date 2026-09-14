@@ -54,6 +54,10 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Instalar adaptador HEIC móvil
+        working-directory: source
+        run: npm install --no-save heic-convert@2.1.0 heic-decode@2.1.0 libheif-js@1.19.8 jpeg-js@0.4.4 pngjs@6.0.0
+
       - name: Validar autoridad única del pipeline QA
         working-directory: source
         run: python3 preview-v8/tools/validate_qa_pipeline.py
@@ -61,7 +65,7 @@ jobs:
       - name: Sincronizar PUBLICO_EXPORT y materializar medios seguros
         working-directory: source
         run: |
-          node preview-v8/tools/sync_google_publico.mjs
+          node preview-v8/tools/sync_google_publico_with_heic.mjs
           node preview-v8/tools/normalize_public_ids.mjs
 
       - name: Validar contratos públicos y renderer Partidos
@@ -79,6 +83,8 @@ jobs:
           node --check preview-v8/shared/page-ux.js
           node --check preview-v8/tools/qa_google_render.mjs
           node --check preview-v8/tools/visual_qa.mjs
+          node --check preview-v8/tools/heic_media.mjs
+          node --check preview-v8/tools/sync_google_publico_with_heic.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
           node --check preview-v8/tools/normalize_public_ids.mjs
           python3 - <<'PY'

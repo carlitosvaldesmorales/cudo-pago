@@ -12,7 +12,10 @@ on:
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/shared/page-ux.js'
+      - 'preview-v8/tools/heic_media.mjs'
+      - 'preview-v8/tools/sync_google_publico_with_heic.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'preview-v8/tools/validate_heic_ingest.mjs'
       - 'preview-v8/tools/normalize_public_ids.mjs'
       - 'preview-v8/tools/validate_data.py'
       - 'preview-v8/tools/validate_partidos_vertical.py'
@@ -33,7 +36,10 @@ on:
       - 'preview-v8/shared/data-source.js'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/shared/page-ux.js'
+      - 'preview-v8/tools/heic_media.mjs'
+      - 'preview-v8/tools/sync_google_publico_with_heic.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'preview-v8/tools/validate_heic_ingest.mjs'
       - 'preview-v8/tools/normalize_public_ids.mjs'
       - 'preview-v8/tools/validate_data.py'
       - 'preview-v8/tools/validate_partidos_vertical.py'
@@ -53,6 +59,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Instalar adaptador HEIC móvil
+        run: npm install --no-save heic-convert@2.1.0 heic-decode@2.1.0 libheif-js@1.19.8 jpeg-js@0.4.4 pngjs@6.0.0
+      - name: Validar HEIC real a JPEG web
+        run: node preview-v8/tools/validate_heic_ingest.mjs
       - name: Validar autoridad única del pipeline QA
         run: python3 preview-v8/tools/validate_qa_pipeline.py
       - name: Validar contratos públicos JSON
@@ -68,7 +82,10 @@ jobs:
           node --check preview-v8/shared/seed-data.js
           node --check preview-v8/shared/data-source.js
           node --check preview-v8/shared/page-ux.js
+          node --check preview-v8/tools/heic_media.mjs
+          node --check preview-v8/tools/sync_google_publico_with_heic.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
+          node --check preview-v8/tools/validate_heic_ingest.mjs
           node --check preview-v8/tools/normalize_public_ids.mjs
           node --check preview-v8/tools/visual_qa.mjs
       - name: Garantizar separación QA/PROD y ausencia de mock
