@@ -1,0 +1,57 @@
+name: CUDO Forms - capacidad OAuth readonly
+
+on:
+  push:
+    branches:
+      - diagnose/google-forms-authority-v1
+    paths:
+      - '.github/workflows/google-forms-capability-readonly.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-capability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - name: Revisar scopes y estado de Forms API sin cambios
+        shell: bash
+        run: |
+          set -euo pipefail
+          token_json=$(curl -fsS -X POST 'https://oauth2.googleapis.com/token' \
+            --data-urlencode "client_id=${CUDO_GOOGLE_OAUTH_CLIENT_ID}" \
+            --data-urlencode "client_secret=${CUDO_GOOGLE_OAUTH_CLIENT_SECRET}" \
+            --data-urlencode "refresh_token=${CUDO_GOOGLE_REFRESH_TOKEN}" \
+            --data-urlencode 'grant_type=refresh_token')
+          access_token=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("access_token", ""))' <<<"$token_json")
+          [ -n "$access_token" ] || { echo '::error::Sin access token'; exit 1; }
+
+          tokeninfo=$(curl -fsS "https://oauth2.googleapis.com/tokeninfo?access_token=${access_token}")
+          python3 - <<'PY' <<<"$tokeninfo"
+          PY
+          python3 -c 'import json,sys; d=json.load(sys.stdin); print("OAUTH_SCOPES=" + d.get("scope", ""))' <<<"$tokeninfo"
+
+          out=/tmp/service.json
+          http=$(curl -sS -o "$out" -w '%{http_code}' \
+            -H "Authorization: Bearer ${access_token}" \
+            'https://serviceusage.googleapis.com/v1/projects/257090036200/services/forms.googleapis.com')
+          python3 - "$http" "$out" <<'PY'
+          import json, sys
+          http, path = sys.argv[1:]
+          try:
+              data = json.load(open(path, encoding='utf-8'))
+          except Exception:
+              data = {}
+          if http == '200':
+              print(f'SERVICE_USAGE_HTTP={http} STATE={data.get("state", "UNKNOWN")}')
+          else:
+              err = data.get('error', {})
+              msg = str(err.get('message', '')).replace('\n',' ')[:240]
+              print(f'SERVICE_USAGE_HTTP={http} STATUS={err.get("status", "UNKNOWN")} MESSAGE={msg!r}')
+          PY
