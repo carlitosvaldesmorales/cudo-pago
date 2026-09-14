@@ -1,0 +1,86 @@
+name: CUDO Forms - diagnostico autoridad readonly
+
+on:
+  push:
+    branches:
+      - diagnose/google-forms-authority-v1
+    paths:
+      - '.github/workflows/google-forms-authority-readonly.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-google-forms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - name: Consultar Forms API sin modificar formularios
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in CUDO_GOOGLE_OAUTH_CLIENT_ID CUDO_GOOGLE_OAUTH_CLIENT_SECRET CUDO_GOOGLE_REFRESH_TOKEN; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::$v no configurado"
+              exit 1
+            fi
+          done
+
+          token_json=$(curl -fsS -X POST 'https://oauth2.googleapis.com/token' \
+            --data-urlencode "client_id=${CUDO_GOOGLE_OAUTH_CLIENT_ID}" \
+            --data-urlencode "client_secret=${CUDO_GOOGLE_OAUTH_CLIENT_SECRET}" \
+            --data-urlencode "refresh_token=${CUDO_GOOGLE_REFRESH_TOKEN}" \
+            --data-urlencode 'grant_type=refresh_token')
+          access_token=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("access_token", ""))' <<<"$token_json")
+          if [ -z "$access_token" ]; then
+            echo '::error::No fue posible obtener access token'
+            exit 1
+          fi
+
+          forms=(
+            'noticias:1RK41ZiLdz70cHsunuNQCCapbcnNiUuS9aBYmIFBJooo'
+            'plantel:1i45naKu51brEjNd8OexpzXDtcTllraGy72FAZq8i4us'
+            'galeria:1wG13NunQT5ed3n5CHu7vEEq9b5r7UHOGdgEV2BipwbA'
+            'equipos:1Ila0fWY-bAq5Biuzn5Hp1_CdcDiiLXex91x62zKCUkk'
+            'partidos:1ZujRoboJGqqkKQJBwJeD1UNMiIYnDzstSWL24n_TtCA'
+            'tabla:1teEHaQ1xRGJX3Y0sFsF7Y_j67usO-wssXgzCqpPYfUc'
+          )
+
+          failure=0
+          for entry in "${forms[@]}"; do
+            name=${entry%%:*}
+            id=${entry#*:}
+            out="/tmp/form-${name}.json"
+            http=$(curl -sS -o "$out" -w '%{http_code}' \
+              -H "Authorization: Bearer ${access_token}" \
+              "https://forms.googleapis.com/v1/forms/${id}")
+            python3 - "$name" "$http" "$out" <<'PY'
+          import json, sys
+          name, http, path = sys.argv[1:]
+          try:
+              data = json.load(open(path, encoding='utf-8'))
+          except Exception:
+              data = {}
+          if http == '200':
+              title = str(data.get('info', {}).get('title', '')).replace('\n', ' ')[:120]
+              responder = bool(data.get('responderUri'))
+              linked = bool(data.get('linkedSheetId'))
+              print(f'FORM={name} HTTP={http} TITLE={title!r} RESPONDER_URI={responder} LINKED_SHEET={linked}')
+          else:
+              status = data.get('error', {}).get('status', 'UNKNOWN')
+              message = str(data.get('error', {}).get('message', '')).replace('\n', ' ')[:180]
+              print(f'FORM={name} HTTP={http} ERROR_STATUS={status} MESSAGE={message!r}')
+          PY
+            if [ "$http" != '200' ]; then failure=1; fi
+          done
+
+          if [ "$failure" -ne 0 ]; then
+            echo '::error::Forms API no pudo leer uno o más formularios con la credencial actual'
+            exit 2
+          fi
+          echo 'FORMS_API_READONLY=PASS'
