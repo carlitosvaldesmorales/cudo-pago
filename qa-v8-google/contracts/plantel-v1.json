@@ -4,8 +4,18 @@
   "module": "plantel",
   "source": "CUDO_WEB_PLANTEL",
   "pipeline": {
+    "form_spec_sheet": "FORM_SPEC",
+    "raw_sheet": "RAW_FORM_PLANTEL",
+    "control_sheet": "PLANTEL_CONTROL",
+    "public_sheet": "PUBLICO_EXPORT",
     "public_json": "preview-v8/data/plantel.json",
-    "media_root": "preview-v8/media/plantel"
+    "media_root": "preview-v8/media/plantel",
+    "publication_gate": {
+      "ESTADO": "PUBLICADO",
+      "PUBLICAR": "SI",
+      "PRIVACIDAD": "PUBLICO",
+      "AUTORIZACION_PUBLICACION": "AUTORIZADO"
+    }
   },
   "sync": {
     "spreadsheet_id": "1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94"
@@ -27,5 +37,20 @@
       }
     },
     "boolean_fields": ["capitan"]
-  }
+  },
+  "renderer": {
+    "page": "preview-v8/equipos/index.html",
+    "function": "cudoRenderCollection",
+    "type": "plantel"
+  },
+  "form_mapping": [
+    {"order": 1, "question": "Nombre deportivo público", "raw": "NOMBRE_DEPORTIVO_PUBLICO", "required": true, "public": "nombre_deportivo"},
+    {"order": 2, "question": "Número de camiseta", "raw": "NUMERO", "required": false, "public": "numero"},
+    {"order": 3, "question": "Posición", "raw": "POSICION", "required": true, "public": "posicion"},
+    {"order": 4, "question": "Serie o categoría", "raw": "CATEGORIA", "required": true, "public": "categoria"},
+    {"order": 5, "question": "Fotografía del jugador", "raw": "FOTO_REF", "required": false, "public": "foto_ref"},
+    {"order": 6, "question": "¿Es capitán de la serie?", "raw": "CAPITAN", "required": true, "public": "capitan"},
+    {"order": 7, "question": "Confirmación para publicar la fotografía", "raw": "FUENTE", "required": true, "public": false},
+    {"order": 8, "question": "Nota para revisión", "raw": "OBSERVACIONES_VALIDACION", "required": false, "public": false}
+  ]
 }

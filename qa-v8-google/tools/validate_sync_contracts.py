@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Valida sin credenciales la configuración sync de los contratos CUDO V8."""
+"""Valida sin credenciales la configuración sync y el mapeo humano de los contratos CUDO V8."""
 
 from __future__ import annotations
 
@@ -35,6 +35,72 @@ def string_list(value: object, where: str) -> list[str]:
     if len(set(value)) != len(value):
         fail(f"{where} contiene valores duplicados")
     return list(value)
+
+
+def validate_form_mapping(filename: str, contract: dict, allowed: list[str]) -> None:
+    mapping = contract.get("form_mapping")
+    if not isinstance(mapping, list) or not mapping:
+        fail(f"{filename}: form_mapping ausente o vacío")
+
+    orders: list[int] = []
+    raws: list[str] = []
+    for index, item in enumerate(mapping, start=1):
+        where = f"{filename}: form_mapping[{index}]"
+        if not isinstance(item, dict):
+            fail(f"{where} debe ser objeto")
+        order = item.get("order")
+        question = item.get("question")
+        raw = item.get("raw")
+        required = item.get("required")
+        public_field = item.get("public")
+
+        if not isinstance(order, int) or isinstance(order, bool) or order < 1:
+            fail(f"{where}.order inválido")
+        if not nonblank(question):
+            fail(f"{where}.question inválido")
+        if not nonblank(raw):
+            fail(f"{where}.raw inválido")
+        if not isinstance(required, bool):
+            fail(f"{where}.required debe ser booleano")
+        if public_field is not False and not nonblank(public_field):
+            fail(f"{where}.public debe ser false o texto no vacío")
+        if isinstance(public_field, str) and public_field not in allowed:
+            fail(f"{where}.public referencia campo no permitido: {public_field}")
+
+        orders.append(order)
+        raws.append(raw.strip())
+
+    if len(set(orders)) != len(orders):
+        fail(f"{filename}: form_mapping contiene order duplicado")
+    if orders != sorted(orders):
+        fail(f"{filename}: form_mapping debe estar ordenado por order")
+    if len(set(raws)) != len(raws):
+        fail(f"{filename}: form_mapping contiene raw duplicado")
+
+
+def validate_derived_fields(filename: str, contract: dict, allowed: list[str]) -> None:
+    derived = contract.get("derived_fields", [])
+    if derived is None:
+        derived = []
+    if not isinstance(derived, list):
+        fail(f"{filename}: derived_fields debe ser lista")
+    seen: set[str] = set()
+    for index, item in enumerate(derived, start=1):
+        where = f"{filename}: derived_fields[{index}]"
+        if not isinstance(item, dict):
+            fail(f"{where} debe ser objeto")
+        public_field = item.get("public")
+        control = item.get("control")
+        transform = item.get("transform")
+        if not nonblank(public_field) or public_field not in allowed:
+            fail(f"{where}.public inválido o fuera de allowed")
+        if not nonblank(control):
+            fail(f"{where}.control inválido")
+        if not nonblank(transform):
+            fail(f"{where}.transform inválido")
+        if public_field in seen:
+            fail(f"{filename}: derived_fields repite {public_field}")
+        seen.add(public_field)
 
 
 def validate_contract(filename: str) -> tuple[str, str]:
@@ -98,11 +164,20 @@ def validate_contract(filename: str) -> tuple[str, str]:
     pipeline = contract.get("pipeline", {})
     if not isinstance(pipeline, dict):
         fail(f"{filename}: pipeline inválido")
-    public_sheet = pipeline.get("public_sheet")
-    if public_sheet is not None and not nonblank(public_sheet):
-        fail(f"{filename}: pipeline.public_sheet inválido")
+    for key in ("form_spec_sheet", "raw_sheet", "control_sheet", "public_sheet", "public_json"):
+        if not nonblank(pipeline.get(key)):
+            fail(f"{filename}: pipeline.{key} inválido o ausente")
+    publication_gate = pipeline.get("publication_gate")
+    if not isinstance(publication_gate, dict) or not publication_gate:
+        fail(f"{filename}: pipeline.publication_gate inválido o ausente")
+    for key, value in publication_gate.items():
+        if not nonblank(key) or not nonblank(value):
+            fail(f"{filename}: pipeline.publication_gate contiene clave/valor inválido")
 
-    print(f"OK  {filename}: module={module} sync estático válido")
+    validate_form_mapping(filename, contract, allowed)
+    validate_derived_fields(filename, contract, allowed)
+
+    print(f"OK  {filename}: module={module} sync+mapeo estático válido")
     return module, spreadsheet_id.strip()
 
 
@@ -123,7 +198,7 @@ def main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    print("OK  CUDO V8: configuración sync pre-merge válida")
+    print("OK  CUDO V8: configuración sync+mapeo pre-merge válida")
     return 0
 
 
