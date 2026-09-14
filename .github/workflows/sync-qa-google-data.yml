@@ -64,8 +64,26 @@ jobs:
 
       - name: Sincronizar PUBLICO_EXPORT y materializar medios seguros
         working-directory: source
+        shell: bash
         run: |
-          node preview-v8/tools/sync_google_publico_with_heic.mjs
+          set -euo pipefail
+          synced=0
+          for attempt in 1 2 3; do
+            echo "Sync Google attempt ${attempt}/3"
+            if node preview-v8/tools/sync_google_publico_with_heic.mjs; then
+              synced=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              delay=$((attempt * 10))
+              echo "Sync Google falló; reintentando en ${delay}s..."
+              sleep "$delay"
+            fi
+          done
+          if [ "$synced" -ne 1 ]; then
+            echo '::error::Sync Google falló tras 3 intentos'
+            exit 1
+          fi
           node preview-v8/tools/normalize_public_ids.mjs
 
       - name: Validar contratos públicos y renderer Partidos
