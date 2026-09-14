@@ -30,7 +30,8 @@ const report={
   profiles:[],
   data_contract:{},
   controlled_external_dependencies:{
-    sports_event_bus:'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS'
+    sports_event_bus:'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
+    service_worker:'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
   },
   failures:[]
 };
@@ -51,13 +52,15 @@ async function validatePublicData(request){
 }
 
 function installControlledExternalRoutes(context){
+  const matches=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/matches(?:\?|$)/;
+  const seriesResults=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/series-results(?:\?|$)/;
   return Promise.all([
-    context.route(`${sportsApi}/api/v1/matches**`,route=>route.fulfill({
+    context.route(matches,route=>route.fulfill({
       status:200,
       contentType:'application/json',
       body:JSON.stringify({ok:true,matches:fixture.matches||[],byes:fixture.byes||[]})
     })),
-    context.route(`${sportsApi}/api/v1/series-results**`,route=>route.fulfill({
+    context.route(seriesResults,route=>route.fulfill({
       status:200,
       contentType:'application/json',
       body:JSON.stringify({ok:true,results:series.results||[]})
@@ -81,7 +84,7 @@ function installControlledExternalRoutes(context){
 
 for(const p of profiles){
   const browser=await p.engine.launch({headless:true});
-  const context=await browser.newContext({...p.context,locale:'es-CL',timezoneId:'America/Santiago'});
+  const context=await browser.newContext({...p.context,locale:'es-CL',timezoneId:'America/Santiago',serviceWorkers:'block'});
   await installControlledExternalRoutes(context);
   const page=await context.newPage();
   const result={name:p.name,pages:[],console_errors:[]};
