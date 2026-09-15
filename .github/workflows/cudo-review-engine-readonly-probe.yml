@@ -1,0 +1,37 @@
+name: CUDO Review Engine Readonly Probe
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-review-engine-readonly-probe.yml'
+      - 'qa-v8-google/tools/probe_review_engine_readonly.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis
+        run: node --check qa-v8-google/tools/probe_review_engine_readonly.mjs
+      - name: Probar acceso real Google en modo sólo lectura
+        run: node qa-v8-google/tools/probe_review_engine_readonly.mjs
+      - name: Publicar evidencia sin contenido privado
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-review-readonly-probe-${{ github.run_id }}
+          path: qa-review-probe/read-only-report.json
+          if-no-files-found: warn
+          retention-days: 14
