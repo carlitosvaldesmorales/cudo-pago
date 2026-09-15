@@ -40,6 +40,15 @@ async function spreadsheetMetadata(accessToken,spreadsheetId){
   return d;
 }
 
+function nonSensitiveRevisionSamples(revision){
+  if(!revision.length) return [];
+  const headers=revision[0].map(v=>String(v||'').trim());
+  const excluded=new Set(['ID','REVISOR','FECHA_REVISION','OBSERVACIONES']);
+  return revision.slice(1,4).map(row=>Object.fromEntries(headers
+    .map((h,i)=>[h,String(row[i]??'').trim()])
+    .filter(([h])=>h&&!excluded.has(h))));
+}
+
 const accessToken=await token();
 const audit=await readValues(accessToken,REVIEW_SHEET_ID,'AUDITORIA_REVISION!A:P');
 if(!audit.length) throw new Error('AUDITORIA_REVISION sin encabezados');
@@ -85,6 +94,7 @@ for(const [key,module] of Object.entries(MODULES)){
     has_revision:hasRevision,
     revision_rows:Math.max(0,revision.length-1),
     revision_headers:revision[0]?.map(v=>String(v||'').trim()).filter(Boolean)||[],
+    revision_state_samples:nonSensitiveRevisionSamples(revision),
     public_export_rows:Math.max(0,values.length-1),
     public_export_headers:values[0]?.map(v=>String(v||'').trim()).filter(Boolean)||[]
   };
