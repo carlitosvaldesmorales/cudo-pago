@@ -1,0 +1,84 @@
+const CUDO_REVIEW_EVENT_BRIDGE = Object.freeze({
+  spreadsheetId: '1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms',
+  handlerFunction: 'cudoReviewOnFormSubmit',
+  tokenProperty: 'CUDO_GITHUB_ACTIONS_TOKEN',
+  dispatchUrl: 'https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/actions/workflows/cudo-review-engine.yml/dispatches',
+});
+
+function cudoReviewOnFormSubmit(e) {
+  if (!e || !e.range || !e.range.getSheet) {
+    throw new Error('CUDO Review bridge: evento de formulario inválido');
+  }
+
+  const sheet = e.range.getSheet();
+  const spreadsheet = sheet.getParent();
+  if (!spreadsheet || spreadsheet.getId() !== CUDO_REVIEW_EVENT_BRIDGE.spreadsheetId) {
+    return { ok: true, ignored: true, reason: 'OTHER_SPREADSHEET' };
+  }
+
+  const token = PropertiesService.getScriptProperties().getProperty(CUDO_REVIEW_EVENT_BRIDGE.tokenProperty);
+  if (!token) {
+    throw new Error('CUDO Review bridge: falta Script Property CUDO_GITHUB_ACTIONS_TOKEN');
+  }
+
+  const response = UrlFetchApp.fetch(CUDO_REVIEW_EVENT_BRIDGE.dispatchUrl, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: 'Bearer ' + token,
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    payload: JSON.stringify({
+      ref: 'main',
+      inputs: { apply_changes: 'true' },
+    }),
+    muteHttpExceptions: true,
+  });
+
+  const code = response.getResponseCode();
+  if (code !== 200 && code !== 204) {
+    throw new Error('CUDO Review bridge: GitHub dispatch HTTP ' + code + ' ' + response.getContentText().slice(0, 300));
+  }
+
+  return { ok: true, ignored: false, github_status: code };
+}
+
+function installCudoReviewEventBridge() {
+  const token = PropertiesService.getScriptProperties().getProperty(CUDO_REVIEW_EVENT_BRIDGE.tokenProperty);
+  if (!token) {
+    throw new Error('CUDO Review bridge: configura CUDO_GITHUB_ACTIONS_TOKEN antes de instalar el trigger');
+  }
+
+  const existing = ScriptApp.getProjectTriggers().filter(function(trigger) {
+    return trigger.getHandlerFunction() === CUDO_REVIEW_EVENT_BRIDGE.handlerFunction;
+  });
+  existing.forEach(function(trigger) {
+    ScriptApp.deleteTrigger(trigger);
+  });
+
+  const trigger = ScriptApp.newTrigger(CUDO_REVIEW_EVENT_BRIDGE.handlerFunction)
+    .forSpreadsheet(CUDO_REVIEW_EVENT_BRIDGE.spreadsheetId)
+    .onFormSubmit()
+    .create();
+
+  return {
+    ok: true,
+    deleted_previous: existing.length,
+    trigger_id: trigger.getUniqueId(),
+  };
+}
+
+function cudoReviewEventBridgeStatus() {
+  const properties = PropertiesService.getScriptProperties();
+  const triggerCount = ScriptApp.getProjectTriggers().filter(function(trigger) {
+    return trigger.getHandlerFunction() === CUDO_REVIEW_EVENT_BRIDGE.handlerFunction;
+  }).length;
+  return {
+    ok: true,
+    token_configured: Boolean(properties.getProperty(CUDO_REVIEW_EVENT_BRIDGE.tokenProperty)),
+    trigger_count: triggerCount,
+    spreadsheet_id: CUDO_REVIEW_EVENT_BRIDGE.spreadsheetId,
+    dispatch_url: CUDO_REVIEW_EVENT_BRIDGE.dispatchUrl,
+  };
+}
