@@ -7,12 +7,12 @@ for(const [name,value] of Object.entries({CLIENT_ID,CLIENT_SECRET,REFRESH_TOKEN}
 
 const REVIEW_SHEET_ID='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms';
 const MODULES={
-  NOTICIA:{spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',sheet:'PUBLICO_EXPORT'},
-  EQUIPO:{spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',sheet:'PUBLICO_EXPORT'},
-  PLANTEL:{spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',sheet:'PUBLICO_EXPORT'},
-  PARTIDO:{spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',sheet:'PUBLICO_EXPORT'},
-  TABLA:{spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',sheet:'PUBLICO_EXPORT'},
-  GALERIA:{spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',sheet:'PUBLICO_EXPORT'}
+  NOTICIA:{spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',sheet:'PUBLICO_EXPORT',controlSheets:['NOTICIAS']},
+  EQUIPO:{spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',sheet:'PUBLICO_EXPORT',controlSheets:['CONTROL']},
+  PLANTEL:{spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',sheet:'PUBLICO_EXPORT',controlSheets:['PLANTEL_CONTROL']},
+  PARTIDO:{spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',sheet:'PUBLICO_EXPORT',controlSheets:['CONTROL']},
+  TABLA:{spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',sheet:'PUBLICO_EXPORT',controlSheets:['CONTROL']},
+  GALERIA:{spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',sheet:'PUBLICO_EXPORT',controlSheets:['CONTROL']}
 };
 
 async function token(){
@@ -49,6 +49,18 @@ function nonSensitiveRevisionSamples(revision){
     .filter(([h])=>h&&!excluded.has(h))));
 }
 
+async function nonSensitiveStage(accessToken,spreadsheetId,title){
+  const [headerRows,columnA]=await Promise.all([
+    readValues(accessToken,spreadsheetId,`'${title.replaceAll("'","''")}'!1:1`),
+    readValues(accessToken,spreadsheetId,`'${title.replaceAll("'","''")}'!A:A`)
+  ]);
+  return {
+    sheet:title,
+    rows:Math.max(0,columnA.length-1),
+    headers:(headerRows[0]||[]).map(v=>String(v||'').trim()).filter(Boolean)
+  };
+}
+
 const accessToken=await token();
 const audit=await readValues(accessToken,REVIEW_SHEET_ID,'AUDITORIA_REVISION!A:P');
 if(!audit.length) throw new Error('AUDITORIA_REVISION sin encabezados');
@@ -82,15 +94,22 @@ for(const [key,module] of Object.entries(MODULES)){
   const values=await readValues(accessToken,module.spreadsheetId,`${module.sheet}!A:Z`);
   const hasRevision=sheetTitles.includes('REVISION');
   const revision=hasRevision?await readValues(accessToken,module.spreadsheetId,'REVISION!A:H'):[];
-  const hasControl=sheetTitles.includes('CONTROL');
-  const controlHeader=hasControl?await readValues(accessToken,module.spreadsheetId,'CONTROL!A1:Z2'):[];
   const rawSheets=sheetTitles.filter(title=>/^RAW_FORM_/i.test(title));
+  const providerCaptureSheets=sheetTitles.filter(title=>/^Respuestas de formulario/i.test(title)||/^TALLY_/i.test(title)||/^Subir fotos/i.test(title));
+  const controlSheets=module.controlSheets.filter(title=>sheetTitles.includes(title));
+  const stages={provider_capture:[],raw:[],control:[],revision:[],public_export:[]};
+  for(const title of providerCaptureSheets) stages.provider_capture.push(await nonSensitiveStage(accessToken,module.spreadsheetId,title));
+  for(const title of rawSheets) stages.raw.push(await nonSensitiveStage(accessToken,module.spreadsheetId,title));
+  for(const title of controlSheets) stages.control.push(await nonSensitiveStage(accessToken,module.spreadsheetId,title));
+  if(hasRevision) stages.revision.push(await nonSensitiveStage(accessToken,module.spreadsheetId,'REVISION'));
+  stages.public_export.push(await nonSensitiveStage(accessToken,module.spreadsheetId,module.sheet));
+
   modules[key]={
     spreadsheet_title:metadata.properties?.title||null,
     sheet_titles:sheetTitles,
+    stages,
     raw_form_sheets:rawSheets,
-    has_control:hasControl,
-    control_headers:controlHeader[0]?.map(v=>String(v||'').trim()).filter(Boolean)||[],
+    control_sheets:controlSheets,
     has_revision:hasRevision,
     revision_rows:Math.max(0,revision.length-1),
     revision_headers:revision[0]?.map(v=>String(v||'').trim()).filter(Boolean)||[],
@@ -103,6 +122,7 @@ for(const [key,module] of Object.entries(MODULES)){
 const report={
   ok:true,
   mode:'READ_ONLY_NO_EXTERNAL_WRITES',
+  privacy:'HEADERS_AND_ROW_COUNTS_ONLY_FOR_CAPTURE_RAW_CONTROL_STAGES',
   timestamp:new Date().toISOString(),
   review_sheet:{
     headers,
