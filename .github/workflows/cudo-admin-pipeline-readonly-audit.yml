@@ -7,6 +7,7 @@ on:
       - 'qa-v8-google/tools/admin_pipeline_readonly_audit.mjs'
       - 'qa-v8-google/tools/apps_script_formapp_source_probe.mjs'
       - 'qa-v8-google/tools/execute_existing_form_audit.mjs'
+      - 'qa-v8-google/apps-script/CudoAdminReadonlyAudit.gs'
       - 'qa-v8-google/contracts/**'
       - 'preview-v8/admin/**'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
@@ -42,6 +43,56 @@ jobs:
       - name: Execute existing Apps Script FormAudit read-only
         run: node qa-v8-google/tools/execute_existing_form_audit.mjs
 
+      - name: Execute temporary FormApp destination audit and restore Apps Script source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qa-admin-audit
+          python3 - <<'PY'
+          import json, os, pathlib, urllib.parse, urllib.request
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          helper=pathlib.Path('qa-v8-google/apps-script/CudoAdminReadonlyAudit.gs').read_text()
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r:
+            access=json.load(r)['access_token']
+          content_url=f'https://script.googleapis.com/v1/projects/{sid}/content'
+          def call_content(method='GET',payload=None):
+            req=urllib.request.Request(content_url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(req) as r:
+              raw=r.read(); return json.loads(raw) if raw else {}
+          current=call_content()
+          original=[{'name':f['name'],'type':f['type'],'source':f.get('source','')} for f in current.get('files',[])]
+          if any(f['name']=='CudoAdminReadonlyAudit' for f in original):
+            raise SystemExit('Temporary helper unexpectedly already present before audit')
+          modified=original+[{'name':'CudoAdminReadonlyAudit','type':'SERVER_JS','source':helper}]
+          try:
+            call_content('PUT',{'files':modified})
+            run_req=urllib.request.Request(
+              f'https://script.googleapis.com/v1/scripts/{sid}:run',
+              data=json.dumps({'function':'cudoAdminReadonlyAudit','devMode':True}).encode(),
+              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
+              method='POST')
+            with urllib.request.urlopen(run_req) as r:
+              execution=json.load(r)
+            if execution.get('error'):
+              raise RuntimeError(json.dumps(execution['error']))
+            result=((execution.get('response') or {}).get('result') or {})
+            pathlib.Path('qa-admin-audit/formapp-destination-audit.json').write_text(json.dumps({'ok':True,'mode':'TEMPORARY_READONLY_FORMAPP_AUDIT','result':result},indent=2)+'\n')
+            print(json.dumps({'ok':True,'mode':'TEMPORARY_READONLY_FORMAPP_AUDIT','result':result},indent=2))
+          finally:
+            call_content('PUT',{'files':original})
+            verify=call_content()
+            names=[f.get('name') for f in verify.get('files',[])]
+            if 'CudoAdminReadonlyAudit' in names:
+              raise RuntimeError('Temporary helper was not removed')
+            print(json.dumps({'apps_script_source_restored':True,'file_count':len(names)},indent=2))
+          PY
+
       - name: Audit eight live Administration entry points read-only
         run: node qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
 
@@ -71,6 +122,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cudo-admin-pipeline-readonly-${{ github.run_id }}
-          path: qa-admin-audit/admin-pipeline-readonly-report.json
+          path: qa-admin-audit/*.json
           if-no-files-found: warn
           retention-days: 14
