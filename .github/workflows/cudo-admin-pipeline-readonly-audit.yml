@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/cudo-admin-pipeline-readonly-audit.yml'
       - 'qa-v8-google/tools/admin_pipeline_readonly_audit.mjs'
+      - 'qa-v8-google/tools/apps_script_formapp_source_probe.mjs'
       - 'qa-v8-google/contracts/**'
       - 'preview-v8/admin/**'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
@@ -29,7 +30,12 @@ jobs:
           node-version: '20'
 
       - name: Validate audit syntax
-        run: node --check qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
+        run: |
+          node --check qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
+          node --check qa-v8-google/tools/apps_script_formapp_source_probe.mjs
+
+      - name: Probe existing Apps Script FormApp capabilities read-only
+        run: node qa-v8-google/tools/apps_script_formapp_source_probe.mjs
 
       - name: Audit eight live Administration entry points read-only
         run: node qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
