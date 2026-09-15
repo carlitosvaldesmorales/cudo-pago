@@ -19,6 +19,9 @@ jobs:
     env:
       CUDO_BASE_URL: https://cudo.cl/preview-v8/
       CUDO_LIVE_MODE: '1'
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
     steps:
       - name: Checkout release source
         uses: actions/checkout@v4
@@ -29,8 +32,10 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate live journey syntax
-        run: node --check preview-v8/tools/mobile_product_journey.mjs
+      - name: Validate certification syntax
+        run: |
+          node --check preview-v8/tools/mobile_product_journey.mjs
+          node --check preview-v8/tools/probe_google_forms_responder_acl.mjs
 
       - name: Wait for production deployment convergence
         shell: bash
@@ -90,6 +95,9 @@ jobs:
           console.log('Sports Event Bus real OK');
           NODE
 
+      - name: Certify Google Forms responder ACL read-only
+        run: node preview-v8/tools/probe_google_forms_responder_acl.mjs
+
       - name: Install mobile browsers
         run: |
           npm install --no-save playwright@1.55.0
@@ -105,6 +113,9 @@ jobs:
           mkdir -p qa-mobile-production
           if [ -d qa-mobile-certification ]; then
             cp -R qa-mobile-certification qa-mobile-production/mobile-certification
+          fi
+          if [ -d qa-google-forms-acl ]; then
+            cp -R qa-google-forms-acl qa-mobile-production/google-forms-acl
           fi
           printf 'release_sha=%s\nrun_id=%s\nbase_url=%s\nmode=LIVE_PRODUCTION\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$CUDO_BASE_URL" > qa-mobile-production/CERTIFICATE.txt
 
