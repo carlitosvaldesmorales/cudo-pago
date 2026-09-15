@@ -13,10 +13,15 @@ async function token(){
 
 function functions(src){return [...src.matchAll(/function\s+([A-Za-z0-9_$]+)\s*\(/g)].map(m=>m[1]);}
 function calls(src){
-  const names=['FormApp.openById','FormApp.getActiveForm','FormApp.create','setDestination','getDestinationId','getPublishedUrl','getEditUrl','getItems','getTitle','SpreadsheetApp.openById','ScriptApp.newTrigger'];
+  const names=['FormApp.openById','FormApp.getActiveForm','FormApp.create','setDestination','getDestinationId','getPublishedUrl','getEditUrl','getItems','getTitle','getCollectEmail','getLimitOneResponsePerUser','requiresLogin','SpreadsheetApp.openById','ScriptApp.newTrigger'];
   return names.filter(n=>src.includes(n));
 }
 function ids(src){return [...new Set([...src.matchAll(/["'`]([A-Za-z0-9_-]{30,})["'`]/g)].map(m=>m[1]).filter(v=>v.length>=35&&v.length<=80))];}
+function setters(src){return [...new Set([...src.matchAll(/\.((?:set|add)[A-Z][A-Za-z0-9_]*)\s*\(/g)].map(m=>m[1]))].sort();}
+function accessSignals(src){
+  const needles=['setCollectEmail','setLimitOneResponsePerUser','setRequireLogin','requiresLogin','setAcceptingResponses','setDestination'];
+  return Object.fromEntries(needles.map(n=>[n,src.includes(n)]));
+}
 
 const access=await token();
 const r=await fetch(`https://script.googleapis.com/v1/projects/${SCRIPT_ID}/content`,{headers:{Authorization:`Bearer ${access}`}});
@@ -25,6 +30,8 @@ const selected=(d.files||[]).filter(f=>['FormAudit','SafeProvision','Maintenance
   name:f.name,
   functions:functions(f.source||''),
   relevant_calls:calls(f.source||''),
+  setter_calls:setters(f.source||''),
+  access_signals:accessSignals(f.source||''),
   literal_ids:ids(f.source||'')
 }));
 console.log(JSON.stringify({ok:true,mode:'READONLY_APPS_SCRIPT_CAPABILITY_PROBE',selected},null,2));
