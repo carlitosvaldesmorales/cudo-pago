@@ -1,0 +1,62 @@
+name: CUDO Admin Pipeline Readonly Audit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-admin-pipeline-readonly-audit.yml'
+      - 'qa-v8-google/tools/admin_pipeline_readonly_audit.mjs'
+      - 'qa-v8-google/contracts/**'
+      - 'preview-v8/admin/**'
+      - 'qa-v8-google/tools/process_review_decisions.mjs'
+      - 'preview-v8/tools/sync_google_publico.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate audit syntax
+        run: node --check qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
+
+      - name: Audit eight live Administration entry points read-only
+        run: node qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
+
+      - name: Re-run real Google PUBLICO_EXPORT sync only in runner workspace
+        run: node preview-v8/tools/sync_google_publico.mjs
+
+      - name: Validate public V8 contracts after live sync
+        run: python3 preview-v8/tools/validate_data.py preview-v8/data
+
+      - name: Require zero tracked or untracked drift in public data/media
+        shell: bash
+        run: |
+          set -euo pipefail
+          STATUS="$(git status --porcelain --untracked-files=all -- preview-v8/data preview-v8/media)"
+          if [ -n "$STATUS" ]; then
+            echo "$STATUS"
+            echo 'Live Google PUBLICO_EXPORT is not aligned with versioned V8 output.' >&2
+            exit 1
+          fi
+          echo 'V8 public data/media aligned with live Google output.'
+
+      - name: Upload sanitized read-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-admin-pipeline-readonly-${{ github.run_id }}
+          path: qa-admin-audit/admin-pipeline-readonly-report.json
+          if-no-files-found: warn
+          retention-days: 14
