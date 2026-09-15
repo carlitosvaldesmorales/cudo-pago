@@ -2,8 +2,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const REVIEW_SHEET_ID='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms';
+const STANDARD_REVISION_HEADERS=['ID','ESTADO','PUBLICAR','PRIVACIDAD','AUTORIZACION','REVISOR','FECHA_REVISION','OBSERVACIONES'];
 export const MODULES={
-  NOTICIA:{spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',revisionSheet:'REVISION'}
+  NOTICIA:{spreadsheetId:'14ZCRIuCBtZQ_obcXzxYY3FKDScSMZG1v7UZ0954nwJI',revisionSheet:'REVISION',revisionHeaders:STANDARD_REVISION_HEADERS},
+  EQUIPO:{spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',revisionSheet:'REVISION',revisionHeaders:STANDARD_REVISION_HEADERS},
+  PLANTEL:{spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',revisionSheet:'REVISION',revisionHeaders:STANDARD_REVISION_HEADERS},
+  PARTIDO:{spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',revisionSheet:'REVISION',revisionHeaders:STANDARD_REVISION_HEADERS},
+  TABLA:{spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',revisionSheet:'REVISION',revisionHeaders:STANDARD_REVISION_HEADERS},
+  GALERIA:{spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',revisionSheet:'REVISION',supported:false,blockReason:'CONTRATO_AUTORIZACION_MENORES_REQUIERE_ADAPTADOR'}
 };
 
 export function transition(decision){
@@ -13,10 +19,35 @@ export function transition(decision){
   return null;
 }
 
+function normalize(value){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
+}
+
+export function resolveContentType(value){
+  const type=normalize(value);
+  if(!type) return null;
+  if(MODULES[type]) return type;
+  if(type.includes('NOTICIA')) return 'NOTICIA';
+  if(type.includes('EQUIPO')||type.includes('SERIE')) return 'EQUIPO';
+  if(type.includes('PLANTEL')||type.includes('JUGADOR')) return 'PLANTEL';
+  if(type.includes('PARTIDO')||type.includes('RESULTADO')) return 'PARTIDO';
+  if(type.includes('TABLA')) return 'TABLA';
+  if(type.includes('GALERIA')||type.includes('FOTO')) return 'GALERIA';
+  return null;
+}
+
+function assertRevisionContract(revisions,mod,moduleKey){
+  if(!revisions.length) throw new Error(`${moduleKey}: REVISION sin encabezados`);
+  const actual=revisions[0].map(v=>String(v||'').trim()).slice(0,mod.revisionHeaders.length);
+  if(JSON.stringify(actual)!==JSON.stringify(mod.revisionHeaders)){
+    throw new Error(`${moduleKey}: contrato REVISION inesperado: ${actual.join('|')}`);
+  }
+}
+
 export async function processReviewDecisions({readValues,updateValues,appendValues,now=()=>new Date().toISOString(),modules=MODULES,reviewSheetId=REVIEW_SHEET_ID,expectedPending=null}){
   const audit=await readValues(reviewSheetId,'AUDITORIA_REVISION!A:P');
   if(!audit.length) throw new Error('AUDITORIA_REVISION sin encabezados');
-  const headers=audit[0];
+  const headers=audit[0].map(v=>String(v||'').trim());
   const idx=Object.fromEntries(headers.map((h,i)=>[h,i]));
   const required=['ID_REVISION','FECHA','TIPO_CONTENIDO','IDENTIFICADOR_HUMANO','DECISION','OBSERVACIONES','REVISOR','ESTADO_PROCESO'];
   for(const h of required) if(idx[h]===undefined) throw new Error(`Falta columna ${h} en AUDITORIA_REVISION`);
@@ -36,16 +67,29 @@ export async function processReviewDecisions({readValues,updateValues,appendValu
   for(let i=1;i<audit.length;i++){
     const row=audit[i];
     const id=String(row[idx.IDENTIFICADOR_HUMANO]||'').trim();
-    const type=String(row[idx.TIPO_CONTENIDO]||'').trim();
+    const rawType=String(row[idx.TIPO_CONTENIDO]||'').trim();
     const decision=String(row[idx.DECISION]||'').trim();
     const processState=String(row[idx.ESTADO_PROCESO]||'').trim();
-    if(!id||!type||!decision||processState) continue;
-    const mod=modules[type];
-    if(!mod){summary.push({row:i+1,id,type,decision,status:'IGNORADO_TIPO_NO_IMPLEMENTADO'});continue;}
+    if(!id||!rawType||!decision||processState) continue;
+
+    const moduleKey=resolveContentType(rawType);
+    const mod=moduleKey?modules[moduleKey]:null;
+    if(!mod){
+      summary.push({row:i+1,id,type:rawType,module:null,decision,status:'IGNORADO_TIPO_NO_IMPLEMENTADO'});
+      continue;
+    }
+    if(mod.supported===false){
+      summary.push({row:i+1,id,type:rawType,module:moduleKey,decision,status:`BLOQUEADO_${mod.blockReason}`});
+      continue;
+    }
     const next=transition(decision);
-    if(!next){summary.push({row:i+1,id,type,decision,status:'IGNORADO_DECISION_NO_IMPLEMENTADA'});continue;}
+    if(!next){
+      summary.push({row:i+1,id,type:rawType,module:moduleKey,decision,status:'IGNORADO_DECISION_NO_IMPLEMENTADA'});
+      continue;
+    }
 
     const revisions=await readValues(mod.spreadsheetId,`${mod.revisionSheet}!A:H`);
+    assertRevisionContract(revisions,mod,moduleKey);
     const existingIndex=revisions.findIndex((r,n)=>n>0&&String(r[0]||'').trim()===id);
     const timestamp=now();
     const revRow=[id,...next,String(row[idx.REVISOR]||'').trim(),timestamp,String(row[idx.OBSERVACIONES]||'').trim()];
@@ -54,7 +98,7 @@ export async function processReviewDecisions({readValues,updateValues,appendValu
 
     const auditRow=i+1;
     await updateValues(reviewSheetId,`AUDITORIA_REVISION!J${auditRow}:O${auditRow}`,[['APLICADO',id,1,`${decision} aplicado`,timestamp,'']]);
-    summary.push({row:auditRow,id,type,decision,status:'APLICADO'});
+    summary.push({row:auditRow,id,type:rawType,module:moduleKey,decision,status:'APLICADO'});
   }
   return {ok:true,pending:pendingRows.length,summary};
 }
