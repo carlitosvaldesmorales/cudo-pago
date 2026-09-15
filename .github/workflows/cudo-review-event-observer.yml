@@ -1,0 +1,72 @@
+name: CUDO Review Event Observer
+
+on:
+  workflow_run:
+    workflows: ['CUDO Review Engine']
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  certify-real-form-event:
+    if: >-
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(github.event.workflow_run.display_title, 'apps_script_form_submit')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+      SOURCE_CREATED_AT: ${{ github.event.workflow_run.created_at }}
+      SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      SOURCE_TITLE: ${{ github.event.workflow_run.display_title }}
+      CUDO_REVIEW_RUN_LOG: /tmp/review-run.log
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Refresh main before materializing certification
+        run: git pull --ff-only origin main
+
+      - name: Download completed Review Engine logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/logs" \
+            -o /tmp/review-run-logs.zip
+          unzip -p /tmp/review-run-logs.zip > "$CUDO_REVIEW_RUN_LOG"
+
+      - name: Require real form event and materialize event-driven PASS
+        run: node qa-v8-google/tools/review_event_observer.mjs
+
+      - name: Validate resulting scheduler and evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "cron: '17 9 * * *'" .github/workflows/cudo-review-engine.yml
+          test -s evidence/review-event-bridge/event-driven-latest.json
+          test -s evidence/review-event-bridge/event-driven-latest.md
+          git diff --check
+
+      - name: Commit certification and low-frequency reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add evidence/review-event-bridge .github/workflows/cudo-review-engine.yml
+          if git diff --cached --quiet; then
+            echo 'Certification already materialized.'
+            exit 0
+          fi
+          git config user.name 'cudo-review-event-observer'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'CUDO: certificar evento real y reducir polling a reconciliación diaria'
+          git push origin HEAD:main

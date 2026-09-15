@@ -1,4 +1,5 @@
 name: CUDO Review Engine
+run-name: CUDO Review Engine · ${{ github.event_name }} · ${{ inputs.source || 'n/a' }}
 
 on:
   push:
@@ -8,10 +9,13 @@ on:
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
+      - 'qa-v8-google/tools/review_event_observer.mjs'
+      - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
+      - '.github/workflows/cudo-review-event-observer.yml'
   pull_request:
     branches: [main]
     paths:
@@ -20,10 +24,13 @@ on:
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
+      - 'qa-v8-google/tools/review_event_observer.mjs'
+      - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
+      - '.github/workflows/cudo-review-event-observer.yml'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -33,6 +40,11 @@ on:
         required: true
         default: false
         type: boolean
+      source:
+        description: 'Origen del dispatch: manual, apps_script_form_submit o agent_ping'
+        required: false
+        default: 'manual'
+        type: string
 
 permissions:
   contents: write
@@ -57,6 +69,8 @@ jobs:
           node --check qa-v8-google/tools/ingest_review_form_responses.mjs
           node --check qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
           node --check qa-v8-google/tools/review_event_bridge_fixture_harness.mjs
+          node --check qa-v8-google/tools/review_event_observer.mjs
+          node --check qa-v8-google/tools/review_event_observer_fixture_harness.mjs
           node --check qa-v8-google/tools/process_review_decisions.mjs
           node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
@@ -64,6 +78,8 @@ jobs:
         run: node qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
       - name: Probar bridge Apps Script -> workflow_dispatch de forma sintética
         run: node qa-v8-google/tools/review_event_bridge_fixture_harness.mjs
+      - name: Probar observador de evento real y retiro seguro de polling
+        run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
       - name: Probar AUDITORIA -> revisión/corrección con fixture sintético
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
 
@@ -78,6 +94,7 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
       CUDO_REVIEW_INGEST_APPLY: 'true'
+      CUDO_REVIEW_TRIGGER_SOURCE: ${{ inputs.source || github.event_name }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +102,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Registrar origen operacional
+        run: echo "CUDO_REVIEW_TRIGGER_SOURCE=$CUDO_REVIEW_TRIGGER_SOURCE"
       - name: Ingerir respuestas nuevas del formulario al ledger
         run: node qa-v8-google/tools/ingest_review_form_responses.mjs
       - name: Procesar decisiones CUDO Review
