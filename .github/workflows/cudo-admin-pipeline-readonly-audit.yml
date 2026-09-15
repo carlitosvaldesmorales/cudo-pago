@@ -34,6 +34,9 @@ jobs:
       - name: Audit eight live Administration entry points read-only
         run: node qa-v8-google/tools/admin_pipeline_readonly_audit.mjs
 
+      - name: Print sanitized read-only report
+        run: cat qa-admin-audit/admin-pipeline-readonly-report.json
+
       - name: Re-run real Google PUBLICO_EXPORT sync only in runner workspace
         run: node preview-v8/tools/sync_google_publico.mjs
 
@@ -60,5 +63,3 @@ jobs:
           path: qa-admin-audit/admin-pipeline-readonly-report.json
           if-no-files-found: warn
           retention-days: 14
-
-# second push intentionally executes the registered workflow
