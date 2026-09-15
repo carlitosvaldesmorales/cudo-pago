@@ -1,0 +1,37 @@
+name: CUDO Equipos Formula Gap Diagnostic
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-equipos-formula-gap.yml'
+      - 'qa-v8-google/tools/diagnose_equipos_formula_gap.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis
+        run: node --check qa-v8-google/tools/diagnose_equipos_formula_gap.mjs
+      - name: Diagnosticar propagación Equipos sin escrituras
+        run: node qa-v8-google/tools/diagnose_equipos_formula_gap.mjs
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-equipos-formula-gap-${{ github.run_id }}
+          path: qa-equipos-diagnostic/equipos-formula-gap.json
+          if-no-files-found: warn
+          retention-days: 14
