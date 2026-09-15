@@ -1,0 +1,38 @@
+name: CUDO Google Form Capture E2E QA
+
+on:
+  push:
+    paths:
+      - '.github/workflows/certify-google-form-capture-e2e.yml'
+      - 'qa-v8-google/tools/certify_google_form_capture_e2e.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CUDO_CAPTURE_QA_APPLY: 'false'
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis
+        run: node --check qa-v8-google/tools/certify_google_form_capture_e2e.mjs
+      - name: Ejecutar harness de captura QA
+        run: node qa-v8-google/tools/certify_google_form_capture_e2e.mjs
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-google-form-capture-e2e-${{ github.run_id }}
+          path: qa-capture-e2e/capture-e2e-report.json
+          if-no-files-found: warn
+          retention-days: 14
