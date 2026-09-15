@@ -53,8 +53,25 @@ for(const [file,prefix] of [['index.html',''],['admin/index.html','../']]){
   if(!html.includes(`src="${pwaSrc}"`)) fail(`${file}: sin pwa.js`);
 }
 
+const publicViews=['club/index.html','noticias/index.html','partidos/index.html','equipos/index.html','galeria/index.html'];
+for(const file of publicViews){
+  const html=text(file);
+  if(!html.includes('src="../shared/site.js"')) fail(`${file}: sin site.js transversal`);
+}
+
+const site=text('shared/site.js');
+if(!site.includes("document.write('<script src=\"'+base+'pwa.js\"")) fail('site.js no carga la capa PWA transversal');
+
 const pwa=text('shared/pwa.js');
+if(!pwa.includes("version:'2.0'")) fail('pwa.js no declara shell móvil v2');
 if(!pwa.includes("register('/preview-v8/sw.js',{scope:state.scope})")) fail('registro SW fuera del scope canónico');
+if(!pwa.includes("beforeinstallprompt")) fail('pwa.js sin flujo de instalación explícito');
+if(!pwa.includes("'(display-mode: standalone)'")) fail('pwa.js sin detección standalone');
+if(!pwa.includes("data-cudo-pwa-shell")) fail('pwa.js sin shell visible de app');
+if(!pwa.includes("href('admin/')")) fail('pwa.js sin acceso móvil a Administración');
+if(!pwa.includes("href('partidos/')")) fail('pwa.js sin acceso móvil a Partidos');
+if(!pwa.includes("INSTALAR")) fail('pwa.js sin CTA de instalación');
+
 const sw=text('sw.js');
 if(!sw.includes("const SCOPE='/preview-v8/'")) fail('SW sin scope canónico');
 if(!sw.includes("url.pathname.startsWith(`${SCOPE}data/`)")) fail('SW no excluye data/ del cache');
@@ -64,9 +81,12 @@ if(precache.includes('data/')) fail('PRECACHE no puede incluir datos públicos')
 
 console.log(JSON.stringify({
   ok:true,
-  mode:'CUDO_MOBILE_PWA',
+  mode:'CUDO_MOBILE_PWA_APP_SHELL_V2',
   scope:manifest.scope,
   start_url:manifest.start_url,
+  public_views_with_app_layer:publicViews,
+  install_ux:'EXPLICIT',
+  standalone_navigation:['Inicio','Partidos','Noticias','Administrar'],
   icons:[...requiredIcons.values(),'180x180 apple-touch-icon'],
   data_cache_policy:'ONLINE_FIRST_NO_PUBLIC_DATA_PRECACHE'
 },null,2));
