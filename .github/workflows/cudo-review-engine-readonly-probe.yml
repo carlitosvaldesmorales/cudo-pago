@@ -5,13 +5,14 @@ on:
     paths:
       - '.github/workflows/cudo-review-engine-readonly-probe.yml'
       - 'qa-v8-google/tools/probe_review_engine_readonly.mjs'
+      - 'qa-v8-google/tools/probe_formula_topology_readonly.mjs'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  probe:
+  review-probe:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -23,15 +24,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Validar sintaxis
+      - name: Validar sintaxis review probe
         run: node --check qa-v8-google/tools/probe_review_engine_readonly.mjs
       - name: Probar acceso real Google en modo sólo lectura
         run: node qa-v8-google/tools/probe_review_engine_readonly.mjs
-      - name: Publicar evidencia sin contenido privado
+      - name: Publicar evidencia review sin contenido privado
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cudo-review-readonly-probe-${{ github.run_id }}
           path: qa-review-probe/read-only-report.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  formula-topology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis formula topology
+        run: node --check qa-v8-google/tools/probe_formula_topology_readonly.mjs
+      - name: Probar topología de fórmulas Google en modo sólo lectura
+        run: node qa-v8-google/tools/probe_formula_topology_readonly.mjs
+      - name: Publicar evidencia de topología sin valores de negocio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-formula-topology-${{ github.run_id }}
+          path: qa-formula-topology/formula-topology.json
           if-no-files-found: warn
           retention-days: 14
