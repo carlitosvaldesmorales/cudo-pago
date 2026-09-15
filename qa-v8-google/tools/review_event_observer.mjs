@@ -7,16 +7,21 @@ export const FAST_CRON="    - cron: '*/5 * * * *'";
 export const DAILY_CRON="    - cron: '17 9 * * *'";
 
 export function inspectReviewRunLog(text){
-  const sources=[...String(text).matchAll(/CUDO_REVIEW_TRIGGER_SOURCE=([^\s]+)/g)].map(m=>m[1]);
-  const counts=[...String(text).matchAll(/"new_count":\s*([0-9]+)/g)].map(m=>Number(m[1]));
+  const raw=String(text);
+  const sources=[...raw.matchAll(/CUDO_REVIEW_TRIGGER_SOURCE=([^\s]+)/g)].map(m=>m[1]);
+  const counts=[...raw.matchAll(/"new_count":\s*([0-9]+)/g)].map(m=>Number(m[1]));
   const newCount=counts.length?Math.max(...counts):0;
+  const appliedCount=[...raw.matchAll(/"status":\s*"APLICADO"/g)].length;
   if(!sources.includes(REAL_EVENT_SOURCE)){
-    return {ok:false,reason:'NOT_REAL_FORM_EVENT',sources,new_count:newCount};
+    return {ok:false,reason:'NOT_REAL_FORM_EVENT',sources,new_count:newCount,applied_count:appliedCount};
   }
   if(newCount<1){
-    return {ok:false,reason:'NO_NEW_FORM_RESPONSE',sources,new_count:newCount};
+    return {ok:false,reason:'NO_NEW_FORM_RESPONSE',sources,new_count:newCount,applied_count:appliedCount};
   }
-  return {ok:true,source:REAL_EVENT_SOURCE,new_count:newCount};
+  if(appliedCount<1){
+    return {ok:false,reason:'NO_APPLIED_REVIEW_DECISION',sources,new_count:newCount,applied_count:appliedCount};
+  }
+  return {ok:true,source:REAL_EVENT_SOURCE,new_count:newCount,applied_count:appliedCount};
 }
 
 export function reducePollingToDaily(workflowText){
@@ -28,16 +33,17 @@ export function reducePollingToDaily(workflowText){
   throw new Error('Unexpected scheduler contract; refusing automatic change');
 }
 
-export function buildEvidence({runId,headSha,createdAt,title,newCount}){
+export function buildEvidence({runId,headSha,createdAt,title,newCount,appliedCount}){
   return {
     ok:true,
-    classification:'PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_REVIEW_ENGINE',
+    classification:'PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_APPLIED_REVIEW_DECISION',
     source:REAL_EVENT_SOURCE,
     review_engine_run_id:Number(runId),
     review_engine_head_sha:String(headSha||''),
     review_engine_created_at:String(createdAt||''),
     review_engine_display_title:String(title||''),
     new_count:Number(newCount),
+    applied_count:Number(appliedCount),
     result:'SUCCESS',
     safety_net_transition:'5_MINUTE_POLLING_TO_DAILY_RECONCILIATION',
   };
@@ -47,7 +53,7 @@ export function materializeCertification({logText,workflowText,metadata,evidence
   const inspection=inspectReviewRunLog(logText);
   if(!inspection.ok) throw new Error(`${inspection.reason}: keep polling safety net`);
   const schedule=reducePollingToDaily(workflowText);
-  const evidence=buildEvidence({...metadata,newCount:inspection.new_count});
+  const evidence=buildEvidence({...metadata,newCount:inspection.new_count,appliedCount:inspection.applied_count});
   fs.mkdirSync(evidenceDir,{recursive:true});
   fs.writeFileSync(path.join(evidenceDir,'event-driven-latest.json'),JSON.stringify(evidence,null,2)+'\n');
   fs.writeFileSync(path.join(evidenceDir,'event-driven-latest.md'),[
@@ -55,7 +61,8 @@ export function materializeCertification({logText,workflowText,metadata,evidence
     `run_id: ${evidence.review_engine_run_id}`,
     `source: ${evidence.source}`,
     `new_count: ${evidence.new_count}`,
-    'result: PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_REVIEW_ENGINE',
+    `applied_count: ${evidence.applied_count}`,
+    'result: PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_APPLIED_REVIEW_DECISION',
     'scheduler_after_pass: daily_reconciliation',''
   ].join('\n'));
   return {inspection,schedule,evidence};
@@ -79,5 +86,5 @@ if(isMain){
     evidenceDir,
   });
   fs.writeFileSync(workflowPath,result.schedule.text);
-  console.log(JSON.stringify({ok:true,source:result.inspection.source,new_count:result.inspection.new_count,schedule_changed:result.schedule.changed},null,2));
+  console.log(JSON.stringify({ok:true,source:result.inspection.source,new_count:result.inspection.new_count,applied_count:result.inspection.applied_count,schedule_changed:result.schedule.changed},null,2));
 }
