@@ -1,0 +1,41 @@
+name: CUDO Mobile Admin Entrypoints Live Verify
+
+on:
+  push:
+    branches:
+      - fix/mobile-google-form-responder-access
+    paths:
+      - 'preview-v8/tools/mobile_product_journey.mjs'
+      - '.github/workflows/cudo-mobile-admin-entrypoints-live-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-admin-entrypoints:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CUDO_BASE_URL: https://cudo.cl/preview-v8/
+      CUDO_LIVE_MODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate journey syntax
+        run: node --check preview-v8/tools/mobile_product_journey.mjs
+      - name: Install mobile browsers
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+      - name: Verify production admin entrypoints without submitting forms
+        run: node preview-v8/tools/mobile_product_journey.mjs
+      - name: Upload live evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-admin-entrypoints-${{ github.run_id }}
+          path: qa-mobile-certification/
+          if-no-files-found: error
+          retention-days: 30
