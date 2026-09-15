@@ -15,6 +15,7 @@ function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadshe
     Object,
     Boolean,
     Error,
+    String,
     PropertiesService:{
       getScriptProperties:()=>({getProperty:key=>key==='CUDO_GITHUB_ACTIONS_TOKEN'?token:null})
     },
@@ -42,12 +43,15 @@ function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadshe
   return {api:context.__bridgeExports,event,fetchCalls,deleted,getCreated:()=>created};
 }
 
-function assertDispatch(fetchCalls){
+function assertDispatch(fetchCalls,expectedSource){
   assert.equal(fetchCalls.length,1);
   assert.equal(fetchCalls[0].url,'https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/actions/workflows/cudo-review-engine.yml/dispatches');
   assert.equal(fetchCalls[0].options.method,'post');
   assert.equal(fetchCalls[0].options.headers.Authorization,'Bearer token-qa');
-  assert.deepEqual(JSON.parse(fetchCalls[0].options.payload),{ref:'main',inputs:{apply_changes:'true'}});
+  assert.deepEqual(JSON.parse(fetchCalls[0].options.payload),{
+    ref:'main',
+    inputs:{apply_changes:'true',source:expectedSource}
+  });
 }
 
 {
@@ -55,7 +59,8 @@ function assertDispatch(fetchCalls){
   const result=api.cudoReviewOnFormSubmit(event);
   assert.equal(result.ok,true);
   assert.equal(result.ignored,false);
-  assertDispatch(fetchCalls);
+  assert.equal(result.source,'apps_script_form_submit');
+  assertDispatch(fetchCalls,'apps_script_form_submit');
 }
 
 {
@@ -63,7 +68,8 @@ function assertDispatch(fetchCalls){
   const result=api.cudoReviewEventBridgePing();
   assert.equal(result.ok,true);
   assert.equal(result.github_status,204);
-  assertDispatch(fetchCalls);
+  assert.equal(result.source,'agent_ping');
+  assertDispatch(fetchCalls,'agent_ping');
 }
 
 {
@@ -104,9 +110,10 @@ console.log(JSON.stringify({
   ok:true,
   mode:'SYNTHETIC_APPS_SCRIPT_EVENT_BRIDGE',
   source:'qa-v8-google/apps-script/CudoReviewEventBridge.gs',
+  dispatch_sources:{form:'apps_script_form_submit',ping:'agent_ping'},
   cases:[
-    'form-submit-dispatches-official-workflow',
-    'manual-agent-ping-dispatches-official-workflow-without-sheet-write',
+    'form-submit-dispatches-official-workflow-with-source-tag',
+    'manual-agent-ping-dispatches-official-workflow-with-distinct-source-tag',
     'other-spreadsheet-ignored',
     'missing-token-blocked',
     'github-error-blocked',
