@@ -20,6 +20,7 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
       CUDO_REVIEW_EXPECT_PENDING: '0'
+      CUDO_REVIEW_DRY_RUN: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,7 +28,7 @@ jobs:
           node-version: '20'
       - name: Preparar evidencia
         run: mkdir -p qa-review-live-dry-run/generated
-      - name: Ejecutar motor real con safety gate 0 pendientes
+      - name: Ejecutar motor real en dry-run explícito con safety gate 0 pendientes
         run: node qa-v8-google/tools/process_review_decisions.mjs | tee qa-review-live-dry-run/review-result.json
       - name: Sincronizar PUBLICO_EXPORT real sólo al workspace
         run: node preview-v8/tools/sync_google_publico.mjs | tee qa-review-live-dry-run/sync-result.json
@@ -57,6 +58,7 @@ jobs:
           const report={
             ok:changed.length===0&&status.length===0,
             mode:'LIVE_GOOGLE_NO_EXTERNAL_WRITES_NO_PUSH',
+            review_dry_run:true,
             expected_pending:0,
             changed_files:changed,
             changed_count:changed.length,
