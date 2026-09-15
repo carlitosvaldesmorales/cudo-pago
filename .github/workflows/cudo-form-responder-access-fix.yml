@@ -19,7 +19,7 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
-      CUDO_FORM_ACCESS_APPLY: 'false'
+      CUDO_FORM_ACCESS_APPLY: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,9 +27,9 @@ jobs:
           node-version: '20'
       - name: Validate responder access manager syntax
         run: node --check qa-v8-google/tools/manage_google_form_responder_access.mjs
-      - name: Preflight Google Form responder access
+      - name: Apply and verify Google Form responder access
         run: node qa-v8-google/tools/manage_google_form_responder_access.mjs
-      - name: Upload preflight evidence
+      - name: Upload apply evidence
         uses: actions/upload-artifact@v4
         with:
           name: cudo-form-responder-access-${{ github.run_id }}
