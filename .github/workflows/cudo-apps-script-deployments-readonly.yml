@@ -39,3 +39,5 @@ jobs:
             out.append({'deploymentId':dep.get('deploymentId'),'description':dep.get('deploymentConfig',{}).get('description'),'versionNumber':dep.get('deploymentConfig',{}).get('versionNumber'),'entryPoints':eps})
           print(json.dumps({'ok':True,'deployments':out},indent=2))
           PY
+
+# second push intentionally runs the registered read-only inspection
