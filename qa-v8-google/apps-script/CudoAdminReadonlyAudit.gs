@@ -23,6 +23,7 @@ function cudoAdminReadonlyAudit() {
       accepting: form.isAcceptingResponses(),
       collectsEmail: safe(function() { return form.collectsEmail(); }),
       limitOneResponsePerUser: safe(function() { return form.hasLimitOneResponsePerUser(); }),
+      respondAgainLink: safe(function() { return form.hasRespondAgainLink(); }),
       requiresLogin: safe(function() { return form.requiresLogin(); }),
       supportsAdvancedResponderPermissions: safe(function() { return form.supportsAdvancedResponderPermissions(); }),
       published: safe(function() { return form.isPublished(); }),
