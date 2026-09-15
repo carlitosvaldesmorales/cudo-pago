@@ -31,6 +31,7 @@ const report={
   generated_at:new Date().toISOString(),
   profiles:[],
   data_contract:{},
+  app_shell_contract:{version:'2.0',required_on:requiredPages},
   controlled_external_dependencies:{
     sports_event_bus:liveMode?'LIVE_REAL_DEPENDENCY':'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
     service_worker:liveMode?'LIVE_REAL_SERVICE_WORKER':'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
@@ -71,8 +72,6 @@ function installControlledExternalRoutes(context){
   ]);
 }
 
-// La privacidad/contrato de datos es un gate propio. Aunque falle, los journeys siguen
-// ejecutándose para dejar evidencia completa del producto y no ocultar defectos secundarios.
 {
   const browser=await chromium.launch({headless:true});
   const context=await browser.newContext();
@@ -100,19 +99,23 @@ for(const p of profiles){
       const url=new URL(relative,baseUrl).href;
       const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
       if(!response||!response.ok()) throw new Error(`${p.name} ${relative||'/'}: HTTP ${response?.status()}`);
+      await page.waitForFunction(()=>window.CUDO_PWA?.version==='2.0',{timeout:10000});
       await page.waitForTimeout(liveMode?800:300);
       const metrics=await page.evaluate(()=>({
         title:document.title,
         width:document.documentElement.scrollWidth,
         viewport:document.documentElement.clientWidth,
-        bodyText:(document.body?.innerText||'').trim().slice(0,120)
+        bodyText:(document.body?.innerText||'').trim().slice(0,120),
+        pwaVersion:window.CUDO_PWA?.version||null,
+        manifest:document.querySelector('link[rel="manifest"]')?.href||null,
+        shellInstall:document.querySelector('[data-cudo-pwa-shell="install"]')!==null
       }));
       if(!metrics.bodyText) throw new Error(`${p.name} ${relative||'/'}: pagina vacia`);
       if(metrics.width>metrics.viewport+2) throw new Error(`${p.name} ${relative||'/'}: overflow horizontal ${metrics.width}>${metrics.viewport}`);
-      result.pages.push({path:relative||'/',title:metrics.title,width:metrics.width,viewport:metrics.viewport});
+      if(metrics.pwaVersion!=='2.0') throw new Error(`${p.name} ${relative||'/'}: shell PWA v2 ausente`);
+      if(!metrics.manifest) throw new Error(`${p.name} ${relative||'/'}: manifest runtime ausente`);
+      result.pages.push({path:relative||'/',title:metrics.title,width:metrics.width,viewport:metrics.viewport,pwaVersion:metrics.pwaVersion,manifest:metrics.manifest,shellInstall:metrics.shellInstall});
       if(relative===''){
-        const manifest=await page.locator('link[rel="manifest"]').getAttribute('href');
-        if(!manifest) throw new Error(`${p.name}: falta manifest en inicio`);
         await page.screenshot({path:path.join(outDir,`${p.name}-home.png`),fullPage:true});
       }
       if(relative==='partidos/'){
