@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '20'
       - name: Preparar evidencia
-        run: mkdir -p qa-review-live-dry-run
+        run: mkdir -p qa-review-live-dry-run/generated
       - name: Ejecutar motor real con safety gate 0 pendientes
         run: node qa-v8-google/tools/process_review_decisions.mjs | tee qa-review-live-dry-run/review-result.json
       - name: Sincronizar PUBLICO_EXPORT real sólo al workspace
@@ -39,6 +39,15 @@ jobs:
           set -euo pipefail
           git diff --name-only -- preview-v8/data preview-v8/media > qa-review-live-dry-run/changed-files.txt
           git diff --stat -- preview-v8/data preview-v8/media > qa-review-live-dry-run/diff-stat.txt
+          git diff -- preview-v8/data preview-v8/media > qa-review-live-dry-run/diff.patch
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            case "$file" in
+              preview-v8/data/*.json)
+                cp "$file" "qa-review-live-dry-run/generated/$(basename "$file")"
+                ;;
+            esac
+          done < qa-review-live-dry-run/changed-files.txt
           node - <<'NODE'
           const fs=require('fs');
           const changed=fs.readFileSync('qa-review-live-dry-run/changed-files.txt','utf8').split(/\r?\n/).filter(Boolean);
