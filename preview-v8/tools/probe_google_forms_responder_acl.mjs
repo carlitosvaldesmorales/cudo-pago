@@ -7,6 +7,39 @@ for(const [name,value] of Object.entries({CLIENT_ID,CLIENT_SECRET,REFRESH_TOKEN}
   if(!value) throw new Error(`${name} no configurado`);
 }
 
+const EXPECTED_FORMS=[
+  {
+    file_id:'1Ila0fWY-bAq5Biuzn5Hp1_CdcDiiLXex91x62zKCUkk',
+    name:'CUDO QA · Equipos',
+    role:'CONTENT_INPUT',
+    anyone_with_link:true
+  },
+  {
+    file_id:'1ZujRoboJGqqkKQJBwJeD1UNMiIYnDzstSWL24n_TtCA',
+    name:'CUDO QA · Partidos y Resultados',
+    role:'CONTENT_INPUT',
+    anyone_with_link:true
+  },
+  {
+    file_id:'1teEHaQ1xRGJX3Y0sFsF7Y_j67usO-wssXgzCqpPYfUc',
+    name:'CUDO QA · Tabla de Posiciones',
+    role:'CONTENT_INPUT',
+    anyone_with_link:true
+  },
+  {
+    file_id:'1vry-EQ7V_DvD6ZF64OaHk4KXtTjtvonIfnnYaG1rruw',
+    name:'CUDO QA · Corregir o retirar contenido publicado',
+    role:'CONTENT_MAINTENANCE_REQUEST',
+    anyone_with_link:true
+  },
+  {
+    file_id:'1YHuKTdApT0dawISYNAolVjn1HlpI7cuBQOs8T7cRgnw',
+    name:'CUDO QA · Revisar contenido antes de publicar',
+    role:'AUTHORIZED_REVIEW',
+    anyone_with_link:false
+  }
+];
+
 async function refreshAccessToken(){
   const body=new URLSearchParams({
     client_id:CLIENT_ID,
@@ -31,19 +64,9 @@ async function googleJson(url,accessToken,label){
   return d;
 }
 
-async function listForms(accessToken){
-  const q="mimeType='application/vnd.google-apps.form' and trashed=false";
-  const fields='nextPageToken,files(id,name,modifiedTime,webViewLink,owners(displayName))';
-  let pageToken='';
-  const files=[];
-  do {
-    const params=new URLSearchParams({q,pageSize:'1000',fields});
-    if(pageToken) params.set('pageToken',pageToken);
-    const d=await googleJson(`https://www.googleapis.com/drive/v3/files?${params}`,accessToken,'Drive files.list Forms');
-    files.push(...(d.files||[]));
-    pageToken=d.nextPageToken||'';
-  } while(pageToken);
-  return files;
+async function driveFile(accessToken,fileId){
+  const params=new URLSearchParams({fields:'id,name,mimeType,modifiedTime,owners(displayName)'});
+  return googleJson(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?${params}`,accessToken,`Drive files.get ${fileId}`);
 }
 
 async function publishedPermissions(accessToken,fileId){
@@ -62,39 +85,42 @@ const report={
   method:'DRIVE_PUBLISHED_PERMISSIONS_ONLY',
   generated_at:new Date().toISOString(),
   oauth_scopes:scope,
-  drive_forms_count:0,
+  contract:EXPECTED_FORMS.map(({file_id,name,role,anyone_with_link})=>({file_id,name,role,anyone_with_link})),
   forms:[],
-  errors:[]
+  failures:[]
 };
 
-let files=[];
-try {
-  files=await listForms(accessToken);
-  report.drive_forms_count=files.length;
-} catch(error) {
-  report.errors.push(String(error?.message||error));
-}
-
-for(const file of files){
+for(const expected of EXPECTED_FORMS){
   try {
-    const permissions=await publishedPermissions(accessToken,file.id);
+    const file=await driveFile(accessToken,expected.file_id);
+    if(file.mimeType!=='application/vnd.google-apps.form') throw new Error(`${expected.name}: MIME inesperado ${file.mimeType}`);
+    if(file.name!==expected.name) throw new Error(`${expected.file_id}: nombre inesperado '${file.name}' != '${expected.name}'`);
+    const permissions=await publishedPermissions(accessToken,expected.file_id);
     const publishedReaders=permissions.filter(p=>p.view==='published'&&p.role==='reader');
-    report.forms.push({
+    const anyoneWithLink=publishedReaders.some(p=>p.type==='anyone');
+    const actual={
       file_id:file.id,
-      name:file.name||null,
+      name:file.name,
+      role:expected.role,
       modified_time:file.modifiedTime||null,
       owner_names:(file.owners||[]).map(o=>o.displayName).filter(Boolean),
       published_reader_types:[...new Set(publishedReaders.map(p=>p.type).filter(Boolean))].sort(),
       published_reader_count:publishedReaders.length,
-      anyone_with_link:publishedReaders.some(p=>p.type==='anyone')
-    });
+      expected_anyone_with_link:expected.anyone_with_link,
+      anyone_with_link:anyoneWithLink,
+      contract_ok:anyoneWithLink===expected.anyone_with_link
+    };
+    report.forms.push(actual);
+    if(!actual.contract_ok){
+      report.failures.push(`${expected.name}: anyone_with_link=${anyoneWithLink}, esperado ${expected.anyone_with_link}`);
+    }
   } catch(error) {
-    report.forms.push({file_id:file.id,name:file.name||null,acl_error:String(error?.message||error)});
+    report.forms.push({file_id:expected.file_id,name:expected.name,role:expected.role,error:String(error?.message||error)});
+    report.failures.push(String(error?.message||error));
   }
 }
 
-report.forms.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'es'));
-report.ok=report.drive_forms_count>0 && report.forms.length===report.drive_forms_count && report.forms.every(x=>typeof x.anyone_with_link==='boolean');
+report.ok=report.failures.length===0 && report.forms.length===EXPECTED_FORMS.length;
 fs.mkdirSync('qa-google-forms-acl',{recursive:true});
 fs.writeFileSync('qa-google-forms-acl/report.json',JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
