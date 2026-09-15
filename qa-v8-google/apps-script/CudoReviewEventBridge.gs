@@ -5,17 +5,7 @@ const CUDO_REVIEW_EVENT_BRIDGE = Object.freeze({
   dispatchUrl: 'https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/actions/workflows/cudo-review-engine.yml/dispatches',
 });
 
-function cudoReviewOnFormSubmit(e) {
-  if (!e || !e.range || !e.range.getSheet) {
-    throw new Error('CUDO Review bridge: evento de formulario inválido');
-  }
-
-  const sheet = e.range.getSheet();
-  const spreadsheet = sheet.getParent();
-  if (!spreadsheet || spreadsheet.getId() !== CUDO_REVIEW_EVENT_BRIDGE.spreadsheetId) {
-    return { ok: true, ignored: true, reason: 'OTHER_SPREADSHEET' };
-  }
-
+function cudoReviewDispatch_() {
   const token = PropertiesService.getScriptProperties().getProperty(CUDO_REVIEW_EVENT_BRIDGE.tokenProperty);
   if (!token) {
     throw new Error('CUDO Review bridge: falta Script Property CUDO_GITHUB_ACTIONS_TOKEN');
@@ -41,7 +31,26 @@ function cudoReviewOnFormSubmit(e) {
     throw new Error('CUDO Review bridge: GitHub dispatch HTTP ' + code + ' ' + response.getContentText().slice(0, 300));
   }
 
-  return { ok: true, ignored: false, github_status: code };
+  return { ok: true, github_status: code };
+}
+
+function cudoReviewOnFormSubmit(e) {
+  if (!e || !e.range || !e.range.getSheet) {
+    throw new Error('CUDO Review bridge: evento de formulario inválido');
+  }
+
+  const sheet = e.range.getSheet();
+  const spreadsheet = sheet.getParent();
+  if (!spreadsheet || spreadsheet.getId() !== CUDO_REVIEW_EVENT_BRIDGE.spreadsheetId) {
+    return { ok: true, ignored: true, reason: 'OTHER_SPREADSHEET' };
+  }
+
+  const dispatched = cudoReviewDispatch_();
+  return { ok: true, ignored: false, github_status: dispatched.github_status };
+}
+
+function cudoReviewEventBridgePing() {
+  return cudoReviewDispatch_();
 }
 
 function installCudoReviewEventBridge() {
