@@ -10,25 +10,20 @@ fs.mkdirSync(outDir,{recursive:true});
 const requiredPages=['','noticias/','partidos/','equipos/','galeria/','admin/'];
 const publicData=['noticias','equipos','plantel','partidos','tabla','galeria'];
 const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signature='];
-const sportsApi='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 const expectedAdminActions=[
-  {label:'Publicar una noticia',host:'tally.so'},
-  {label:'Administrar equipo o serie',host:'docs.google.com'},
-  {label:'Agregar jugador',host:'tally.so'},
-  {label:'Registrar partido o resultado',host:'docs.google.com'},
-  {label:'Actualizar tabla',host:'docs.google.com'},
-  {label:'Subir fotos a la galería',host:'tally.so'},
-  {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com'},
-  {label:'Revisar contenido pendiente',host:'docs.google.com'}
+  {label:'Publicar una noticia',host:'tally.so',access:'public'},
+  {label:'Administrar equipo o serie',host:'docs.google.com',access:'public'},
+  {label:'Agregar jugador',host:'tally.so',access:'public'},
+  {label:'Registrar partido o resultado',host:'docs.google.com',access:'public'},
+  {label:'Actualizar tabla',host:'docs.google.com',access:'public'},
+  {label:'Subir fotos a la galería',host:'tally.so',access:'public'},
+  {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com',access:'public'},
+  {label:'Revisar contenido pendiente',host:'docs.google.com',access:'protected'}
 ];
 
-const profile=(name,engine,deviceName,fallback)=>({
-  name,engine,
-  context:devices[deviceName]||fallback
-});
-
+const profile=(name,engine,deviceName,fallback)=>({name,engine,context:devices[deviceName]||fallback});
 const profiles=[
   profile('mobile-chromium',chromium,'Pixel 7',{viewport:{width:412,height:915},screen:{width:412,height:915},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'}),
   profile('mobile-webkit',webkit,'iPhone 15',{viewport:{width:393,height:852},screen:{width:393,height:852},isMobile:true,hasTouch:true,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1'})
@@ -42,7 +37,12 @@ const report={
   profiles:[],
   data_contract:{},
   app_shell_contract:{version:'2.0',required_on:requiredPages},
-  admin_action_contract:{expected:expectedAdminActions.map(a=>a.label),live_external_open:liveMode},
+  admin_action_contract:{
+    expected:expectedAdminActions.map(a=>({label:a.label,access:a.access})),
+    live_external_open:liveMode,
+    public_actions_must_not_require_google_login:true,
+    protected_review_must_require_google_login:true
+  },
   controlled_external_dependencies:{
     sports_event_bus:liveMode?'LIVE_REAL_DEPENDENCY':'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
     service_worker:liveMode?'LIVE_REAL_SERVICE_WORKER':'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
@@ -70,16 +70,8 @@ function installControlledExternalRoutes(context){
   const matches=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/matches(?:\?|$)/;
   const seriesResults=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/series-results(?:\?|$)/;
   return Promise.all([
-    context.route(matches,route=>route.fulfill({
-      status:200,
-      contentType:'application/json',
-      body:JSON.stringify({ok:true,matches:fixture.matches||[],byes:fixture.byes||[]})
-    })),
-    context.route(seriesResults,route=>route.fulfill({
-      status:200,
-      contentType:'application/json',
-      body:JSON.stringify({ok:true,results:series.results||[]})
-    }))
+    context.route(matches,route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,matches:fixture.matches||[],byes:fixture.byes||[]})})),
+    context.route(seriesResults,route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,results:series.results||[]})}))
   ]);
 }
 
@@ -98,10 +90,10 @@ async function validateAdminActions(page,result){
     if(actual.disabled) throw new Error(`admin: accion deshabilitada ${actual.label}`);
     const parsed=new URL(actual.href);
     if(parsed.protocol!=='https:') throw new Error(`admin: destino no HTTPS ${actual.href}`);
-    if(parsed.hostname!==expected.host) throw new Error(`admin: host inesperado para ${actual.label}: ${parsed.hostname}`);
+    if(parsed.hostname!==expected.host) throw new Error(`admin: host configurado inesperado para ${actual.label}: ${parsed.hostname}`);
   }
 
-  result.admin_actions=actions.map(a=>({label:a.label,href:a.href,entrypoint:'READY'}));
+  result.admin_actions=actions.map((a,i)=>({label:a.label,href:a.href,access:expectedAdminActions[i].access,entrypoint:'READY'}));
   if(!liveMode) return;
 
   for(let i=0;i<expectedAdminActions.length;i++){
@@ -114,10 +106,17 @@ async function validateAdminActions(page,result){
       await popup.waitForLoadState('domcontentloaded',{timeout:20000});
       const url=popup.url();
       const parsed=new URL(url);
-      if(parsed.hostname!==expected.host) throw new Error(`admin: click ${expected.label} abrió host ${parsed.hostname}`);
       const bodyText=(await popup.locator('body').innerText({timeout:10000})).trim();
       if(!bodyText) throw new Error(`admin: click ${expected.label} abrió destino vacío`);
-      result.admin_actions[i].entrypoint='LIVE_OPENED';
+
+      if(expected.access==='public'){
+        if(parsed.hostname==='accounts.google.com') throw new Error(`admin: acción pública ${expected.label} todavía exige login Google`);
+        if(parsed.hostname!==expected.host) throw new Error(`admin: click público ${expected.label} abrió host ${parsed.hostname}`);
+        result.admin_actions[i].entrypoint='LIVE_PUBLIC_OPENED';
+      }else{
+        if(parsed.hostname!=='accounts.google.com') throw new Error(`admin: REVIEW protegido no exigió login; abrió ${parsed.hostname}`);
+        result.admin_actions[i].entrypoint='LIVE_AUTH_GATE';
+      }
       result.admin_actions[i].resolved_url=url;
     }finally{
       await popup.close().catch(()=>{});
@@ -128,13 +127,7 @@ async function validateAdminActions(page,result){
 {
   const browser=await chromium.launch({headless:true});
   const context=await browser.newContext();
-  try{
-    await validatePublicData(context.request);
-  }catch(error){
-    report.failures.push(String(error?.message||error));
-  }finally{
-    await browser.close();
-  }
+  try{await validatePublicData(context.request);}catch(error){report.failures.push(String(error?.message||error));}finally{await browser.close();}
 }
 
 for(const p of profiles){
@@ -168,16 +161,10 @@ for(const p of profiles){
       if(metrics.pwaVersion!=='2.0') throw new Error(`${p.name} ${relative||'/'}: shell PWA v2 ausente`);
       if(!metrics.manifest) throw new Error(`${p.name} ${relative||'/'}: manifest runtime ausente`);
       result.pages.push({path:relative||'/',title:metrics.title,width:metrics.width,viewport:metrics.viewport,pwaVersion:metrics.pwaVersion,manifest:metrics.manifest,shellInstall:metrics.shellInstall});
-      if(relative===''){
-        await page.screenshot({path:path.join(outDir,`${p.name}-home.png`),fullPage:true});
-      }
+      if(relative==='') await page.screenshot({path:path.join(outDir,`${p.name}-home.png`),fullPage:true});
       if(relative==='partidos/'){
-        try{
-          await page.locator('.champ-match-card').first().waitFor({state:'visible',timeout:liveMode?15000:5000});
-        }catch{
-          const cards=await page.locator('.champ-match-card').count();
-          if(cards<1) throw new Error(`${p.name}: campeonato no renderizo partidos`);
-        }
+        try{await page.locator('.champ-match-card').first().waitFor({state:'visible',timeout:liveMode?15000:5000});}
+        catch{const cards=await page.locator('.champ-match-card').count();if(cards<1) throw new Error(`${p.name}: campeonato no renderizo partidos`);}
       }
       if(relative==='admin/'){
         await validateAdminActions(page,result);
