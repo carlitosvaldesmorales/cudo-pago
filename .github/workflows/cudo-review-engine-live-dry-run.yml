@@ -1,3 +1,4 @@
+# QA-only preflight: verifica drift sin writes ni push antes de certificar review event.
 name: CUDO Review Engine Live Dry Run
 
 on:
