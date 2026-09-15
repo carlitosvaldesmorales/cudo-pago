@@ -23,6 +23,7 @@ jobs:
       SOURCE_CREATED_AT: ${{ github.event.workflow_run.created_at }}
       SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       SOURCE_TITLE: ${{ github.event.workflow_run.display_title }}
+      CUDO_REVIEW_RUN_LOG: /tmp/review-run.log
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,7 +31,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Require a real newly ingested form response
+      - name: Refresh main before materializing certification
+        run: git pull --ff-only origin main
+
+      - name: Download completed Review Engine logs
         shell: bash
         run: |
           set -euo pipefail
@@ -39,70 +43,24 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/logs" \
             -o /tmp/review-run-logs.zip
-          unzip -p /tmp/review-run-logs.zip > /tmp/review-run.log
-          python3 - <<'PY'
-          import os,re,pathlib
-          text=pathlib.Path('/tmp/review-run.log').read_text(errors='replace')
-          source_matches=re.findall(r'CUDO_REVIEW_TRIGGER_SOURCE=([^\s]+)',text)
-          if 'apps_script_form_submit' not in source_matches:
-              raise SystemExit('Missing apps_script_form_submit runtime marker')
-          counts=[int(x) for x in re.findall(r'"new_count":\s*([0-9]+)',text)]
-          new_count=max(counts) if counts else 0
-          if new_count < 1:
-              raise SystemExit('Form event had no newly ingested response; keep polling safety net')
-          pathlib.Path('/tmp/new-count').write_text(str(new_count))
-          print(f'event_source=apps_script_form_submit new_count={new_count}')
-          PY
+          unzip -p /tmp/review-run-logs.zip > "$CUDO_REVIEW_RUN_LOG"
 
-      - name: Persist event-driven PASS and reduce scheduler to daily reconciliation
+      - name: Require real form event and materialize event-driven PASS
+        run: node qa-v8-google/tools/review_event_observer.mjs
+
+      - name: Validate resulting scheduler and evidence
         shell: bash
         run: |
           set -euo pipefail
-          NEW_COUNT="$(cat /tmp/new-count)"
-          mkdir -p evidence/review-event-bridge
-          python3 - <<'PY'
-          import json,os,pathlib
-          evidence={
-            'ok':True,
-            'classification':'PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_REVIEW_ENGINE',
-            'source':'apps_script_form_submit',
-            'review_engine_run_id':int(os.environ['SOURCE_RUN_ID']),
-            'review_engine_head_sha':os.environ['SOURCE_HEAD_SHA'],
-            'review_engine_created_at':os.environ['SOURCE_CREATED_AT'],
-            'review_engine_display_title':os.environ['SOURCE_TITLE'],
-            'new_count':int(pathlib.Path('/tmp/new-count').read_text()),
-            'result':'SUCCESS',
-            'safety_net_transition':'5_MINUTE_POLLING_TO_DAILY_RECONCILIATION'
-          }
-          pathlib.Path('evidence/review-event-bridge/event-driven-latest.json').write_text(json.dumps(evidence,indent=2)+'\n')
-          pathlib.Path('evidence/review-event-bridge/event-driven-latest.md').write_text(
-            '# CUDO Review Event-Driven Certification\n\n'
-            f"run_id: {evidence['review_engine_run_id']}\n"
-            f"source: {evidence['source']}\n"
-            f"new_count: {evidence['new_count']}\n"
-            'result: PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_REVIEW_ENGINE\n'
-            'scheduler_after_pass: daily_reconciliation\n'
-          )
-          PY
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('.github/workflows/cudo-review-engine.yml')
-          s=p.read_text()
-          old="    - cron: '*/5 * * * *'"
-          new="    - cron: '17 9 * * *'"
-          if old in s:
-              s=s.replace(old,new,1)
-          elif new not in s:
-              raise SystemExit('Unexpected scheduler contract; refusing automatic change')
-          p.write_text(s)
-          PY
+          grep -F "cron: '17 9 * * *'" .github/workflows/cudo-review-engine.yml
+          test -s evidence/review-event-bridge/event-driven-latest.json
+          test -s evidence/review-event-bridge/event-driven-latest.md
           git diff --check
 
       - name: Commit certification and low-frequency reconciliation
         shell: bash
         run: |
           set -euo pipefail
-          git pull --ff-only origin main
           git add evidence/review-event-bridge .github/workflows/cudo-review-engine.yml
           if git diff --cached --quiet; then
             echo 'Certification already materialized.'
