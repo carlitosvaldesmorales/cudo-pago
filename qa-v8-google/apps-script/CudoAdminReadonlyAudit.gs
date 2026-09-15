@@ -7,6 +7,11 @@ function cudoAdminReadonlyAudit() {
     { key: 'MAINTENANCE', id: '1vry-EQ7V_DvD6ZF64OaHk4KXtTjtvonIfnnYaG1rruw' },
   ];
 
+  function safe(call) {
+    try { return { supported: true, value: call() }; }
+    catch (err) { return { supported: false, error: String(err && err.message ? err.message : err) }; }
+  }
+
   const result = {};
   forms.forEach(function(entry) {
     const form = FormApp.openById(entry.id);
@@ -16,6 +21,11 @@ function cudoAdminReadonlyAudit() {
       publishedUrl: form.getPublishedUrl(),
       destinationId: form.getDestinationId(),
       accepting: form.isAcceptingResponses(),
+      collectsEmail: safe(function() { return form.collectsEmail(); }),
+      limitOneResponsePerUser: safe(function() { return form.hasLimitOneResponsePerUser(); }),
+      requiresLogin: safe(function() { return form.requiresLogin(); }),
+      supportsAdvancedResponderPermissions: safe(function() { return form.supportsAdvancedResponderPermissions(); }),
+      published: safe(function() { return form.isPublished(); }),
       confirmation: form.getConfirmationMessage(),
       items: form.getItems().map(function(item, index) {
         const row = { index: index, title: item.getTitle(), type: String(item.getType()) };
