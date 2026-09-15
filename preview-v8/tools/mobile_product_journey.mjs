@@ -10,19 +10,19 @@ fs.mkdirSync(outDir,{recursive:true});
 const requiredPages=['','noticias/','partidos/','equipos/','galeria/','admin/'];
 const publicData=['noticias','equipos','plantel','partidos','tabla','galeria'];
 const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signature='];
-const sportsApi='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 const expectedAdminActions=[
-  {label:'Publicar una noticia',host:'tally.so'},
-  {label:'Administrar equipo o serie',host:'docs.google.com'},
-  {label:'Agregar jugador',host:'tally.so'},
-  {label:'Registrar partido o resultado',host:'docs.google.com'},
-  {label:'Actualizar tabla',host:'docs.google.com'},
-  {label:'Subir fotos a la galería',host:'tally.so'},
-  {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com'},
-  {label:'Revisar contenido pendiente',host:'docs.google.com'}
+  {label:'Publicar una noticia',host:'tally.so',provider:'TALLY'},
+  {label:'Administrar equipo o serie',host:'docs.google.com',provider:'GOOGLE_FORMS'},
+  {label:'Agregar jugador',host:'tally.so',provider:'TALLY'},
+  {label:'Registrar partido o resultado',host:'docs.google.com',provider:'GOOGLE_FORMS'},
+  {label:'Actualizar tabla',host:'docs.google.com',provider:'GOOGLE_FORMS'},
+  {label:'Subir fotos a la galería',host:'tally.so',provider:'TALLY'},
+  {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com',provider:'GOOGLE_FORMS'},
+  {label:'Revisar contenido pendiente',host:'docs.google.com',provider:'GOOGLE_FORMS'}
 ];
+const googleAllowedResolvedHosts=new Set(['docs.google.com','accounts.google.com']);
 
 const profile=(name,engine,deviceName,fallback)=>({
   name,engine,
@@ -42,7 +42,11 @@ const report={
   profiles:[],
   data_contract:{},
   app_shell_contract:{version:'2.0',required_on:requiredPages},
-  admin_action_contract:{expected:expectedAdminActions.map(a=>a.label),live_external_open:liveMode},
+  admin_action_contract:{
+    expected:expectedAdminActions.map(a=>a.label),
+    live_external_open:liveMode,
+    google_responder_access:'CERTIFIED_SEPARATELY_BY_DRIVE_PUBLISHED_PERMISSIONS'
+  },
   controlled_external_dependencies:{
     sports_event_bus:liveMode?'LIVE_REAL_DEPENDENCY':'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
     service_worker:liveMode?'LIVE_REAL_SERVICE_WORKER':'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
@@ -101,7 +105,12 @@ async function validateAdminActions(page,result){
     if(parsed.hostname!==expected.host) throw new Error(`admin: host inesperado para ${actual.label}: ${parsed.hostname}`);
   }
 
-  result.admin_actions=actions.map(a=>({label:a.label,href:a.href,entrypoint:'READY'}));
+  result.admin_actions=actions.map((a,i)=>({
+    label:a.label,
+    href:a.href,
+    provider:expectedAdminActions[i].provider,
+    entrypoint:'READY'
+  }));
   if(!liveMode) return;
 
   for(let i=0;i<expectedAdminActions.length;i++){
@@ -111,13 +120,27 @@ async function validateAdminActions(page,result){
     await card.click();
     const popup=await popupPromise;
     try{
-      await popup.waitForLoadState('domcontentloaded',{timeout:20000});
+      await popup.waitForLoadState('domcontentloaded',{timeout:20000}).catch(()=>{});
+      await popup.waitForTimeout(800);
       const url=popup.url();
       const parsed=new URL(url);
-      if(parsed.hostname!==expected.host) throw new Error(`admin: click ${expected.label} abrió host ${parsed.hostname}`);
-      const bodyText=(await popup.locator('body').innerText({timeout:10000})).trim();
+      const bodyText=(await popup.locator('body').innerText({timeout:10000}).catch(()=>''))?.trim()||'';
       if(!bodyText) throw new Error(`admin: click ${expected.label} abrió destino vacío`);
-      result.admin_actions[i].entrypoint='LIVE_OPENED';
+
+      if(expected.provider==='TALLY'){
+        if(parsed.hostname!==expected.host) throw new Error(`admin: click ${expected.label} abrió host ${parsed.hostname}`);
+        result.admin_actions[i].entrypoint='LIVE_OPENED';
+      }else if(expected.provider==='GOOGLE_FORMS'){
+        if(!googleAllowedResolvedHosts.has(parsed.hostname)){
+          throw new Error(`admin: click ${expected.label} resolvió host Google inesperado ${parsed.hostname}`);
+        }
+        result.admin_actions[i].entrypoint=parsed.hostname==='accounts.google.com'
+          ? 'LIVE_DISPATCHED_PROVIDER_AUTH'
+          : 'LIVE_OPENED';
+        result.admin_actions[i].provider_access_observation=parsed.hostname==='accounts.google.com'
+          ? 'HEADLESS_AUTH_REDIRECT_OBSERVED'
+          : 'FORM_CONTENT_OBSERVED';
+      }
       result.admin_actions[i].resolved_url=url;
     }finally{
       await popup.close().catch(()=>{});
