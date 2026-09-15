@@ -1,0 +1,52 @@
+name: Temporary inspect CUDO Apps Script
+
+on:
+  push:
+    paths:
+      - '.github/workflows/temporary-inspect-cudo-apps-script.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - name: Inspect project structure safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, urllib.parse, urllib.request
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
+          req=urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})
+          with urllib.request.urlopen(req) as r: access=json.load(r)['access_token']
+          def get(url):
+            req=urllib.request.Request(url,headers={'Authorization':'Bearer '+access})
+            with urllib.request.urlopen(req) as r:return json.load(r)
+          content=get(f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}/content')
+          out=[]
+          for f in content.get('files',[]):
+            src=f.get('source','')
+            funcs=re.findall(r'\bfunction\s+([A-Za-z_$][\w$]*)\s*\(',src)
+            out.append({'name':f.get('name'),'type':f.get('type'),'functions':funcs,'uses_trigger_builder':('newTrigger(' in src),'uses_urlfetch':('UrlFetchApp' in src),'uses_properties':('PropertiesService' in src),'mentions_github':('github' in src.lower()),'mentions_form_submit':('onFormSubmit' in src or 'onFormSubmit()' in src)})
+          print(json.dumps({'files':out},indent=2))
+          try:
+            deps=get(f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}/deployments')
+            print(json.dumps({'deployments':[{'deploymentId':d.get('deploymentId'),'entryPoints':[e.get('entryPointType') for e in d.get('entryPoints',[])],'description':d.get('description')} for d in deps.get('deployments',[])]},indent=2))
+          except Exception as e:
+            print(json.dumps({'deployments':'UNAVAILABLE','error':str(e)},indent=2))
+          manifest=next((f for f in content.get('files',[]) if f.get('type')=='JSON'),None)
+          if manifest:
+            try:
+              m=json.loads(manifest.get('source','{}'))
+              safe={k:m.get(k) for k in ['timeZone','runtimeVersion','exceptionLogging','oauthScopes','executionApi','webapp'] if k in m}
+              print(json.dumps({'manifest':safe},indent=2))
+            except Exception as e: print(json.dumps({'manifest_parse_error':str(e)},indent=2))
+          PY
