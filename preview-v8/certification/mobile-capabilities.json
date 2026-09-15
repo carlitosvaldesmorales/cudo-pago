@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "invariant": "NO_CAPABILITY_WITHOUT_AUTOMATED_CERTIFICATION",
   "release_rule": "PREMERGE_AND_POSTDEPLOY_AUTOMATED_EVIDENCE_REQUIRED",
   "human_test_policy": "NOT_A_NORMAL_RELEASE_GATE",
@@ -56,6 +56,13 @@
     },
     {
       "id": "mobile_admin_entry",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": ["MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+    },
+    {
+      "id": "mobile_admin_action_entrypoints",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,

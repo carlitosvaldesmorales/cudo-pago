@@ -13,6 +13,16 @@ const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signatur
 const sportsApi='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
+const expectedAdminActions=[
+  {label:'Publicar una noticia',host:'tally.so'},
+  {label:'Administrar equipo o serie',host:'docs.google.com'},
+  {label:'Agregar jugador',host:'tally.so'},
+  {label:'Registrar partido o resultado',host:'docs.google.com'},
+  {label:'Actualizar tabla',host:'docs.google.com'},
+  {label:'Subir fotos a la galería',host:'tally.so'},
+  {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com'},
+  {label:'Revisar contenido pendiente',host:'docs.google.com'}
+];
 
 const profile=(name,engine,deviceName,fallback)=>({
   name,engine,
@@ -32,6 +42,7 @@ const report={
   profiles:[],
   data_contract:{},
   app_shell_contract:{version:'2.0',required_on:requiredPages},
+  admin_action_contract:{expected:expectedAdminActions.map(a=>a.label),live_external_open:liveMode},
   controlled_external_dependencies:{
     sports_event_bus:liveMode?'LIVE_REAL_DEPENDENCY':'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
     service_worker:liveMode?'LIVE_REAL_SERVICE_WORKER':'CERTIFIED_SEPARATELY_AND_BLOCKED_IN_UI_JOURNEY'
@@ -72,6 +83,48 @@ function installControlledExternalRoutes(context){
   ]);
 }
 
+async function validateAdminActions(page,result){
+  const cards=page.locator('a.admincard');
+  await page.waitForFunction(()=>[...document.querySelectorAll('a.admincard')].every(a=>!a.classList.contains('disabled')&&a.href&&!a.href.endsWith('#')),{timeout:liveMode?15000:5000});
+  const actions=await cards.evaluateAll(nodes=>nodes.map(n=>({
+    label:(n.querySelector('strong')?.textContent||'').trim(),
+    href:n.href,
+    disabled:n.classList.contains('disabled')
+  })));
+  if(actions.length!==expectedAdminActions.length) throw new Error(`admin: ${actions.length} acciones, esperadas ${expectedAdminActions.length}`);
+  for(let i=0;i<expectedAdminActions.length;i++){
+    const expected=expectedAdminActions[i],actual=actions[i];
+    if(actual.label!==expected.label) throw new Error(`admin: accion ${i+1} inesperada "${actual.label}" != "${expected.label}"`);
+    if(actual.disabled) throw new Error(`admin: accion deshabilitada ${actual.label}`);
+    const parsed=new URL(actual.href);
+    if(parsed.protocol!=='https:') throw new Error(`admin: destino no HTTPS ${actual.href}`);
+    if(parsed.hostname!==expected.host) throw new Error(`admin: host inesperado para ${actual.label}: ${parsed.hostname}`);
+  }
+
+  result.admin_actions=actions.map(a=>({label:a.label,href:a.href,entrypoint:'READY'}));
+  if(!liveMode) return;
+
+  for(let i=0;i<expectedAdminActions.length;i++){
+    const expected=expectedAdminActions[i];
+    const card=cards.nth(i);
+    const popupPromise=page.waitForEvent('popup',{timeout:15000});
+    await card.click();
+    const popup=await popupPromise;
+    try{
+      await popup.waitForLoadState('domcontentloaded',{timeout:20000});
+      const url=popup.url();
+      const parsed=new URL(url);
+      if(parsed.hostname!==expected.host) throw new Error(`admin: click ${expected.label} abrió host ${parsed.hostname}`);
+      const bodyText=(await popup.locator('body').innerText({timeout:10000})).trim();
+      if(!bodyText) throw new Error(`admin: click ${expected.label} abrió destino vacío`);
+      result.admin_actions[i].entrypoint='LIVE_OPENED';
+      result.admin_actions[i].resolved_url=url;
+    }finally{
+      await popup.close().catch(()=>{});
+    }
+  }
+}
+
 {
   const browser=await chromium.launch({headless:true});
   const context=await browser.newContext();
@@ -91,7 +144,7 @@ for(const p of profiles){
   const context=await browser.newContext(contextOptions);
   await installControlledExternalRoutes(context);
   const page=await context.newPage();
-  const result={name:p.name,pages:[],console_errors:[]};
+  const result={name:p.name,pages:[],console_errors:[],admin_actions:[]};
   page.on('console',msg=>{if(msg.type()==='error') result.console_errors.push(msg.text())});
   page.on('pageerror',error=>result.console_errors.push(error.message));
   try{
@@ -127,12 +180,7 @@ for(const p of profiles){
         }
       }
       if(relative==='admin/'){
-        const cards=page.locator('a.admincard');
-        const count=await cards.count();
-        if(count<8) throw new Error(`${p.name}: admin incompleto; ${count} acciones`);
-        const hrefs=await cards.evaluateAll(nodes=>nodes.map(n=>n.href).filter(Boolean));
-        const unsafe=hrefs.filter(h=>!h.startsWith('https://')&&!h.startsWith(baseUrl));
-        if(unsafe.length) throw new Error(`${p.name}: enlaces admin inseguros: ${unsafe.join(', ')}`);
+        await validateAdminActions(page,result);
         await page.screenshot({path:path.join(outDir,`${p.name}-admin.png`),fullPage:true});
       }
     }
