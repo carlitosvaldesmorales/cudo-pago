@@ -1,0 +1,25 @@
+name: Temporary verify CUDO Review Engine gate
+
+on:
+  push:
+    paths:
+      - '.github/workflows/temporary-verify-cudo-review-engine-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify repository variable
+        env:
+          CUDO_REVIEW_ENGINE_ENABLED: ${{ vars.CUDO_REVIEW_ENGINE_ENABLED }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${CUDO_REVIEW_ENGINE_ENABLED}" != "true" ]; then
+            echo "CUDO_REVIEW_ENGINE_ENABLED is not true"
+            exit 1
+          fi
+          echo "CUDO_REVIEW_ENGINE_ENABLED=true"
