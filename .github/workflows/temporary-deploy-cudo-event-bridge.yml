@@ -41,3 +41,5 @@ jobs:
           if len(found)!=1 or found[0].get('source')!=bridge: raise SystemExit('Bridge verification failed')
           print(json.dumps({'ok':True,'bridge_source_matches_main':True,'file_count':len(verify.get('files',[])),'other_files_preserved':len(verify.get('files',[]))-1},indent=2))
           PY
+
+# second push intentionally executes the registered temporary deployment workflow
