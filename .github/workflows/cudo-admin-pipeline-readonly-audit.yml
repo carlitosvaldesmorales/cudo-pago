@@ -60,3 +60,5 @@ jobs:
           path: qa-admin-audit/admin-pipeline-readonly-report.json
           if-no-files-found: warn
           retention-days: 14
+
+# second push intentionally executes the registered workflow
