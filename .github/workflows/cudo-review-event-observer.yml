@@ -1,0 +1,114 @@
+name: CUDO Review Event Observer
+
+on:
+  workflow_run:
+    workflows: ['CUDO Review Engine']
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  certify-real-form-event:
+    if: >-
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      contains(github.event.workflow_run.display_title, 'apps_script_form_submit')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+      SOURCE_CREATED_AT: ${{ github.event.workflow_run.created_at }}
+      SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      SOURCE_TITLE: ${{ github.event.workflow_run.display_title }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Require a real newly ingested form response
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/logs" \
+            -o /tmp/review-run-logs.zip
+          unzip -p /tmp/review-run-logs.zip > /tmp/review-run.log
+          python3 - <<'PY'
+          import os,re,pathlib
+          text=pathlib.Path('/tmp/review-run.log').read_text(errors='replace')
+          source_matches=re.findall(r'CUDO_REVIEW_TRIGGER_SOURCE=([^\s]+)',text)
+          if 'apps_script_form_submit' not in source_matches:
+              raise SystemExit('Missing apps_script_form_submit runtime marker')
+          counts=[int(x) for x in re.findall(r'"new_count":\s*([0-9]+)',text)]
+          new_count=max(counts) if counts else 0
+          if new_count < 1:
+              raise SystemExit('Form event had no newly ingested response; keep polling safety net')
+          pathlib.Path('/tmp/new-count').write_text(str(new_count))
+          print(f'event_source=apps_script_form_submit new_count={new_count}')
+          PY
+
+      - name: Persist event-driven PASS and reduce scheduler to daily reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEW_COUNT="$(cat /tmp/new-count)"
+          mkdir -p evidence/review-event-bridge
+          python3 - <<'PY'
+          import json,os,pathlib
+          evidence={
+            'ok':True,
+            'classification':'PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_REVIEW_ENGINE',
+            'source':'apps_script_form_submit',
+            'review_engine_run_id':int(os.environ['SOURCE_RUN_ID']),
+            'review_engine_head_sha':os.environ['SOURCE_HEAD_SHA'],
+            'review_engine_created_at':os.environ['SOURCE_CREATED_AT'],
+            'review_engine_display_title':os.environ['SOURCE_TITLE'],
+            'new_count':int(pathlib.Path('/tmp/new-count').read_text()),
+            'result':'SUCCESS',
+            'safety_net_transition':'5_MINUTE_POLLING_TO_DAILY_RECONCILIATION'
+          }
+          pathlib.Path('evidence/review-event-bridge/event-driven-latest.json').write_text(json.dumps(evidence,indent=2)+'\n')
+          pathlib.Path('evidence/review-event-bridge/event-driven-latest.md').write_text(
+            '# CUDO Review Event-Driven Certification\n\n'
+            f"run_id: {evidence['review_engine_run_id']}\n"
+            f"source: {evidence['source']}\n"
+            f"new_count: {evidence['new_count']}\n"
+            'result: PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_REVIEW_ENGINE\n'
+            'scheduler_after_pass: daily_reconciliation\n'
+          )
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/cudo-review-engine.yml')
+          s=p.read_text()
+          old="    - cron: '*/5 * * * *'"
+          new="    - cron: '17 9 * * *'"
+          if old in s:
+              s=s.replace(old,new,1)
+          elif new not in s:
+              raise SystemExit('Unexpected scheduler contract; refusing automatic change')
+          p.write_text(s)
+          PY
+          git diff --check
+
+      - name: Commit certification and low-frequency reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin main
+          git add evidence/review-event-bridge .github/workflows/cudo-review-engine.yml
+          if git diff --cached --quiet; then
+            echo 'Certification already materialized.'
+            exit 0
+          fi
+          git config user.name 'cudo-review-event-observer'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'CUDO: certificar evento real y reducir polling a reconciliación diaria'
+          git push origin HEAD:main
