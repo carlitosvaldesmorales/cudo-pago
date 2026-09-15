@@ -57,13 +57,16 @@ function parseQuestions(data){
     const entry=item[4][0];
     const entryId=Array.isArray(entry)&&Number.isInteger(entry[0])?entry[0]:null;
     if(entryId===null) continue;
+    const title=item[1].trim();
     const optionStrings=[...new Set(stringsDeep(entry?.[4]??[]))];
+    const publicStrings=[...new Set(stringsDeep(item).filter(s=>s!==title))];
     questions.push({
-      title:item[1].trim(),
+      title,
       type:Number.isInteger(item[3])?item[3]:null,
       entry_id:`entry.${entryId}`,
       required:Boolean(entry?.[2]),
-      options:optionStrings
+      options:optionStrings,
+      public_string_candidates:publicStrings
     });
   }
   return questions;
@@ -96,7 +99,8 @@ for(const [key,cfg] of Object.entries(FORMS)){
         live_required:q?.required??null,
         required_matches:q? q.required===e.required:false,
         type:q?.type??null,
-        options:q?.options??[]
+        options:q?.options??[],
+        public_string_candidates:q?.public_string_candidates??[]
       };
     });
     const unmatchedLive=parsed.filter(q=>!expected.some(e=>e.title===q.title)).map(q=>q.title);
