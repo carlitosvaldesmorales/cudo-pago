@@ -31,3 +31,5 @@ jobs:
           done
           command -v node >/dev/null && echo "node=PRESENT"
           command -v curl >/dev/null && echo "curl=PRESENT"
+
+# second push intentionally triggers the newly registered workflow
