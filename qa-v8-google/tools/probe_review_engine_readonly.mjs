@@ -48,6 +48,25 @@ function nonSensitiveRevisionSamples(revision){
     .map((h,i)=>[h,String(row[i]??'').trim()])
     .filter(([h])=>h&&!excluded.has(h))));
 }
+function distinctCounts(values,headerNames){
+  if(!values.length) return {};
+  const headers=values[0].map(v=>String(v||'').trim());
+  const idx=Object.fromEntries(headers.map((h,i)=>[h,i]));
+  const out={};
+  for(const name of headerNames){
+    if(idx[name]===undefined) continue;
+    const counts={};
+    for(const row of values.slice(1)){
+      const v=String(row[idx[name]]??'').trim()||'(vacío)';
+      counts[v]=(counts[v]||0)+1;
+    }
+    out[name]=counts;
+  }
+  return out;
+}
+function compactRows(values,maxRows=50){
+  return values.slice(0,maxRows).map(row=>row.map(v=>String(v??'').trim()));
+}
 
 const accessToken=await token();
 const audit=await readValues(accessToken,REVIEW_SHEET_ID,'AUDITORIA_REVISION!A:P');
@@ -65,15 +84,9 @@ const pending=audit.slice(1).filter(row=>{
   return Boolean(id&&type&&decision&&!state);
 });
 const countsByType={};
-for(const row of pending){
-  const type=String(row[idx.TIPO_CONTENIDO]||'').trim()||'(vacío)';
-  countsByType[type]=(countsByType[type]||0)+1;
-}
+for(const row of pending){const type=String(row[idx.TIPO_CONTENIDO]||'').trim()||'(vacío)';countsByType[type]=(countsByType[type]||0)+1;}
 const historicalTypes={};
-for(const row of audit.slice(1)){
-  const type=String(row[idx.TIPO_CONTENIDO]||'').trim();
-  if(type) historicalTypes[type]=(historicalTypes[type]||0)+1;
-}
+for(const row of audit.slice(1)){const type=String(row[idx.TIPO_CONTENIDO]||'').trim();if(type) historicalTypes[type]=(historicalTypes[type]||0)+1;}
 
 const modules={};
 for(const [key,module] of Object.entries(MODULES)){
@@ -100,19 +113,20 @@ for(const [key,module] of Object.entries(MODULES)){
   };
 }
 
-const report={
-  ok:true,
-  mode:'READ_ONLY_NO_EXTERNAL_WRITES',
-  timestamp:new Date().toISOString(),
-  review_sheet:{
-    headers,
-    audit_rows:Math.max(0,audit.length-1),
-    historical_types:historicalTypes,
-    pending_decisions:pending.length,
-    pending_by_type:countsByType
-  },
-  modules
+const galleryId=MODULES.GALERIA.spreadsheetId;
+const galleryControl=await readValues(accessToken,galleryId,'CONTROL!A:Z');
+const galleryRevision=await readValues(accessToken,galleryId,'REVISION!A:H');
+const galleryCatalogs=await readValues(accessToken,galleryId,'CATALOGOS!A:Z');
+const galleryFormSpec=await readValues(accessToken,galleryId,'FORM_SPEC!A:Z');
+const galleryContract={
+  control_state_counts:distinctCounts(galleryControl,['CONTIENE_MENORES','AUTORIZACION_MENORES','ESTADO_REGISTRO','PUBLICAR','PRIVACIDAD','AUTORIZACION_PUBLICACION']),
+  revision_state_counts:distinctCounts(galleryRevision,['ESTADO','PUBLICAR','PRIVACIDAD','AUTORIZACION_PUBLICACION','AUTORIZACION_MENORES']),
+  review_audit_authorization_counts:distinctCounts(audit,['AUTORIZACION_PUBLICACION','AUTORIZACION_MENORES']),
+  catalogs:compactRows(galleryCatalogs),
+  form_spec:compactRows(galleryFormSpec)
 };
+
+const report={ok:true,mode:'READ_ONLY_NO_EXTERNAL_WRITES',timestamp:new Date().toISOString(),review_sheet:{headers,audit_rows:Math.max(0,audit.length-1),historical_types:historicalTypes,pending_decisions:pending.length,pending_by_type:countsByType},modules,gallery_contract:galleryContract};
 fs.mkdirSync('qa-review-probe',{recursive:true});
 fs.writeFileSync('qa-review-probe/read-only-report.json',JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
