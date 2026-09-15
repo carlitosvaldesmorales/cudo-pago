@@ -63,6 +63,23 @@ export async function processReviewDecisions({readValues,updateValues,appendValu
     throw new Error(`Safety gate: decisiones pendientes ${pendingRows.length}, esperado ${expectedPending}. No se aplicó ninguna escritura.`);
   }
 
+  const revisionCache=new Map();
+  const preflightModules=new Set();
+  for(const row of pendingRows){
+    const rawType=String(row[idx.TIPO_CONTENIDO]||'').trim();
+    const decision=String(row[idx.DECISION]||'').trim();
+    const moduleKey=resolveContentType(rawType);
+    const mod=moduleKey?modules[moduleKey]:null;
+    if(!mod||mod.supported===false||!transition(decision)) continue;
+    preflightModules.add(moduleKey);
+  }
+  for(const moduleKey of preflightModules){
+    const mod=modules[moduleKey];
+    const revisions=await readValues(mod.spreadsheetId,`${mod.revisionSheet}!A:H`);
+    assertRevisionContract(revisions,mod,moduleKey);
+    revisionCache.set(moduleKey,revisions);
+  }
+
   const summary=[];
   for(let i=1;i<audit.length;i++){
     const row=audit[i];
@@ -88,19 +105,23 @@ export async function processReviewDecisions({readValues,updateValues,appendValu
       continue;
     }
 
-    const revisions=await readValues(mod.spreadsheetId,`${mod.revisionSheet}!A:H`);
-    assertRevisionContract(revisions,mod,moduleKey);
+    const revisions=revisionCache.get(moduleKey);
     const existingIndex=revisions.findIndex((r,n)=>n>0&&String(r[0]||'').trim()===id);
     const timestamp=now();
     const revRow=[id,...next,String(row[idx.REVISOR]||'').trim(),timestamp,String(row[idx.OBSERVACIONES]||'').trim()];
-    if(existingIndex>0) await updateValues(mod.spreadsheetId,`${mod.revisionSheet}!A${existingIndex+1}:H${existingIndex+1}`,[revRow]);
-    else await appendValues(mod.spreadsheetId,`${mod.revisionSheet}!A:H`,[revRow]);
+    if(existingIndex>0){
+      await updateValues(mod.spreadsheetId,`${mod.revisionSheet}!A${existingIndex+1}:H${existingIndex+1}`,[revRow]);
+      revisions[existingIndex]=revRow;
+    }else{
+      await appendValues(mod.spreadsheetId,`${mod.revisionSheet}!A:H`,[revRow]);
+      revisions.push(revRow);
+    }
 
     const auditRow=i+1;
     await updateValues(reviewSheetId,`AUDITORIA_REVISION!J${auditRow}:O${auditRow}`,[['APLICADO',id,1,`${decision} aplicado`,timestamp,'']]);
     summary.push({row:auditRow,id,type:rawType,module:moduleKey,decision,status:'APLICADO'});
   }
-  return {ok:true,pending:pendingRows.length,summary};
+  return {ok:true,pending:pendingRows.length,preflight_modules:[...preflightModules],summary};
 }
 
 async function getAccessToken(){
