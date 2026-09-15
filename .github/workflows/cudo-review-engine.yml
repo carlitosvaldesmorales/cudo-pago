@@ -4,11 +4,25 @@ on:
   push:
     paths:
       - 'qa-v8-google/tools/process_review_decisions.mjs'
-      - 'qa-v8-google/tools/sync_google_publico.mjs'
+      - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
+      - 'preview-v8/tools/sync_google_publico.mjs'
+      - '.github/workflows/cudo-review-engine.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/tools/process_review_decisions.mjs'
+      - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
+      - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      apply_changes:
+        description: 'Procesar decisiones reales en Google Sheets y sincronizar PUBLICO_EXPORT'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -18,8 +32,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  review-and-sync:
+  validate-review-engine:
+    if: github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis del motor recuperado
+        run: |
+          set -euo pipefail
+          node --check qa-v8-google/tools/process_review_decisions.mjs
+          node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
+          node --check preview-v8/tools/sync_google_publico.mjs
+      - name: Probar decisión -> revisión con fixture sintético
+        run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
+
+  review-and-sync:
+    if: >-
+      (github.event_name == 'schedule' && vars.CUDO_REVIEW_ENGINE_ENABLED == 'true') ||
+      (github.event_name == 'workflow_dispatch' && inputs.apply_changes == true)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
@@ -33,16 +69,19 @@ jobs:
           node-version: '20'
       - name: Procesar decisiones CUDO Review
         run: node qa-v8-google/tools/process_review_decisions.mjs
-      - name: Sincronizar PUBLICO_EXPORT a V8
-        run: node qa-v8-google/tools/sync_google_publico.mjs
-      - name: Publicar cambios JSON si existen
+      - name: Sincronizar PUBLICO_EXPORT con el adaptador V8 vigente
+        run: node preview-v8/tools/sync_google_publico.mjs
+      - name: Validar datos públicos resultantes
+        run: python3 preview-v8/tools/validate_data.py preview-v8/data
+      - name: Publicar cambios JSON y medios si existen
         run: |
-          if git diff --quiet -- preview-v8/data; then
+          set -euo pipefail
+          if git diff --quiet -- preview-v8/data preview-v8/media; then
             echo 'Sin cambios públicos.'
             exit 0
           fi
           git config user.name 'cudo-review-engine'
           git config user.email 'actions@users.noreply.github.com'
-          git add preview-v8/data
+          git add preview-v8/data preview-v8/media
           git commit -m 'CUDO: sincronizar contenido público desde Sheets'
           git push
