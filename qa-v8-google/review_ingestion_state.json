@@ -1,0 +1,10 @@
+{
+  "source_sheet": "Respuestas de formulario 1",
+  "audit_sheet": "AUDITORIA_REVISION",
+  "historical_baseline_through_response_row": 4,
+  "historical_baseline_reason": "Las respuestas 2-4 corresponden a las decisiones ya aplicadas de publicar, corregir y retirar el partido QA-PAR-20260905144145-001. Se preservan como historia y no se reingieren.",
+  "evidence": {
+    "lineage_probe_run": 34964675000,
+    "review_sheet_id": "1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms"
+  }
+}
