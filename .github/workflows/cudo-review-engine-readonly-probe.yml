@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/cudo-review-engine-readonly-probe.yml'
       - 'qa-v8-google/tools/probe_review_engine_readonly.mjs'
+      - 'qa-v8-google/tools/probe_formula_topology_readonly.mjs'
   workflow_dispatch:
 
 permissions:
@@ -24,14 +25,20 @@ jobs:
         with:
           node-version: '20'
       - name: Validar sintaxis
-        run: node --check qa-v8-google/tools/probe_review_engine_readonly.mjs
+        run: |
+          node --check qa-v8-google/tools/probe_review_engine_readonly.mjs
+          node --check qa-v8-google/tools/probe_formula_topology_readonly.mjs
       - name: Probar acceso real Google en modo sólo lectura
         run: node qa-v8-google/tools/probe_review_engine_readonly.mjs
+      - name: Probar topología de fórmulas Google en modo sólo lectura
+        run: node qa-v8-google/tools/probe_formula_topology_readonly.mjs
       - name: Publicar evidencia sin contenido privado
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cudo-review-readonly-probe-${{ github.run_id }}
-          path: qa-review-probe/read-only-report.json
+          path: |
+            qa-review-probe/read-only-report.json
+            qa-formula-topology/formula-topology.json
           if-no-files-found: warn
           retention-days: 14
