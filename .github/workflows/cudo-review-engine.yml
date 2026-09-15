@@ -9,10 +9,13 @@ on:
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
+      - 'qa-v8-google/tools/review_event_observer.mjs'
+      - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
+      - '.github/workflows/cudo-review-event-observer.yml'
   pull_request:
     branches: [main]
     paths:
@@ -21,10 +24,13 @@ on:
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
+      - 'qa-v8-google/tools/review_event_observer.mjs'
+      - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
+      - '.github/workflows/cudo-review-event-observer.yml'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -63,6 +69,8 @@ jobs:
           node --check qa-v8-google/tools/ingest_review_form_responses.mjs
           node --check qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
           node --check qa-v8-google/tools/review_event_bridge_fixture_harness.mjs
+          node --check qa-v8-google/tools/review_event_observer.mjs
+          node --check qa-v8-google/tools/review_event_observer_fixture_harness.mjs
           node --check qa-v8-google/tools/process_review_decisions.mjs
           node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
@@ -70,6 +78,8 @@ jobs:
         run: node qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
       - name: Probar bridge Apps Script -> workflow_dispatch de forma sintética
         run: node qa-v8-google/tools/review_event_bridge_fixture_harness.mjs
+      - name: Probar observador de evento real y retiro seguro de polling
+        run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
       - name: Probar AUDITORIA -> revisión/corrección con fixture sintético
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
 
