@@ -1,0 +1,35 @@
+name: CUDO Google Form Capture Schema Readonly
+
+on:
+  push:
+    paths:
+      - '.github/workflows/certify-google-form-capture-schema.yml'
+      - 'qa-v8-google/tools/probe_google_form_capture_schema.mjs'
+      - 'qa-v8-google/contracts/equipos-v1.json'
+      - 'qa-v8-google/contracts/tabla-v1.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis
+        run: node --check qa-v8-google/tools/probe_google_form_capture_schema.mjs
+      - name: Certificar esquema público de Forms sin enviar respuestas
+        run: node qa-v8-google/tools/probe_google_form_capture_schema.mjs
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-google-form-capture-schema-${{ github.run_id }}
+          path: qa-form-schema/google-form-capture-schema.json
+          if-no-files-found: warn
+          retention-days: 14
