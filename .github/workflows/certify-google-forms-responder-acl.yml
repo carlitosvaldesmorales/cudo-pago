@@ -1,0 +1,37 @@
+name: Certify Google Forms Responder ACL
+
+on:
+  push:
+    paths:
+      - '.github/workflows/certify-google-forms-responder-acl.yml'
+      - 'preview-v8/tools/probe_google_forms_responder_acl.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readonly-acl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validar sintaxis
+        run: node --check preview-v8/tools/probe_google_forms_responder_acl.mjs
+      - name: Certificar ACL de respondedor Google Forms sin escrituras
+        run: node preview-v8/tools/probe_google_forms_responder_acl.mjs
+      - name: Publicar evidencia no sensible
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-google-forms-responder-acl-${{ github.run_id }}
+          path: qa-google-forms-acl/report.json
+          if-no-files-found: warn
+          retention-days: 14
