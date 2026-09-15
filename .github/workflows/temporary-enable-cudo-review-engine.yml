@@ -1,0 +1,44 @@
+name: Temporary enable CUDO Review Engine gate
+
+on:
+  push:
+    paths:
+      - '.github/workflows/temporary-enable-cudo-review-engine.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  enable-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update CUDO_REVIEW_ENGINE_ENABLED=true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${REPO}/actions/variables"
+          headers=(-H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28")
+          code=$(curl -sS -o /tmp/current.json -w '%{http_code}' "${headers[@]}" "${api}/CUDO_REVIEW_ENGINE_ENABLED")
+          if [ "$code" = "200" ]; then
+            code=$(curl -sS -o /tmp/write.json -w '%{http_code}' -X PATCH "${headers[@]}" "${api}/CUDO_REVIEW_ENGINE_ENABLED" -d '{"name":"CUDO_REVIEW_ENGINE_ENABLED","value":"true"}')
+            [ "$code" = "204" ] || { cat /tmp/write.json; echo "PATCH failed HTTP $code"; exit 1; }
+          elif [ "$code" = "404" ]; then
+            code=$(curl -sS -o /tmp/write.json -w '%{http_code}' -X POST "${headers[@]}" "$api" -d '{"name":"CUDO_REVIEW_ENGINE_ENABLED","value":"true"}')
+            [ "$code" = "201" ] || { cat /tmp/write.json; echo "POST failed HTTP $code"; exit 1; }
+          else
+            cat /tmp/current.json
+            echo "GET variable failed HTTP $code"
+            exit 1
+          fi
+          curl -fsS "${headers[@]}" "${api}/CUDO_REVIEW_ENGINE_ENABLED" > /tmp/verified.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/verified.json'))
+          assert d.get('name')=='CUDO_REVIEW_ENGINE_ENABLED'
+          assert d.get('value')=='true'
+          print(json.dumps({'ok':True,'name':d['name'],'value':d['value']},indent=2))
+          PY
