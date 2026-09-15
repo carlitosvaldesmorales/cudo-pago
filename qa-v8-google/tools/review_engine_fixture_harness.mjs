@@ -14,10 +14,9 @@ const revisions=[
   ['ID','ESTADO_REGISTRO','PUBLICAR','PRIVACIDAD','ESTADO_REVISION','REVISOR','FECHA_REVISION','OBSERVACIONES'],
   ['NOT-002','PENDIENTE','NO','INTERNO','PENDIENTE','','','']
 ];
-const writes=[];
 
 const clone=value=>JSON.parse(JSON.stringify(value));
-const adapter={
+const makeAdapter=writes=>({
   now:()=> '2026-09-15T04:00:00.000Z',
   readValues:async(spreadsheetId,range)=>{
     if(spreadsheetId===REVIEW_SHEET_ID&&range==='AUDITORIA_REVISION!A:P') return clone(audit);
@@ -32,15 +31,24 @@ const adapter={
     writes.push({op:'append',spreadsheetId,range,values:clone(values)});
     return {updates:{updatedRange:range}};
   }
-};
+});
 
 assert.deepEqual(transition('Aprobar y publicar'),['PUBLICADO','SI','PUBLICO','AUTORIZADO']);
 assert.deepEqual(transition('Solicitar corrección'),['REQUIERE_CORRECCION','NO','INTERNO','PENDIENTE']);
 assert.deepEqual(transition('Rechazar'),['RECHAZADO','NO','INTERNO','PENDIENTE']);
 assert.equal(transition('otra'),null);
 
-const result=await processReviewDecisions(adapter);
+const guardedWrites=[];
+await assert.rejects(
+  ()=>processReviewDecisions({...makeAdapter(guardedWrites),expectedPending:0}),
+  /Safety gate: decisiones pendientes 4, esperado 0/
+);
+assert.equal(guardedWrites.length,0,'El safety gate debe detenerse antes de cualquier escritura');
+
+const writes=[];
+const result=await processReviewDecisions(makeAdapter(writes));
 assert.equal(result.ok,true);
+assert.equal(result.pending,4);
 assert.deepEqual(result.summary.map(x=>x.status),[
   'APLICADO',
   'APLICADO',
@@ -69,6 +77,8 @@ console.log(JSON.stringify({
   ok:true,
   mode:'SYNTHETIC_IN_MEMORY_NO_EXTERNAL_WRITES',
   processor:'qa-v8-google/tools/process_review_decisions.mjs',
+  safety_gate:'PASS_NO_WRITES_ON_PENDING_MISMATCH',
+  pending:result.pending,
   applied:result.summary.filter(x=>x.status==='APLICADO').length,
   ignored:result.summary.filter(x=>x.status.startsWith('IGNORADO_')).length,
   writes:writes.map(w=>({op:w.op,range:w.range}))
