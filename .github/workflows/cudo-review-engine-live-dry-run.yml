@@ -1,0 +1,63 @@
+name: CUDO Review Engine Live Dry Run
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-review-engine-live-dry-run.yml'
+      - 'qa-v8-google/tools/process_review_decisions.mjs'
+      - 'preview-v8/tools/sync_google_publico.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_REVIEW_EXPECT_PENDING: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Preparar evidencia
+        run: mkdir -p qa-review-live-dry-run
+      - name: Ejecutar motor real con safety gate 0 pendientes
+        run: node qa-v8-google/tools/process_review_decisions.mjs | tee qa-review-live-dry-run/review-result.json
+      - name: Sincronizar PUBLICO_EXPORT real sólo al workspace
+        run: node preview-v8/tools/sync_google_publico.mjs | tee qa-review-live-dry-run/sync-result.json
+      - name: Validar JSON públicos resultantes
+        run: python3 preview-v8/tools/validate_data.py preview-v8/data
+      - name: Medir drift sin publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only -- preview-v8/data preview-v8/media > qa-review-live-dry-run/changed-files.txt
+          git diff --stat -- preview-v8/data preview-v8/media > qa-review-live-dry-run/diff-stat.txt
+          node - <<'NODE'
+          const fs=require('fs');
+          const changed=fs.readFileSync('qa-review-live-dry-run/changed-files.txt','utf8').split(/\r?\n/).filter(Boolean);
+          const report={
+            ok:true,
+            mode:'LIVE_GOOGLE_NO_EXTERNAL_WRITES_NO_PUSH',
+            expected_pending:0,
+            changed_files:changed,
+            changed_count:changed.length,
+            v8_aligned:changed.length===0
+          };
+          fs.writeFileSync('qa-review-live-dry-run/report.json',JSON.stringify(report,null,2)+'\n');
+          console.log(JSON.stringify(report,null,2));
+          NODE
+      - name: Publicar evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-review-live-dry-run-${{ github.run_id }}
+          path: qa-review-live-dry-run/
+          if-no-files-found: warn
+          retention-days: 14
