@@ -1,0 +1,33 @@
+name: Temporary probe CUDO Review Engine state
+
+on:
+  push:
+    paths:
+      - '.github/workflows/temporary-probe-cudo-review-engine-state.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read workflow state
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${REPO}/actions/workflows/cudo-review-engine.yml" \
+            > /tmp/workflow.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/workflow.json'))
+          print(json.dumps({'id':d.get('id'),'name':d.get('name'),'path':d.get('path'),'state':d.get('state')},indent=2))
+          PY
