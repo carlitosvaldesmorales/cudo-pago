@@ -9,8 +9,14 @@ on:
       - 'preview-v8/offline.html'
       - 'preview-v8/icons/**'
       - 'preview-v8/shared/pwa.js'
+      - 'preview-v8/shared/site.js'
       - 'preview-v8/index.html'
       - 'preview-v8/admin/index.html'
+      - 'preview-v8/club/index.html'
+      - 'preview-v8/noticias/index.html'
+      - 'preview-v8/partidos/index.html'
+      - 'preview-v8/equipos/index.html'
+      - 'preview-v8/galeria/index.html'
       - 'preview-v8/certification/**'
       - 'preview-v8/tools/validate_pwa_shell.mjs'
       - 'preview-v8/tools/validate_mobile_certification.mjs'
@@ -46,6 +52,7 @@ jobs:
           set -euo pipefail
           node --check preview-v8/sw.js
           node --check preview-v8/shared/pwa.js
+          node --check preview-v8/shared/site.js
           node --check preview-v8/tools/validate_pwa_shell.mjs
           node --check preview-v8/tools/validate_mobile_certification.mjs
           node --check preview-v8/tools/mobile_product_journey.mjs
@@ -130,11 +137,12 @@ jobs:
             const manifestLink=document.querySelector('link[rel="manifest"]')?.getAttribute('href');
             const manifest=await fetch(manifestLink).then(r=>r.json());
             const reg=await navigator.serviceWorker.ready;
-            return {manifestLink,scope:reg.scope,startUrl:manifest.start_url,display:manifest.display,error:window.CUDO_PWA.error};
+            return {manifestLink,scope:reg.scope,startUrl:manifest.start_url,display:manifest.display,error:window.CUDO_PWA.error,version:window.CUDO_PWA.version};
           });
           console.log(JSON.stringify(state,null,2));
           if(errors.length) throw new Error(`page errors: ${errors.join(' | ')}`);
           if(state.error) throw new Error(state.error);
+          if(state.version!=='2.0') throw new Error(`shell móvil inesperado ${state.version}`);
           if(state.scope!=='http://127.0.0.1:4173/preview-v8/') throw new Error(`scope inválido ${state.scope}`);
           if(state.startUrl!=='/preview-v8/'||state.display!=='standalone') throw new Error('manifest runtime inválido');
           await browser.close();
