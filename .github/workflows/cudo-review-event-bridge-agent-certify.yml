@@ -121,3 +121,5 @@ jobs:
           done
           echo 'Timed out waiting for dispatched Review Engine run' >&2
           exit 1
+
+# registered workflow: this second commit intentionally exercises the certification path
