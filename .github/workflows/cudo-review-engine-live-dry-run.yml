@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - '.github/workflows/cudo-review-engine-live-dry-run.yml'
+      - 'qa-v8-google/review_ingestion_state.json'
+      - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
   workflow_dispatch:
@@ -19,6 +21,7 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_REVIEW_INGEST_EXPECT_NEW: '0'
       CUDO_REVIEW_EXPECT_PENDING: '0'
       CUDO_REVIEW_DRY_RUN: 'true'
     steps:
@@ -28,6 +31,8 @@ jobs:
           node-version: '20'
       - name: Preparar evidencia
         run: mkdir -p qa-review-live-dry-run/generated
+      - name: Verificar Form -> AUDITORIA en dry-run con baseline histórico
+        run: node qa-v8-google/tools/ingest_review_form_responses.mjs | tee qa-review-live-dry-run/ingest-result.json
       - name: Ejecutar motor real en dry-run explícito con safety gate 0 pendientes
         run: node qa-v8-google/tools/process_review_decisions.mjs | tee qa-review-live-dry-run/review-result.json
       - name: Sincronizar PUBLICO_EXPORT real sólo al workspace
@@ -58,6 +63,8 @@ jobs:
           const report={
             ok:changed.length===0&&status.length===0,
             mode:'LIVE_GOOGLE_NO_EXTERNAL_WRITES_NO_PUSH',
+            ingest_expected_new:0,
+            ingest_apply:false,
             review_dry_run:true,
             expected_pending:0,
             changed_files:changed,
