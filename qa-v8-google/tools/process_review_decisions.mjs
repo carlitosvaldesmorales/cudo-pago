@@ -13,13 +13,24 @@ export function transition(decision){
   return null;
 }
 
-export async function processReviewDecisions({readValues,updateValues,appendValues,now=()=>new Date().toISOString(),modules=MODULES,reviewSheetId=REVIEW_SHEET_ID}){
+export async function processReviewDecisions({readValues,updateValues,appendValues,now=()=>new Date().toISOString(),modules=MODULES,reviewSheetId=REVIEW_SHEET_ID,expectedPending=null}){
   const audit=await readValues(reviewSheetId,'AUDITORIA_REVISION!A:P');
   if(!audit.length) throw new Error('AUDITORIA_REVISION sin encabezados');
   const headers=audit[0];
   const idx=Object.fromEntries(headers.map((h,i)=>[h,i]));
   const required=['ID_REVISION','FECHA','TIPO_CONTENIDO','IDENTIFICADOR_HUMANO','DECISION','OBSERVACIONES','REVISOR','ESTADO_PROCESO'];
   for(const h of required) if(idx[h]===undefined) throw new Error(`Falta columna ${h} en AUDITORIA_REVISION`);
+
+  const pendingRows=audit.slice(1).filter(row=>{
+    const id=String(row[idx.IDENTIFICADOR_HUMANO]||'').trim();
+    const type=String(row[idx.TIPO_CONTENIDO]||'').trim();
+    const decision=String(row[idx.DECISION]||'').trim();
+    const processState=String(row[idx.ESTADO_PROCESO]||'').trim();
+    return Boolean(id&&type&&decision&&!processState);
+  });
+  if(expectedPending!==null&&pendingRows.length!==expectedPending){
+    throw new Error(`Safety gate: decisiones pendientes ${pendingRows.length}, esperado ${expectedPending}. No se aplicó ninguna escritura.`);
+  }
 
   const summary=[];
   for(let i=1;i<audit.length;i++){
@@ -45,7 +56,7 @@ export async function processReviewDecisions({readValues,updateValues,appendValu
     await updateValues(reviewSheetId,`AUDITORIA_REVISION!J${auditRow}:O${auditRow}`,[['APLICADO',id,1,`${decision} aplicado`,timestamp,'']]);
     summary.push({row:auditRow,id,type,decision,status:'APLICADO'});
   }
-  return {ok:true,summary};
+  return {ok:true,pending:pendingRows.length,summary};
 }
 
 async function getAccessToken(){
@@ -87,6 +98,9 @@ async function productionAdapter(){
 const isMain=process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href;
 if(isMain){
   const adapter=await productionAdapter();
-  const result=await processReviewDecisions(adapter);
+  const expectedRaw=process.env.CUDO_REVIEW_EXPECT_PENDING;
+  const expectedPending=expectedRaw===undefined||expectedRaw===''?null:Number(expectedRaw);
+  if(expectedPending!==null&&!Number.isInteger(expectedPending)) throw new Error('CUDO_REVIEW_EXPECT_PENDING debe ser entero');
+  const result=await processReviewDecisions({...adapter,expectedPending});
   console.log(JSON.stringify(result,null,2));
 }
