@@ -95,8 +95,8 @@ jobs:
           set -euo pipefail
           MAIN_AFTER="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
           test "$MAIN_AFTER" = 'b5d3567b13f588f525e14de7b1d8afe2142d919a'
-          test -z "$(git status --porcelain -- preview-v8)"
-          changed="$(git status --porcelain | awk '{print $2}')"
+          test -z "$(git status --porcelain --untracked-files=all -- preview-v8)"
+          changed="$(git status --porcelain --untracked-files=all | awk '{print $2}')"
           while IFS= read -r path; do
             [ -z "$path" ] && continue
             case "$path" in
