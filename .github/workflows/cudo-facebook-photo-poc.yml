@@ -1,0 +1,188 @@
+name: CUDO Facebook Photo Picker PoC
+
+on:
+  push:
+    branches:
+      - poc/facebook-photo-picker-qa
+    paths:
+      - 'poc/facebook-photo-picker/**'
+      - '.github/workflows/cudo-facebook-photo-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    outputs:
+      public_url: ${{ steps.run.outputs.public_url }}
+      entry_url: ${{ steps.run.outputs.entry_url }}
+      callback_url: ${{ steps.run.outputs.callback_url }}
+      meta_configured: ${{ steps.run.outputs.meta_configured }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Materialize isolated Facebook photo picker PoC
+        id: run
+        shell: bash
+        env:
+          CUDO_META_APP_ID: ${{ secrets.CUDO_META_APP_ID }}
+          CUDO_META_APP_SECRET: ${{ secrets.CUDO_META_APP_SECRET }}
+        run: |
+          set -euo pipefail
+          umask 077
+          RUNTIME="$HOME/.cudo-facebook-photo-poc"
+          STORAGE="$RUNTIME/storage"
+          EVIDENCE="$GITHUB_WORKSPACE/evidence/cudo-facebook-photo-poc"
+          PORT=19110
+          mkdir -p "$RUNTIME" "$STORAGE/selected" "$EVIDENCE" "$RUNTIME/cloudflared-home"
+
+          if [ ! -s "$RUNTIME/poc-key" ]; then
+            python3 - <<'PY' > "$RUNTIME/poc-key"
+          import secrets
+          print(secrets.token_urlsafe(24).replace('-', '').replace('_', ''))
+          PY
+            chmod 600 "$RUNTIME/poc-key"
+          fi
+          POC_KEY="$(cat "$RUNTIME/poc-key")"
+
+          capture_metrics() {
+            local label="$1"
+            {
+              echo "## $label"
+              echo "timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "host: $(hostname)"
+              echo "cpu_count: $(nproc)"
+              echo "load: $(uptime | sed 's/.*load average: //')"
+              echo 'memory:'
+              free -m
+              echo 'disk_home:'
+              df -h "$HOME" | tail -n +1
+              echo
+            } >> "$RUNTIME/metrics.md"
+          }
+
+          : > "$RUNTIME/metrics.md"
+          capture_metrics BEFORE_POC
+
+          if [ -f "$RUNTIME/server.pid" ]; then
+            kill "$(cat "$RUNTIME/server.pid")" 2>/dev/null || true
+            rm -f "$RUNTIME/server.pid"
+          fi
+          if [ -f "$RUNTIME/cloudflared.pid" ]; then
+            kill "$(cat "$RUNTIME/cloudflared.pid")" 2>/dev/null || true
+            rm -f "$RUNTIME/cloudflared.pid"
+          fi
+
+          cp "$GITHUB_WORKSPACE/poc/facebook-photo-picker/server.mjs" "$RUNTIME/server.mjs"
+          : > "$RUNTIME/server.log"
+          unset RUNNER_TRACKING_ID || true
+          nohup env \
+            PORT="$PORT" \
+            CUDO_POC_KEY="$POC_KEY" \
+            CUDO_POC_STORAGE="$STORAGE" \
+            CUDO_META_APP_ID="${CUDO_META_APP_ID:-}" \
+            CUDO_META_APP_SECRET="${CUDO_META_APP_SECRET:-}" \
+            CUDO_META_API_VERSION='v26.0' \
+            node "$RUNTIME/server.mjs" > "$RUNTIME/server.log" 2>&1 &
+          echo $! > "$RUNTIME/server.pid"
+
+          LOCAL='000'
+          for i in $(seq 1 30); do
+            LOCAL="$(curl -sS -o "$RUNTIME/health.json" -w '%{http_code}' --max-time 3 "http://127.0.0.1:$PORT/health" || true)"
+            [ "$LOCAL" = '200' ] && break
+            sleep 1
+          done
+          test "$LOCAL" = '200'
+
+          CLOUDFLARED="$(command -v cloudflared || true)"
+          if [ -z "$CLOUDFLARED" ]; then
+            for p in $(pgrep -x cloudflared 2>/dev/null || true); do
+              candidate="$(readlink -f "/proc/$p/exe" 2>/dev/null || true)"
+              if [ -n "$candidate" ] && [ -x "$candidate" ]; then CLOUDFLARED="$candidate"; break; fi
+            done
+          fi
+          test -n "$CLOUDFLARED"
+          : > "$RUNTIME/cloudflared.log"
+          HOME="$RUNTIME/cloudflared-home" nohup "$CLOUDFLARED" tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" > "$RUNTIME/cloudflared.log" 2>&1 &
+          echo $! > "$RUNTIME/cloudflared.pid"
+
+          PUBLIC_URL=''
+          for i in $(seq 1 60); do
+            PUBLIC_URL="$(grep -Eo 'https://[-a-z0-9]+\.trycloudflare\.com' "$RUNTIME/cloudflared.log" | tail -n1 || true)"
+            [ -n "$PUBLIC_URL" ] && break
+            sleep 2
+          done
+          test -n "$PUBLIC_URL"
+
+          ENTRY_URL="$PUBLIC_URL/$POC_KEY/"
+          CALLBACK_URL="$PUBLIC_URL/$POC_KEY/callback"
+          if [ -n "${CUDO_META_APP_ID:-}" ] && [ -n "${CUDO_META_APP_SECRET:-}" ]; then META_CONFIGURED=true; else META_CONFIGURED=false; fi
+
+          capture_metrics AFTER_POC_START
+          cp "$RUNTIME/metrics.md" "$EVIDENCE/server-capacity-latest.md"
+
+          cat > "$EVIDENCE/runtime-latest.md" <<EOF
+          # CUDO Facebook Photo Picker PoC
+
+          timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          scope: QA_ONLY
+          branch: poc/facebook-photo-picker-qa
+          host: $(hostname)
+          production_v8_touched: false
+          tally_replaced: false
+          runtime: host_node_plus_cloudflare_quick_tunnel
+          node: $(node --version)
+          local_health_http: $LOCAL
+          meta_api_version: v26.0
+          meta_credentials_configured: $META_CONFIGURED
+          access_tokens_persisted: false
+          selected_image_storage: ~/.cudo-facebook-photo-poc/storage/selected
+          public_url: $PUBLIC_URL
+          public_entry_url: $ENTRY_URL
+          meta_valid_oauth_redirect_uri: $CALLBACK_URL
+          current_gate: $( [ "$META_CONFIGURED" = true ] && echo READY_FOR_META_OAUTH || echo META_APP_CREDENTIALS_REQUIRED )
+          EOF
+
+          echo "public_url=$PUBLIC_URL" >> "$GITHUB_OUTPUT"
+          echo "entry_url=$ENTRY_URL" >> "$GITHUB_OUTPUT"
+          echo "callback_url=$CALLBACK_URL" >> "$GITHUB_OUTPUT"
+          echo "meta_configured=$META_CONFIGURED" >> "$GITHUB_OUTPUT"
+
+      - name: Persist QA evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/cudo-facebook-photo-poc/
+          git commit -m 'evidence(cudo): record Facebook photo picker PoC runtime' || true
+          git push origin HEAD:poc/facebook-photo-picker-qa || true
+
+  external-probe:
+    needs: materialize
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify QA front door from Internet
+        shell: bash
+        env:
+          PUBLIC_URL: ${{ needs.materialize.outputs.public_url }}
+          ENTRY_URL: ${{ needs.materialize.outputs.entry_url }}
+        run: |
+          set -euo pipefail
+          HEALTH='000'
+          ENTRY='000'
+          for i in $(seq 1 45); do
+            HEALTH="$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 15 "$PUBLIC_URL/health" || true)"
+            ENTRY="$(curl -sS -o /tmp/entry.html -w '%{http_code}' --max-time 15 "$ENTRY_URL" || true)"
+            [ "$HEALTH" = '200' ] && [ "$ENTRY" = '200' ] && break
+            sleep 2
+          done
+          echo "health_http=$HEALTH"
+          echo "entry_http=$ENTRY"
+          cat /tmp/health.json || true
+          test "$HEALTH" = '200'
+          test "$ENTRY" = '200'
