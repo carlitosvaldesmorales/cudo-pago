@@ -1,0 +1,58 @@
+name: CUDO Review Recover Positional Baseline Bug
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-review-recover-baseline-bug.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  recover-once:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      EXPECTED_REVIEW_ID: CUDO-REV-F706B3D9032D68B8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Preflight exact pending synthetic response
+        shell: bash
+        run: |
+          set -euo pipefail
+          CUDO_REVIEW_INGEST_APPLY=false CUDO_REVIEW_INGEST_EXPECT_NEW=1 \
+            node qa-v8-google/tools/ingest_review_form_responses.mjs > /tmp/review-plan.json
+          cat /tmp/review-plan.json
+          python3 - <<'PY'
+          import json,os
+          d=json.load(open('/tmp/review-plan.json'))
+          e=d.get('new_entries',[])
+          assert d.get('baseline_identity_mode')=='stable_review_id', d
+          assert d.get('new_count')==1, d
+          assert len(e)==1, d
+          assert e[0].get('id')==os.environ['EXPECTED_REVIEW_ID'], e
+          assert e[0].get('content_type')=='Tabla de posiciones', e
+          assert e[0].get('decision')=='Rechazar publicación', e
+          print('exact_synthetic_recovery_preflight=PASS')
+          PY
+      - name: Ingest exact missed response
+        run: |
+          CUDO_REVIEW_INGEST_APPLY=true CUDO_REVIEW_INGEST_EXPECT_NEW=1 \
+            node qa-v8-google/tools/ingest_review_form_responses.mjs
+      - name: Process recovered decision
+        run: node qa-v8-google/tools/process_review_decisions.mjs
+      - name: Sync public projection locally only
+        run: node preview-v8/tools/sync_google_publico.mjs
+      - name: Validate no public or V8 data change from rejection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 preview-v8/tools/validate_data.py preview-v8/data
+          git diff --exit-code -- preview-v8/data preview-v8/media
+          echo 'public_projection_unchanged=PASS'
