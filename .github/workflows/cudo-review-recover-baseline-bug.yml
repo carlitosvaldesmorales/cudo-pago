@@ -16,12 +16,15 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
-      EXPECTED_REVIEW_ID: CUDO-REV-F706B3D9032D68B8
+      EXPECTED_TARGET: CUDO-QA-SYNTH-TABLA-35027786202
+      EXPECTED_EVENT_ID: CUDO-REVIEW-E2E-20260916-001
+      EXPECTED_REVIEWER: CUDO QA Automation
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+
       - name: Preflight exact pending synthetic response
         shell: bash
         run: |
@@ -30,25 +33,116 @@ jobs:
             node qa-v8-google/tools/ingest_review_form_responses.mjs > /tmp/review-plan.json
           cat /tmp/review-plan.json
           python3 - <<'PY'
-          import json,os
+          import json,os,urllib.parse,urllib.request
+
           d=json.load(open('/tmp/review-plan.json'))
           e=d.get('new_entries',[])
           assert d.get('baseline_identity_mode')=='stable_review_id', d
+          assert d.get('response_layout_mode')=='dual_legacy_current_explicit', d
           assert d.get('new_count')==1, d
           assert len(e)==1, d
-          assert e[0].get('id')==os.environ['EXPECTED_REVIEW_ID'], e
+          assert e[0].get('source_row')==2, e
+          assert e[0].get('source_layout')=='CURRENT_A_I_Q', e
           assert e[0].get('content_type')=='Tabla de posiciones', e
           assert e[0].get('decision')=='Rechazar publicación', e
+          review_id=e[0].get('id')
+          assert review_id and review_id.startswith('CUDO-REV-'), e
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            token=json.load(r)['access_token']
+
+          sid='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms'
+          rng=urllib.parse.quote("'Respuestas de formulario 1'!I2:O2",safe='')
+          req=urllib.request.Request(
+            f'https://sheets.googleapis.com/v4/spreadsheets/{sid}/values/{rng}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE',
+            headers={'Authorization':'Bearer '+token}
+          )
+          with urllib.request.urlopen(req) as r:
+            rows=json.load(r).get('values',[])
+          assert len(rows)==1, rows
+          vals=(rows[0]+['']*7)[:7]
+          content,identifier,decision,pub_auth,minors_auth,observations,reviewer=[str(x).strip() for x in vals]
+          assert content=='Tabla de posiciones'
+          assert identifier==os.environ['EXPECTED_TARGET']
+          assert decision=='Rechazar publicación'
+          assert pub_auth=='NO'
+          assert minors_auth=='NO APLICA'
+          assert os.environ['EXPECTED_EVENT_ID'] in observations
+          assert reviewer==os.environ['EXPECTED_REVIEWER']
+
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+            f.write('RECOVERED_REVIEW_ID='+review_id+'\n')
           print('exact_synthetic_recovery_preflight=PASS')
+          print('recovered_review_id='+review_id)
           PY
+
       - name: Ingest exact missed response
         run: |
           CUDO_REVIEW_INGEST_APPLY=true CUDO_REVIEW_INGEST_EXPECT_NEW=1 \
             node qa-v8-google/tools/ingest_review_form_responses.mjs
+
       - name: Process recovered decision
         run: node qa-v8-google/tools/process_review_decisions.mjs
+
+      - name: Verify recovered decision applied and remains non-public
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,urllib.parse,urllib.request
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            token=json.load(r)['access_token']
+          sid='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms'
+          headers={'Authorization':'Bearer '+token}
+          def read(tab,rng):
+            q=urllib.parse.quote(f"'{tab}'!{rng}",safe='')
+            with urllib.request.urlopen(urllib.request.Request(
+              f'https://sheets.googleapis.com/v4/spreadsheets/{sid}/values/{q}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE',
+              headers=headers
+            )) as r:
+              return json.load(r).get('values',[])
+
+          audit=read('AUDITORIA_REVISION','A:P')
+          matches=[]
+          for n,row in enumerate(audit[1:],start=2):
+            vals=row+['']*(16-len(row))
+            if str(vals[0]).strip()==os.environ['RECOVERED_REVIEW_ID']:
+              matches.append((n,[str(x).strip() for x in vals]))
+          assert len(matches)==1, {'match_count':len(matches)}
+          _,vals=matches[0]
+          assert vals[2]=='Tabla de posiciones'
+          assert vals[3]==os.environ['EXPECTED_TARGET']
+          assert vals[4]=='Rechazar publicación'
+          assert vals[9]=='APLICADO', {'estado_proceso':vals[9],'resultado':vals[12]}
+
+          public=read('PUBLICO_EXPORT','A:Z')
+          public_matches=sum(1 for row in public if os.environ['EXPECTED_TARGET'] in [str(v).strip() for v in row])
+          assert public_matches==0, {'public_matches':public_matches}
+          print('recovered_decision_aplicado=PASS')
+          print('public_export_target_absent=PASS')
+          PY
+
       - name: Sync public projection locally only
         run: node preview-v8/tools/sync_google_publico.mjs
+
       - name: Validate no public or V8 data change from rejection
         shell: bash
         run: |
