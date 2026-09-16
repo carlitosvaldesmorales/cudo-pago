@@ -1,0 +1,97 @@
+name: CUDO QA Noticias Tally Synthetic Submit
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-noticias-tally-submit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  submit-synthetic-noticia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Guard production and install Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN_SHA" = 'b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Submit exactly one synthetic Noticias item through the real Admin Tally form
+        shell: bash
+        env:
+          QA_MARKER: CUDO-QA-SYNTH-NOTICIA-${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          cat > submit.cjs <<'JS'
+          const fs=require('fs');
+          const { chromium }=require('playwright');
+          (async()=>{
+            const marker=process.env.QA_MARKER;
+            if(!/^CUDO-QA-SYNTH-NOTICIA-\d+$/.test(marker)) throw new Error('Synthetic marker contract failed');
+            const admin=fs.readFileSync('qa-v8-google/admin/index.html','utf8');
+            const m=admin.match(/<a class="admincard" href="([^"]+)"[^>]*><strong>Publicar una noticia<\/strong>/);
+            if(!m) throw new Error('Noticias Admin link not found');
+            const url=m[1];
+            if(url!=='https://tally.so/r/Me4Eel') throw new Error(`Unexpected Noticias form ${url}`);
+
+            const browser=await chromium.launch({headless:true});
+            const art=await browser.newPage({viewport:{width:1200,height:630}});
+            await art.setContent(`<!doctype html><html><body style="margin:0;width:1200px;height:630px;background:#03163d;color:white;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif"><div style="text-align:center"><div style="font-size:62px;font-weight:800">CUDO QA</div><div style="font-size:32px;margin-top:20px">PRUEBA SINTÉTICA · NO PUBLICAR EN PRODUCCIÓN</div><div style="font-size:24px;margin-top:32px">${marker}</div></div></body></html>`);
+            await art.screenshot({path:'qa-synthetic-noticia.png'});
+            await art.close();
+
+            const page=await browser.newPage({viewport:{width:390,height:844}});
+            const errors=[]; const failed=[];
+            page.on('pageerror',e=>errors.push(String(e.message||e)));
+            page.on('requestfailed',r=>failed.push(r.url()));
+            await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForTimeout(2000);
+
+            const combo=page.getByRole('combobox').first();
+            await combo.click();
+            const comunicado=page.getByText('Comunicado',{exact:true});
+            await comunicado.waitFor({state:'visible',timeout:10000});
+            await comunicado.click();
+
+            await page.getByPlaceholder('Ej.: CUDO recibe a Santa Elena este domingo').fill(marker);
+            await page.getByPlaceholder('Explique en pocas líneas lo principal de la noticia.').fill(`Prueba sintética QA ${marker}. Debe permanecer fuera de producción.`);
+            await page.getByPlaceholder('Escriba aquí la información que se publicará.').fill(`Contenido sintético para certificar el flujo Administración → Tally → revisión → proyección visible QA. Marcador: ${marker}.`);
+            const dateInput=page.locator('input').filter({has:undefined}).nth(4);
+            await dateInput.fill('2026-09-16');
+            await page.locator('input[type=file]').setInputFiles('qa-synthetic-noticia.png');
+            await page.getByPlaceholder('Ej.: Jugadores del CUDO antes del partido.').fill(`Imagen sintética QA ${marker}`);
+            await page.getByPlaceholder('Opcional. Agregue aquí alguna indicación para quien revisará la noticia.').fill(`QA ONLY ${marker}; aprobar sólo mediante cuarentena positiva QA.`);
+
+            const submit=page.getByRole('button',{name:'Enviar noticia para revisión'});
+            await submit.click();
+            await page.waitForTimeout(5000);
+            const body=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
+            const result={ok:true,marker,form:url,final_url:page.url(),body_excerpt:body.slice(0,1200),page_errors:errors,failed_requests:failed,write_performed:true,production_preview_v8_touched:false};
+            console.log(JSON.stringify(result,null,2));
+            if(errors.length||failed.length) process.exitCode=2;
+            await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          JS
+          node submit.cjs
+      - name: Re-check frozen production branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          echo "production_main_after=$MAIN_SHA"
+          test "$MAIN_SHA" = 'b5d3567b13f588f525e14de7b1d8afe2142d919a'
