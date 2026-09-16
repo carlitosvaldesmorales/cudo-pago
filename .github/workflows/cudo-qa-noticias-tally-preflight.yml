@@ -1,0 +1,55 @@
+name: CUDO QA Noticias Tally Preflight
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-noticias-tally-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Discover Noticias form from QA Administration without writing
+        run: |
+          cat > "$RUNNER_TEMP/preflight.cjs" <<'JS'
+          const fs=require('fs');
+          const { chromium }=require('playwright');
+          (async()=>{
+            const admin=fs.readFileSync('qa-v8-google/admin/index.html','utf8');
+            const m=admin.match(/<a class="admincard" href="([^"]+)"[^>]*><strong>Publicar una noticia<\/strong>/);
+            if(!m) throw new Error('Noticias Admin link not found');
+            const url=m[1];
+            if(!/^https:\/\/tally\.so\//.test(url)) throw new Error('Noticias Admin link is not Tally');
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:390,height:844}});
+            const failed=[]; page.on('requestfailed',r=>failed.push(r.url()));
+            const errors=[]; page.on('pageerror',e=>errors.push(String(e.message||e)));
+            await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForTimeout(3000);
+            const body=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
+            const controls=await page.locator('input,textarea,select,[role="radio"],[role="checkbox"],[contenteditable="true"]').evaluateAll(nodes=>nodes.slice(0,100).map((n,i)=>({i,tag:n.tagName,type:n.getAttribute('type'),name:n.getAttribute('name'),placeholder:n.getAttribute('placeholder'),aria:n.getAttribute('aria-label'),role:n.getAttribute('role'),value:n.getAttribute('value')})));
+            const labels=await page.locator('label').allTextContents();
+            const headings=await page.locator('h1,h2,h3,[role="heading"]').allTextContents();
+            const result={ok:true,source:'QA_ADMIN_NOTICIAS_LINK',url_origin:new URL(page.url()).origin,title:await page.title(),headings:headings.map(x=>x.trim()).filter(Boolean),labels:labels.map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),controls,body_excerpt:body.slice(0,5000),failed_requests:failed.length,page_errors:errors,write_performed:false};
+            console.log(JSON.stringify(result,null,2));
+            await browser.close();
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          JS
+          node "$RUNNER_TEMP/preflight.cjs"
