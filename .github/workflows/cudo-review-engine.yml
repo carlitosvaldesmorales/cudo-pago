@@ -91,7 +91,7 @@ jobs:
         run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
       - name: Probar AUDITORIA -> revisión/corrección con fixture sintético
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
-      - name: Probar cuarentena positiva QA sin escrituras externas
+      - name: Probar cuarentena positiva QA multidominio sin escrituras externas
         run: node qa-v8-google/tools/qa_quarantine_fixture_harness.mjs
 
   review-and-sync:
@@ -139,7 +139,7 @@ jobs:
           const s=d.summary[0];
           if(!String(s.identifier||'').includes('CUDO-QA-SYNTH-')) throw new Error('QA guard: la decisión pendiente no es sintética');
           if(String(s.status||'').startsWith('BLOQUEADO_')) throw new Error(`QA guard: decisión bloqueada en dry-run ${s.status}`);
-          const quarantine=s.module==='NOTICIA'&&s.action==='PUBLISH';
+          const quarantine=['NOTICIA','EQUIPO','TABLA'].includes(s.module)&&s.action==='PUBLISH';
           fs.appendFileSync(outFile,`quarantine=${quarantine?'true':'false'}\n`);
           console.log(JSON.stringify({ok:true,pending:d.pending,module:s.module,action:s.action,synthetic:true,qa_positive_quarantine:quarantine},null,2));
           JS
