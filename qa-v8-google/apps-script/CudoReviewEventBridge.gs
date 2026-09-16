@@ -3,6 +3,7 @@ const CUDO_REVIEW_EVENT_BRIDGE = Object.freeze({
   handlerFunction: 'cudoReviewOnFormSubmit',
   tokenProperty: 'CUDO_GITHUB_ACTIONS_TOKEN',
   dispatchUrl: 'https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/actions/workflows/cudo-review-engine.yml/dispatches',
+  dispatchRef: 'main',
 });
 
 function cudoReviewDispatch_(source) {
@@ -21,7 +22,7 @@ function cudoReviewDispatch_(source) {
       'X-GitHub-Api-Version': '2022-11-28',
     },
     payload: JSON.stringify({
-      ref: 'main',
+      ref: CUDO_REVIEW_EVENT_BRIDGE.dispatchRef,
       inputs: {
         apply_changes: 'true',
         source: dispatchSource,
@@ -35,7 +36,7 @@ function cudoReviewDispatch_(source) {
     throw new Error('CUDO Review bridge: GitHub dispatch HTTP ' + code + ' ' + response.getContentText().slice(0, 300));
   }
 
-  return { ok: true, github_status: code, source: dispatchSource };
+  return { ok: true, github_status: code, source: dispatchSource, ref: CUDO_REVIEW_EVENT_BRIDGE.dispatchRef };
 }
 
 function cudoReviewOnFormSubmit(e) {
@@ -50,7 +51,7 @@ function cudoReviewOnFormSubmit(e) {
   }
 
   const dispatched = cudoReviewDispatch_('apps_script_form_submit');
-  return { ok: true, ignored: false, github_status: dispatched.github_status, source: dispatched.source };
+  return { ok: true, ignored: false, github_status: dispatched.github_status, source: dispatched.source, ref: dispatched.ref };
 }
 
 function cudoReviewEventBridgePing() {
@@ -93,5 +94,6 @@ function cudoReviewEventBridgeStatus() {
     trigger_count: triggerCount,
     spreadsheet_id: CUDO_REVIEW_EVENT_BRIDGE.spreadsheetId,
     dispatch_url: CUDO_REVIEW_EVENT_BRIDGE.dispatchUrl,
+    dispatch_ref: CUDO_REVIEW_EVENT_BRIDGE.dispatchRef,
   };
 }

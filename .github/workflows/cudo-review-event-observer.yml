@@ -7,7 +7,7 @@ on:
 
 permissions:
   actions: read
-  contents: write
+  contents: read
 
 jobs:
   certify-real-form-event:
@@ -24,15 +24,13 @@ jobs:
       SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       SOURCE_TITLE: ${{ github.event.workflow_run.display_title }}
       CUDO_REVIEW_RUN_LOG: /tmp/review-run.log
+      CUDO_REVIEW_EVENT_EVIDENCE_DIR: /tmp/cudo-review-event-evidence
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Refresh main before materializing certification
-        run: git pull --ff-only origin main
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Download completed Review Engine logs
         shell: bash
@@ -45,28 +43,22 @@ jobs:
             -o /tmp/review-run-logs.zip
           unzip -p /tmp/review-run-logs.zip > "$CUDO_REVIEW_RUN_LOG"
 
-      - name: Require real form event and materialize event-driven PASS
+      - name: Certificar evento real end-to-end sin polling
         run: node qa-v8-google/tools/review_event_observer.mjs
 
-      - name: Validate resulting scheduler and evidence
+      - name: Validar evidencia event-driven
         shell: bash
         run: |
           set -euo pipefail
-          grep -F "cron: '17 9 * * *'" .github/workflows/cudo-review-engine.yml
-          test -s evidence/review-event-bridge/event-driven-latest.json
-          test -s evidence/review-event-bridge/event-driven-latest.md
-          git diff --check
+          test -s "$CUDO_REVIEW_EVENT_EVIDENCE_DIR/event-driven-latest.json"
+          test -s "$CUDO_REVIEW_EVENT_EVIDENCE_DIR/event-driven-latest.md"
+          ! grep -Eq '^\s*schedule\s*:' .github/workflows/cudo-review-engine.yml
+          ! grep -Eq '\bcron\s*:' .github/workflows/cudo-review-engine.yml
 
-      - name: Commit certification and low-frequency reconciliation
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add evidence/review-event-bridge .github/workflows/cudo-review-engine.yml
-          if git diff --cached --quiet; then
-            echo 'Certification already materialized.'
-            exit 0
-          fi
-          git config user.name 'cudo-review-event-observer'
-          git config user.email 'actions@users.noreply.github.com'
-          git commit -m 'CUDO: certificar evento real y reducir polling a reconciliación diaria'
-          git push origin HEAD:main
+      - name: Publicar evidencia de certificación
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-review-event-driven-${{ github.event.workflow_run.id }}
+          path: /tmp/cudo-review-event-evidence/
+          if-no-files-found: error
+          retention-days: 30

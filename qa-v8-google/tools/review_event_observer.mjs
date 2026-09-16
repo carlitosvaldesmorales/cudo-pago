@@ -3,8 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const REAL_EVENT_SOURCE='apps_script_form_submit';
-export const FAST_CRON="    - cron: '*/5 * * * *'";
-export const DAILY_CRON="    - cron: '17 9 * * *'";
 
 export function inspectReviewRunLog(text){
   const raw=String(text);
@@ -24,13 +22,14 @@ export function inspectReviewRunLog(text){
   return {ok:true,source:REAL_EVENT_SOURCE,new_count:newCount,applied_count:appliedCount};
 }
 
-export function reducePollingToDaily(workflowText){
+export function assertEventDrivenOnly(workflowText){
   const text=String(workflowText);
-  if(text.includes(FAST_CRON)){
-    return {changed:true,text:text.replace(FAST_CRON,DAILY_CRON)};
+  const hasSchedule=/^\s*schedule\s*:/m.test(text);
+  const hasCron=/\bcron\s*:/m.test(text);
+  if(hasSchedule||hasCron){
+    throw new Error('POLLING_NOT_ALLOWED: CUDO Review Engine debe ser event-driven only');
   }
-  if(text.includes(DAILY_CRON)) return {changed:false,text};
-  throw new Error('Unexpected scheduler contract; refusing automatic change');
+  return {ok:true,polling:false,mode:'EVENT_DRIVEN_ONLY'};
 }
 
 export function buildEvidence({runId,headSha,createdAt,title,newCount,appliedCount}){
@@ -45,14 +44,15 @@ export function buildEvidence({runId,headSha,createdAt,title,newCount,appliedCou
     new_count:Number(newCount),
     applied_count:Number(appliedCount),
     result:'SUCCESS',
-    safety_net_transition:'5_MINUTE_POLLING_TO_DAILY_RECONCILIATION',
+    execution_mode:'EVENT_DRIVEN_ONLY',
+    polling:false,
   };
 }
 
 export function materializeCertification({logText,workflowText,metadata,evidenceDir}){
   const inspection=inspectReviewRunLog(logText);
-  if(!inspection.ok) throw new Error(`${inspection.reason}: keep polling safety net`);
-  const schedule=reducePollingToDaily(workflowText);
+  if(!inspection.ok) throw new Error(inspection.reason);
+  const eventDriven=assertEventDrivenOnly(workflowText);
   const evidence=buildEvidence({...metadata,newCount:inspection.new_count,appliedCount:inspection.applied_count});
   fs.mkdirSync(evidenceDir,{recursive:true});
   fs.writeFileSync(path.join(evidenceDir,'event-driven-latest.json'),JSON.stringify(evidence,null,2)+'\n');
@@ -63,9 +63,10 @@ export function materializeCertification({logText,workflowText,metadata,evidence
     `new_count: ${evidence.new_count}`,
     `applied_count: ${evidence.applied_count}`,
     'result: PASS_REAL_APPS_SCRIPT_FORM_EVENT_TO_APPLIED_REVIEW_DECISION',
-    'scheduler_after_pass: daily_reconciliation',''
+    'execution_mode: event_driven_only',
+    'polling: false',''
   ].join('\n'));
-  return {inspection,schedule,evidence};
+  return {inspection,eventDriven,evidence};
 }
 
 const isMain=process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1]);
@@ -85,6 +86,12 @@ if(isMain){
     },
     evidenceDir,
   });
-  fs.writeFileSync(workflowPath,result.schedule.text);
-  console.log(JSON.stringify({ok:true,source:result.inspection.source,new_count:result.inspection.new_count,applied_count:result.inspection.applied_count,schedule_changed:result.schedule.changed},null,2));
+  console.log(JSON.stringify({
+    ok:true,
+    source:result.inspection.source,
+    new_count:result.inspection.new_count,
+    applied_count:result.inspection.applied_count,
+    execution_mode:result.eventDriven.mode,
+    polling:false
+  },null,2));
 }

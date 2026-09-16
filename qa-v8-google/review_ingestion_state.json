@@ -1,10 +1,18 @@
 {
   "source_sheet": "Respuestas de formulario 1",
   "audit_sheet": "AUDITORIA_REVISION",
-  "historical_baseline_through_response_row": 4,
-  "historical_baseline_reason": "Las respuestas 2-4 corresponden a las decisiones ya aplicadas de publicar, corregir y retirar el partido QA-PAR-20260905144145-001. Se preservan como historia y no se reingieren.",
+  "historical_baseline_identity_mode": "stable_review_id",
+  "historical_baseline_review_ids": [
+    "CUDO-REV-36988971D5ADEFFD",
+    "CUDO-REV-BA3B453315B47822",
+    "CUDO-REV-8A613AB6DC201EB7"
+  ],
+  "historical_baseline_original_response_rows": [2, 3, 4],
+  "historical_baseline_reason": "Las tres decisiones históricas de publicar, corregir y retirar el partido QA-PAR-20260905144145-001 se preservan por ID estable, no por posición física. Google Forms puede insertar respuestas nuevas antes de filas históricas y desplazar su numeración.",
   "evidence": {
     "lineage_probe_run": 34964675000,
+    "row_reordering_discovery_run": 35095455683,
+    "row_identity_classification_run": 35095570010,
     "review_sheet_id": "1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms"
   }
 }
