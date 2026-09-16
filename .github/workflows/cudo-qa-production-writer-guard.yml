@@ -1,0 +1,51 @@
+name: CUDO QA Production Writer Guard
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-production-writer-guard.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      LEGACY_REVIEW_ENABLED: ${{ vars.CUDO_REVIEW_ENGINE_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+          fetch-depth: 0
+      - name: Prove frozen production and enumerate public-data writers
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN='b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          git fetch origin main --depth=1
+          ACTUAL_MAIN="$(git rev-parse origin/main)"
+          echo "production_main_matches_expected=$([ "$ACTUAL_MAIN" = "$EXPECTED_MAIN" ] && echo true || echo false)"
+          test "$ACTUAL_MAIN" = "$EXPECTED_MAIN"
+
+          mapfile -t WRITERS < <(git grep -l 'sync_google_publico\.mjs' origin/main -- '.github/workflows/*.yml' || true)
+          printf 'production_workflows_referencing_public_sync=%s\n' "${#WRITERS[@]}"
+          printf '%s\n' "${WRITERS[@]}" | sed 's#^origin/main:##'
+          test "${#WRITERS[@]}" -ge 1
+
+          ENABLED=false
+          [ "${LEGACY_REVIEW_ENABLED:-}" = 'true' ] && ENABLED=true
+          echo "legacy_production_review_writer_enabled=$ENABLED"
+          test "$ENABLED" = 'false'
+
+          for path in "${WRITERS[@]}"; do
+            clean="${path#origin/main:}"
+            case "$clean" in
+              .github/workflows/cudo-review-engine.yml|.github/workflows/cudo-review-engine-live-dry-run.yml) ;;
+              *) echo "Unexpected production public sync writer: $clean" >&2; exit 1;;
+            esac
+          done
+          echo 'production_positive_QA_publication_guard=PASS'
