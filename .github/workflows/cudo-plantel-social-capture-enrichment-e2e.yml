@@ -1,0 +1,68 @@
+name: CUDO Plantel Social Capture Enrichment E2E
+
+on:
+  push:
+    branches:
+      - poc/facebook-photo-picker-qa
+    paths:
+      - 'poc/social-profile-enrichment/sheet-e2e.mjs'
+      - 'poc/social-profile-enrichment/resolver.mjs'
+      - '.github/workflows/cudo-plantel-social-capture-enrichment-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: poc/facebook-photo-picker-qa
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate required Google credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for v in CUDO_GOOGLE_OAUTH_CLIENT_ID CUDO_GOOGLE_OAUTH_CLIENT_SECRET CUDO_GOOGLE_REFRESH_TOKEN; do
+            test -n "${!v:-}" || { echo "::error::$v not configured"; exit 1; }
+          done
+
+      - name: Read real synthetic Plantel row and resolve social image candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qa-v8-artifacts/social-enrichment
+          CUDO_EVIDENCE_PATH='qa-v8-artifacts/social-enrichment/sheet-e2e-result.json' \
+            node poc/social-profile-enrichment/sheet-e2e.mjs
+
+      - name: Upload durable CI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-plantel-social-enrichment-${{ github.run_id }}
+          path: qa-v8-artifacts/social-enrichment/
+          retention-days: 14
+
+      - name: Persist sanitized evidence on PoC branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p poc/social-profile-enrichment/evidence
+          cp qa-v8-artifacts/social-enrichment/sheet-e2e-result.json poc/social-profile-enrichment/evidence/sheet-e2e-latest.json
+          git add poc/social-profile-enrichment/evidence/sheet-e2e-latest.json
+          git commit -m 'evidence(cudo): Plantel Tally to social resolver E2E PASS' || true
+          git pull --rebase origin poc/facebook-photo-picker-qa
+          git push origin HEAD:poc/facebook-photo-picker-qa
