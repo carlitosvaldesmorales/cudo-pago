@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../apps-script/CudoReviewEventBridge.gs',import.meta.url),'utf8');
+const EXPECTED_REF='qa/review-event-no-prod-20260915';
 
 function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadsheetId='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms',existingTriggers=[]}={}){
   const fetchCalls=[];
@@ -49,7 +50,7 @@ function assertDispatch(fetchCalls,expectedSource){
   assert.equal(fetchCalls[0].options.method,'post');
   assert.equal(fetchCalls[0].options.headers.Authorization,'Bearer token-qa');
   assert.deepEqual(JSON.parse(fetchCalls[0].options.payload),{
-    ref:'main',
+    ref:EXPECTED_REF,
     inputs:{apply_changes:'true',source:expectedSource}
   });
 }
@@ -60,6 +61,7 @@ function assertDispatch(fetchCalls,expectedSource){
   assert.equal(result.ok,true);
   assert.equal(result.ignored,false);
   assert.equal(result.source,'apps_script_form_submit');
+  assert.equal(result.ref,EXPECTED_REF);
   assertDispatch(fetchCalls,'apps_script_form_submit');
 }
 
@@ -69,6 +71,7 @@ function assertDispatch(fetchCalls,expectedSource){
   assert.equal(result.ok,true);
   assert.equal(result.github_status,204);
   assert.equal(result.source,'agent_ping');
+  assert.equal(result.ref,EXPECTED_REF);
   assertDispatch(fetchCalls,'agent_ping');
 }
 
@@ -104,16 +107,18 @@ function assertDispatch(fetchCalls,expectedSource){
   const status=api.cudoReviewEventBridgeStatus();
   assert.equal(status.token_configured,true);
   assert.equal(status.trigger_count,1);
+  assert.equal(status.dispatch_ref,EXPECTED_REF);
 }
 
 console.log(JSON.stringify({
   ok:true,
   mode:'SYNTHETIC_APPS_SCRIPT_EVENT_BRIDGE',
   source:'qa-v8-google/apps-script/CudoReviewEventBridge.gs',
+  dispatch_ref:EXPECTED_REF,
   dispatch_sources:{form:'apps_script_form_submit',ping:'agent_ping'},
   cases:[
-    'form-submit-dispatches-official-workflow-with-source-tag',
-    'manual-agent-ping-dispatches-official-workflow-with-distinct-source-tag',
+    'form-submit-dispatches-official-workflow-with-source-tag-to-qa-ref',
+    'manual-agent-ping-dispatches-official-workflow-with-distinct-source-tag-to-qa-ref',
     'other-spreadsheet-ignored',
     'missing-token-blocked',
     'github-error-blocked',
