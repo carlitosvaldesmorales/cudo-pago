@@ -53,6 +53,32 @@ async function probeOembed(test) {
   };
 }
 
+async function downloadCandidate(url) {
+  if (!url) return { attempted: false, ok: false };
+  const started = Date.now();
+  try {
+    const r = await fetch(url, {
+      redirect: 'follow',
+      headers: {
+        accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
+      },
+    });
+    const bytes = Buffer.from(await r.arrayBuffer());
+    return {
+      attempted: true,
+      ok: r.ok && bytes.length > 0,
+      http_status: r.status,
+      content_type: r.headers.get('content-type'),
+      bytes: bytes.length,
+      final_host: (() => { try { return new URL(r.url).host; } catch { return null; } })(),
+      elapsed_ms: Date.now() - started,
+    };
+  } catch (error) {
+    return { attempted: true, ok: false, transport_error: String(error), elapsed_ms: Date.now() - started };
+  }
+}
+
 async function probePublicHtml(test) {
   const started = Date.now();
   let response;
@@ -70,9 +96,11 @@ async function probePublicHtml(test) {
   } catch (error) {
     return { ok: false, transport_error: String(error), elapsed_ms: Date.now() - started };
   }
-  const ogImage = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i.exec(html)?.[1]
+  const ogImageRaw = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i.exec(html)?.[1]
     || /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i.exec(html)?.[1]
     || null;
+  const ogImage = ogImageRaw ? ogImageRaw.replaceAll('&amp;', '&') : null;
+  const candidate_download = await downloadCandidate(ogImage);
   return {
     ok: response.ok,
     http_status: response.status,
@@ -81,8 +109,9 @@ async function probePublicHtml(test) {
     elapsed_ms: Date.now() - started,
     html_length: html.length,
     has_og_image: Boolean(ogImage),
-    og_image_host: ogImage ? (() => { try { return new URL(ogImage.replaceAll('&amp;', '&')).host; } catch { return null; } })() : null,
+    og_image_host: ogImage ? (() => { try { return new URL(ogImage).host; } catch { return null; } })() : null,
     login_wall_signal: /log in|iniciar sesi[oó]n|accounts\/login/i.test(html),
+    candidate_download,
   };
 }
 
@@ -92,7 +121,8 @@ for (const test of cases) {
   const public_html = await probePublicHtml(test);
   let classification = 'NO_USEFUL_ENRICHMENT';
   if (oembed.ok && oembed.json?.has_thumbnail_url) classification = 'IMAGE_CANDIDATE_FROM_OEMBED';
-  else if (public_html.ok && public_html.has_og_image) classification = 'IMAGE_CANDIDATE_FROM_PUBLIC_HTML_EXPERIMENTAL';
+  else if (public_html.candidate_download?.ok) classification = 'PUBLIC_POST_IMAGE_BYTES_PASS';
+  else if (public_html.ok && public_html.has_og_image) classification = 'IMAGE_CANDIDATE_NOT_DOWNLOADABLE';
   else if (oembed.ok && oembed.json?.html_length > 0) classification = 'EMBED_ONLY_NO_DIRECT_IMAGE';
   results.push({ ...test, oembed, public_html, classification });
 }
@@ -103,6 +133,7 @@ const output = {
   production_v8_touched: false,
   user_oauth_required: false,
   access_token_used: false,
+  image_bytes_persisted: false,
   cases: results,
 };
 
