@@ -11,13 +11,22 @@ export const RESPONSE_PREFIX_HEADERS=['Marca temporal','¿Qué contenido desea r
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_STATE_PATH=path.resolve(__dirname,'../review_ingestion_state.json');
+const STABLE_ID_RE=/^CUDO-REV-[A-F0-9]{16}$/;
 
 export function loadIngestionState(statePath=DEFAULT_STATE_PATH){
   const state=JSON.parse(fs.readFileSync(statePath,'utf8'));
-  if(!Number.isInteger(state.historical_baseline_through_response_row)||state.historical_baseline_through_response_row<1){
-    throw new Error('review_ingestion_state.json: historical_baseline_through_response_row inválido');
+  const ids=state.historical_baseline_review_ids;
+  if(!Array.isArray(ids)||ids.length===0){
+    throw new Error('review_ingestion_state.json: historical_baseline_review_ids debe ser un arreglo no vacío');
   }
-  return state;
+  const normalized=ids.map(value=>String(value??'').trim());
+  if(normalized.some(id=>!STABLE_ID_RE.test(id))){
+    throw new Error('review_ingestion_state.json: historical_baseline_review_ids contiene ID inválido');
+  }
+  if(new Set(normalized).size!==normalized.length){
+    throw new Error('review_ingestion_state.json: historical_baseline_review_ids contiene duplicados');
+  }
+  return {...state,historical_baseline_review_ids:normalized};
 }
 
 function clean(value){return String(value??'').trim();}
@@ -78,7 +87,9 @@ export async function planReviewResponseIngestion({readValues,state=loadIngestio
   assertAuditHeaders(audit);
 
   const existingIds=new Set(audit.slice(1).map(row=>clean(row[0])).filter(Boolean));
-  const baselineThrough=state.historical_baseline_through_response_row;
+  const baselineIds=new Set((state.historical_baseline_review_ids||[]).map(clean));
+  if(baselineIds.size===0) throw new Error('Safety gate ingestión: baseline histórico por identidad no configurado');
+
   const baseline=[];
   const duplicates=[];
   const newEntries=[];
@@ -87,9 +98,15 @@ export async function planReviewResponseIngestion({readValues,state=loadIngestio
     const rowNumber=i+1;
     const row=responses[i]||[];
     if(isBlankRow(row)) continue;
-    if(rowNumber<=baselineThrough){baseline.push(rowNumber);continue;}
     const entry=responseRowToAudit(row,rowNumber);
-    if(existingIds.has(entry.id)){duplicates.push({source_row:rowNumber,id:entry.id});continue;}
+    if(baselineIds.has(entry.id)){
+      baseline.push({source_row:rowNumber,id:entry.id});
+      continue;
+    }
+    if(existingIds.has(entry.id)){
+      duplicates.push({source_row:rowNumber,id:entry.id});
+      continue;
+    }
     newEntries.push(entry);
   }
 
@@ -99,8 +116,10 @@ export async function planReviewResponseIngestion({readValues,state=loadIngestio
 
   return {
     ok:true,
-    baseline_through_response_row:baselineThrough,
-    historical_baseline_rows:baseline,
+    baseline_identity_mode:'stable_review_id',
+    historical_baseline_ids:[...baselineIds],
+    historical_baseline_matches:baseline,
+    historical_baseline_rows:baseline.map(entry=>entry.source_row),
     duplicate_count:duplicates.length,
     duplicates,
     new_count:newEntries.length,
@@ -162,7 +181,8 @@ if(isMain){
   console.log(JSON.stringify({
     ok:result.ok,
     mode:apply?'APPLY_NEW_FORM_RESPONSES':'DRY_RUN_NEW_FORM_RESPONSES',
-    baseline_through_response_row:result.baseline_through_response_row,
+    baseline_identity_mode:result.baseline_identity_mode,
+    historical_baseline_ids:result.historical_baseline_ids,
     historical_baseline_rows:result.historical_baseline_rows,
     duplicate_count:result.duplicate_count,
     new_count:result.new_count,
