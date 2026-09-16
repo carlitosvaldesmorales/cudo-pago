@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- qa-v8-google/admin qa-v8-google/chepica-play; then
+          if [ -z "$(git status --porcelain -- qa-v8-google/admin qa-v8-google/chepica-play)" ]; then
             echo 'QA admin and Chepica Play already aligned.'
             exit 0
           fi
