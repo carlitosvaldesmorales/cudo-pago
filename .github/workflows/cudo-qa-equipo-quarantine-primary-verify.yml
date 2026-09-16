@@ -1,0 +1,69 @@
+name: CUDO QA Equipo Quarantine Primary Verify
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-equipo-quarantine-primary-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      EXPECTED_MAIN: b5d3567b13f588f525e14de7b1d8afe2142d919a
+      REVIEW_SHEET: 1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms
+      EQUIPO_SHEET: 1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI
+      REVIEW_ID: CUDO-REV-E8EF4AA75713D84F
+      TARGET_ID: QA-EQU-20260915215005-001
+      MARKER: CUDO-QA-SYNTH-EQUIPO-35027786202
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify primary shared state remains quarantined
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'qa/review-event-no-prod-20260915'
+          MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN" = "$EXPECTED_MAIN"
+          cat > "$RUNNER_TEMP/verify.mjs" <<'JS'
+          const env=process.env;
+          const body=new URLSearchParams({client_id:env.CUDO_GOOGLE_OAUTH_CLIENT_ID,client_secret:env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET,refresh_token:env.CUDO_GOOGLE_REFRESH_TOKEN,grant_type:'refresh_token'});
+          const tr=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+          const td=await tr.json(); if(!tr.ok||!td.access_token) throw new Error(`oauth ${tr.status}`); const token=td.access_token;
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          async function read(id,range){
+            const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
+            let last;
+            for(let i=0;i<6;i++){
+              const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}); const d=await r.json();
+              if(r.ok) return d.values||[];
+              last={status:r.status,message:d.error?.message||''};
+              if(![429,500,502,503,504].includes(r.status)||i===5) break;
+              await sleep(1000*(i+1));
+            }
+            throw new Error(`read ${range}: ${last?.status} ${last?.message}`);
+          }
+          const objs=rows=>{if(!rows.length)return[];const h=rows[0].map(x=>String(x??'').trim());return rows.slice(1).map((r,i)=>({__row:i+2,...Object.fromEntries(h.map((k,j)=>[k,String(r[j]??'').trim()]))}));};
+          const audit=objs(await read(env.REVIEW_SHEET,'AUDITORIA_REVISION!A:P'));
+          const hits=audit.filter(r=>r.ID_REVISION===env.REVIEW_ID);
+          if(hits.length!==1) throw new Error(`audit hits ${hits.length}`);
+          const a=hits[0];
+          if(a.ESTADO_PROCESO!=='APLICADO'||a.ID_RESUELTO!==env.TARGET_ID||!String(a.RESULTADO||'').toLowerCase().includes('cuarentena')) throw new Error('audit quarantine evidence invalid');
+          const revisions=objs(await read(env.EQUIPO_SHEET,'REVISION!A:H')).filter(r=>r.ID===env.TARGET_ID);
+          if(revisions.length!==1) throw new Error(`revision hits ${revisions.length}`);
+          const rev=revisions[0];
+          if(rev.ESTADO!=='RECHAZADO'||rev.PUBLICAR!=='NO'||rev.PRIVACIDAD!=='INTERNO') throw new Error('shared REVISION changed unexpectedly');
+          const pub=await read(env.EQUIPO_SHEET,'PUBLICO_EXPORT!A:Z');
+          const pubHits=pub.slice(1).filter(row=>row.some(v=>String(v??'').includes(env.TARGET_ID)||String(v??'').includes(env.MARKER))).length;
+          if(pubHits!==0) throw new Error(`shared PUBLICO_EXPORT contains ${pubHits} synthetic hit(s)`);
+          console.log(JSON.stringify({ok:true,mode:'PRIMARY_SHARED_STATE_READ_ONLY',audit_applied:true,audit_quarantine:true,shared_revision_state:rev.ESTADO,shared_revision_publish:rev.PUBLICAR,shared_revision_privacy:rev.PRIVACIDAD,shared_public_export_hits:pubHits,production_main:env.EXPECTED_MAIN,writes:0},null,2));
+          JS
+          node "$RUNNER_TEMP/verify.mjs"
