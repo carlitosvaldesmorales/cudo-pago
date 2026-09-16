@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT=path.resolve(process.cwd());
 const SYNTHETIC_PREFIX='CUDO-QA-SYNTH-';
@@ -56,24 +57,29 @@ export function mergeNoticiasQaOverride(publicDoc,overlayDoc){return mergeQaOver
 export function mergeEquiposQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'EQUIPO',validateItem:assertEquipo});}
 export function mergeTablaQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'TABLA',validateItem:assertTabla});}
 
-const MODULES=[
-  {module:'NOTICIA',file:'noticias.json',merge:mergeNoticiasQaOverride},
-  {module:'EQUIPO',file:'equipos.json',merge:mergeEquiposQaOverride},
-  {module:'TABLA',file:'tabla.json',merge:mergeTablaQaOverride}
-];
-const summary={};
-for(const cfg of MODULES){
-  const overlayPath=path.join(ROOT,'qa-v8-google','qa_review_overrides',cfg.file);
-  const targetPath=path.join(ROOT,'qa-v8-google','data',cfg.file);
-  if(!fs.existsSync(overlayPath)){
-    summary[cfg.module]={mode:'NO_QA_OVERRIDE',overlay_items:0,target:path.relative(ROOT,targetPath)};
-    continue;
+export function applyQaReviewOverrides({root=ROOT}={}){
+  const modules=[
+    {module:'NOTICIA',file:'noticias.json',merge:mergeNoticiasQaOverride},
+    {module:'EQUIPO',file:'equipos.json',merge:mergeEquiposQaOverride},
+    {module:'TABLA',file:'tabla.json',merge:mergeTablaQaOverride}
+  ];
+  const summary={};
+  for(const cfg of modules){
+    const overlayPath=path.join(root,'qa-v8-google','qa_review_overrides',cfg.file);
+    const targetPath=path.join(root,'qa-v8-google','data',cfg.file);
+    if(!fs.existsSync(overlayPath)){
+      summary[cfg.module]={mode:'NO_QA_OVERRIDE',overlay_items:0,target:path.relative(root,targetPath)};
+      continue;
+    }
+    if(!fs.existsSync(targetPath)) throw new Error(`QA override ${cfg.module}: falta ${path.relative(root,targetPath)}`);
+    const publicDoc=JSON.parse(fs.readFileSync(targetPath,'utf8'));
+    const overlayDoc=JSON.parse(fs.readFileSync(overlayPath,'utf8'));
+    const merged=cfg.merge(publicDoc,overlayDoc);
+    fs.writeFileSync(targetPath,JSON.stringify(merged,null,2)+'\n');
+    summary[cfg.module]={mode:'QA_SYNTHETIC_QUARANTINE',overlay_items:overlayDoc.items.length,result_items:merged.items.length,target:path.relative(root,targetPath)};
   }
-  if(!fs.existsSync(targetPath)) throw new Error(`QA override ${cfg.module}: falta ${path.relative(ROOT,targetPath)}`);
-  const publicDoc=JSON.parse(fs.readFileSync(targetPath,'utf8'));
-  const overlayDoc=JSON.parse(fs.readFileSync(overlayPath,'utf8'));
-  const merged=cfg.merge(publicDoc,overlayDoc);
-  fs.writeFileSync(targetPath,JSON.stringify(merged,null,2)+'\n');
-  summary[cfg.module]={mode:'QA_SYNTHETIC_QUARANTINE',overlay_items:overlayDoc.items.length,result_items:merged.items.length,target:path.relative(ROOT,targetPath)};
+  return {ok:true,mode:'QA_SYNTHETIC_QUARANTINE_MULTI_DOMAIN',modules:summary,production_preview_v8_touched:false};
 }
-console.log(JSON.stringify({ok:true,mode:'QA_SYNTHETIC_QUARANTINE_MULTI_DOMAIN',modules:summary,production_preview_v8_touched:false},null,2));
+
+const isMain=process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href;
+if(isMain) console.log(JSON.stringify(applyQaReviewOverrides(),null,2));
