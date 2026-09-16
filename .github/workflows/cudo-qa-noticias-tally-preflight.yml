@@ -28,7 +28,7 @@ jobs:
           npx playwright install --with-deps chromium >/dev/null
       - name: Discover Noticias form from QA Administration without writing
         run: |
-          cat > "$RUNNER_TEMP/preflight.cjs" <<'JS'
+          cat > preflight.cjs <<'JS'
           const fs=require('fs');
           const { chromium }=require('playwright');
           (async()=>{
@@ -44,7 +44,7 @@ jobs:
             await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
             await page.waitForTimeout(3000);
             const body=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
-            const controls=await page.locator('input,textarea,select,[role="radio"],[role="checkbox"],[contenteditable="true"]').evaluateAll(nodes=>nodes.slice(0,100).map((n,i)=>({i,tag:n.tagName,type:n.getAttribute('type'),name:n.getAttribute('name'),placeholder:n.getAttribute('placeholder'),aria:n.getAttribute('aria-label'),role:n.getAttribute('role'),value:n.getAttribute('value')})));
+            const controls=await page.locator('input,textarea,select,button,[role="combobox"],[role="option"],[role="radio"],[role="checkbox"],[contenteditable="true"]').evaluateAll(nodes=>nodes.slice(0,150).map((n,i)=>({i,tag:n.tagName,type:n.getAttribute('type'),name:n.getAttribute('name'),placeholder:n.getAttribute('placeholder'),aria:n.getAttribute('aria-label'),role:n.getAttribute('role'),value:n.getAttribute('value'),text:(n.innerText||n.textContent||'').replace(/\s+/g,' ').trim().slice(0,160)})));
             const labels=await page.locator('label').allTextContents();
             const headings=await page.locator('h1,h2,h3,[role="heading"]').allTextContents();
             const result={ok:true,source:'QA_ADMIN_NOTICIAS_LINK',url_origin:new URL(page.url()).origin,title:await page.title(),headings:headings.map(x=>x.trim()).filter(Boolean),labels:labels.map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean),controls,body_excerpt:body.slice(0,5000),failed_requests:failed.length,page_errors:errors,write_performed:false};
@@ -52,4 +52,4 @@ jobs:
             await browser.close();
           })().catch(e=>{console.error(e.stack||e);process.exit(1)});
           JS
-          node "$RUNNER_TEMP/preflight.cjs"
+          node preflight.cjs
