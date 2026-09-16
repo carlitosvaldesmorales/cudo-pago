@@ -1,0 +1,99 @@
+name: CUDO Remaining Domains Readonly Discovery
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-remaining-domains-readonly-discovery.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      EXPECTED_MAIN: b5d3567b13f588f525e14de7b1d8afe2142d919a
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Guard QA-only and frozen production
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'qa/review-event-no-prod-20260915'
+          MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN" = "$EXPECTED_MAIN"
+          echo "production_main=$MAIN"
+
+      - name: Inventory synthetic operational targets without writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/discover.mjs" <<'JS'
+          import fs from 'node:fs';
+          const CLIENT_ID=process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID;
+          const CLIENT_SECRET=process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET;
+          const REFRESH_TOKEN=process.env.CUDO_GOOGLE_REFRESH_TOKEN;
+          for(const [k,v] of Object.entries({CLIENT_ID,CLIENT_SECRET,REFRESH_TOKEN})) if(!v) throw new Error(`${k} missing`);
+          const modules={
+            EQUIPO:{spreadsheetId:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',operational:'CONTROL',id:'ID_EQUIPO',data:'equipos.json'},
+            PLANTEL:{spreadsheetId:'1fvJedi1WiI_lm-WFGXls4STjddAcdz3_wQN8GG11B94',operational:'PLANTEL_CONTROL',id:'ID_INTERNO',data:'plantel.json'},
+            PARTIDO:{spreadsheetId:'1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI',operational:'CONTROL',id:'ID_PARTIDO',data:'partidos.json'},
+            TABLA:{spreadsheetId:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',operational:'CONTROL',id:'ID_TABLA',data:'tabla.json'},
+            GALERIA:{spreadsheetId:'1RDs5qukBJnW8L6OBPwo4ZcB3a3xz3tI2XibceTh6Q2c',operational:'CONTROL',id:'ID_FOTO',data:'galeria.json'}
+          };
+          const body=new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:REFRESH_TOKEN,grant_type:'refresh_token'});
+          const tr=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+          const td=await tr.json(); if(!tr.ok||!td.access_token) throw new Error(`oauth ${tr.status}`); const token=td.access_token;
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          async function read(id,range){
+            const url=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
+            let last;
+            for(let i=0;i<5;i++){
+              const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}); const d=await r.json();
+              if(r.ok) return d.values||[]; last={status:r.status,message:d.error?.message||''};
+              if(![429,500,502,503,504].includes(r.status)||i===4) break; await sleep(800*(2**i));
+            }
+            throw new Error(`Sheets read ${id}/${range}: ${last?.status} ${last?.message}`);
+          }
+          const objects=rows=>{
+            if(!rows.length) return [];
+            const h=rows[0].map(x=>String(x??'').trim());
+            return rows.slice(1).map((r,i)=>({__row:i+2,...Object.fromEntries(h.map((k,j)=>[k,String(r[j]??'').trim()]))})).filter(o=>h.some(k=>o[k]));
+          };
+          const hasSynthetic=o=>Object.values(o).some(v=>String(v??'').includes('CUDO-QA-SYNTH-')||String(v??'').includes('SYNTHETIC_QA_')||/^QA-[A-Z]+-202609/.test(String(v??'')));
+          const result={ok:true,mode:'READ_ONLY',writes:0,production_main:process.env.EXPECTED_MAIN,modules:{}};
+          for(const [name,m] of Object.entries(modules)){
+            const operational=objects(await read(m.spreadsheetId,`${m.operational}!A:Z`));
+            const revisions=objects(await read(m.spreadsheetId,'REVISION!A:J'));
+            const publicRows=objects(await read(m.spreadsheetId,'PUBLICO_EXPORT!A:Z'));
+            const synthetic=operational.filter(hasSynthetic);
+            const candidates=synthetic.map(row=>{
+              const id=String(row[m.id]||'').trim();
+              const markerValues=Object.values(row).filter(v=>String(v).includes('CUDO-QA-SYNTH-')||String(v).includes('SYNTHETIC_QA_'));
+              const revisionHits=id?revisions.filter(r=>String(r.ID||'').trim()===id):[];
+              const publicHits=publicRows.filter(r=>Object.values(r).some(v=>String(v).includes(id)||markerValues.some(marker=>marker&&String(v).includes(marker))));
+              const selected={__row:row.__row,[m.id]:id};
+              for(const key of ['NOMBRE','CATEGORIA','DESCRIPCION','NOMBRE_DEPORTIVO_PUBLICO','NUMERO','JORNADA','FECHA','LOCAL','VISITA','RECINTO','EQUIPO','COMPETENCIA','ALBUM_ID','ALBUM','TITULO','ESTADO_REVISION','PUBLICAR']) if(row[key]!==undefined) selected[key]=row[key];
+              return {operational:selected,markers:[...new Set(markerValues)],revision_hits:revisionHits.length,public_hits:publicHits.length};
+            });
+            let qaDoc={items:[]};
+            try{qaDoc=JSON.parse(fs.readFileSync(`qa-v8-google/data/${m.data}`,'utf8'));}catch{}
+            const qaItems=Array.isArray(qaDoc.items)?qaDoc.items:[];
+            for(const c of candidates){
+              const id=c.operational[m.id];
+              c.qa_data_hits=qaItems.filter(item=>Object.values(item||{}).some(v=>String(v).includes(id)||c.markers.some(marker=>marker&&String(v).includes(marker)))).length;
+            }
+            result.modules[name]={operational_rows:operational.length,revision_rows:revisions.length,public_rows:publicRows.length,synthetic_candidates:candidates};
+          }
+          console.log(JSON.stringify(result,null,2));
+          JS
+          node "$RUNNER_TEMP/discover.mjs"
