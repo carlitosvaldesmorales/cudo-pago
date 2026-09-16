@@ -1,0 +1,115 @@
+name: CUDO QA Isolated PWA
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-pwa-isolated.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Reuse frozen V8 PWA as QA-scoped PWA only
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN='b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          git fetch origin main --depth=1
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          PROD="$RUNNER_TEMP/cudo-prod-pwa"
+          rm -rf "$PROD"
+          git worktree add --detach "$PROD" origin/main
+
+          for f in manifest.webmanifest sw.js offline.html; do test -f "$PROD/preview-v8/$f"; done
+          test -f "$PROD/preview-v8/shared/pwa.js"
+          test -d "$PROD/preview-v8/icons"
+
+          mkdir -p qa-v8-google/shared qa-v8-google/icons
+          cp "$PROD/preview-v8/manifest.webmanifest" qa-v8-google/manifest.webmanifest
+          cp "$PROD/preview-v8/sw.js" qa-v8-google/sw.js
+          cp "$PROD/preview-v8/offline.html" qa-v8-google/offline.html
+          cp "$PROD/preview-v8/shared/pwa.js" qa-v8-google/shared/pwa.js
+          rsync -a "$PROD/preview-v8/icons/" qa-v8-google/icons/
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          m=Path('qa-v8-google/manifest.webmanifest')
+          data=json.loads(m.read_text())
+          data['name']='C.U.D.O. QA — Club Unión Deportivo Orilla'
+          data['short_name']='C.U.D.O. QA'
+          data['description']='Entorno QA aislado de la aplicación C.U.D.O. para pruebas y revisión.'
+          data['id']='/qa/'
+          data['start_url']='/qa/'
+          data['scope']='/qa/'
+          for icon in data.get('icons',[]): icon['src']=icon['src'].replace('/preview-v8/','/qa/')
+          for shortcut in data.get('shortcuts',[]):
+              shortcut['url']=shortcut['url'].replace('/preview-v8/','/qa/')
+              for icon in shortcut.get('icons',[]): icon['src']=icon['src'].replace('/preview-v8/','/qa/')
+          m.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+
+          p=Path('qa-v8-google/shared/pwa.js')
+          text=p.read_text().replace("scope:'/preview-v8/'","scope:'/qa/'")
+          text=text.replace("new URL('/preview-v8/',location.origin)","new URL('/qa/',location.origin)")
+          text=text.replace(".register('/preview-v8/sw.js'",".register('/qa/sw.js'")
+          p.write_text(text)
+
+          sw=Path('qa-v8-google/sw.js')
+          text=sw.read_text().replace("const CACHE_NAME='cudo-mobile-shell-v1';","const CACHE_NAME='cudo-qa-mobile-shell-v1';")
+          text=text.replace("const SCOPE='/preview-v8/';","const SCOPE='/qa/';")
+          sw.write_text(text)
+
+          offline=Path('qa-v8-google/offline.html')
+          offline.write_text(offline.read_text().replace('/preview-v8/','/qa/').replace('C.U.D.O.','C.U.D.O. QA',1))
+
+          pages=[
+            Path('qa-v8-google/index.html'),Path('qa-v8-google/club/index.html'),Path('qa-v8-google/noticias/index.html'),
+            Path('qa-v8-google/partidos/index.html'),Path('qa-v8-google/equipos/index.html'),Path('qa-v8-google/galeria/index.html'),
+            Path('qa-v8-google/admin/index.html'),Path('qa-v8-google/chepica-play/index.html')]
+          marker='<script src="shared/pwa.js"></script>'
+          for page in pages:
+              if not page.exists(): continue
+              rel='../shared/pwa.js' if page.parent.name!='qa-v8-google' else 'shared/pwa.js'
+              tag=f'<script src="{rel}"></script>'
+              text=page.read_text()
+              if 'shared/pwa.js' not in text:
+                  text=text.replace('</body>',f'  {tag}\n</body>',1)
+              page.write_text(text)
+          PY
+
+          python3 -m json.tool qa-v8-google/manifest.webmanifest >/dev/null
+          node --check qa-v8-google/shared/pwa.js
+          node --check qa-v8-google/sw.js
+          grep -q '"scope": "/qa/"' qa-v8-google/manifest.webmanifest
+          grep -q "scope:'/qa/'" qa-v8-google/shared/pwa.js
+          grep -q "register('/qa/sw.js'" qa-v8-google/shared/pwa.js
+          grep -q "const SCOPE='/qa/'" qa-v8-google/sw.js
+          ! grep -R -n '/preview-v8/' qa-v8-google/manifest.webmanifest qa-v8-google/sw.js qa-v8-google/shared/pwa.js qa-v8-google/offline.html
+          test -z "$(git status --porcelain -- preview-v8)"
+          git worktree remove "$PROD" --force
+
+      - name: Persist isolated QA PWA only
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- qa-v8-google)" ]; then
+            echo 'QA PWA already aligned.'
+            exit 0
+          fi
+          git config user.name 'cudo-qa-integration'
+          git config user.email 'actions@users.noreply.github.com'
+          git add qa-v8-google
+          git commit -m 'QA: materialize isolated /qa PWA scope'
+          git push origin HEAD:qa/review-event-no-prod-20260915
