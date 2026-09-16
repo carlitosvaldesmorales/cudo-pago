@@ -1,0 +1,111 @@
+name: CUDO Review Response Tab Discovery
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-review-response-tab-discovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - name: Discover sheets and locate synthetic stored response safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+
+          sid='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms'
+          target='CUDO-QA-SYNTH-TABLA-35027786202'
+          event_id='CUDO-REVIEW-E2E-20260916-001'
+          reviewer='CUDO QA Automation'
+
+          body=urllib.parse.urlencode({
+              'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+              'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+              'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+              'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+              'https://oauth2.googleapis.com/token',data=body,
+              headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+              token=json.load(r)['access_token']
+
+          headers={'Authorization':'Bearer '+token}
+          with urllib.request.urlopen(urllib.request.Request(
+              f'https://sheets.googleapis.com/v4/spreadsheets/{sid}?fields=sheets.properties(sheetId,title,gridProperties(rowCount,columnCount),sheetType,index)',
+              headers=headers
+          )) as r:
+              meta=json.load(r)
+
+          sheets=[]
+          for s in meta.get('sheets',[]):
+              p=s['properties']
+              sheets.append({
+                  'sheetId':p.get('sheetId'),
+                  'title':p.get('title'),
+                  'index':p.get('index'),
+                  'sheetType':p.get('sheetType'),
+                  'rowCount':p.get('gridProperties',{}).get('rowCount'),
+                  'columnCount':p.get('gridProperties',{}).get('columnCount'),
+              })
+
+          def values(title):
+              rng=urllib.parse.quote(f"'{title}'!A:Z",safe='')
+              req=urllib.request.Request(
+                  f'https://sheets.googleapis.com/v4/spreadsheets/{sid}/values/{rng}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE',
+                  headers=headers
+              )
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      return json.load(r).get('values',[])
+              except Exception:
+                  return []
+
+          scan=[]
+          for s in sheets:
+              rows=values(s['title'])
+              target_rows=[]
+              event_rows=[]
+              reviewer_rows=[]
+              for n,row in enumerate(rows,start=1):
+                  vals=[str(v).strip() for v in row]
+                  joined=' | '.join(vals)
+                  if target in vals: target_rows.append(n)
+                  if event_id in joined: event_rows.append(n)
+                  if reviewer in vals: reviewer_rows.append(n)
+              scan.append({
+                  'title':s['title'],
+                  'sheetId':s['sheetId'],
+                  'used_rows':len(rows),
+                  'used_columns_max':max([len(r) for r in rows],default=0),
+                  'has_target':bool(target_rows),
+                  'target_rows':target_rows,
+                  'has_event_id':bool(event_rows),
+                  'event_rows':event_rows,
+                  'has_reviewer':bool(reviewer_rows),
+                  'reviewer_rows':reviewer_rows,
+              })
+
+          exact=[x for x in scan if x['has_target'] and x['has_event_id'] and x['has_reviewer']]
+          print(json.dumps({
+              'ok':True,
+              'sheet_count':len(sheets),
+              'sheets':sheets,
+              'scan':scan,
+              'exact_synthetic_response_tabs':[{'title':x['title'],'sheetId':x['sheetId'],'target_rows':x['target_rows']} for x in exact],
+              'exact_tab_count':len(exact),
+              'write_performed':False
+          },ensure_ascii=False,indent=2))
+          PY
