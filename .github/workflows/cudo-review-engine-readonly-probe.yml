@@ -1,4 +1,5 @@
 name: CUDO Review Engine Readonly Probe
+# 2026-09-16: preflight ledger before exactly one positive synthetic Equipo review event.
 
 on:
   push:
@@ -19,7 +20,7 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
-      CUDO_QA_SYNTHETIC_MARKER: CUDO-QA-SYNTH-NOTICIA-35120135382
+      CUDO_QA_SYNTHETIC_MARKER: CUDO-QA-SYNTH-EQUIPO-35027786202
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
