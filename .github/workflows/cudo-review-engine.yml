@@ -12,6 +12,9 @@ on:
       - 'qa-v8-google/tools/review_event_observer.mjs'
       - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
+      - 'qa-v8-google/tools/process_review_decisions_qa_quarantine.mjs'
+      - 'qa-v8-google/tools/apply_qa_review_overrides.mjs'
+      - 'qa-v8-google/tools/qa_quarantine_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
       - 'qa-v8-google/tools/sync_google_publico.mjs'
       - 'qa-v8-google/tools/validate_data.py'
@@ -28,6 +31,9 @@ on:
       - 'qa-v8-google/tools/review_event_observer.mjs'
       - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
+      - 'qa-v8-google/tools/process_review_decisions_qa_quarantine.mjs'
+      - 'qa-v8-google/tools/apply_qa_review_overrides.mjs'
+      - 'qa-v8-google/tools/qa_quarantine_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
       - 'qa-v8-google/tools/sync_google_publico.mjs'
       - 'qa-v8-google/tools/validate_data.py'
@@ -36,7 +42,7 @@ on:
   workflow_dispatch:
     inputs:
       apply_changes:
-        description: 'Ingerir respuestas nuevas, procesar decisiones reales y sincronizar sólo el entorno QA'
+        description: 'Ingerir respuestas nuevas, procesar decisiones sintéticas y sincronizar sólo el entorno QA'
         required: true
         default: false
         type: boolean
@@ -72,6 +78,9 @@ jobs:
           node --check qa-v8-google/tools/review_event_observer.mjs
           node --check qa-v8-google/tools/review_event_observer_fixture_harness.mjs
           node --check qa-v8-google/tools/process_review_decisions.mjs
+          node --check qa-v8-google/tools/process_review_decisions_qa_quarantine.mjs
+          node --check qa-v8-google/tools/apply_qa_review_overrides.mjs
+          node --check qa-v8-google/tools/qa_quarantine_fixture_harness.mjs
           node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
           node --check qa-v8-google/tools/sync_google_publico.mjs
       - name: Probar Form -> AUDITORIA de forma sintética
@@ -82,6 +91,8 @@ jobs:
         run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
       - name: Probar AUDITORIA -> revisión/corrección con fixture sintético
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
+      - name: Probar cuarentena positiva QA sin escrituras externas
+        run: node qa-v8-google/tools/qa_quarantine_fixture_harness.mjs
 
   review-and-sync:
     if: >-
@@ -96,6 +107,7 @@ jobs:
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
       CUDO_REVIEW_INGEST_APPLY: 'true'
       CUDO_REVIEW_TRIGGER_SOURCE: ${{ inputs.source }}
+      CUDO_QA_EXPECT_MARKER: 'CUDO-QA-SYNTH-'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -113,9 +125,33 @@ jobs:
           echo "CUDO_REVIEW_TARGET=qa-v8-google"
       - name: Ingerir respuestas nuevas del formulario al ledger
         run: node qa-v8-google/tools/ingest_review_form_responses.mjs
-      - name: Procesar decisiones CUDO Review
+      - name: Preflight fail-closed de una única decisión sintética
+        id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+          CUDO_REVIEW_DRY_RUN=true CUDO_REVIEW_EXPECT_PENDING=1 node qa-v8-google/tools/process_review_decisions.mjs > "$RUNNER_TEMP/review-plan.json"
+          node - "$RUNNER_TEMP/review-plan.json" "$GITHUB_OUTPUT" <<'JS'
+          const fs=require('fs');
+          const [planFile,outFile]=process.argv.slice(2);
+          const d=JSON.parse(fs.readFileSync(planFile,'utf8'));
+          if(d.pending!==1||!Array.isArray(d.summary)||d.summary.length!==1) throw new Error('QA guard: debe existir exactamente una decisión pendiente');
+          const s=d.summary[0];
+          if(!String(s.identifier||'').includes('CUDO-QA-SYNTH-')) throw new Error('QA guard: la decisión pendiente no es sintética');
+          if(String(s.status||'').startsWith('BLOQUEADO_')) throw new Error(`QA guard: decisión bloqueada en dry-run ${s.status}`);
+          const quarantine=s.module==='NOTICIA'&&s.action==='PUBLISH';
+          fs.appendFileSync(outFile,`quarantine=${quarantine?'true':'false'}\n`);
+          console.log(JSON.stringify({ok:true,pending:d.pending,module:s.module,action:s.action,synthetic:true,qa_positive_quarantine:quarantine},null,2));
+          JS
+      - name: Procesar aprobación positiva sintética en cuarentena QA
+        if: steps.route.outputs.quarantine == 'true'
+        run: node qa-v8-google/tools/process_review_decisions_qa_quarantine.mjs
+      - name: Procesar otra decisión sintética con motor existente
+        if: steps.route.outputs.quarantine != 'true'
+        env:
+          CUDO_REVIEW_EXPECT_PENDING: '1'
         run: node qa-v8-google/tools/process_review_decisions.mjs
-      - name: Sincronizar PUBLICO_EXPORT sólo hacia QA
+      - name: Sincronizar PUBLICO_EXPORT compartido sólo como baseline de lectura hacia QA
         shell: bash
         run: |
           set -euo pipefail
@@ -125,13 +161,15 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/qa-v8-google" "$runtime/preview-v8"
           cd "$runtime"
           node "$GITHUB_WORKSPACE/qa-v8-google/tools/sync_google_publico.mjs"
+      - name: Aplicar exclusivamente overrides sintéticos QA después del baseline
+        run: node qa-v8-google/tools/apply_qa_review_overrides.mjs
       - name: Validar datos QA resultantes
         run: python3 qa-v8-google/tools/validate_data.py
       - name: Persistir sólo cambios del entorno QA
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- qa-v8-google/data qa-v8-google/media; then
+          if git diff --quiet -- qa-v8-google/data qa-v8-google/media qa-v8-google/qa_review_overrides; then
             echo 'Sin cambios QA.'
             exit 0
           fi
@@ -142,6 +180,6 @@ jobs:
           fi
           git config user.name 'cudo-review-engine-qa'
           git config user.email 'actions@users.noreply.github.com'
-          git add qa-v8-google/data qa-v8-google/media
-          git commit -m 'QA: sincronizar contenido revisado desde Sheets'
+          git add qa-v8-google/data qa-v8-google/media qa-v8-google/qa_review_overrides
+          git commit -m 'QA: sincronizar contenido revisado en cuarentena aislada'
           git push origin HEAD:qa/review-event-no-prod-20260915
