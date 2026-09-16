@@ -13,7 +13,8 @@ on:
       - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
-      - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'qa-v8-google/tools/sync_google_publico.mjs'
+      - 'qa-v8-google/tools/validate_data.py'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
   pull_request:
@@ -28,13 +29,14 @@ on:
       - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
-      - 'preview-v8/tools/sync_google_publico.mjs'
+      - 'qa-v8-google/tools/sync_google_publico.mjs'
+      - 'qa-v8-google/tools/validate_data.py'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
   workflow_dispatch:
     inputs:
       apply_changes:
-        description: 'Ingerir respuestas nuevas, procesar decisiones reales y sincronizar PUBLICO_EXPORT'
+        description: 'Ingerir respuestas nuevas, procesar decisiones reales y sincronizar sólo el entorno QA'
         required: true
         default: false
         type: boolean
@@ -48,7 +50,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: cudo-review-engine
+  group: cudo-review-engine-qa-isolated
   cancel-in-progress: false
 
 jobs:
@@ -61,7 +63,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Validar sintaxis del pipeline de revisión
+      - name: Validar sintaxis del pipeline de revisión QA aislado
         run: |
           set -euo pipefail
           node --check qa-v8-google/tools/ingest_review_form_responses.mjs
@@ -71,10 +73,10 @@ jobs:
           node --check qa-v8-google/tools/review_event_observer_fixture_harness.mjs
           node --check qa-v8-google/tools/process_review_decisions.mjs
           node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
-          node --check preview-v8/tools/sync_google_publico.mjs
+          node --check qa-v8-google/tools/sync_google_publico.mjs
       - name: Probar Form -> AUDITORIA de forma sintética
         run: node qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
-      - name: Probar bridge Apps Script -> workflow_dispatch de forma sintética
+      - name: Probar bridge Apps Script -> workflow_dispatch QA de forma sintética
         run: node qa-v8-google/tools/review_event_bridge_fixture_harness.mjs
       - name: Probar observador event-driven sin polling
         run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
@@ -101,25 +103,45 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Registrar origen operacional
-        run: echo "CUDO_REVIEW_TRIGGER_SOURCE=$CUDO_REVIEW_TRIGGER_SOURCE"
+      - name: Guardar frontera QA y origen operacional
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'qa/review-event-no-prod-20260915'
+          test "$GITHUB_REF_NAME" != 'main'
+          echo "CUDO_REVIEW_TRIGGER_SOURCE=$CUDO_REVIEW_TRIGGER_SOURCE"
+          echo "CUDO_REVIEW_TARGET=qa-v8-google"
       - name: Ingerir respuestas nuevas del formulario al ledger
         run: node qa-v8-google/tools/ingest_review_form_responses.mjs
       - name: Procesar decisiones CUDO Review
         run: node qa-v8-google/tools/process_review_decisions.mjs
-      - name: Sincronizar PUBLICO_EXPORT con el adaptador V8 vigente
-        run: node preview-v8/tools/sync_google_publico.mjs
-      - name: Validar datos públicos resultantes
-        run: python3 preview-v8/tools/validate_data.py preview-v8/data
-      - name: Publicar cambios JSON y medios si existen
+      - name: Sincronizar PUBLICO_EXPORT sólo hacia QA
+        shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- preview-v8/data preview-v8/media; then
-            echo 'Sin cambios públicos.'
+          runtime="$RUNNER_TEMP/cudo-review-qa-sync"
+          rm -rf "$runtime"
+          mkdir -p "$runtime"
+          ln -s "$GITHUB_WORKSPACE/qa-v8-google" "$runtime/preview-v8"
+          cd "$runtime"
+          node "$GITHUB_WORKSPACE/qa-v8-google/tools/sync_google_publico.mjs"
+      - name: Validar datos QA resultantes
+        run: python3 qa-v8-google/tools/validate_data.py
+      - name: Persistir sólo cambios del entorno QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- qa-v8-google/data qa-v8-google/media; then
+            echo 'Sin cambios QA.'
             exit 0
           fi
-          git config user.name 'cudo-review-engine'
+          if ! git diff --quiet -- preview-v8; then
+            echo '::error::Invariante roto: review QA intentó modificar preview-v8'
+            git diff -- preview-v8
+            exit 1
+          fi
+          git config user.name 'cudo-review-engine-qa'
           git config user.email 'actions@users.noreply.github.com'
-          git add preview-v8/data preview-v8/media
-          git commit -m 'CUDO: sincronizar contenido público desde Sheets'
-          git push
+          git add qa-v8-google/data qa-v8-google/media
+          git commit -m 'QA: sincronizar contenido revisado desde Sheets'
+          git push origin HEAD:qa/review-event-no-prod-20260915
