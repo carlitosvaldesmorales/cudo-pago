@@ -50,7 +50,8 @@
     {"order": 4, "question": "Serie o categoría", "raw": "CATEGORIA", "required": true, "public": "categoria"},
     {"order": 5, "question": "Fotografía del jugador", "raw": "FOTO_REF", "required": false, "public": "foto_ref"},
     {"order": 6, "question": "¿Es capitán de la serie?", "raw": "CAPITAN", "required": true, "public": "capitan"},
-    {"order": 7, "question": "Confirmación para publicar la fotografía", "raw": "FUENTE", "required": true, "public": false},
-    {"order": 8, "question": "Nota para revisión", "raw": "OBSERVACIONES_VALIDACION", "required": false, "public": false}
+    {"order": 7, "question": "Confirmación para publicar la fotografía", "raw": "FUENTE", "required": false, "public": false},
+    {"order": 8, "question": "Nota para revisión", "raw": "OBSERVACIONES_VALIDACION", "required": false, "public": false},
+    {"order": 9, "question": "Instagram o Facebook", "raw": "RED_SOCIAL_REF", "required": false, "public": false}
   ]
 }
