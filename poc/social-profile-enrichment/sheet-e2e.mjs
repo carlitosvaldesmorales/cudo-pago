@@ -52,6 +52,7 @@ for(let i=1;i<rows.length;i++){
   const publicar=String(row[idx.PUBLICAR]||'').trim();
   if(!social || foto || estado!=='PENDIENTE_REVISION' || publicar!=='NO') continue;
   const resolved=await resolveSocialReference(social);
+  const image=resolved.image_candidate||null;
   candidates.push({
     source_row:i+1,
     id:String(row[idx.ID_INTERNO]||'').trim(),
@@ -66,7 +67,7 @@ for(let i=1;i<rows.length;i++){
       canonical_url:resolved.canonical_url,
       enrichment_attempted:resolved.enrichment_attempted,
       reason:resolved.reason,
-      image_candidate:resolved.image_candidate
+      image_candidate:image?{content_type:image.content_type,bytes:image.bytes,source_host:image.source_host}:null
     }
   });
 }
