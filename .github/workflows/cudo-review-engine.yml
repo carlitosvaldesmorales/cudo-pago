@@ -31,8 +31,6 @@ on:
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       apply_changes:
@@ -41,7 +39,7 @@ on:
         default: false
         type: boolean
       source:
-        description: 'Origen del dispatch: manual, apps_script_form_submit o agent_ping'
+        description: 'Origen del dispatch; el único origen operacional con escrituras es apps_script_form_submit'
         required: false
         default: 'manual'
         type: string
@@ -78,15 +76,16 @@ jobs:
         run: node qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
       - name: Probar bridge Apps Script -> workflow_dispatch de forma sintética
         run: node qa-v8-google/tools/review_event_bridge_fixture_harness.mjs
-      - name: Probar observador de evento real y retiro seguro de polling
+      - name: Probar observador event-driven sin polling
         run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
       - name: Probar AUDITORIA -> revisión/corrección con fixture sintético
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
 
   review-and-sync:
     if: >-
-      (github.event_name == 'schedule' && vars.CUDO_REVIEW_ENGINE_ENABLED == 'true') ||
-      (github.event_name == 'workflow_dispatch' && inputs.apply_changes == true)
+      github.event_name == 'workflow_dispatch' &&
+      inputs.apply_changes == true &&
+      inputs.source == 'apps_script_form_submit'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -94,7 +93,7 @@ jobs:
       CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
       CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
       CUDO_REVIEW_INGEST_APPLY: 'true'
-      CUDO_REVIEW_TRIGGER_SOURCE: ${{ inputs.source || github.event_name }}
+      CUDO_REVIEW_TRIGGER_SOURCE: ${{ inputs.source }}
     steps:
       - uses: actions/checkout@v4
         with:
