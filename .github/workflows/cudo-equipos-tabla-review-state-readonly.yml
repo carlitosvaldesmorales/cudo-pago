@@ -1,0 +1,48 @@
+name: CUDO Equipo Tabla Review State Readonly
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-equipos-tabla-review-state-readonly.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      EXPECTED_MAIN: b5d3567b13f588f525e14de7b1d8afe2142d919a
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read exact review state, no writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN" = "$EXPECTED_MAIN"
+          cat > "$RUNNER_TEMP/read.mjs" <<'JS'
+          const cfg={
+            EQUIPO:{sheet:'1GJYChKXx9qAwBu7fhC8V-qmoW5S1Mmq7kP8cuO6khNI',id:'QA-EQU-20260915215005-001'},
+            TABLA:{sheet:'1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY',id:'QA-TAB-20260915215118-001'}
+          };
+          const b=new URLSearchParams({client_id:process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID,client_secret:process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET,refresh_token:process.env.CUDO_GOOGLE_REFRESH_TOKEN,grant_type:'refresh_token'});
+          const tr=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b});const td=await tr.json();if(!tr.ok)throw new Error(`oauth ${tr.status}`);const token=td.access_token;
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          async function read(sheet,range){let last;const url=`https://sheets.googleapis.com/v4/spreadsheets/${sheet}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;for(let i=0;i<5;i++){const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});const d=await r.json();if(r.ok)return d.values||[];last={status:r.status,msg:d.error?.message||''};if(![429,500,502,503,504].includes(r.status)||i===4)break;await sleep(700*(2**i));}throw new Error(JSON.stringify(last));}
+          const objs=rows=>{if(!rows.length)return[];const h=rows[0].map(x=>String(x??'').trim());return rows.slice(1).map((r,i)=>({__row:i+2,...Object.fromEntries(h.map((k,j)=>[k,String(r[j]??'').trim()]))}));};
+          const out={ok:true,mode:'READ_ONLY',writes:0,production_main:process.env.EXPECTED_MAIN,targets:{}};
+          for(const [name,c] of Object.entries(cfg)){
+            const rev=objs(await read(c.sheet,'REVISION!A:J')).filter(r=>String(r.ID||'').trim()===c.id);
+            const pub=objs(await read(c.sheet,'PUBLICO_EXPORT!A:Z')).filter(r=>Object.values(r).some(v=>String(v).includes(c.id)));
+            out.targets[name]={id:c.id,revision_matches:rev,public_matches:pub.length};
+          }
+          console.log(JSON.stringify(out,null,2));
+          JS
+          node "$RUNNER_TEMP/read.mjs"
