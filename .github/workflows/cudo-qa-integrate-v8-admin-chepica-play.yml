@@ -59,6 +59,12 @@ jobs:
           text=admin.read_text()
           text=text.replace('  <script src="../shared/pwa.js"></script>\n','')
           text=text.replace('<title>Administrar contenido del CUDO</title>','<title>QA · Administrar contenido del CUDO</title>')
+
+          old='''        <a class="admincard" href="https://docs.google.com/forms/d/e/1FAIpQLSf_WwBEVwZkvlDFMHnfO3FOFG7h9eUd-6DG4Rh6MW6kix696Q/viewform" target="_blank" rel="noopener"><strong>Actualizar tabla</strong><span>Registra los valores de la tabla oficial de la competencia.</span><em>Abrir formulario →</em></a>'''
+          new='''        <div class="admincard" data-canonical-table="calculated-from-verified-results"><strong>Tabla de posiciones</strong><span>Se actualiza automáticamente con los resultados verificados. Para modificarla, registra un partido o resultado; si el dato ya fue publicado, usa la opción de corrección.</span><em>Automática · sin formulario manual</em></div>'''
+          if old not in text:
+              raise SystemExit('Legacy manual Tabla admin card not found in frozen production source')
+          text=text.replace(old,new,1)
           admin.write_text(text)
 
           cp=Path('qa-v8-google/chepica-play/index.html')
@@ -73,6 +79,10 @@ jobs:
           PY
 
           ! grep -q '../shared/pwa.js' qa-v8-google/admin/index.html
+          grep -q 'data-canonical-table="calculated-from-verified-results"' qa-v8-google/admin/index.html
+          grep -q 'Automática · sin formulario manual' qa-v8-google/admin/index.html
+          ! grep -q '1FAIpQLSf_WwBEVwZkvlDFMHnfO3FOFG7h9eUd-6DG4Rh6MW6kix696Q' qa-v8-google/admin/index.html
+          grep -q '1FAIpQLSfD8jwbGL_kUAYm2A6DR3yYmANMoyTr2ja609JTFqBH9zvg2w' qa-v8-google/admin/index.html
           grep -q 'qa-sports-proxy-config.js' qa-v8-google/chepica-play/index.html
           grep -q 'qa-sports-proxy.js' qa-v8-google/chepica-play/index.html
           node --check qa-v8-google/chepica-play/live.js
@@ -91,5 +101,5 @@ jobs:
           git config user.name 'cudo-qa-integration'
           git config user.email 'actions@users.noreply.github.com'
           git add qa-v8-google/admin qa-v8-google/chepica-play
-          git commit -m 'QA: integrate V8 admin and Chepica Play surfaces'
+          git commit -m 'QA: integrate V8 admin and Chepica Play surfaces with canonical Tabla semantics'
           git push origin HEAD:qa/review-event-no-prod-20260915
