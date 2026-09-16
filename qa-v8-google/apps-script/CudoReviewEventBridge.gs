@@ -3,7 +3,7 @@ const CUDO_REVIEW_EVENT_BRIDGE = Object.freeze({
   handlerFunction: 'cudoReviewOnFormSubmit',
   tokenProperty: 'CUDO_GITHUB_ACTIONS_TOKEN',
   dispatchUrl: 'https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/actions/workflows/cudo-review-engine.yml/dispatches',
-  dispatchRef: 'qa/review-event-no-prod-20260915',
+  dispatchRef: 'main',
 });
 
 function cudoReviewDispatch_(source) {
