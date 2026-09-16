@@ -1,0 +1,112 @@
+name: CUDO QA Integrate V8 Sports Baseline
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-integrate-v8-sports-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-qa-integrate-v8-sports-baseline
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout isolated QA branch
+        uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Materialize frozen V8 baseline into QA sports surfaces only
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN='b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          git fetch origin main --depth=1
+          ACTUAL_MAIN="$(git rev-parse origin/main)"
+          test "$ACTUAL_MAIN" = "$EXPECTED_MAIN"
+
+          PROD="$RUNNER_TEMP/cudo-v8-prod"
+          rm -rf "$PROD"
+          git worktree add --detach "$PROD" origin/main
+
+          test -f "$PROD/preview-v8/partidos/index.html"
+          test -f "$PROD/preview-v8/equipos/index.html"
+          test -f "$PROD/preview-v8/shared/championship.js"
+          test -f "$PROD/preview-v8/shared/standings.js"
+          test -d "$PROD/preview-v8/media/clubes"
+
+          mkdir -p qa-v8-google/shared qa-v8-google/data qa-v8-google/media/clubes
+
+          # Reuse the real V8 sports UI/capabilities while preserving the approved QA shell elsewhere.
+          cp "$PROD/preview-v8/partidos/index.html" qa-v8-google/partidos/index.html
+          cp "$PROD/preview-v8/equipos/index.html" qa-v8-google/equipos/index.html
+
+          for f in \
+            accessibility.css \
+            championship-crests.css \
+            championship.css \
+            championship.js \
+            clubs.css \
+            clubs.js \
+            crest-hotfix-marker.txt \
+            crest-loader.js \
+            crest-render-hotfix.css \
+            standings.css \
+            standings.js; do
+            cp "$PROD/preview-v8/shared/$f" "qa-v8-google/shared/$f"
+          done
+
+          for f in \
+            championship-fixture.json \
+            anfa-chepica-2026-series-results.json \
+            anfa-chepica-2026-standings-rules.json; do
+            cp "$PROD/preview-v8/data/$f" "qa-v8-google/data/$f"
+          done
+
+          rsync -a "$PROD/preview-v8/media/clubes/" qa-v8-google/media/clubes/
+
+          # The six human-administered public JSONs remain owned by the QA review pipeline.
+          for f in noticias.json equipos.json plantel.json partidos.json tabla.json galeria.json; do
+            test -f "qa-v8-google/data/$f"
+          done
+
+          # Isolation guards: no production surface may be modified by this operation.
+          test -z "$(git status --porcelain -- preview-v8)"
+          ! grep -R -n -E 'cudo\.cl/preview-v8|/preview-v8/' \
+            qa-v8-google/partidos qa-v8-google/equipos \
+            qa-v8-google/shared/championship.js qa-v8-google/shared/standings.js \
+            qa-v8-google/shared/championship.css qa-v8-google/shared/standings.css \
+            qa-v8-google/shared/clubs.css qa-v8-google/shared/clubs.js
+
+          node --check qa-v8-google/shared/championship.js
+          node --check qa-v8-google/shared/standings.js
+          python3 -m json.tool qa-v8-google/data/championship-fixture.json >/dev/null
+          python3 -m json.tool qa-v8-google/data/anfa-chepica-2026-series-results.json >/dev/null
+          python3 -m json.tool qa-v8-google/data/anfa-chepica-2026-standings-rules.json >/dev/null
+
+          git worktree remove "$PROD" --force
+
+      - name: Persist isolated QA sports parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- qa-v8-google; then
+            echo 'QA sports baseline already aligned.'
+            exit 0
+          fi
+          git config user.name 'cudo-qa-integration'
+          git config user.email 'actions@users.noreply.github.com'
+          git add qa-v8-google/partidos qa-v8-google/equipos qa-v8-google/shared qa-v8-google/data qa-v8-google/media/clubes
+          git commit -m 'QA: integrate frozen V8 championship, standings and club assets'
+          git push origin HEAD:qa/review-event-no-prod-20260915
