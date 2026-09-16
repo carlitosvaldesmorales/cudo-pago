@@ -86,6 +86,8 @@ jobs:
             }
             if(!dateInput) throw new Error('Date input not found');
             await dateInput.fill('16/09/2026');
+            await dateInput.press('Tab');
+            await page.keyboard.press('Escape').catch(()=>{});
 
             const fileInput=page.locator('input[type=file]');
             await fileInput.setInputFiles('qa-synthetic-noticia.png');
@@ -95,7 +97,12 @@ jobs:
             await page.getByPlaceholder('Opcional. Agregue aquí alguna indicación para quien revisará la noticia.').fill(`QA ONLY ${marker}; aprobar sólo mediante cuarentena positiva QA.`);
 
             const submit=page.getByRole('button',{name:'Enviar noticia para revisión'});
-            await submit.click();
+            await submit.scrollIntoViewIfNeeded().catch(()=>{});
+            await page.evaluate(()=>{
+              const b=[...document.querySelectorAll('button[type="submit"]')].find(x=>(x.textContent||'').includes('Enviar noticia para revisión'));
+              if(!b) throw new Error('Submit button not found');
+              b.click();
+            });
             const thanks=page.getByText('Información recibida',{exact:true});
             try{
               await thanks.waitFor({state:'visible',timeout:30000});
