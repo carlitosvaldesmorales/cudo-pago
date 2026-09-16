@@ -13,6 +13,7 @@ const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signatur
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 const expectedAdminActions=[
+  {label:'Completar mi ficha',host:'tally.so',provider:'TALLY'},
   {label:'Publicar una noticia',host:'tally.so',provider:'TALLY'},
   {label:'Administrar equipo o serie',host:'docs.google.com',provider:'GOOGLE_FORMS'},
   {label:'Agregar jugador',host:'tally.so',provider:'TALLY'},
