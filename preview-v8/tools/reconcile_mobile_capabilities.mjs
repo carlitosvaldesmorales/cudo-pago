@@ -103,17 +103,17 @@ function reconcile(contract,runs){
 
 async function githubJson(url,token){
   const response=await fetch(url,{headers:{Accept:'application/vnd.github+json',Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2022-11-28'}});
-  if(!response.ok()) fail(`GitHub API ${response.status} ${url}`);
+  if(!response.ok) fail(`GitHub API ${response.status} ${url}`);
   return response.json();
 }
 
 async function fetchRuns(repo,token){
-  const encoded=encodeURIComponent(repo);
+  const base=`https://api.github.com/repos/${repo}/actions/runs`;
   const urls=[
-    `https://api.github.com/repos/${encoded}/actions/runs?status=completed&per_page=100`,
-    `https://api.github.com/repos/${encoded}/actions/runs?branch=qa-v8-google-data&status=completed&per_page=100`,
-    `https://api.github.com/repos/${encoded}/actions/runs?branch=main&status=completed&per_page=100`,
-    `https://api.github.com/repos/${encoded}/actions/runs?event=pull_request&status=completed&per_page=100`
+    `${base}?status=completed&per_page=100`,
+    `${base}?branch=qa-v8-google-data&status=completed&per_page=100`,
+    `${base}?branch=main&status=completed&per_page=100`,
+    `${base}?event=pull_request&status=completed&per_page=100`
   ];
   const all=[];
   for(const url of urls){
