@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../apps-script/CudoReviewEventBridge.gs',import.meta.url),'utf8');
-const EXPECTED_REF='qa/review-event-no-prod-20260915';
+const EXPECTED_REF='main';
 
 function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadsheetId='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms',existingTriggers=[]}={}){
   const fetchCalls=[];
@@ -117,8 +117,8 @@ console.log(JSON.stringify({
   dispatch_ref:EXPECTED_REF,
   dispatch_sources:{form:'apps_script_form_submit',ping:'agent_ping'},
   cases:[
-    'form-submit-dispatches-official-workflow-with-source-tag-to-qa-ref',
-    'manual-agent-ping-dispatches-official-workflow-with-distinct-source-tag-to-qa-ref',
+    'form-submit-dispatches-official-workflow-with-source-tag-to-main-ref',
+    'manual-agent-ping-dispatches-official-workflow-with-distinct-source-tag-to-main-ref',
     'other-spreadsheet-ignored',
     'missing-token-blocked',
     'github-error-blocked',
