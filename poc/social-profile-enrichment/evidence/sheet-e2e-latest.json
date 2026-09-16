@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-09-16T18:36:00.374Z",
+  "scope": "QA_ONLY_REAL_TALLY_TO_SHEET_TO_RESOLVER",
+  "production_v8_touched": false,
+  "real_club_data_processed": false,
+  "user_oauth_required": false,
+  "result": "PASS",
+  "candidate": {
+    "source_row": 3,
+    "id": "QA-PLA-20260916183306-002",
+    "name": "QA Social Ref 20260916183302",
+    "social": "https://www.instagram.com/p/fA9uwTtkSN/",
+    "estado": "PENDIENTE_REVISION",
+    "publicar": "NO",
+    "resolver": {
+      "status": "ENRICHABLE_PUBLIC_CONTENT",
+      "provider": "instagram",
+      "kind": "post",
+      "canonical_url": "https://www.instagram.com/p/fA9uwTtkSN/",
+      "enrichment_attempted": true,
+      "reason": "PUBLIC_CONTENT_IMAGE_CANDIDATE_PASS",
+      "image_candidate": {
+        "content_type": "image/jpeg",
+        "bytes": 29075,
+        "source_host": "scontent-sjc6-1.cdninstagram.com"
+      }
+    }
+  }
+}
