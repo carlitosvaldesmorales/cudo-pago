@@ -67,6 +67,21 @@ jobs:
             cp "$PROD/preview-v8/shared/$f" "qa-v8-google/shared/$f"
           done
 
+          # Keep production sports code intact and inject only the QA transport adapter.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('qa-v8-google/partidos/index.html')
+          text=p.read_text()
+          marker='<script src="../shared/qa-sports-proxy.js"></script>'
+          if marker not in text:
+              needle='<script src="../shared/championship.js'
+              pos=text.find(needle)
+              if pos < 0:
+                  raise SystemExit('championship script marker not found')
+              text=text[:pos]+marker+text[pos:]
+          p.write_text(text)
+          PY
+
           for f in \
             championship-fixture.json \
             anfa-chepica-2026-series-results.json \
@@ -81,6 +96,9 @@ jobs:
             test -f "qa-v8-google/data/$f"
           done
 
+          test -f qa-v8-google/shared/qa-sports-proxy.js
+          grep -q 'qa-sports-proxy.js' qa-v8-google/partidos/index.html
+
           # Isolation guards: no production surface may be modified by this operation.
           test -z "$(git status --porcelain -- preview-v8)"
           ! grep -R -n -E 'cudo\.cl/preview-v8|/preview-v8/' \
@@ -91,6 +109,7 @@ jobs:
 
           node --check qa-v8-google/shared/championship.js
           node --check qa-v8-google/shared/standings.js
+          node --check qa-v8-google/shared/qa-sports-proxy.js
           python3 -m json.tool qa-v8-google/data/championship-fixture.json >/dev/null
           python3 -m json.tool qa-v8-google/data/anfa-chepica-2026-series-results.json >/dev/null
           python3 -m json.tool qa-v8-google/data/anfa-chepica-2026-standings-rules.json >/dev/null
