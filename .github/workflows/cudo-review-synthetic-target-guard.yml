@@ -1,0 +1,93 @@
+name: CUDO Review Synthetic Target Guard
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-review-synthetic-target-guard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    if: github.ref == 'refs/heads/qa/review-event-no-prod-20260915'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - name: Verify target is unique in CONTROL and absent from PUBLICO_EXPORT
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+
+          spreadsheet_id='1evGNco6Si1BYUAdwsBxLGiSMsYEmmojVWlx04NgPodY'
+          marker='CUDO-QA-SYNTH-TABLA-35027786202'
+
+          body=urllib.parse.urlencode({
+              'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+              'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+              'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+              'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+              'https://oauth2.googleapis.com/token', data=body,
+              headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+              token=json.load(r)['access_token']
+
+          def values(tab):
+              rng=urllib.parse.quote(f"{tab}!A:Z",safe='')
+              req=urllib.request.Request(
+                  f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{rng}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE',
+                  headers={'Authorization':'Bearer '+token}
+              )
+              with urllib.request.urlopen(req) as r:
+                  return json.load(r).get('values',[])
+
+          def matches(tab):
+              rows=values(tab)
+              if not rows:
+                  return [], []
+              headers=rows[0]
+              out=[]
+              for rownum,row in enumerate(rows[1:],start=2):
+                  obj={headers[i]:row[i] if i<len(row) else '' for i in range(len(headers))}
+                  if marker in [str(v).strip() for v in obj.values()]:
+                      out.append({
+                          'row':rownum,
+                          'ID_TABLA':obj.get('ID_TABLA',''),
+                          'EQUIPO':obj.get('EQUIPO',''),
+                          'COMPETENCIA':obj.get('COMPETENCIA',''),
+                          'SERIE':obj.get('SERIE',''),
+                          'ESTADO':obj.get('ESTADO',''),
+                          'PUBLICAR':obj.get('PUBLICAR',''),
+                          'VISIBILIDAD':obj.get('VISIBILIDAD',''),
+                          'REVISION':obj.get('REVISION',''),
+                      })
+              return headers,out
+
+          control_headers,control=matches('CONTROL')
+          public_headers,public=matches('PUBLICO_EXPORT')
+          result={
+              'ok':len(control)==1 and len(public)==0,
+              'marker':marker,
+              'control_matches':control,
+              'control_unique':len(control)==1,
+              'public_export_matches':public,
+              'public_export_absent':len(public)==0,
+              'write_performed':False,
+          }
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          if len(control)!=1:
+              raise SystemExit(f'expected exactly one CONTROL target, found {len(control)}')
+          if len(public)!=0:
+              raise SystemExit(f'target unexpectedly present in PUBLICO_EXPORT: {len(public)}')
+          PY
