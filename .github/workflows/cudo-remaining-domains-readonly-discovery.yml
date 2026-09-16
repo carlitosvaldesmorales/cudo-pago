@@ -82,7 +82,7 @@ jobs:
               const revisionHits=id?revisions.filter(r=>String(r.ID||'').trim()===id):[];
               const publicHits=publicRows.filter(r=>Object.values(r).some(v=>String(v).includes(id)||markerValues.some(marker=>marker&&String(v).includes(marker))));
               const selected={__row:row.__row,[m.id]:id};
-              for(const key of ['NOMBRE','CATEGORIA','DESCRIPCION','NOMBRE_DEPORTIVO_PUBLICO','NUMERO','JORNADA','FECHA','LOCAL','VISITA','RECINTO','EQUIPO','COMPETENCIA','ALBUM_ID','ALBUM','TITULO','ESTADO_REVISION','PUBLICAR']) if(row[key]!==undefined) selected[key]=row[key];
+              for(const key of ['NOMBRE','CATEGORIA','DESCRIPCION','NOMBRE_DEPORTIVO_PUBLICO','NUMERO','JORNADA','FECHA','LOCAL','VISITA','RECINTO','EQUIPO','COMPETENCIA','POSICION','PJ','PG','PE','PP','GF','GC','DG','PTS','ALBUM_ID','ALBUM','TITULO','ESTADO_REVISION','PUBLICAR']) if(row[key]!==undefined) selected[key]=row[key];
               const safeReview=revisionHits.map(r=>({__row:r.__row,ID:r.ID||'',ESTADO:r.ESTADO||'',PUBLICAR:r.PUBLICAR||'',PRIVACIDAD:r.PRIVACIDAD||'',AUTORIZACION:r.AUTORIZACION||r.AUTORIZACION_PUBLICACION||'',AUTORIZACION_MENORES:r.AUTORIZACION_MENORES||'',REVISOR:r.REVISOR||'',FECHA_REVISION:r.FECHA_REVISION||'',OBSERVACIONES:r.OBSERVACIONES||''}));
               return {operational:selected,markers:[...new Set(markerValues)],revision_hits:revisionHits.length,revision_matches:safeReview,public_hits:publicHits.length};
             });
