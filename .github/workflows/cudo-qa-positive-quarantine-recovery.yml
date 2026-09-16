@@ -1,0 +1,112 @@
+name: CUDO QA Positive Quarantine Recovery
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-positive-quarantine-recovery.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_QA_RECOVERY_MARKER: CUDO-QA-SYNTH-NOTICIA-35120135382
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Guard frozen production and patch proven Galeria slug normalization into QA sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_BEFORE="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN_BEFORE" = 'b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('qa-v8-google/tools/sync_google_publico.mjs')
+          s=p.read_text()
+          marker="module.key === 'galeria' && h === 'album_id'"
+          if marker not in s:
+              anchor="    if (module.key === 'partidos' && (h === 'local' || h === 'visita')) return [h,canonicalizePartidosIdentity(raw)];\n"
+              if s.count(anchor)!=1:
+                  raise SystemExit(f'gallery slug patch anchor count={s.count(anchor)}')
+              insert=anchor+"    if (module.key === 'galeria' && h === 'album_id') {\n      const albumIndex=headers.indexOf('album');\n      const source=clean(raw)||clean(albumIndex>=0?row[albumIndex]:'');\n      const slug=source.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');\n      if(!slug) throw new Error('galeria.album_id: no se pudo derivar slug');\n      return [h,slug];\n    }\n"
+              s=s.replace(anchor,insert)
+              p.write_text(s)
+          PY
+          node --check qa-v8-google/tools/sync_google_publico.mjs
+          grep -q "module.key === 'galeria' && h === 'album_id'" qa-v8-google/tools/sync_google_publico.mjs
+
+      - name: Recover only the already-applied synthetic quarantine from primary Google evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check qa-v8-google/tools/recover_applied_qa_quarantine.mjs
+          node qa-v8-google/tools/recover_applied_qa_quarantine.mjs | tee "$RUNNER_TEMP/recovery.json"
+          python3 - "$RUNNER_TEMP/recovery.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d['ok'] is True
+          assert d['mode']=='RECOVER_APPLIED_QA_QUARANTINE'
+          assert d['shared_revision_hits']==0
+          assert d['shared_public_export_hits']==0
+          assert d['overlay_items']==1
+          assert d['item']['titulo']=='CUDO-QA-SYNTH-NOTICIA-35120135382'
+          PY
+
+      - name: Apply recovered overlay to current valid QA baseline without re-syncing unrelated modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          node qa-v8-google/tools/apply_qa_review_overrides.mjs
+          python3 qa-v8-google/tools/validate_data.py
+          grep -q 'CUDO-QA-SYNTH-NOTICIA-35120135382' qa-v8-google/data/noticias.json
+          grep -q 'CUDO-QA-SYNTH-NOTICIA-35120135382' qa-v8-google/qa_review_overrides/noticias.json
+
+      - name: Verify repaired Galeria normalization against shared source in an isolated throwaway copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          SANDBOX="$RUNNER_TEMP/cudo-sync-sandbox"
+          rm -rf "$SANDBOX"
+          mkdir -p "$SANDBOX/root" "$SANDBOX/run"
+          cp -a qa-v8-google "$SANDBOX/root/qa-v8-google"
+          ln -s "$SANDBOX/root/qa-v8-google" "$SANDBOX/run/preview-v8"
+          (
+            cd "$SANDBOX/run"
+            node "$GITHUB_WORKSPACE/qa-v8-google/tools/sync_google_publico.mjs"
+          )
+          python3 "$SANDBOX/root/qa-v8-google/tools/validate_data.py"
+          test -z "$(grep -E '"'"'album_id'"'"'\s*:\s*"'"'[^"'"']*[A-ZÁÉÍÓÚÑ ]' "$SANDBOX/root/qa-v8-google/data/galeria.json" || true)"
+
+      - name: Enforce QA-only diff and persist recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAIN_AFTER="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN_AFTER" = 'b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          test -z "$(git status --porcelain -- preview-v8)"
+          changed="$(git status --porcelain | awk '{print $2}')"
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            case "$path" in
+              qa-v8-google/tools/sync_google_publico.mjs|qa-v8-google/data/noticias.json|qa-v8-google/qa_review_overrides/noticias.json) ;;
+              *) echo "::error::Unexpected recovery diff: $path"; exit 1;;
+            esac
+          done <<< "$changed"
+          git config user.name 'cudo-qa-recovery'
+          git config user.email 'actions@users.noreply.github.com'
+          git add qa-v8-google/tools/sync_google_publico.mjs qa-v8-google/data/noticias.json qa-v8-google/qa_review_overrides/noticias.json
+          git commit -m 'QA: recover positive Noticias quarantine after validation regression'
+          git push origin HEAD:qa/review-event-no-prod-20260915
