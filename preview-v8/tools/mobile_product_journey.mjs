@@ -17,11 +17,16 @@ const expectedAdminActions=[
   {label:'Administrar equipo o serie',host:'docs.google.com',provider:'GOOGLE_FORMS'},
   {label:'Agregar jugador',host:'tally.so',provider:'TALLY'},
   {label:'Registrar partido o resultado',host:'docs.google.com',provider:'GOOGLE_FORMS'},
-  {label:'Actualizar tabla',host:'docs.google.com',provider:'GOOGLE_FORMS'},
   {label:'Subir fotos a la galería',host:'tally.so',provider:'TALLY'},
   {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com',provider:'GOOGLE_FORMS'},
   {label:'Revisar contenido pendiente',host:'docs.google.com',provider:'GOOGLE_FORMS'}
 ];
+const canonicalTable={
+  selector:'[data-canonical-table="calculated-from-verified-results"]',
+  label:'Tabla de posiciones',
+  state:'Automática · sin formulario manual',
+  legacyFormToken:'1FAIpQLSf_WwBEVwZkvlDFMHnfO3FOFG7h9eUd-6DG4Rh6MW6kix696Q'
+};
 const googleAllowedResolvedHosts=new Set(['docs.google.com','accounts.google.com']);
 
 const profile=(name,engine,deviceName,fallback)=>({
@@ -43,7 +48,8 @@ const report={
   data_contract:{},
   app_shell_contract:{version:'2.0',required_on:requiredPages},
   admin_action_contract:{
-    expected:expectedAdminActions.map(a=>a.label),
+    expected_clickable:expectedAdminActions.map(a=>a.label),
+    canonical_table:{authority:'CALCULATED_FROM_VERIFIED_RESULTS',label:canonicalTable.label,manual_form:false},
     live_external_open:liveMode,
     google_responder_access:'CERTIFIED_SEPARATELY_BY_DRIVE_PUBLISHED_PERMISSIONS'
   },
@@ -95,7 +101,7 @@ async function validateAdminActions(page,result){
     href:n.href,
     disabled:n.classList.contains('disabled')
   })));
-  if(actions.length!==expectedAdminActions.length) throw new Error(`admin: ${actions.length} acciones, esperadas ${expectedAdminActions.length}`);
+  if(actions.length!==expectedAdminActions.length) throw new Error(`admin: ${actions.length} acciones ejecutables, esperadas ${expectedAdminActions.length}`);
   for(let i=0;i<expectedAdminActions.length;i++){
     const expected=expectedAdminActions[i],actual=actions[i];
     if(actual.label!==expected.label) throw new Error(`admin: accion ${i+1} inesperada "${actual.label}" != "${expected.label}"`);
@@ -105,6 +111,27 @@ async function validateAdminActions(page,result){
     if(parsed.hostname!==expected.host) throw new Error(`admin: host inesperado para ${actual.label}: ${parsed.hostname}`);
   }
 
+  const tableCards=page.locator(canonicalTable.selector);
+  const tableCount=await tableCards.count();
+  if(tableCount!==1) throw new Error(`admin: ${tableCount} tarjetas canonicas de Tabla, esperada 1`);
+  const tableCard=tableCards.first();
+  const tableState=await tableCard.evaluate(node=>({
+    label:(node.querySelector('strong')?.textContent||'').trim(),
+    state:(node.querySelector('em')?.textContent||'').trim(),
+    text:(node.textContent||'').trim()
+  }));
+  if(tableState.label!==canonicalTable.label) throw new Error(`admin: tarjeta Tabla inesperada "${tableState.label}"`);
+  if(tableState.state!==canonicalTable.state) throw new Error(`admin: estado Tabla inesperado "${tableState.state}"`);
+  if(!/resultados verificados/i.test(tableState.text)) throw new Error('admin: Tabla no declara resultados verificados como fuente');
+  const legacyManualLinks=await page.locator(`a[href*="${canonicalTable.legacyFormToken}"]`).count();
+  if(legacyManualLinks!==0) throw new Error(`admin: formulario manual legado de Tabla presente (${legacyManualLinks})`);
+
+  result.admin_table={
+    label:tableState.label,
+    authority:'CALCULATED_FROM_VERIFIED_RESULTS',
+    manual_form:false,
+    state:tableState.state
+  };
   result.admin_actions=actions.map((a,i)=>({
     label:a.label,
     href:a.href,
@@ -167,7 +194,7 @@ for(const p of profiles){
   const context=await browser.newContext(contextOptions);
   await installControlledExternalRoutes(context);
   const page=await context.newPage();
-  const result={name:p.name,pages:[],console_errors:[],admin_actions:[]};
+  const result={name:p.name,pages:[],console_errors:[],admin_actions:[],admin_table:null};
   page.on('console',msg=>{if(msg.type()==='error') result.console_errors.push(msg.text())});
   page.on('pageerror',error=>result.console_errors.push(error.message));
   try{
