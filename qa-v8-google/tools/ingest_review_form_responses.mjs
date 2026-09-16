@@ -8,6 +8,14 @@ export const RESPONSE_SHEET='Respuestas de formulario 1';
 export const AUDIT_SHEET='AUDITORIA_REVISION';
 export const AUDIT_HEADERS=['ID_REVISION','FECHA','TIPO_CONTENIDO','IDENTIFICADOR_HUMANO','DECISION','AUTORIZACION_PUBLICACION','AUTORIZACION_MENORES','OBSERVACIONES','REVISOR','ESTADO_PROCESO','ID_RESUELTO','COINCIDENCIAS','RESULTADO','FECHA_APLICACION','CAMPO_CORRECCION','NUEVO_VALOR'];
 export const RESPONSE_PREFIX_HEADERS=['Marca temporal','¿Qué contenido desea revisar?','Identifique el contenido','Decisión de revisión','¿La publicación está autorizada?','Si aparecen menores, ¿la autorización fue verificada?','Observaciones de revisión','Nombre del revisor'];
+export const REVIEW_QUESTION_HEADERS=RESPONSE_PREFIX_HEADERS.slice(1);
+export const CORRECTION_HEADERS=['¿Qué dato se corrige?','¿Cuál es el valor aprobado?'];
+export const RESPONSE_HEADERS_CURRENT=[
+  'Marca temporal',
+  ...REVIEW_QUESTION_HEADERS,
+  ...REVIEW_QUESTION_HEADERS,
+  ...CORRECTION_HEADERS
+];
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_STATE_PATH=path.resolve(__dirname,'../review_ingestion_state.json');
@@ -33,9 +41,9 @@ function clean(value){return String(value??'').trim();}
 function isBlankRow(row){return !row.some(value=>clean(value)!=='');}
 function assertResponseHeaders(values){
   if(!values.length) throw new Error(`${RESPONSE_SHEET}: sin encabezados`);
-  const actual=values[0].slice(0,RESPONSE_PREFIX_HEADERS.length).map(clean);
-  if(JSON.stringify(actual)!==JSON.stringify(RESPONSE_PREFIX_HEADERS)){
-    throw new Error(`${RESPONSE_SHEET}: contrato A:H inesperado: ${actual.join('|')}`);
+  const actual=values[0].slice(0,RESPONSE_HEADERS_CURRENT.length).map(clean);
+  if(JSON.stringify(actual)!==JSON.stringify(RESPONSE_HEADERS_CURRENT)){
+    throw new Error(`${RESPONSE_SHEET}: contrato A:Q inesperado: ${actual.join('|')}`);
   }
 }
 function assertAuditHeaders(values){
@@ -52,26 +60,75 @@ export function stableReviewId({submittedAt,contentType,identifier,decision,auth
   return `CUDO-REV-${digest}`;
 }
 
+function candidateFromLayout(row,layout){
+  const submittedAt=clean(row[0]);
+  if(layout==='LEGACY_A_J'){
+    return {
+      layout,
+      submittedAt,
+      contentType:clean(row[1]),identifier:clean(row[2]),decision:clean(row[3]),
+      authorizationPublication:clean(row[4]),authorizationMinors:clean(row[5]),
+      observations:clean(row[6]),reviewer:clean(row[7]),
+      correctionField:clean(row[8]),newValue:clean(row[9])
+    };
+  }
+  if(layout==='CURRENT_A_I_Q'){
+    return {
+      layout,
+      submittedAt,
+      contentType:clean(row[8]),identifier:clean(row[9]),decision:clean(row[10]),
+      authorizationPublication:clean(row[11]),authorizationMinors:clean(row[12]),
+      observations:clean(row[13]),reviewer:clean(row[14]),
+      correctionField:clean(row[15]),newValue:clean(row[16])
+    };
+  }
+  throw new Error(`layout desconocido: ${layout}`);
+}
+
+function candidateMissing(candidate){
+  const required={
+    submittedAt:candidate.submittedAt,
+    contentType:candidate.contentType,
+    identifier:candidate.identifier,
+    decision:candidate.decision,
+    authorizationPublication:candidate.authorizationPublication,
+    authorizationMinors:candidate.authorizationMinors,
+    reviewer:candidate.reviewer
+  };
+  return Object.entries(required).filter(([,value])=>!value).map(([key])=>key);
+}
+
+export function resolveResponseLayout(row,rowNumber){
+  const legacy=candidateFromLayout(row,'LEGACY_A_J');
+  const current=candidateFromLayout(row,'CURRENT_A_I_Q');
+  const legacyMissing=candidateMissing(legacy);
+  const currentMissing=candidateMissing(current);
+  const legacyComplete=legacyMissing.length===0;
+  const currentComplete=currentMissing.length===0;
+
+  if(legacyComplete&&currentComplete){
+    throw new Error(`${RESPONSE_SHEET}!${rowNumber}: respuesta ambigua; bloques legacy y current están completos`);
+  }
+  if(currentComplete) return current;
+  if(legacyComplete) return legacy;
+
+  throw new Error(
+    `${RESPONSE_SHEET}!${rowNumber}: respuesta incompleta `+
+    `(legacy:${legacyMissing.join(',')||'none'}; current:${currentMissing.join(',')||'none'})`
+  );
+}
+
 export function responseRowToAudit(row,rowNumber){
   if(isBlankRow(row)) return null;
-  const submittedAt=clean(row[0]);
-  const contentType=clean(row[1]);
-  const identifier=clean(row[2]);
-  const decision=clean(row[3]);
-  const authorizationPublication=clean(row[4]);
-  const authorizationMinors=clean(row[5]);
-  const observations=clean(row[6]);
-  const reviewer=clean(row[7]);
-  // La hoja conserva encabezados históricos duplicados desde I:Q. La evidencia real demuestra
-  // que las preguntas 8 y 9 vigentes del FORM_SPEC se escriben actualmente en I/J.
-  const correctionField=clean(row[8]);
-  const newValue=clean(row[9]);
-  const required={submittedAt,contentType,identifier,decision,authorizationPublication,authorizationMinors,reviewer};
-  const missing=Object.entries(required).filter(([,value])=>!value).map(([key])=>key);
-  if(missing.length) throw new Error(`${RESPONSE_SHEET}!${rowNumber}: respuesta incompleta (${missing.join(',')})`);
+  const resolved=resolveResponseLayout(row,rowNumber);
+  const {
+    layout,submittedAt,contentType,identifier,decision,authorizationPublication,authorizationMinors,
+    observations,reviewer,correctionField,newValue
+  }=resolved;
   const id=stableReviewId({submittedAt,contentType,identifier,decision,authorizationPublication,authorizationMinors,observations,reviewer,correctionField,newValue});
   return {
     source_row:rowNumber,
+    source_layout:layout,
     id,
     decision,
     content_type:contentType,
@@ -100,11 +157,11 @@ export async function planReviewResponseIngestion({readValues,state=loadIngestio
     if(isBlankRow(row)) continue;
     const entry=responseRowToAudit(row,rowNumber);
     if(baselineIds.has(entry.id)){
-      baseline.push({source_row:rowNumber,id:entry.id});
+      baseline.push({source_row:rowNumber,id:entry.id,source_layout:entry.source_layout});
       continue;
     }
     if(existingIds.has(entry.id)){
-      duplicates.push({source_row:rowNumber,id:entry.id});
+      duplicates.push({source_row:rowNumber,id:entry.id,source_layout:entry.source_layout});
       continue;
     }
     newEntries.push(entry);
@@ -117,6 +174,7 @@ export async function planReviewResponseIngestion({readValues,state=loadIngestio
   return {
     ok:true,
     baseline_identity_mode:'stable_review_id',
+    response_layout_mode:'dual_legacy_current_explicit',
     historical_baseline_ids:[...baselineIds],
     historical_baseline_matches:baseline,
     historical_baseline_rows:baseline.map(entry=>entry.source_row),
@@ -182,11 +240,12 @@ if(isMain){
     ok:result.ok,
     mode:apply?'APPLY_NEW_FORM_RESPONSES':'DRY_RUN_NEW_FORM_RESPONSES',
     baseline_identity_mode:result.baseline_identity_mode,
+    response_layout_mode:result.response_layout_mode,
     historical_baseline_ids:result.historical_baseline_ids,
     historical_baseline_rows:result.historical_baseline_rows,
     duplicate_count:result.duplicate_count,
     new_count:result.new_count,
-    new_entries:result.new_entries.map(entry=>({source_row:entry.source_row,id:entry.id,content_type:entry.content_type,decision:entry.decision,has_correction:entry.has_correction})),
+    new_entries:result.new_entries.map(entry=>({source_row:entry.source_row,source_layout:entry.source_layout,id:entry.id,content_type:entry.content_type,decision:entry.decision,has_correction:entry.has_correction})),
     writes_applied:result.writes_applied,
     rows_appended:result.rows_appended
   },null,2));
