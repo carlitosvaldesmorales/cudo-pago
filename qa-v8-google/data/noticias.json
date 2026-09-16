@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-09-13T18:16:38.892Z",
+  "generated_at": "2026-09-16T16:27:55.640Z",
   "source": "CUDO_WEB_NOTICIAS",
   "items": [
     {
@@ -11,6 +11,14 @@
       "resumen": "La Camiseta no solo se pone para jugar!!",
       "cuerpo": "La Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!\nLa Camiseta no solo se pone para jugar!!",
       "imagen_ref": "media/noticias/tally-5703b400f00b2e13da7f.jpg"
+    },
+    {
+      "id": "QA-NOT-20260916161045-003",
+      "fecha": "2026-09-16",
+      "slug": "qa-not-20260916161045-003",
+      "titulo": "CUDO-QA-SYNTH-NOTICIA-35120135382",
+      "resumen": "Prueba sintética QA CUDO-QA-SYNTH-NOTICIA-35120135382. Debe permanecer fuera de producción.",
+      "cuerpo": "Contenido sintético para certificar el flujo Administración → Tally → revisión → proyección visible QA. Marcador: CUDO-QA-SYNTH-NOTICIA-35120135382."
     }
   ]
 }

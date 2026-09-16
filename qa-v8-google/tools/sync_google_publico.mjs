@@ -353,6 +353,13 @@ function rowToItem(row,headers,module) {
   return Object.fromEntries(headers.map((h,i)=>{
     const raw = row[i] ?? '';
     if (module.key === 'partidos' && (h === 'local' || h === 'visita')) return [h,canonicalizePartidosIdentity(raw)];
+    if (module.key === 'galeria' && h === 'album_id') {
+      const albumIndex=headers.indexOf('album');
+      const source=clean(raw)||clean(albumIndex>=0?row[albumIndex]:'');
+      const slug=source.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+      if(!slug) throw new Error('galeria.album_id: no se pudo derivar slug');
+      return [h,slug];
+    }
     if (module.date.includes(h)) return [h,toIsoDate(raw,`${module.key}.${h}`)];
     if (module.time.includes(h)) return [h,toHHMM(raw,`${module.key}.${h}`)];
     if (module.numeric.includes(h)) return [h,toNumber(raw)];

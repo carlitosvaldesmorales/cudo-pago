@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "mode": "QA_SYNTHETIC_QUARANTINE",
+  "items": [
+    {
+      "id": "QA-NOT-20260916161045-003",
+      "fecha": "2026-09-16",
+      "slug": "qa-not-20260916161045-003",
+      "titulo": "CUDO-QA-SYNTH-NOTICIA-35120135382",
+      "resumen": "Prueba sintética QA CUDO-QA-SYNTH-NOTICIA-35120135382. Debe permanecer fuera de producción.",
+      "cuerpo": "Contenido sintético para certificar el flujo Administración → Tally → revisión → proyección visible QA. Marcador: CUDO-QA-SYNTH-NOTICIA-35120135382."
+    }
+  ]
+}
