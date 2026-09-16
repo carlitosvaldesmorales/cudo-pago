@@ -1,0 +1,95 @@
+name: CUDO QA Integrate V8 Admin and Chepica Play
+
+on:
+  push:
+    branches:
+      - qa/review-event-no-prod-20260915
+    paths:
+      - '.github/workflows/cudo-qa-integrate-v8-admin-chepica-play.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-qa-integrate-v8-admin-chepica-play
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa/review-event-no-prod-20260915
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Reuse frozen V8 admin and Chépica Play without production coupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_MAIN='b5d3567b13f588f525e14de7b1d8afe2142d919a'
+          git fetch origin main --depth=1
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          PROD="$RUNNER_TEMP/cudo-v8-prod-extra"
+          rm -rf "$PROD"
+          git worktree add --detach "$PROD" origin/main
+
+          test -f "$PROD/preview-v8/admin/index.html"
+          test -f "$PROD/preview-v8/admin/forms-config.json"
+          test -f "$PROD/preview-v8/chepica-play/index.html"
+          test -f "$PROD/preview-v8/chepica-play/live.css"
+          test -f "$PROD/preview-v8/chepica-play/live.js"
+          test -f qa-v8-google/shared/qa-sports-proxy-config.js
+          test -f qa-v8-google/shared/qa-sports-proxy.js
+
+          mkdir -p qa-v8-google/admin qa-v8-google/chepica-play
+          cp "$PROD/preview-v8/admin/forms-config.json" qa-v8-google/admin/forms-config.json
+          cp "$PROD/preview-v8/admin/index.html" qa-v8-google/admin/index.html
+          cp "$PROD/preview-v8/chepica-play/index.html" qa-v8-google/chepica-play/index.html
+          cp "$PROD/preview-v8/chepica-play/live.css" qa-v8-google/chepica-play/live.css
+          cp "$PROD/preview-v8/chepica-play/live.js" qa-v8-google/chepica-play/live.js
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          admin=Path('qa-v8-google/admin/index.html')
+          text=admin.read_text()
+          text=text.replace('  <script src="../shared/pwa.js"></script>\n','')
+          text=text.replace('<title>Administrar contenido del CUDO</title>','<title>QA · Administrar contenido del CUDO</title>')
+          admin.write_text(text)
+
+          cp=Path('qa-v8-google/chepica-play/index.html')
+          text=cp.read_text()
+          config='<script src="../shared/qa-sports-proxy-config.js"></script>\n  '
+          adapter='<script src="../shared/qa-sports-proxy.js"></script>\n  '
+          needle='<script type="module" src="./live.js"></script>'
+          if needle not in text:
+              raise SystemExit('Chepica Play module marker not found')
+          text=text.replace(needle,config+adapter+needle,1)
+          cp.write_text(text)
+          PY
+
+          ! grep -q '../shared/pwa.js' qa-v8-google/admin/index.html
+          grep -q 'qa-sports-proxy-config.js' qa-v8-google/chepica-play/index.html
+          grep -q 'qa-sports-proxy.js' qa-v8-google/chepica-play/index.html
+          node --check qa-v8-google/chepica-play/live.js
+          python3 -m json.tool qa-v8-google/admin/forms-config.json >/dev/null
+          test -z "$(git status --porcelain -- preview-v8)"
+          git worktree remove "$PROD" --force
+
+      - name: Persist QA-only parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- qa-v8-google/admin qa-v8-google/chepica-play; then
+            echo 'QA admin and Chepica Play already aligned.'
+            exit 0
+          fi
+          git config user.name 'cudo-qa-integration'
+          git config user.email 'actions@users.noreply.github.com'
+          git add qa-v8-google/admin qa-v8-google/chepica-play
+          git commit -m 'QA: integrate V8 admin and Chepica Play surfaces'
+          git push origin HEAD:qa/review-event-no-prod-20260915
