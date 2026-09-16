@@ -57,5 +57,6 @@
     const enable=(id,state,url)=>{if(!url)return;const a=document.getElementById(id);a.href=url;a.target='_blank';a.rel='noopener';a.classList.remove('disabled');document.getElementById(state).textContent='Abrir formulario →'};
     fetch('./forms-config.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(cfg=>{if(!cfg)return;enable('maintenanceLink','maintenanceState',cfg.maintenance_url);enable('reviewLink','reviewState',cfg.review_url)}).catch(()=>{});
   </script>
+  <script src="../shared/pwa.js"></script>
 </body>
 </html>
