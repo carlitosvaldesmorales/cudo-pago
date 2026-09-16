@@ -60,7 +60,7 @@ jobs:
             page.on('pageerror',e=>errors.push(String(e.message||e)));
             page.on('requestfailed',r=>failed.push(r.url()));
             await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-            await page.waitForTimeout(2000);
+            await page.waitForTimeout(1500);
 
             const combo=page.getByRole('combobox').first();
             await combo.click();
@@ -71,17 +71,42 @@ jobs:
             await page.getByPlaceholder('Ej.: CUDO recibe a Santa Elena este domingo').fill(marker);
             await page.getByPlaceholder('Explique en pocas líneas lo principal de la noticia.').fill(`Prueba sintética QA ${marker}. Debe permanecer fuera de producción.`);
             await page.getByPlaceholder('Escriba aquí la información que se publicará.').fill(`Contenido sintético para certificar el flujo Administración → Tally → revisión → proyección visible QA. Marcador: ${marker}.`);
-            const dateInput=page.locator('input').filter({has:undefined}).nth(4);
-            await dateInput.fill('2026-09-16');
-            await page.locator('input[type=file]').setInputFiles('qa-synthetic-noticia.png');
+
+            const inputs=page.locator('input');
+            const inputCount=await inputs.count();
+            let dateInput=null;
+            for(let i=0;i<inputCount;i++){
+              const el=inputs.nth(i);
+              const type=await el.getAttribute('type');
+              const role=await el.getAttribute('role');
+              if(type==='file'||role==='combobox') continue;
+              const value=await el.inputValue().catch(()=>null);
+              const placeholder=await el.getAttribute('placeholder');
+              if(value!==null&&placeholder===''){ dateInput=el; break; }
+            }
+            if(!dateInput) throw new Error('Date input not found');
+            await dateInput.fill('16/09/2026');
+
+            const fileInput=page.locator('input[type=file]');
+            await fileInput.setInputFiles('qa-synthetic-noticia.png');
+            await page.getByText('qa-synthetic-noticia.png',{exact:false}).waitFor({state:'visible',timeout:30000});
+
             await page.getByPlaceholder('Ej.: Jugadores del CUDO antes del partido.').fill(`Imagen sintética QA ${marker}`);
             await page.getByPlaceholder('Opcional. Agregue aquí alguna indicación para quien revisará la noticia.').fill(`QA ONLY ${marker}; aprobar sólo mediante cuarentena positiva QA.`);
 
             const submit=page.getByRole('button',{name:'Enviar noticia para revisión'});
             await submit.click();
-            await page.waitForTimeout(5000);
+            const thanks=page.getByText('Información recibida',{exact:true});
+            try{
+              await thanks.waitFor({state:'visible',timeout:30000});
+            }catch(e){
+              const body=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
+              console.error(JSON.stringify({ok:false,marker,body_excerpt:body.slice(0,2200)},null,2));
+              throw e;
+            }
             const body=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
-            const result={ok:true,marker,form:url,final_url:page.url(),body_excerpt:body.slice(0,1200),page_errors:errors,failed_requests:failed,write_performed:true,production_preview_v8_touched:false};
+            if(!body.includes('Recibimos la información. Aún no está publicada')) throw new Error('Thank-you contract not reached');
+            const result={ok:true,marker,form:url,final_url:page.url(),thank_you:true,page_errors:errors,failed_requests:failed,write_performed:true,production_preview_v8_touched:false};
             console.log(JSON.stringify(result,null,2));
             if(errors.length||failed.length) process.exitCode=2;
             await browser.close();
