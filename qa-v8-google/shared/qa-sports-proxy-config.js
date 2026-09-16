@@ -1,0 +1,1 @@
+window.CUDO_QA_SPORTS_PROXY_BASE='';
