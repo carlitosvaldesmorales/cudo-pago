@@ -108,6 +108,7 @@ jobs:
       CUDO_REVIEW_INGEST_APPLY: 'true'
       CUDO_REVIEW_TRIGGER_SOURCE: ${{ inputs.source }}
       CUDO_QA_EXPECT_MARKER: 'CUDO-QA-SYNTH-'
+      CUDO_QA_AUDIT_MUTATION_FILE: ${{ runner.temp }}/cudo-review-qa-audit.json
     steps:
       - uses: actions/checkout@v4
         with:
@@ -184,3 +185,8 @@ jobs:
           git add qa-v8-google/data qa-v8-google/media qa-v8-google/qa_review_overrides
           git commit -m 'QA: sincronizar contenido revisado en cuarentena aislada'
           git push origin HEAD:qa/review-event-no-prod-20260915
+      - name: Confirmar auditoría sólo después de persistencia QA
+        if: steps.route.outputs.quarantine == 'true'
+        env:
+          CUDO_QA_FINALIZE_AUDIT: 'true'
+        run: node qa-v8-google/tools/process_review_decisions_qa_quarantine.mjs
