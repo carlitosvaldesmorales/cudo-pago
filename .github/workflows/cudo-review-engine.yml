@@ -108,7 +108,7 @@ jobs:
       CUDO_REVIEW_INGEST_APPLY: 'true'
       CUDO_REVIEW_TRIGGER_SOURCE: ${{ inputs.source }}
       CUDO_QA_EXPECT_MARKER: 'CUDO-QA-SYNTH-'
-      CUDO_QA_AUDIT_MUTATION_FILE: ${{ runner.temp }}/cudo-review-qa-audit.json
+      CUDO_QA_AUDIT_MUTATION_FILE: /tmp/cudo-review-qa-audit.json
     steps:
       - uses: actions/checkout@v4
         with:
