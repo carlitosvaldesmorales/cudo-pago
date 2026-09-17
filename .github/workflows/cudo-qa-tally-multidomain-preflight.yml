@@ -51,7 +51,26 @@ jobs:
               const controls=await page.locator('input,textarea,select,button,[role="combobox"],[role="option"],[role="radio"],[role="checkbox"],[contenteditable="true"]').evaluateAll(nodes=>nodes.slice(0,200).map((n,i)=>({i,tag:n.tagName,type:n.getAttribute('type'),name:n.getAttribute('name'),placeholder:n.getAttribute('placeholder'),aria:n.getAttribute('aria-label'),role:n.getAttribute('role'),value:n.getAttribute('value'),text:(n.innerText||n.textContent||'').replace(/\s+/g,' ').trim().slice(0,180)})));
               const labels=(await page.locator('label').allTextContents()).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
               const headings=(await page.locator('h1,h2,h3,[role="heading"]').allTextContents()).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
-              results.push({action:card.action,url:card.url,final_url:page.url(),title:await page.title(),headings,labels,controls,body_excerpt:body.slice(0,7000),failed_requests:failed.length,page_errors:errors,write_performed:false});
+
+              const comboboxes=page.locator('[role="combobox"]');
+              const combo_options=[];
+              const comboCount=await comboboxes.count();
+              for(let i=0;i<comboCount;i++){
+                const combo=comboboxes.nth(i);
+                await combo.scrollIntoViewIfNeeded().catch(()=>{});
+                await combo.click();
+                await page.waitForTimeout(250);
+                const options=await page.locator('[role="option"], [role="menuitem"], [data-radix-collection-item]').evaluateAll(nodes=>nodes.filter(n=>{
+                  const s=getComputedStyle(n); const r=n.getBoundingClientRect();
+                  return s.visibility!=='hidden'&&s.display!=='none'&&r.width>0&&r.height>0;
+                }).map(n=>(n.innerText||n.textContent||'').replace(/\s+/g,' ').trim()).filter(Boolean));
+                const openBody=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
+                combo_options.push({index:i,options:[...new Set(options)],body_delta:openBody===body?'':openBody.slice(0,9000)});
+                await page.keyboard.press('Escape').catch(()=>{});
+                await page.waitForTimeout(100);
+              }
+
+              results.push({action:card.action,url:card.url,final_url:page.url(),title:await page.title(),headings,labels,controls,combo_options,body_excerpt:body.slice(0,7000),failed_requests:failed.length,page_errors:errors,write_performed:false});
               await page.close();
             }
             await browser.close();
