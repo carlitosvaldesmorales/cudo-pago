@@ -1,0 +1,133 @@
+name: Promote CUDO Persona Intake Existing Deployment
+
+on:
+  push:
+    paths:
+      - '.github/workflows/promote-cudo-persona-intake-existing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  promote-and-certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Promote v47 to existing Tally endpoint and certify non-blocking notification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,hmac,json,os,pathlib,time,urllib.parse,urllib.request
+
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          DEPLOYMENT_ID='AKfycbwY1oixu60Ack5JgnXcNHqEQqizhDKBCAPtEj8p3Svbrr2fMDyGHa1LZDe1dfrytX-B'
+          VERSION=47
+          SHEET_ID='1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y'
+
+          token_body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token',
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=token_body,headers={'Content-Type':'application/x-www-form-urlencoded'}),timeout=30) as r:
+            access=json.load(r)['access_token']
+
+          def api(url,method='GET',payload=None):
+            req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(req,timeout=30) as r:
+              raw=r.read(); return json.loads(raw) if raw else {}
+
+          update_url=f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}/deployments/{DEPLOYMENT_ID}'
+          deployment=api(update_url,'PUT',{'deploymentConfig':{
+            'scriptId':SCRIPT_ID,
+            'versionNumber':VERSION,
+            'manifestFileName':'appsscript',
+            'description':'CUDO Persona Tally Intake production v47 notification fail-safe',
+          }})
+          actual=(deployment.get('deploymentConfig') or {}).get('versionNumber')
+          if actual!=VERSION:
+            raise SystemExit('Existing deployment did not move to v47: '+json.dumps(deployment))
+
+          intake_key=hmac.new(os.environ['CUDO_GOOGLE_REFRESH_TOKEN'].encode(),b'CUDO_PERSONA_TALLY_INTAKE_V1',hashlib.sha256).hexdigest()
+          endpoint=f'https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec?key='+urllib.parse.quote(intake_key)
+          run=os.environ.get('GITHUB_RUN_ID','0')
+          sid='NONBLOCK'+run[-12:]
+          name='CUDO-QA-SYNTH-NONBLOCK-'+run
+          created='2026-09-17T19:35:00.000Z'
+          payload={
+            'eventId':'nonblock-cert-'+sid,
+            'eventType':'FORM_RESPONSE',
+            'createdAt':created,
+            'data':{
+              'responseId':sid,'submissionId':sid,'respondentId':'nonblock-cert',
+              'formId':'9qeq5p','formName':'Mi ficha CUDO','createdAt':created,
+              'fields':[
+                {'key':'question_role','label':'¿Cómo participas en el CUDO?','type':'MULTIPLE_CHOICE','value':['role-other'],'options':[{'id':'role-other','text':'Otra relación con el club'}]},
+                {'key':'question_name','label':'¿Cómo quieres que aparezca tu nombre?','type':'INPUT_TEXT','value':name},
+                {'key':'question_func','label':'¿Qué función o participación tienes en el club?','type':'INPUT_TEXT','value':'Certificación notificación no bloqueante'},
+                {'key':'question_auth','label':'Antes de enviar','type':'CHECKBOXES','value':['auth-ok'],'options':[{'id':'auth-ok','text':'Autorizo al CUDO a revisar estos datos para preparar mi ficha pública'}]},
+              ]
+            }
+          }
+
+          row=None
+          response=None
+          try:
+            last=None
+            for attempt in range(8):
+              try:
+                req=urllib.request.Request(endpoint,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','User-Agent':'CUDO-Nonblocking-Notification-Cert'},method='POST')
+                with urllib.request.urlopen(req,timeout=30) as r:
+                  raw=r.read().decode()
+                  response=json.loads(raw)
+                if response.get('ok'): break
+              except Exception as exc:
+                last=repr(exc); time.sleep(2)
+            if not response or not response.get('ok'):
+              raise SystemExit('Updated endpoint did not return valid JSON after retries: '+str(last))
+            row=int(response['row'])
+            state=response.get('state') or {}
+            expected={'estado':'PENDIENTE_REVISION','publicar':'NO','privacidad':'INTERNO'}
+            if state!=expected:
+              raise SystemExit('Unexpected governance state '+json.dumps(state))
+            notification=response.get('notification') or {}
+            valid_notification=(notification.get('sent') is True) or (notification.get('sent') is False and notification.get('reason')=='MAIL_ERROR')
+            if not valid_notification:
+              raise SystemExit('Unexpected notification result '+json.dumps(notification))
+
+            evidence={
+              'ok':True,
+              'deploymentId':DEPLOYMENT_ID,
+              'versionNumber':VERSION,
+              'endpointUnchanged':True,
+              'submissionId':sid,
+              'row':row,
+              'durableState':state,
+              'notification':notification,
+              'jsonResponsePreserved':True,
+              'cleaned':False,
+            }
+            pathlib.Path('persona-existing-deployment-promotion.json').write_text(json.dumps(evidence,indent=2,ensure_ascii=False))
+            print(json.dumps(evidence,indent=2,ensure_ascii=False))
+          finally:
+            if row:
+              api(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values:batchClear','POST',{'ranges':[f'PERSONAS_CONTROL!A{row}:O{row}',f'PERSONAS_CONTROL!W{row}:W{row}']})
+              if pathlib.Path('persona-existing-deployment-promotion.json').exists():
+                e=json.loads(pathlib.Path('persona-existing-deployment-promotion.json').read_text())
+                e['cleaned']=True
+                pathlib.Path('persona-existing-deployment-promotion.json').write_text(json.dumps(e,indent=2,ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: persona-existing-deployment-promotion
+          path: persona-existing-deployment-promotion.json
+          retention-days: 14
