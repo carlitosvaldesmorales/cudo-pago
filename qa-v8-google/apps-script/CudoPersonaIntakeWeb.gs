@@ -104,15 +104,23 @@ function cudoPersonaIntakeNotify_(record,isCertification){
   const props=PropertiesService.getScriptProperties();
   const prop='CUDO_PERSONA_NOTIFIED_'+record.submissionId;
   if(props.getProperty(prop)==='1') return {sent:false,reason:'ALREADY_NOTIFIED'};
-  MailApp.sendEmail({
-    to:CUDO_PERSONA_NOTIFY_,
-    subject:'CUDO · Nueva ficha pendiente · '+record.name,
-    body:'CUDO recibió y guardó una nueva ficha de '+record.name+' ('+record.relation+').\n\nRevisar solicitudes: '+CUDO_PERSONA_ADMIN_URL_,
-    htmlBody:'<p><b>CUDO recibió y guardó una nueva ficha.</b></p><p>'+record.name+' · '+record.relation+'</p><p><a href="'+CUDO_PERSONA_ADMIN_URL_+'">Revisar solicitudes de fichas</a></p><p>Este aviso se genera después de la persistencia durable en CUDO.</p>',
-    name:'CUDO',
-  });
-  props.setProperty(prop,'1');
-  return {sent:true};
+  try{
+    MailApp.sendEmail({
+      to:CUDO_PERSONA_NOTIFY_,
+      subject:'CUDO · Nueva ficha pendiente · '+record.name,
+      body:'CUDO recibió y guardó una nueva ficha de '+record.name+' ('+record.relation+').\n\nRevisar solicitudes: '+CUDO_PERSONA_ADMIN_URL_,
+      htmlBody:'<p><b>CUDO recibió y guardó una nueva ficha.</b></p><p>'+record.name+' · '+record.relation+'</p><p><a href="'+CUDO_PERSONA_ADMIN_URL_+'">Revisar solicitudes de fichas</a></p><p>Este aviso se genera después de la persistencia durable en CUDO.</p>',
+      name:'CUDO',
+    });
+    props.setProperty(prop,'1');
+    return {sent:true};
+  }catch(err){
+    return {
+      sent:false,
+      reason:'MAIL_ERROR',
+      error:cudoPersonaIntakeSafeText_(err&&err.message?err.message:String(err),300),
+    };
+  }
 }
 
 function doPost(e){
