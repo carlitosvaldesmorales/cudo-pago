@@ -20,6 +20,7 @@ const expectedAdminActions=[
   {label:'Registrar partido o resultado',host:'docs.google.com',provider:'GOOGLE_FORMS'},
   {label:'Subir fotos a la galería',host:'tally.so',provider:'TALLY'},
   {label:'Corregir, actualizar, retirar o reactivar',host:'docs.google.com',provider:'GOOGLE_FORMS'},
+  {label:'Revisar solicitudes de fichas',host:'script.google.com',provider:'GOOGLE_APPS_SCRIPT_PRIVATE'},
   {label:'Revisar contenido pendiente',host:'docs.google.com',provider:'GOOGLE_FORMS'}
 ];
 const canonicalTable={
@@ -29,6 +30,7 @@ const canonicalTable={
   legacyFormToken:'1FAIpQLSf_WwBEVwZkvlDFMHnfO3FOFG7h9eUd-6DG4Rh6MW6kix696Q'
 };
 const googleAllowedResolvedHosts=new Set(['docs.google.com','accounts.google.com']);
+const appsScriptAllowedResolvedHosts=new Set(['script.google.com','accounts.google.com']);
 
 const profile=(name,engine,deviceName,fallback)=>({
   name,engine,
@@ -52,7 +54,8 @@ const report={
     expected_clickable:expectedAdminActions.map(a=>a.label),
     canonical_table:{authority:'CALCULATED_FROM_VERIFIED_RESULTS',label:canonicalTable.label,manual_form:false},
     live_external_open:liveMode,
-    google_responder_access:'CERTIFIED_SEPARATELY_BY_DRIVE_PUBLISHED_PERMISSIONS'
+    google_responder_access:'CERTIFIED_SEPARATELY_BY_DRIVE_PUBLISHED_PERMISSIONS',
+    persona_review_access:'PRIVATE_GOOGLE_APPS_SCRIPT_AUTH'
   },
   controlled_external_dependencies:{
     sports_event_bus:liveMode?'LIVE_REAL_DEPENDENCY':'INTERCEPTED_WITH_VERSIONED_PRODUCT_SNAPSHOTS',
@@ -168,6 +171,16 @@ async function validateAdminActions(page,result){
         result.admin_actions[i].provider_access_observation=parsed.hostname==='accounts.google.com'
           ? 'HEADLESS_AUTH_REDIRECT_OBSERVED'
           : 'FORM_CONTENT_OBSERVED';
+      }else if(expected.provider==='GOOGLE_APPS_SCRIPT_PRIVATE'){
+        if(!appsScriptAllowedResolvedHosts.has(parsed.hostname)){
+          throw new Error(`admin: click ${expected.label} resolvió host Apps Script inesperado ${parsed.hostname}`);
+        }
+        result.admin_actions[i].entrypoint=parsed.hostname==='accounts.google.com'
+          ? 'LIVE_DISPATCHED_PROVIDER_AUTH'
+          : 'LIVE_OPENED_PRIVATE_APP';
+        result.admin_actions[i].provider_access_observation=parsed.hostname==='accounts.google.com'
+          ? 'PRIVATE_AUTH_REDIRECT_OBSERVED'
+          : 'PRIVATE_APPS_SCRIPT_CONTENT_OBSERVED';
       }
       result.admin_actions[i].resolved_url=url;
     }finally{
