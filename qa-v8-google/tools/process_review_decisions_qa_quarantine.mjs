@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -6,6 +7,14 @@ import { MODULES, planReviewDecisions } from './process_review_decisions.mjs';
 const EXPECTED_BRANCH='qa/review-event-no-prod-20260915';
 const SYNTHETIC_PREFIX='CUDO-QA-SYNTH-';
 const SUPPORTED_MODULES=new Set(['NOTICIA','EQUIPO','PLANTEL','TABLA']);
+const MAX_MEDIA_BYTES=10*1024*1024;
+const IMAGE_EXT=new Map([
+  ['image/jpeg','jpg'],
+  ['image/png','png'],
+  ['image/webp','webp'],
+  ['image/gif','gif'],
+  ['image/avif','avif']
+]);
 const MODULE_META={
   NOTICIA:{idHeader:'ID_NOTICIA',overlay:'noticias.json'},
   EQUIPO:{idHeader:'ID_EQUIPO',overlay:'equipos.json'},
@@ -120,6 +129,53 @@ export function publicItemForModule(moduleKey,row,resolvedId){
   throw new Error(`QA quarantine: módulo no permitido ${moduleKey}`);
 }
 
+function privateTallyUrl(value){
+  const source=String(value??'').trim();
+  if(!source) return null;
+  try{
+    const u=new URL(source);
+    if(u.protocol==='https:'&&u.hostname==='storage.tally.so'&&u.pathname.startsWith('/private/')) return u.toString();
+  }catch{}
+  return null;
+}
+
+function imageBytesMatchMime(buffer,mime){
+  if(mime==='image/jpeg') return buffer.length>=3&&buffer[0]===0xff&&buffer[1]===0xd8&&buffer[2]===0xff;
+  if(mime==='image/png') return buffer.length>=8&&buffer.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]));
+  if(mime==='image/gif') return buffer.length>=6&&['GIF87a','GIF89a'].includes(buffer.subarray(0,6).toString('ascii'));
+  if(mime==='image/webp') return buffer.length>=12&&buffer.subarray(0,4).toString('ascii')==='RIFF'&&buffer.subarray(8,12).toString('ascii')==='WEBP';
+  if(mime==='image/avif') return buffer.length>=12&&buffer.subarray(4,8).toString('ascii')==='ftyp'&&['avif','avis'].includes(buffer.subarray(8,12).toString('ascii'));
+  return false;
+}
+
+export async function materializeQaImageRef({moduleKey,itemId,value,qaRoot='qa-v8-google',fetchImpl=fetch}){
+  const url=privateTallyUrl(value);
+  if(!url) return String(value??'').trim();
+  let response;
+  try{
+    response=await fetchImpl(url,{redirect:'follow',signal:AbortSignal.timeout(20000)});
+  }catch{
+    throw new Error(`QA quarantine: no se pudo descargar medio privado de ${itemId||'registro sin id'}`);
+  }
+  if(!response.ok) throw new Error(`QA quarantine: medio privado no disponible para ${itemId||'registro sin id'} (HTTP ${response.status})`);
+  const declaredLength=Number(response.headers.get('content-length')||0);
+  if(Number.isFinite(declaredLength)&&declaredLength>MAX_MEDIA_BYTES) throw new Error(`QA quarantine: medio de ${itemId||'registro sin id'} excede 10 MiB`);
+  const mime=String(response.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+  const ext=IMAGE_EXT.get(mime);
+  if(!ext) throw new Error(`QA quarantine: medio de ${itemId||'registro sin id'} usa tipo no permitido ${mime||'desconocido'}`);
+  const buffer=Buffer.from(await response.arrayBuffer());
+  if(buffer.length===0||buffer.length>MAX_MEDIA_BYTES) throw new Error(`QA quarantine: medio de ${itemId||'registro sin id'} tiene tamaño inválido`);
+  if(!imageBytesMatchMime(buffer,mime)) throw new Error(`QA quarantine: medio de ${itemId||'registro sin id'} no coincide con su tipo declarado`);
+  const digest=crypto.createHash('sha256').update(buffer).digest('hex').slice(0,20);
+  const moduleDir=String(moduleKey||'').toLowerCase();
+  const dir=path.join(qaRoot,'media',moduleDir);
+  fs.mkdirSync(dir,{recursive:true});
+  const filename=`tally-${digest}.${ext}`;
+  const target=path.join(dir,filename);
+  if(!fs.existsSync(target)) fs.writeFileSync(target,buffer,{flag:'wx'});
+  return `media/${moduleDir}/${filename}`;
+}
+
 export function validateQuarantinePlan(plan,{expectedMarker,targetRow}){
   if(plan.pending!==1||plan.summary.length!==1) throw new Error(`QA quarantine: se esperaba exactamente 1 decisión pendiente y llegaron ${plan.pending}`);
   const s=plan.summary[0];
@@ -155,7 +211,15 @@ async function adapter(){
   return {readValues,updateValues};
 }
 
-export async function runQaQuarantine({readValues,updateValues,expectedMarker,overlayPath=null,now=()=>new Date().toISOString()}){
+export async function finalizeQaAudit({updateValues,auditMutationPath}){
+  if(!auditMutationPath||!fs.existsSync(auditMutationPath)) throw new Error('QA quarantine: evidencia de auditoría diferida no existe');
+  const mutation=JSON.parse(fs.readFileSync(auditMutationPath,'utf8'));
+  if(!mutation?.spreadsheetId||!mutation?.range||!Array.isArray(mutation?.values)) throw new Error('QA quarantine: mutación de auditoría diferida inválida');
+  await updateValues(mutation.spreadsheetId,mutation.range,mutation.values);
+  return {ok:true,mode:'QA_SYNTHETIC_QUARANTINE_AUDIT_FINALIZED',audit_writes:1,range:mutation.range};
+}
+
+export async function runQaQuarantine({readValues,updateValues,expectedMarker,overlayPath=null,qaRoot='qa-v8-google',fetchImpl=fetch,now=()=>new Date().toISOString(),deferAudit=false,auditMutationPath=null}){
   if(!expectedMarker||!expectedMarker.startsWith(SYNTHETIC_PREFIX)) throw new Error('QA quarantine: marker sintético esperado no configurado');
   const plan=await planReviewDecisions({readValues,now,expectedPending:1});
   const s=plan.summary[0];
@@ -166,11 +230,20 @@ export async function runQaQuarantine({readValues,updateValues,expectedMarker,ov
   if(!target) throw new Error(`QA quarantine: target de ${s.module} no encontrado por ID resuelto`);
   const validated=validateQuarantinePlan(plan,{expectedMarker,targetRow:target});
   const item=publicItemForModule(s.module,target,validated.summary.id);
+  if(s.module==='PLANTEL'&&item.foto_ref){
+    item.foto_ref=await materializeQaImageRef({moduleKey:s.module,itemId:item.id,value:item.foto_ref,qaRoot,fetchImpl});
+  }
 
   const audit=structuredClone(validated.auditMutation);
   audit.values[0][0]='APLICADO';
   audit.values[0][3]=`Aprobación QA cuarentena ${s.module} aplicada; REVISION/PUBLICO_EXPORT compartido no fue modificado`;
-  await updateValues(audit.spreadsheetId,audit.range,audit.values);
+  if(deferAudit){
+    if(!auditMutationPath) throw new Error('QA quarantine: deferAudit requiere auditMutationPath');
+    fs.mkdirSync(path.dirname(auditMutationPath),{recursive:true});
+    fs.writeFileSync(auditMutationPath,JSON.stringify(audit,null,2)+'\n');
+  }else{
+    await updateValues(audit.spreadsheetId,audit.range,audit.values);
+  }
 
   const targetOverlay=overlayPath||path.join('qa-v8-google','qa_review_overrides',meta.overlay);
   fs.mkdirSync(path.dirname(targetOverlay),{recursive:true});
@@ -180,14 +253,20 @@ export async function runQaQuarantine({readValues,updateValues,expectedMarker,ov
   doc.items=Array.isArray(doc.items)?doc.items.filter(x=>x.id!==item.id):[];
   doc.items.push(item);
   fs.writeFileSync(targetOverlay,JSON.stringify(doc,null,2)+'\n');
-  return {ok:true,mode:'QA_SYNTHETIC_QUARANTINE',marker:expectedMarker,id:item.id,module:s.module,action:'PUBLISH',shared_revision_writes:0,audit_writes:1,overlay_items:doc.items.length,overlay_path:targetOverlay,item};
+  return {ok:true,mode:'QA_SYNTHETIC_QUARANTINE',marker:expectedMarker,id:item.id,module:s.module,action:'PUBLISH',shared_revision_writes:0,audit_writes:deferAudit?0:1,audit_deferred:deferAudit,overlay_items:doc.items.length,overlay_path:targetOverlay,item};
 }
 
 const isMain=process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href;
 if(isMain){
   if(process.env.GITHUB_REF_NAME&&process.env.GITHUB_REF_NAME!==EXPECTED_BRANCH) throw new Error(`QA quarantine: branch inválida ${process.env.GITHUB_REF_NAME}`);
-  const expectedMarker=process.env.CUDO_QA_EXPECT_MARKER||'';
   const a=await adapter();
-  const result=await runQaQuarantine({...a,expectedMarker});
-  console.log(JSON.stringify(result,null,2));
+  const auditMutationPath=process.env.CUDO_QA_AUDIT_MUTATION_FILE||'';
+  if(process.env.CUDO_QA_FINALIZE_AUDIT==='true'){
+    const result=await finalizeQaAudit({updateValues:a.updateValues,auditMutationPath});
+    console.log(JSON.stringify(result,null,2));
+  }else{
+    const expectedMarker=process.env.CUDO_QA_EXPECT_MARKER||'';
+    const result=await runQaQuarantine({...a,expectedMarker,qaRoot:'qa-v8-google',deferAudit:true,auditMutationPath});
+    console.log(JSON.stringify(result,null,2));
+  }
 }
