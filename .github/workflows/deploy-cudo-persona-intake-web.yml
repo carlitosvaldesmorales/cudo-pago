@@ -1,0 +1,159 @@
+name: Deploy CUDO Persona Tally Intake Web
+
+on:
+  push:
+    branches: [main, feat/persona-tally-event-ingestion]
+    paths:
+      - 'qa-v8-google/apps-script/CudoPersonaIntakeWeb.gs'
+      - '.github/workflows/deploy-cudo-persona-intake-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy isolated anonymous intake version and certify durable persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,hmac,json,os,pathlib,re,time,urllib.parse,urllib.request
+
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          SHEET_ID='1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y'
+          SOURCE_PATH=pathlib.Path('qa-v8-google/apps-script/CudoPersonaIntakeWeb.gs')
+          PLACEHOLDER='__CUDO_PERSONA_INTAKE_KEY_SHA256__'
+
+          token_body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token',
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=token_body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r:
+            access=json.load(r)['access_token']
+
+          def api(url,method='GET',payload=None):
+            req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(req,timeout=30) as r:
+              raw=r.read()
+              return json.loads(raw) if raw else {}
+
+          base=f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}'
+          current=api(base+'/content')
+          original_files=[{'name':f['name'],'type':f['type'],'source':f.get('source','')} for f in current.get('files',[])]
+          if not original_files:
+            raise SystemExit('Apps Script project content is empty')
+
+          intake_key=hmac.new(os.environ['CUDO_GOOGLE_REFRESH_TOKEN'].encode(),b'CUDO_PERSONA_TALLY_INTAKE_V1',hashlib.sha256).hexdigest()
+          intake_hash=hashlib.sha256(intake_key.encode()).hexdigest()
+          intake_source=SOURCE_PATH.read_text()
+          if intake_source.count(PLACEHOLDER)!=1:
+            raise SystemExit('Expected exactly one intake key placeholder')
+          intake_source=intake_source.replace(PLACEHOLDER,intake_hash)
+
+          public_files=[]
+          manifest=None
+          for f in original_files:
+            if f['name'] in ('CudoPersonaReviewWeb','CudoPersonaIntakeWeb'):
+              continue
+            if f['name']=='appsscript' and f['type']=='JSON':
+              manifest=json.loads(f.get('source') or '{}')
+              continue
+            if f['type']=='SERVER_JS' and re.search(r'\bfunction\s+(doGet|doPost)\s*\(',f.get('source','')):
+              raise SystemExit('Fail closed: unexpected web handler in '+f['name'])
+            public_files.append(f)
+          if manifest is None:
+            manifest={}
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING'}
+          public_files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          public_files.append({'name':'CudoPersonaIntakeWeb','type':'SERVER_JS','source':intake_source})
+
+          synth_id='SYNTH'+str(os.environ.get('GITHUB_RUN_ID','0'))[-12:]
+          row=None
+          try:
+            api(base+'/content','PUT',{'files':public_files})
+            version=api(base+'/versions','POST',{'description':'CUDO Persona Tally Intake '+os.environ.get('GITHUB_SHA','')[:12]})
+            vn=version['versionNumber']
+            deployment=api(base+'/deployments','POST',{'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Persona Tally Intake anonymous'})
+            did=deployment['deploymentId']
+            web_url='https://script.google.com/macros/s/'+did+'/exec'
+            endpoint=web_url+'?key='+urllib.parse.quote(intake_key)+'&cert=1'
+
+            payload={
+              'eventId':'cert-'+synth_id,
+              'eventType':'FORM_RESPONSE',
+              'createdAt':'2026-09-17T12:00:00.000Z',
+              'data':{
+                'responseId':synth_id,'submissionId':synth_id,'respondentId':'cert',
+                'formId':'9qeq5p','formName':'Mi ficha CUDO','createdAt':'2026-09-17T12:00:00.000Z',
+                'fields':[
+                  {'key':'question_role','label':'¿Cómo participas en el CUDO?','type':'MULTIPLE_CHOICE','value':['role-dir'],'options':[{'id':'role-dir','text':'Dirigente'}]},
+                  {'key':'question_name','label':'¿Cómo quieres que aparezca tu nombre?','type':'INPUT_TEXT','value':'CUDO Sintético E2E'},
+                  {'key':'question_func','label':'¿Qué función o participación tienes en el club?','type':'INPUT_TEXT','value':'Certificación automática'},
+                  {'key':'question_auth','label':'Antes de enviar','type':'CHECKBOXES','value':['auth-ok'],'options':[{'id':'auth-ok','text':'Autorizo al CUDO a revisar estos datos para preparar mi ficha pública'}]},
+                ],
+              },
+            }
+
+            last_error=None
+            response=None
+            for attempt in range(10):
+              try:
+                req=urllib.request.Request(endpoint,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','User-Agent':'CUDO-Certification'},method='POST')
+                with urllib.request.urlopen(req,timeout=20) as r:
+                  response=json.loads(r.read().decode())
+                if response.get('ok'):
+                  break
+              except Exception as exc:
+                last_error=exc
+                time.sleep(3)
+            if not response or not response.get('ok'):
+              raise SystemExit('Synthetic webhook failed after retries: '+repr(last_error))
+
+            row=int(response['row'])
+            expected_state={'estado':'PENDIENTE_REVISION','publicar':'NO','privacidad':'INTERNO'}
+            if response.get('state')!=expected_state:
+              raise SystemExit('Webhook returned unexpected governance state: '+json.dumps(response.get('state')))
+            if response.get('notification',{}).get('reason')!='CERTIFICATION':
+              raise SystemExit('Certification webhook unexpectedly notified administrator')
+
+            a1=urllib.parse.quote(f'PERSONAS_CONTROL!A{row}:W{row}',safe='!:$')
+            values=api(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{a1}')
+            rows=values.get('values') or []
+            if len(rows)!=1:
+              raise SystemExit('Synthetic row not readable after webhook')
+            r=rows[0]+['']*(23-len(rows[0]))
+            checks={
+              'ID_PERSONA':(r[0],'CUDO-PER-'+synth_id),'TALLY_SUBMISSION_ID':(r[1],synth_id),
+              'RELACION_CUDO':(r[3],'Dirigente'),'NOMBRE_PUBLICO':(r[4],'CUDO Sintético E2E'),
+              'FUNCION_CLUB':(r[8],'Certificación automática'),'AUTORIZACION_REVISION':(r[14],'SI'),
+              'ESTADO':(r[15],'PENDIENTE_REVISION'),'PUBLICAR':(r[20],'NO'),
+              'PRIVACIDAD':(r[21],'INTERNO'),'DESTINO_PUBLICO':(r[22],'PERSONA_CUDO'),
+            }
+            bad={k:v for k,v in checks.items() if v[0]!=v[1]}
+            if bad:
+              raise SystemExit('Synthetic durable row mismatch: '+json.dumps(bad,ensure_ascii=False))
+
+            api(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values:batchClear','POST',{'ranges':[f'PERSONAS_CONTROL!A{row}:O{row}',f'PERSONAS_CONTROL!W{row}:W{row}']})
+            out={'ok':True,'scriptId':SCRIPT_ID,'versionNumber':vn,'deploymentId':did,'webAppUrl':web_url,'endpointUrl':web_url+'?key='+intake_key,'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING','syntheticCertification':{'submissionId':synth_id,'row':row,'durableState':expected_state,'notificationSuppressed':True,'cleaned':True}}
+            pathlib.Path('persona-intake-deployment.json').write_text(json.dumps(out,indent=2,ensure_ascii=False))
+            print(json.dumps({k:v for k,v in out.items() if k!='endpointUrl'},indent=2,ensure_ascii=False))
+          finally:
+            api(base+'/content','PUT',{'files':original_files})
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: persona-intake-deployment
+          path: persona-intake-deployment.json
+          retention-days: 14
