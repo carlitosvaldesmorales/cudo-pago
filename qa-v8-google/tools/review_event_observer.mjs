@@ -9,7 +9,10 @@ export function inspectReviewRunLog(text){
   const sources=[...raw.matchAll(/CUDO_REVIEW_TRIGGER_SOURCE=([^\s]+)/g)].map(m=>m[1]);
   const counts=[...raw.matchAll(/"new_count":\s*([0-9]+)/g)].map(m=>Number(m[1]));
   const newCount=counts.length?Math.max(...counts):0;
-  const appliedCount=[...raw.matchAll(/"status":\s*"APLICADO"/g)].length;
+  const legacyAppliedCount=[...raw.matchAll(/"status":\s*"APLICADO"/g)].length;
+  const finalizedAuditBlocks=[...raw.matchAll(/"mode":\s*"QA_SYNTHETIC_QUARANTINE_AUDIT_FINALIZED"[\s\S]{0,500}?"audit_writes":\s*([0-9]+)/g)];
+  const finalizedAuditCount=finalizedAuditBlocks.reduce((sum,m)=>sum+Number(m[1]||0),0);
+  const appliedCount=Math.max(legacyAppliedCount,finalizedAuditCount);
   if(!sources.includes(REAL_EVENT_SOURCE)){
     return {ok:false,reason:'NOT_REAL_FORM_EVENT',sources,new_count:newCount,applied_count:appliedCount};
   }
