@@ -1,0 +1,62 @@
+name: CUDO QA Tally Multidomain Preflight
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-qa-tally-multidomain-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --silent playwright
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Discover all Tally forms linked from QA Administration without writing
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > preflight.cjs <<'JS'
+          const fs=require('fs');
+          const { chromium }=require('playwright');
+          (async()=>{
+            const admin=fs.readFileSync('qa-v8-google/admin/index.html','utf8');
+            const cardRe=/<a class="admincard" href="([^"]+)"[^>]*><strong>([^<]+)<\/strong>/g;
+            const cards=[];
+            for(const m of admin.matchAll(cardRe)){
+              if(/^https:\/\/tally\.so\//.test(m[1])) cards.push({url:m[1],action:m[2].trim()});
+            }
+            if(!cards.length) throw new Error('No Tally Admin cards found');
+            const browser=await chromium.launch({headless:true});
+            const results=[];
+            for(const card of cards){
+              const page=await browser.newPage({viewport:{width:390,height:844}});
+              const failed=[]; const errors=[];
+              page.on('requestfailed',r=>failed.push(r.url()));
+              page.on('pageerror',e=>errors.push(String(e.message||e)));
+              await page.goto(card.url,{waitUntil:'domcontentloaded',timeout:60000});
+              await page.waitForTimeout(2500);
+              const body=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
+              const controls=await page.locator('input,textarea,select,button,[role="combobox"],[role="option"],[role="radio"],[role="checkbox"],[contenteditable="true"]').evaluateAll(nodes=>nodes.slice(0,200).map((n,i)=>({i,tag:n.tagName,type:n.getAttribute('type'),name:n.getAttribute('name'),placeholder:n.getAttribute('placeholder'),aria:n.getAttribute('aria-label'),role:n.getAttribute('role'),value:n.getAttribute('value'),text:(n.innerText||n.textContent||'').replace(/\s+/g,' ').trim().slice(0,180)})));
+              const labels=(await page.locator('label').allTextContents()).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+              const headings=(await page.locator('h1,h2,h3,[role="heading"]').allTextContents()).map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+              results.push({action:card.action,url:card.url,final_url:page.url(),title:await page.title(),headings,labels,controls,body_excerpt:body.slice(0,7000),failed_requests:failed.length,page_errors:errors,write_performed:false});
+              await page.close();
+            }
+            await browser.close();
+            console.log(JSON.stringify({ok:true,mode:'READ_ONLY_TALLY_MULTIDOMAIN_PREFLIGHT',forms:results.length,write_performed:false,results},null,2));
+            if(results.some(r=>r.page_errors.length)) process.exitCode=2;
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          JS
+          node preflight.cjs
