@@ -6,7 +6,7 @@ import { MODULES, planReviewDecisions } from './process_review_decisions.mjs';
 
 const EXPECTED_BRANCH='qa/review-event-no-prod-20260915';
 const SYNTHETIC_PREFIX='CUDO-QA-SYNTH-';
-const SUPPORTED_MODULES=new Set(['NOTICIA','EQUIPO','PLANTEL','TABLA']);
+const SUPPORTED_MODULES=new Set(['NOTICIA','EQUIPO','PLANTEL','PARTIDO','TABLA']);
 const MAX_MEDIA_BYTES=10*1024*1024;
 const IMAGE_EXT=new Map([
   ['image/jpeg','jpg'],
@@ -19,6 +19,7 @@ const MODULE_META={
   NOTICIA:{idHeader:'ID_NOTICIA',overlay:'noticias.json'},
   EQUIPO:{idHeader:'ID_EQUIPO',overlay:'equipos.json'},
   PLANTEL:{idHeader:'ID_INTERNO',overlay:'plantel.json'},
+  PARTIDO:{idHeader:'ID_PARTIDO',overlay:'partidos.json'},
   TABLA:{idHeader:'ID_TABLA',overlay:'tabla.json'}
 };
 
@@ -89,6 +90,80 @@ export function publicPlantelItem(row,resolvedId){
   return item;
 }
 
+function parseLocaleNumber(value){
+  const raw=String(value??'').trim().replace(',','.');
+  if(!/^[-+]?\d+(?:\.\d+)?$/.test(raw)) return null;
+  const number=Number(raw);
+  return Number.isFinite(number)?number:null;
+}
+
+function toIsoDate(value,key='FECHA'){
+  const raw=String(value??'').trim();
+  if(!raw) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const dmy=raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if(dmy){
+    const [,day,month,year]=dmy;
+    const iso=`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
+    const check=new Date(`${iso}T00:00:00Z`);
+    if(!Number.isNaN(check.getTime())&&check.toISOString().slice(0,10)===iso) return iso;
+  }
+  const serial=parseLocaleNumber(raw);
+  if(serial!==null&&serial>=1&&serial<100000){
+    const milliseconds=Date.UTC(1899,11,30)+Math.floor(serial)*86400000;
+    const date=new Date(milliseconds);
+    if(!Number.isNaN(date.getTime())) return date.toISOString().slice(0,10);
+  }
+  throw new Error(`QA quarantine: partido ${key} no reconocida`);
+}
+
+function toHHMM(value,key='HORA'){
+  const raw=String(value??'').trim();
+  if(!raw) return '';
+  if(/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(raw)) return raw;
+  const hms=raw.match(/^((?:[01]?\d|2[0-3])):([0-5]\d):[0-5]\d$/);
+  if(hms) return `${hms[1].padStart(2,'0')}:${hms[2]}`;
+  const serial=parseLocaleNumber(raw);
+  if(serial!==null&&serial>=0){
+    const fraction=serial-Math.floor(serial);
+    const totalMinutes=Math.round(fraction*1440)%1440;
+    const hours=Math.floor(totalMinutes/60);
+    const minutes=totalMinutes%60;
+    return `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+  }
+  throw new Error(`QA quarantine: partido ${key} no reconocida`);
+}
+
+function nullableNonNegativeInteger(row,key){
+  const raw=String(row?.[key]??'').trim();
+  if(!raw) return null;
+  if(!/^\d+$/.test(raw)) throw new Error(`QA quarantine: partido ${key} no entero no-negativo`);
+  const value=Number(raw);
+  if(!Number.isSafeInteger(value)||value<0) throw new Error(`QA quarantine: partido ${key} fuera de rango`);
+  return value;
+}
+
+export function publicPartidoItem(row,resolvedId){
+  const item={
+    id:String(resolvedId||row?.ID_PARTIDO||'').trim(),
+    competencia:String(row?.COMPETENCIA||'').trim(),
+    fecha:toIsoDate(row?.FECHA,'FECHA'),
+    hora:toHHMM(row?.HORA,'HORA'),
+    categoria:String(row?.CATEGORIA||'').trim(),
+    local:String(row?.LOCAL||'').trim(),
+    visita:String(row?.VISITA||'').trim(),
+    recinto:String(row?.RECINTO||'').trim(),
+    estado_partido:String(row?.ESTADO_PARTIDO||'').trim().toUpperCase(),
+    goles_local:nullableNonNegativeInteger(row,'GOLES_LOCAL'),
+    goles_visita:nullableNonNegativeInteger(row,'GOLES_VISITA')
+  };
+  if(!item.id||!item.fecha||!item.local||!item.visita||!item.estado_partido) throw new Error('QA quarantine: partido sin contrato público mínimo');
+  if(!['PROGRAMADO','FINALIZADO','SUSPENDIDO','CANCELADO'].includes(item.estado_partido)) throw new Error('QA quarantine: partido ESTADO_PARTIDO fuera de contrato');
+  if(item.estado_partido==='FINALIZADO'&&(item.goles_local===null||item.goles_visita===null)) throw new Error('QA quarantine: partido FINALIZADO sin ambos marcadores');
+  requireSynthetic(row,'partido');
+  return item;
+}
+
 function integerField(row,key){
   const raw=String(row?.[key]??'').trim();
   if(!/^-?\d+$/.test(raw)) throw new Error(`QA quarantine: tabla ${key} no entero`);
@@ -125,6 +200,7 @@ export function publicItemForModule(moduleKey,row,resolvedId){
   if(moduleKey==='NOTICIA') return publicNoticiaItem(row,resolvedId);
   if(moduleKey==='EQUIPO') return publicEquipoItem(row,resolvedId);
   if(moduleKey==='PLANTEL') return publicPlantelItem(row,resolvedId);
+  if(moduleKey==='PARTIDO') return publicPartidoItem(row,resolvedId);
   if(moduleKey==='TABLA') return publicTablaItem(row,resolvedId);
   throw new Error(`QA quarantine: módulo no permitido ${moduleKey}`);
 }
