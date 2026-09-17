@@ -1,0 +1,37 @@
+name: Certify Club OS QA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'qa-v8-google/admin/**'
+      - 'tools/check-club-os-qa.py'
+      - '.github/workflows/certify-club-os-qa.yml'
+  pull_request:
+    paths:
+      - 'qa-v8-google/admin/**'
+      - 'tools/check-club-os-qa.py'
+      - '.github/workflows/certify-club-os-qa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Certify fail-closed synthetic Club OS QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/check-club-os-qa.py
+
+      - name: Assert artifacts exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s qa-v8-google/admin/index.html
+          test -s qa-v8-google/admin/club-os-fixture.json
