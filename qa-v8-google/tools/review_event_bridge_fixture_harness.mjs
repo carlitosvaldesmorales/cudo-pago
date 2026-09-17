@@ -3,9 +3,18 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../apps-script/CudoReviewEventBridge.gs',import.meta.url),'utf8');
-const EXPECTED_REF='main';
+const PROD_REF='main';
+const QA_REF='qa/review-event-no-prod-20260915';
+const SYNTHETIC_MARKER='CUDO-QA-SYNTH-';
 
-function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadsheetId='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms',existingTriggers=[]}={}){
+function loadBridge({
+  token='token-qa',
+  responseCode=204,
+  responseBody='',
+  spreadsheetId='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms',
+  existingTriggers=[],
+  eventValues=['17/09/2026 12:00:00','Jugador / Plantel','Jugador Real','Aprobar publicación','SI','NO APLICA','','Revisor Real']
+}={}){
   const fetchCalls=[];
   const deleted=[];
   let created=0;
@@ -17,6 +26,7 @@ function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadshe
     Boolean,
     Error,
     String,
+    Array,
     PropertiesService:{
       getScriptProperties:()=>({getProperty:key=>key==='CUDO_GITHUB_ACTIONS_TOKEN'?token:null})
     },
@@ -40,17 +50,22 @@ function loadBridge({token='token-qa',responseCode=204,responseBody='',spreadshe
   };
   vm.createContext(context);
   vm.runInContext(source+`\nglobalThis.__bridgeExports={cudoReviewOnFormSubmit,cudoReviewEventBridgePing,installCudoReviewEventBridge,cudoReviewEventBridgeStatus};`,context);
-  const event={range:{getSheet:()=>({getParent:()=>({getId:()=>spreadsheetId})})}};
+  const range={
+    getSheet:()=>({getParent:()=>({getId:()=>spreadsheetId})}),
+    getValues:()=>eventValues?[eventValues]:[]
+  };
+  const event={range};
+  if(eventValues) event.values=eventValues;
   return {api:context.__bridgeExports,event,fetchCalls,deleted,getCreated:()=>created};
 }
 
-function assertDispatch(fetchCalls,expectedSource){
+function assertDispatch(fetchCalls,expectedSource,expectedRef){
   assert.equal(fetchCalls.length,1);
   assert.equal(fetchCalls[0].url,'https://api.github.com/repos/carlitosvaldesmorales/cudo-pago/actions/workflows/cudo-review-engine.yml/dispatches');
   assert.equal(fetchCalls[0].options.method,'post');
   assert.equal(fetchCalls[0].options.headers.Authorization,'Bearer token-qa');
   assert.deepEqual(JSON.parse(fetchCalls[0].options.payload),{
-    ref:EXPECTED_REF,
+    ref:expectedRef,
     inputs:{apply_changes:'true',source:expectedSource}
   });
 }
@@ -61,8 +76,20 @@ function assertDispatch(fetchCalls,expectedSource){
   assert.equal(result.ok,true);
   assert.equal(result.ignored,false);
   assert.equal(result.source,'apps_script_form_submit');
-  assert.equal(result.ref,EXPECTED_REF);
-  assertDispatch(fetchCalls,'apps_script_form_submit');
+  assert.equal(result.ref,PROD_REF);
+  assert.equal(result.synthetic_qa,false);
+  assertDispatch(fetchCalls,'apps_script_form_submit',PROD_REF);
+}
+
+{
+  const values=['17/09/2026 12:29:43','Jugador / Plantel',`${SYNTHETIC_MARKER}PLANTEL-CUDO_FOREMAN_PLANTEL_CAPTURE`,'Aprobar publicación','SI','NO APLICA',`${SYNTHETIC_MARKER}cuarentena`,'CUDO QA Automation'];
+  const {api,event,fetchCalls}=loadBridge({eventValues:values});
+  const result=api.cudoReviewOnFormSubmit(event);
+  assert.equal(result.ok,true);
+  assert.equal(result.ignored,false);
+  assert.equal(result.ref,QA_REF);
+  assert.equal(result.synthetic_qa,true);
+  assertDispatch(fetchCalls,'apps_script_form_submit',QA_REF);
 }
 
 {
@@ -71,8 +98,8 @@ function assertDispatch(fetchCalls,expectedSource){
   assert.equal(result.ok,true);
   assert.equal(result.github_status,204);
   assert.equal(result.source,'agent_ping');
-  assert.equal(result.ref,EXPECTED_REF);
-  assertDispatch(fetchCalls,'agent_ping');
+  assert.equal(result.ref,PROD_REF);
+  assertDispatch(fetchCalls,'agent_ping',PROD_REF);
 }
 
 {
@@ -80,6 +107,11 @@ function assertDispatch(fetchCalls,expectedSource){
   const result=api.cudoReviewOnFormSubmit(event);
   assert.equal(result.ignored,true);
   assert.equal(fetchCalls.length,0);
+}
+
+{
+  const {api,event}=loadBridge({eventValues:null});
+  assert.throws(()=>api.cudoReviewOnFormSubmit(event),/sin valores inspeccionables/);
 }
 
 {
@@ -107,19 +139,25 @@ function assertDispatch(fetchCalls,expectedSource){
   const status=api.cudoReviewEventBridgeStatus();
   assert.equal(status.token_configured,true);
   assert.equal(status.trigger_count,1);
-  assert.equal(status.dispatch_ref,EXPECTED_REF);
+  assert.equal(status.production_ref,PROD_REF);
+  assert.equal(status.synthetic_qa_ref,QA_REF);
+  assert.equal(status.synthetic_marker,SYNTHETIC_MARKER);
 }
 
 console.log(JSON.stringify({
   ok:true,
-  mode:'SYNTHETIC_APPS_SCRIPT_EVENT_BRIDGE',
+  mode:'SYNTHETIC_APPS_SCRIPT_EVENT_BRIDGE_ROUTING',
   source:'qa-v8-google/apps-script/CudoReviewEventBridge.gs',
-  dispatch_ref:EXPECTED_REF,
+  production_ref:PROD_REF,
+  synthetic_qa_ref:QA_REF,
+  synthetic_marker:SYNTHETIC_MARKER,
   dispatch_sources:{form:'apps_script_form_submit',ping:'agent_ping'},
   cases:[
-    'form-submit-dispatches-official-workflow-with-source-tag-to-main-ref',
-    'manual-agent-ping-dispatches-official-workflow-with-distinct-source-tag-to-main-ref',
+    'normal-form-submit-dispatches-production-main',
+    'synthetic-marker-form-submit-dispatches-isolated-qa',
+    'manual-agent-ping-stays-on-production-main',
     'other-spreadsheet-ignored',
+    'missing-event-values-fail-closed',
     'missing-token-blocked',
     'github-error-blocked',
     'trigger-install-idempotent',
