@@ -30,11 +30,12 @@ jobs:
           import { planPersonaReviewDecisions } from './qa-v8-google/tools/process_persona_review_decisions.mjs';
           const PEOPLE='1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y';
           const REVIEW='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms';
+          const CERT_ROW=1004;
           const run=String(process.env.GITHUB_RUN_ID||Date.now());
           const sid=`SYNTHDEC${run}`, pid=`CUDO-PER-${sid}`, rid=`CUDO-QA-SYNTH-PERSONA-${run}`;
-          let token='',personRow=null,revisionRow=null,auditRow=null;
+          let token='',revisionRow=null,auditRow=null;
           const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-          const summary={ok:false,run,persona_id:pid,review_id:rid,pre:null,post:null,audit_applied:false,cleanup:false};
+          const summary={ok:false,run,persona_id:pid,review_id:rid,cert_row:CERT_ROW,pre:null,post:null,audit_applied:false,cleanup:false};
 
           async function auth(){
             const body=new URLSearchParams({client_id:process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID,client_secret:process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET,refresh_token:process.env.CUDO_GOOGLE_REFRESH_TOKEN,grant_type:'refresh_token'});
@@ -51,11 +52,8 @@ jobs:
           async function clear(id,ranges){return req('POST',`https://sheets.googleapis.com/v4/spreadsheets/${id}/values:batchClear`,{ranges});}
           function rowOf(range){const m=String(range||'').match(/![A-Z]+(\d+):/i);return m?Number(m[1]):null;}
           async function findRow(id,sheet,col,value){const rows=await readValues(id,`${sheet}!${col}1:${col}2000`);for(let i=1;i<rows.length;i++)if(String(rows[i]?.[0]||'').trim()===value)return i+1;return null;}
-          async function state(){
-            const r=(await readValues(PEOPLE,`PERSONAS_CONTROL!A${personRow}:W${personRow}`))[0]||[];
-            return {estado:r[15]||'',decision:r[16]||'',revisor:r[17]||'',publicar:r[20]||'',privacidad:r[21]||'',destino:r[22]||''};
-          }
-          async function waitState(expected){for(let i=0;i<10;i++){const s=await state();if(s.estado===expected&&s.publicar==='NO'&&s.privacidad==='INTERNO')return s;await sleep(700);}throw new Error(`State did not reach ${expected}`);}
+          async function state(){const r=(await readValues(PEOPLE,`PERSONAS_CONTROL!A${CERT_ROW}:W${CERT_ROW}`))[0]||[];return {estado:r[15]||'',decision:r[16]||'',revisor:r[17]||'',publicar:r[20]||'',privacidad:r[21]||'',destino:r[22]||''};}
+          async function waitState(expected){for(let i=0;i<12;i++){const s=await state();if(s.estado===expected&&s.publicar==='NO'&&s.privacidad==='INTERNO')return s;await sleep(700);}throw new Error(`State did not reach ${expected}: ${JSON.stringify(await state())}`);}
 
           try{
             token=await auth();
@@ -63,9 +61,12 @@ jobs:
             const existingPending=audit.slice(1).filter(r=>String(r?.[2]||'').trim().toUpperCase()==='PERSONA'&&String(r?.[3]||'').trim()&&String(r?.[4]||'').trim()&&!String(r?.[9]||'').trim());
             if(existingPending.length!==0) throw new Error(`Fail closed: ${existingPending.length} PERSONA decisions already pending`);
 
-            const pa=await appendValues(PEOPLE,'PERSONAS_CONTROL!A:O',[[pid,sid,new Date().toISOString(),'Dirigente','CUDO Sintético Decisión E2E','','','','Certificación decisión E2E','','','','','', 'SI']]);
-            personRow=rowOf(pa.updates?.updatedRange); if(!personRow) throw new Error('Could not locate synthetic PERSONA row');
-            await updateValues(PEOPLE,`PERSONAS_CONTROL!W${personRow}`,[['PERSONA_CUDO']]);
+            const occupied=(await readValues(PEOPLE,`PERSONAS_CONTROL!A${CERT_ROW}:W${CERT_ROW}`))[0]||[];
+            const userCells=[...occupied.slice(0,15),occupied[22]||''].filter(v=>String(v||'').trim());
+            if(userCells.length) throw new Error(`Fail closed: certification row ${CERT_ROW} is occupied`);
+
+            await updateValues(PEOPLE,`PERSONAS_CONTROL!A${CERT_ROW}:O${CERT_ROW}`,[[pid,sid,new Date().toISOString(),'Dirigente','CUDO Sintético Decisión E2E','','','','Certificación decisión E2E','','','','','', 'SI']]);
+            await updateValues(PEOPLE,`PERSONAS_CONTROL!W${CERT_ROW}`,[['PERSONA_CUDO']]);
             summary.pre=await waitState('PENDIENTE_REVISION');
 
             const aa=await appendValues(REVIEW,'AUDITORIA_REVISION!A:P',[[rid,new Date().toISOString(),'PERSONA',pid,'DAR_DE_ALTA','NO','NO APLICA','Certificación sintética acotada','sistemas@cudo.cl','','','','','','','']]);
@@ -85,10 +86,9 @@ jobs:
           } finally {
             try{
               if(!token) token=await auth();
-              if(!personRow) personRow=await findRow(PEOPLE,'PERSONAS_CONTROL','A',pid);
               if(!revisionRow) revisionRow=await findRow(PEOPLE,'REVISION','A',pid);
               if(!auditRow) auditRow=await findRow(REVIEW,'AUDITORIA_REVISION','A',rid);
-              if(personRow) await clear(PEOPLE,[`PERSONAS_CONTROL!A${personRow}:W${personRow}`]);
+              await clear(PEOPLE,[`PERSONAS_CONTROL!A${CERT_ROW}:O${CERT_ROW}`,`PERSONAS_CONTROL!W${CERT_ROW}:W${CERT_ROW}`]);
               if(revisionRow) await clear(PEOPLE,[`REVISION!A${revisionRow}:H${revisionRow}`]);
               if(auditRow) await clear(REVIEW,[`AUDITORIA_REVISION!A${auditRow}:P${auditRow}`]);
               summary.cleanup=!(await findRow(PEOPLE,'PERSONAS_CONTROL','A',pid))&&!(await findRow(PEOPLE,'REVISION','A',pid))&&!(await findRow(REVIEW,'AUDITORIA_REVISION','A',rid));
