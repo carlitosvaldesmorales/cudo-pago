@@ -6,6 +6,7 @@ on:
     paths:
       - 'qa-v8-google/review_ingestion_state.json'
       - 'qa-v8-google/apps-script/CudoReviewEventBridge.gs'
+      - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
@@ -13,6 +14,8 @@ on:
       - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
+      - 'qa-v8-google/tools/process_persona_review_decisions.mjs'
+      - 'qa-v8-google/tools/persona_review_fixture_harness.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
@@ -21,6 +24,7 @@ on:
     paths:
       - 'qa-v8-google/review_ingestion_state.json'
       - 'qa-v8-google/apps-script/CudoReviewEventBridge.gs'
+      - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
@@ -28,18 +32,20 @@ on:
       - 'qa-v8-google/tools/review_event_observer_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_review_decisions.mjs'
       - 'qa-v8-google/tools/review_engine_fixture_harness.mjs'
+      - 'qa-v8-google/tools/process_persona_review_decisions.mjs'
+      - 'qa-v8-google/tools/persona_review_fixture_harness.mjs'
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
   workflow_dispatch:
     inputs:
       apply_changes:
-        description: 'Ingerir respuestas nuevas, procesar decisiones reales y sincronizar PUBLICO_EXPORT'
+        description: 'Aplicar decisiones gobernadas CUDO'
         required: true
         default: false
         type: boolean
       source:
-        description: 'Origen del dispatch; el único origen operacional con escrituras es apps_script_form_submit'
+        description: 'Origen operacional autorizado: apps_script_form_submit o apps_script_persona_review'
         required: false
         default: 'manual'
         type: string
@@ -71,6 +77,8 @@ jobs:
           node --check qa-v8-google/tools/review_event_observer_fixture_harness.mjs
           node --check qa-v8-google/tools/process_review_decisions.mjs
           node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
+          node --check qa-v8-google/tools/process_persona_review_decisions.mjs
+          node --check qa-v8-google/tools/persona_review_fixture_harness.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
       - name: Probar Form -> AUDITORIA de forma sintética
         run: node qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
@@ -80,12 +88,14 @@ jobs:
         run: node qa-v8-google/tools/review_event_observer_fixture_harness.mjs
       - name: Probar AUDITORIA -> revisión/corrección con fixture sintético
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
+      - name: Probar PERSONA -> alta interna con fixture sintético
+        run: node qa-v8-google/tools/persona_review_fixture_harness.mjs
 
   review-and-sync:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.apply_changes == true &&
-      inputs.source == 'apps_script_form_submit'
+      (inputs.source == 'apps_script_form_submit' || inputs.source == 'apps_script_persona_review')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -104,14 +114,22 @@ jobs:
       - name: Registrar origen operacional
         run: echo "CUDO_REVIEW_TRIGGER_SOURCE=$CUDO_REVIEW_TRIGGER_SOURCE"
       - name: Ingerir respuestas nuevas del formulario al ledger
+        if: inputs.source == 'apps_script_form_submit'
         run: node qa-v8-google/tools/ingest_review_form_responses.mjs
       - name: Procesar decisiones CUDO Review
+        if: inputs.source == 'apps_script_form_submit'
         run: node qa-v8-google/tools/process_review_decisions.mjs
+      - name: Procesar decisiones de fichas PERSONA
+        if: inputs.source == 'apps_script_persona_review'
+        run: node qa-v8-google/tools/process_persona_review_decisions.mjs
       - name: Sincronizar PUBLICO_EXPORT con el adaptador V8 vigente
+        if: inputs.source == 'apps_script_form_submit'
         run: node preview-v8/tools/sync_google_publico.mjs
       - name: Validar datos públicos resultantes
+        if: inputs.source == 'apps_script_form_submit'
         run: python3 preview-v8/tools/validate_data.py preview-v8/data
       - name: Publicar cambios JSON y medios si existen
+        if: inputs.source == 'apps_script_form_submit'
         run: |
           set -euo pipefail
           if git diff --quiet -- preview-v8/data preview-v8/media; then
