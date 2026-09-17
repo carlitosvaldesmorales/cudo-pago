@@ -36,6 +36,16 @@ function assertPlantel(item){
   if(!hasSyntheticMarker(item)) throw new Error('QA override PLANTEL: sólo se permiten jugadores sintéticos identificables');
 }
 
+function assertPartido(item){
+  for(const key of ['id','fecha','local','visita','estado_partido']) if(!String(item?.[key]??'').trim()) throw new Error(`QA override PARTIDO: falta ${key}`);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(item.fecha))) throw new Error('QA override PARTIDO: fecha fuera de contrato');
+  if(item.hora&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(item.hora))) throw new Error('QA override PARTIDO: hora fuera de contrato');
+  if(!['PROGRAMADO','FINALIZADO','SUSPENDIDO','CANCELADO'].includes(String(item.estado_partido||'').toUpperCase())) throw new Error('QA override PARTIDO: estado fuera de contrato');
+  for(const key of ['goles_local','goles_visita']) if(item[key]!==null&&item[key]!==undefined&&(!Number.isSafeInteger(item[key])||item[key]<0)) throw new Error(`QA override PARTIDO: ${key} debe ser entero no-negativo o null`);
+  if(String(item.estado_partido).toUpperCase()==='FINALIZADO'&&(item.goles_local===null||item.goles_local===undefined||item.goles_visita===null||item.goles_visita===undefined)) throw new Error('QA override PARTIDO: FINALIZADO requiere ambos marcadores');
+  if(!hasSyntheticMarker(item)) throw new Error('QA override PARTIDO: sólo se permiten partidos sintéticos identificables');
+}
+
 function assertTabla(item){
   for(const key of ['id','competencia','categoria','equipo']) if(!String(item?.[key]??'').trim()) throw new Error(`QA override TABLA: falta ${key}`);
   for(const key of ['posicion','pj','pg','pe','pp','gf','gc','dg','pts']) if(!Number.isSafeInteger(item?.[key])) throw new Error(`QA override TABLA: ${key} debe ser entero`);
@@ -64,6 +74,7 @@ export function mergeQaOverride(publicDoc,overlayDoc,{module,validateItem}){
 export function mergeNoticiasQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'NOTICIA',validateItem:assertNoticia});}
 export function mergeEquiposQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'EQUIPO',validateItem:assertEquipo});}
 export function mergePlantelQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'PLANTEL',validateItem:assertPlantel});}
+export function mergePartidosQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'PARTIDO',validateItem:assertPartido});}
 export function mergeTablaQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'TABLA',validateItem:assertTabla});}
 
 export function applyQaReviewOverrides({root=ROOT}={}){
@@ -71,6 +82,7 @@ export function applyQaReviewOverrides({root=ROOT}={}){
     {module:'NOTICIA',file:'noticias.json',merge:mergeNoticiasQaOverride},
     {module:'EQUIPO',file:'equipos.json',merge:mergeEquiposQaOverride},
     {module:'PLANTEL',file:'plantel.json',merge:mergePlantelQaOverride},
+    {module:'PARTIDO',file:'partidos.json',merge:mergePartidosQaOverride},
     {module:'TABLA',file:'tabla.json',merge:mergeTablaQaOverride}
   ];
   const summary={};
