@@ -1,0 +1,68 @@
+name: Deploy CUDO Persona Review Web
+
+on:
+  push:
+    branches: [main, feat/persona-review-queue]
+    paths:
+      - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
+      - '.github/workflows/deploy-cudo-persona-review-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy private persona review web app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,re,urllib.parse,urllib.request
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          source=pathlib.Path('qa-v8-google/apps-script/CudoPersonaReviewWeb.gs').read_text()
+          body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r: access=json.load(r)['access_token']
+          def req(url,method='GET',payload=None):
+            q=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(q) as r:
+              raw=r.read(); return json.loads(raw) if raw else {}
+          base=f'https://script.googleapis.com/v1/projects/{sid}'
+          current=req(base+'/content')
+          files=[]; manifest=None
+          for f in current.get('files',[]):
+            if f.get('name')=='CudoPersonaReviewWeb': continue
+            if f.get('type')=='SERVER_JS' and re.search(r'\bfunction\s+(doGet|doPost)\s*\(',f.get('source','')):
+              raise SystemExit('Fail closed: existing doGet/doPost found in '+f.get('name','?'))
+            if f.get('name')=='appsscript' and f.get('type')=='JSON':
+              manifest=json.loads(f.get('source') or '{}')
+              continue
+            files.append({'name':f['name'],'type':f['type'],'source':f.get('source','')})
+          if manifest is None: manifest={}
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          files.append({'name':'CudoPersonaReviewWeb','type':'SERVER_JS','source':source})
+          req(base+'/content','PUT',{'files':files})
+          version=req(base+'/versions','POST',{'description':'CUDO Persona Review '+os.environ.get('GITHUB_SHA','')[:12]})
+          vn=version['versionNumber']
+          dep=req(base+'/deployments','POST',{'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Persona Review private'})
+          did=dep['deploymentId']
+          url='https://script.google.com/macros/s/'+did+'/exec'
+          out={'ok':True,'scriptId':sid,'versionNumber':vn,'deploymentId':did,'webAppUrl':url,'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          pathlib.Path('persona-review-deployment.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: persona-review-deployment
+          path: persona-review-deployment.json
+          retention-days: 14
