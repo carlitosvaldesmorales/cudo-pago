@@ -1,0 +1,124 @@
+name: Certify CUDO Persona Notification
+
+on:
+  push:
+    paths:
+      - '.github/workflows/certify-cudo-persona-notification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download certified intake endpoint artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: persona-intake-deployment
+          path: .persona-intake-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 35218195300
+      - name: Exercise post-persistence notification and clean synthetic row
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,time,urllib.parse,urllib.request,urllib.error
+          SHEET_ID='1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y'
+          art=json.loads(pathlib.Path('.persona-intake-artifact/persona-intake-deployment.json').read_text())
+          endpoint=art['endpointUrl']
+          run=os.environ.get('GITHUB_RUN_ID','0')
+          sid='NOTIFY'+run[-12:]
+          name='CUDO-QA-SYNTH-NOTIFY-'+run
+          created='2026-09-17T19:30:00.000Z'
+          payload={
+            'eventId':'notify-cert-'+sid,
+            'eventType':'FORM_RESPONSE',
+            'createdAt':created,
+            'data':{
+              'responseId':sid,'submissionId':sid,'respondentId':'notify-cert',
+              'formId':'9qeq5p','formName':'Mi ficha CUDO','createdAt':created,
+              'fields':[
+                {'key':'question_role','label':'¿Cómo participas en el CUDO?','type':'MULTIPLE_CHOICE','value':['role-other'],'options':[{'id':'role-other','text':'Otra relación con el club'}]},
+                {'key':'question_name','label':'¿Cómo quieres que aparezca tu nombre?','type':'INPUT_TEXT','value':name},
+                {'key':'question_func','label':'¿Qué función o participación tienes en el club?','type':'INPUT_TEXT','value':'Certificación notifier'},
+                {'key':'question_auth','label':'Antes de enviar','type':'CHECKBOXES','value':['auth-ok'],'options':[{'id':'auth-ok','text':'Autorizo al CUDO a revisar estos datos para preparar mi ficha pública'}]},
+              ]
+            }
+          }
+
+          token_body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token',
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=token_body,headers={'Content-Type':'application/x-www-form-urlencoded'}),timeout=30) as r:
+            access=json.load(r)['access_token']
+
+          def gapi(url,method='GET',payload=None):
+            req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(req,timeout=30) as r:
+              raw=r.read(); return json.loads(raw) if raw else {}
+
+          row=None
+          response=None
+          post_error=None
+          try:
+            req=urllib.request.Request(endpoint,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','User-Agent':'CUDO-Notification-Certification'},method='POST')
+            try:
+              with urllib.request.urlopen(req,timeout=30) as r:
+                raw=r.read().decode(); response=json.loads(raw)
+            except Exception as exc:
+              post_error=repr(exc)
+
+            # Find durable row even if POST response failed after persistence.
+            rng=urllib.parse.quote('PERSONAS_CONTROL!B2:B1100',safe='!:$')
+            vals=gapi(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{rng}').get('values') or []
+            for i,v in enumerate(vals,start=2):
+              if v and str(v[0]).strip()==sid:
+                row=i; break
+            if not row:
+              raise SystemExit('Notification certification: durable row not found; post_error='+str(post_error))
+
+            full=urllib.parse.quote(f'PERSONAS_CONTROL!A{row}:W{row}',safe='!:$')
+            rr=(gapi(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{full}').get('values') or [[]])[0]
+            rr=rr+['']*(23-len(rr))
+            durable={'estado':rr[15],'publicar':rr[20],'privacidad':rr[21]}
+            if durable!={'estado':'PENDIENTE_REVISION','publicar':'NO','privacidad':'INTERNO'}:
+              raise SystemExit('Unexpected durable state '+json.dumps(durable))
+
+            notification=(response or {}).get('notification') or {}
+            evidence={
+              'ok':bool(response and response.get('ok') and notification.get('sent') is True),
+              'submissionId':sid,
+              'syntheticName':name,
+              'row':row,
+              'durableState':durable,
+              'postReturnedJson':bool(response),
+              'notification':notification,
+              'postError':post_error,
+            }
+            pathlib.Path('persona-notification-certification.json').write_text(json.dumps(evidence,indent=2,ensure_ascii=False))
+            print(json.dumps(evidence,indent=2,ensure_ascii=False))
+            if not evidence['ok']:
+              raise SystemExit('Post-persistence notification did not certify')
+          finally:
+            if row:
+              gapi(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values:batchClear','POST',{'ranges':[f'PERSONAS_CONTROL!A{row}:O{row}',f'PERSONAS_CONTROL!W{row}:W{row}']})
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: persona-notification-certification
+          path: persona-notification-certification.json
+          retention-days: 14
