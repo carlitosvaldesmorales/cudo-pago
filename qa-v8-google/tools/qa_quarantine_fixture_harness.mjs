@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { MODULES } from './process_review_decisions.mjs';
-import { rowContainsSyntheticMarker, publicNoticiaItem, publicEquipoItem, publicPlantelItem, publicTablaItem, validateQuarantinePlan } from './process_review_decisions_qa_quarantine.mjs';
+import { rowContainsSyntheticMarker, publicNoticiaItem, publicEquipoItem, publicPlantelItem, publicTablaItem, validateQuarantinePlan, materializeQaImageRef, finalizeQaAudit } from './process_review_decisions_qa_quarantine.mjs';
 import { mergeNoticiasQaOverride, mergeEquiposQaOverride, mergePlantelQaOverride, mergeTablaQaOverride } from './apply_qa_review_overrides.mjs';
 
 function planFor(module,marker,id){
@@ -36,6 +39,29 @@ assert.throws(()=>publicPlantelItem({...plantel,NUMERO:'0'},'QA-PLA-001'),/fuera
 assert.throws(()=>publicPlantelItem({...plantel,POSICION:'LIBERO'},'QA-PLA-001'),/POSICION fuera de contrato/);
 assert.throws(()=>publicPlantelItem({...plantel,CAPITAN:'QUIZAS'},'QA-PLA-001'),/no booleano/);
 
+const png=Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a,0x00]);
+const tmpMedia=fs.mkdtempSync(path.join(os.tmpdir(),'cudo-qa-media-'));
+const fakeFetch=async()=>({
+  ok:true,
+  status:200,
+  headers:{get:key=>key==='content-type'?'image/png':key==='content-length'?String(png.length):null},
+  arrayBuffer:async()=>png.buffer.slice(png.byteOffset,png.byteOffset+png.byteLength)
+});
+const materialized=await materializeQaImageRef({moduleKey:'PLANTEL',itemId:'QA-PLA-001',value:'https://storage.tally.so/private/player.png?accessToken=fake&signature=fake',qaRoot:tmpMedia,fetchImpl:fakeFetch});
+assert.match(materialized,/^media\/plantel\/tally-[a-f0-9]{20}\.png$/);
+assert.equal(fs.existsSync(path.join(tmpMedia,materialized)),true);
+assert.equal(await materializeQaImageRef({moduleKey:'PLANTEL',itemId:'QA-PLA-001',value:'https://example.org/player.png',qaRoot:tmpMedia,fetchImpl:fakeFetch}),'https://example.org/player.png');
+fs.rmSync(tmpMedia,{recursive:true,force:true});
+
+const tmpAuditDir=fs.mkdtempSync(path.join(os.tmpdir(),'cudo-qa-audit-'));
+const auditMutationPath=path.join(tmpAuditDir,'audit.json');
+fs.writeFileSync(auditMutationPath,JSON.stringify({spreadsheetId:'SHEET',range:'AUDITORIA_REVISION!J2:N2',values:[['APLICADO','QA-PLA-001','1','QA','2026-09-17T00:00:00Z']]},null,2));
+let finalized=null;
+const finalizeResult=await finalizeQaAudit({auditMutationPath,updateValues:async(spreadsheetId,range,values)=>{finalized={spreadsheetId,range,values};}});
+assert.equal(finalizeResult.audit_writes,1);
+assert.deepEqual(finalized,{spreadsheetId:'SHEET',range:'AUDITORIA_REVISION!J2:N2',values:[['APLICADO','QA-PLA-001','1','QA','2026-09-17T00:00:00Z']]});
+fs.rmSync(tmpAuditDir,{recursive:true,force:true});
+
 const tablaMarker='CUDO-QA-SYNTH-TABLA-TEST-001';
 const tabla={ID_TABLA:'QA-TAB-001',COMPETENCIA:'Copa QA',CATEGORIA:'TERCERA',POSICION:'1',EQUIPO:tablaMarker,PJ:'0',PG:'0',PE:'0',PP:'0',GF:'0',GC:'0',DG:'0',PTS:'0',OBSERVACIONES:'SYNTHETIC_QA_DO_NOT_PUBLISH'};
 const tablaItem=publicTablaItem(tabla,'QA-TAB-001');
@@ -68,4 +94,4 @@ const tablaMerged=mergeTablaQaOverride(tablaPublic,{schema_version:'1.0',mode:'Q
 assert.deepEqual(tablaMerged.items,[tablaItem]);
 assert.throws(()=>mergeTablaQaOverride(tablaPublic,{schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'TABLA',items:[{...tablaItem,equipo:'Real'}]}),/sintéticas/);
 
-console.log(JSON.stringify({ok:true,mode:'SYNTHETIC_IN_MEMORY_NO_EXTERNAL_WRITES',supported_modules:['NOTICIA','EQUIPO','PLANTEL','TABLA'],shared_revision_suppressed:true,qa_overlay_contract:true},null,2));
+console.log(JSON.stringify({ok:true,mode:'SYNTHETIC_IN_MEMORY_NO_EXTERNAL_WRITES',supported_modules:['NOTICIA','EQUIPO','PLANTEL','TABLA'],shared_revision_suppressed:true,qa_overlay_contract:true,private_tally_media_materialization:true,deferred_audit_finalize:true},null,2));
