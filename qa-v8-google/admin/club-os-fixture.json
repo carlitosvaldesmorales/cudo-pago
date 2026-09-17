@@ -1,0 +1,38 @@
+{
+  "schema_version": "CUDO_CLUB_OS_QA_FIXTURE_V1",
+  "fixture_id": "CUDO-CLUB-OS-QA-001",
+  "provenance_state": "SYNTHETIC",
+  "qa_only": true,
+  "production_publication_allowed": false,
+  "real_compliance_evidence": false,
+  "club": {
+    "display_name": "CUDO QA",
+    "knowledge": {
+      "real": 0,
+      "synthetic": 8,
+      "proposed": 0,
+      "gap": 3
+    }
+  },
+  "roles": [
+    {"id": "PRESIDENT", "label": "Presidencia", "person": "Persona QA Presidente", "state": "SYNTHETIC"},
+    {"id": "SECRETARY", "label": "Secretaría", "person": "Persona QA Secretaria", "state": "SYNTHETIC"},
+    {"id": "TREASURER", "label": "Tesorería", "person": "Persona QA Tesorero", "state": "SYNTHETIC"}
+  ],
+  "conditions": [
+    {"id": "LEGAL_PERSONALITY", "label": "Personalidad jurídica", "active": true, "state": "SYNTHETIC"},
+    {"id": "SPORTS_REGISTRY", "label": "Registro deportivo", "active": true, "state": "SYNTHETIC"},
+    {"id": "ANFA_AFFILIATION", "label": "Afiliación ANFA", "active": true, "state": "SYNTHETIC"},
+    {"id": "ARFA_AFFILIATION", "label": "Afiliación ARFA", "active": false, "state": "SYNTHETIC"}
+  ],
+  "secretariat": {
+    "scenario_id": "SECRETARIAT_MINUTES_DRAFT_001",
+    "meeting_date": "2026-09-20",
+    "attendees": ["Persona QA Presidente", "Persona QA Secretaria", "Persona QA Tesorero"],
+    "agenda": ["Revisión administrativa mensual", "Estado de documentos pendientes", "Preparación de actividad comunitaria"],
+    "agreements": ["Registrar documentos faltantes como GAP", "Preparar borrador de solicitud institucional"],
+    "required_human_gate": "REVIEW",
+    "external_submission_allowed": false,
+    "can_count_as_real_minutes": false
+  }
+}
