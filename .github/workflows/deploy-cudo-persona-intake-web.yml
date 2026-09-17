@@ -43,12 +43,7 @@ jobs:
             access=json.load(r)['access_token']
 
           def api(url,method='GET',payload=None):
-            req=urllib.request.Request(
-              url,
-              data=None if payload is None else json.dumps(payload).encode(),
-              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
-              method=method,
-            )
+            req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
             with urllib.request.urlopen(req,timeout=30) as r:
               raw=r.read()
               return json.loads(raw) if raw else {}
@@ -59,11 +54,7 @@ jobs:
           if not original_files:
             raise SystemExit('Apps Script project content is empty')
 
-          intake_key=hmac.new(
-            os.environ['CUDO_GOOGLE_REFRESH_TOKEN'].encode(),
-            b'CUDO_PERSONA_TALLY_INTAKE_V1',
-            hashlib.sha256,
-          ).hexdigest()
+          intake_key=hmac.new(os.environ['CUDO_GOOGLE_REFRESH_TOKEN'].encode(),b'CUDO_PERSONA_TALLY_INTAKE_V1',hashlib.sha256).hexdigest()
           intake_hash=hashlib.sha256(intake_key.encode()).hexdigest()
           intake_source=SOURCE_PATH.read_text()
           if intake_source.count(PLACEHOLDER)!=1:
@@ -88,18 +79,13 @@ jobs:
           public_files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
           public_files.append({'name':'CudoPersonaIntakeWeb','type':'SERVER_JS','source':intake_source})
 
-          deployment=None
           synth_id='SYNTH'+str(os.environ.get('GITHUB_RUN_ID','0'))[-12:]
           row=None
           try:
             api(base+'/content','PUT',{'files':public_files})
             version=api(base+'/versions','POST',{'description':'CUDO Persona Tally Intake '+os.environ.get('GITHUB_SHA','')[:12]})
             vn=version['versionNumber']
-            deployment=api(base+'/deployments','POST',{
-              'versionNumber':vn,
-              'manifestFileName':'appsscript',
-              'description':'CUDO Persona Tally Intake anonymous',
-            })
+            deployment=api(base+'/deployments','POST',{'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Persona Tally Intake anonymous'})
             did=deployment['deploymentId']
             web_url='https://script.google.com/macros/s/'+did+'/exec'
             endpoint=web_url+'?key='+urllib.parse.quote(intake_key)+'&cert=1'
@@ -109,12 +95,8 @@ jobs:
               'eventType':'FORM_RESPONSE',
               'createdAt':'2026-09-17T12:00:00.000Z',
               'data':{
-                'responseId':synth_id,
-                'submissionId':synth_id,
-                'respondentId':'cert',
-                'formId':'9qeq5p',
-                'formName':'Mi ficha CUDO',
-                'createdAt':'2026-09-17T12:00:00.000Z',
+                'responseId':synth_id,'submissionId':synth_id,'respondentId':'cert',
+                'formId':'9qeq5p','formName':'Mi ficha CUDO','createdAt':'2026-09-17T12:00:00.000Z',
                 'fields':[
                   {'key':'question_role','label':'¿Cómo participas en el CUDO?','type':'MULTIPLE_CHOICE','value':['role-dir'],'options':[{'id':'role-dir','text':'Dirigente'}]},
                   {'key':'question_name','label':'¿Cómo quieres que aparezca tu nombre?','type':'INPUT_TEXT','value':'CUDO Sintético E2E'},
@@ -124,18 +106,12 @@ jobs:
               },
             }
 
-            class PreservePostRedirect(urllib.request.HTTPRedirectHandler):
-              def redirect_request(self,req,fp,code,msg,headers,newurl):
-                if code in (301,302,303,307,308):
-                  return urllib.request.Request(newurl,data=req.data,headers=req.headers,method=req.get_method())
-                return super().redirect_request(req,fp,code,msg,headers,newurl)
-            opener=urllib.request.build_opener(PreservePostRedirect)
             last_error=None
             response=None
             for attempt in range(10):
               try:
                 req=urllib.request.Request(endpoint,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json','User-Agent':'CUDO-Certification'},method='POST')
-                with opener.open(req,timeout=20) as r:
+                with urllib.request.urlopen(req,timeout=20) as r:
                   response=json.loads(r.read().decode())
                 if response.get('ok'):
                   break
@@ -144,6 +120,7 @@ jobs:
                 time.sleep(3)
             if not response or not response.get('ok'):
               raise SystemExit('Synthetic webhook failed after retries: '+repr(last_error))
+
             row=int(response['row'])
             expected_state={'estado':'PENDIENTE_REVISION','publicar':'NO','privacidad':'INTERNO'}
             if response.get('state')!=expected_state:
@@ -158,41 +135,18 @@ jobs:
               raise SystemExit('Synthetic row not readable after webhook')
             r=rows[0]+['']*(23-len(rows[0]))
             checks={
-              'ID_PERSONA':(r[0],'CUDO-PER-'+synth_id),
-              'TALLY_SUBMISSION_ID':(r[1],synth_id),
-              'RELACION_CUDO':(r[3],'Dirigente'),
-              'NOMBRE_PUBLICO':(r[4],'CUDO Sintético E2E'),
-              'FUNCION_CLUB':(r[8],'Certificación automática'),
-              'AUTORIZACION_REVISION':(r[14],'SI'),
-              'ESTADO':(r[15],'PENDIENTE_REVISION'),
-              'PUBLICAR':(r[20],'NO'),
-              'PRIVACIDAD':(r[21],'INTERNO'),
-              'DESTINO_PUBLICO':(r[22],'PERSONA_CUDO'),
+              'ID_PERSONA':(r[0],'CUDO-PER-'+synth_id),'TALLY_SUBMISSION_ID':(r[1],synth_id),
+              'RELACION_CUDO':(r[3],'Dirigente'),'NOMBRE_PUBLICO':(r[4],'CUDO Sintético E2E'),
+              'FUNCION_CLUB':(r[8],'Certificación automática'),'AUTORIZACION_REVISION':(r[14],'SI'),
+              'ESTADO':(r[15],'PENDIENTE_REVISION'),'PUBLICAR':(r[20],'NO'),
+              'PRIVACIDAD':(r[21],'INTERNO'),'DESTINO_PUBLICO':(r[22],'PERSONA_CUDO'),
             }
             bad={k:v for k,v in checks.items() if v[0]!=v[1]}
             if bad:
               raise SystemExit('Synthetic durable row mismatch: '+json.dumps(bad,ensure_ascii=False))
 
-            clear_url=f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values:batchClear'
-            api(clear_url,'POST',{'ranges':[f'PERSONAS_CONTROL!A{row}:O{row}',f'PERSONAS_CONTROL!W{row}:W{row}']})
-
-            out={
-              'ok':True,
-              'scriptId':SCRIPT_ID,
-              'versionNumber':vn,
-              'deploymentId':did,
-              'webAppUrl':web_url,
-              'endpointUrl':web_url+'?key='+intake_key,
-              'access':'ANYONE_ANONYMOUS',
-              'executeAs':'USER_DEPLOYING',
-              'syntheticCertification':{
-                'submissionId':synth_id,
-                'row':row,
-                'durableState':expected_state,
-                'notificationSuppressed':True,
-                'cleaned':True,
-              },
-            }
+            api(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values:batchClear','POST',{'ranges':[f'PERSONAS_CONTROL!A{row}:O{row}',f'PERSONAS_CONTROL!W{row}:W{row}']})
+            out={'ok':True,'scriptId':SCRIPT_ID,'versionNumber':vn,'deploymentId':did,'webAppUrl':web_url,'endpointUrl':web_url+'?key='+intake_key,'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING','syntheticCertification':{'submissionId':synth_id,'row':row,'durableState':expected_state,'notificationSuppressed':True,'cleaned':True}}
             pathlib.Path('persona-intake-deployment.json').write_text(json.dumps(out,indent=2,ensure_ascii=False))
             print(json.dumps({k:v for k,v in out.items() if k!='endpointUrl'},indent=2,ensure_ascii=False))
           finally:
