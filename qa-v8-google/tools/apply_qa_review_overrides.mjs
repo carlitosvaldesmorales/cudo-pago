@@ -28,6 +28,14 @@ function assertEquipo(item){
   if(!hasSyntheticMarker(item)) throw new Error('QA override EQUIPO: sólo se permiten equipos sintéticos identificables');
 }
 
+function assertPlantel(item){
+  for(const key of ['id','nombre_deportivo','posicion','categoria']) if(!String(item?.[key]??'').trim()) throw new Error(`QA override PLANTEL: falta ${key}`);
+  if(!Number.isSafeInteger(item?.numero)||item.numero<1) throw new Error('QA override PLANTEL: numero debe ser entero positivo');
+  if(!['ARQUERO','DEFENSA','VOLANTE','DELANTERO'].includes(String(item?.posicion||'').toUpperCase())) throw new Error('QA override PLANTEL: posicion fuera de contrato');
+  if(typeof item?.capitan!=='boolean') throw new Error('QA override PLANTEL: capitan debe ser booleano');
+  if(!hasSyntheticMarker(item)) throw new Error('QA override PLANTEL: sólo se permiten jugadores sintéticos identificables');
+}
+
 function assertTabla(item){
   for(const key of ['id','competencia','categoria','equipo']) if(!String(item?.[key]??'').trim()) throw new Error(`QA override TABLA: falta ${key}`);
   for(const key of ['posicion','pj','pg','pe','pp','gf','gc','dg','pts']) if(!Number.isSafeInteger(item?.[key])) throw new Error(`QA override TABLA: ${key} debe ser entero`);
@@ -55,12 +63,14 @@ export function mergeQaOverride(publicDoc,overlayDoc,{module,validateItem}){
 
 export function mergeNoticiasQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'NOTICIA',validateItem:assertNoticia});}
 export function mergeEquiposQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'EQUIPO',validateItem:assertEquipo});}
+export function mergePlantelQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'PLANTEL',validateItem:assertPlantel});}
 export function mergeTablaQaOverride(publicDoc,overlayDoc){return mergeQaOverride(publicDoc,overlayDoc,{module:'TABLA',validateItem:assertTabla});}
 
 export function applyQaReviewOverrides({root=ROOT}={}){
   const modules=[
     {module:'NOTICIA',file:'noticias.json',merge:mergeNoticiasQaOverride},
     {module:'EQUIPO',file:'equipos.json',merge:mergeEquiposQaOverride},
+    {module:'PLANTEL',file:'plantel.json',merge:mergePlantelQaOverride},
     {module:'TABLA',file:'tabla.json',merge:mergeTablaQaOverride}
   ];
   const summary={};

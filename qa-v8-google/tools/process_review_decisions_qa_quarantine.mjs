@@ -5,10 +5,11 @@ import { MODULES, planReviewDecisions } from './process_review_decisions.mjs';
 
 const EXPECTED_BRANCH='qa/review-event-no-prod-20260915';
 const SYNTHETIC_PREFIX='CUDO-QA-SYNTH-';
-const SUPPORTED_MODULES=new Set(['NOTICIA','EQUIPO','TABLA']);
+const SUPPORTED_MODULES=new Set(['NOTICIA','EQUIPO','PLANTEL','TABLA']);
 const MODULE_META={
   NOTICIA:{idHeader:'ID_NOTICIA',overlay:'noticias.json'},
   EQUIPO:{idHeader:'ID_EQUIPO',overlay:'equipos.json'},
+  PLANTEL:{idHeader:'ID_INTERNO',overlay:'plantel.json'},
   TABLA:{idHeader:'ID_TABLA',overlay:'tabla.json'}
 };
 
@@ -48,6 +49,37 @@ export function publicEquipoItem(row,resolvedId){
   return item;
 }
 
+function positiveIntegerField(row,key){
+  const raw=String(row?.[key]??'').trim();
+  if(!/^\d+$/.test(raw)) throw new Error(`QA quarantine: plantel ${key} no entero positivo`);
+  const value=Number(raw);
+  if(!Number.isSafeInteger(value)||value<1) throw new Error(`QA quarantine: plantel ${key} fuera de rango`);
+  return value;
+}
+
+function booleanField(row,key){
+  const raw=String(row?.[key]??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  if(['SI','TRUE','1','YES'].includes(raw)) return true;
+  if(['NO','FALSE','0'].includes(raw)) return false;
+  throw new Error(`QA quarantine: plantel ${key} no booleano`);
+}
+
+export function publicPlantelItem(row,resolvedId){
+  const item={
+    id:String(resolvedId||row?.ID_INTERNO||'').trim(),
+    nombre_deportivo:String(row?.NOMBRE_DEPORTIVO_PUBLICO||'').trim(),
+    numero:positiveIntegerField(row,'NUMERO'),
+    posicion:String(row?.POSICION||'').trim().toUpperCase(),
+    categoria:String(row?.CATEGORIA||'').trim(),
+    foto_ref:String(row?.FOTO_REF||'').trim(),
+    capitan:booleanField(row,'CAPITAN')
+  };
+  if(!item.id||!item.nombre_deportivo||!item.posicion||!item.categoria) throw new Error('QA quarantine: plantel sin contrato público mínimo');
+  if(!['ARQUERO','DEFENSA','VOLANTE','DELANTERO'].includes(item.posicion)) throw new Error('QA quarantine: plantel POSICION fuera de contrato');
+  requireSynthetic(row,'plantel');
+  return item;
+}
+
 function integerField(row,key){
   const raw=String(row?.[key]??'').trim();
   if(!/^-?\d+$/.test(raw)) throw new Error(`QA quarantine: tabla ${key} no entero`);
@@ -83,6 +115,7 @@ export function publicTablaItem(row,resolvedId){
 export function publicItemForModule(moduleKey,row,resolvedId){
   if(moduleKey==='NOTICIA') return publicNoticiaItem(row,resolvedId);
   if(moduleKey==='EQUIPO') return publicEquipoItem(row,resolvedId);
+  if(moduleKey==='PLANTEL') return publicPlantelItem(row,resolvedId);
   if(moduleKey==='TABLA') return publicTablaItem(row,resolvedId);
   throw new Error(`QA quarantine: módulo no permitido ${moduleKey}`);
 }

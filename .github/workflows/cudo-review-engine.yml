@@ -140,7 +140,7 @@ jobs:
           if(!String(s.identifier||'').includes('CUDO-QA-SYNTH-')) throw new Error('QA guard: la decisión pendiente no es sintética');
           if(String(s.status||'').startsWith('BLOQUEADO_')) throw new Error(`QA guard: decisión bloqueada en dry-run ${s.status}`);
           if(s.module==='TABLA'&&s.action==='PUBLISH') throw new Error('QA guard: publicación TABLA bloqueada hasta reconciliar autoridad canónica; la superficie vigente calcula standings desde resultados verificados');
-          const quarantine=['NOTICIA','EQUIPO'].includes(s.module)&&s.action==='PUBLISH';
+          const quarantine=['NOTICIA','EQUIPO','PLANTEL'].includes(s.module)&&s.action==='PUBLISH';
           fs.appendFileSync(outFile,`quarantine=${quarantine?'true':'false'}\n`);
           console.log(JSON.stringify({ok:true,pending:d.pending,module:s.module,action:s.action,synthetic:true,qa_positive_quarantine:quarantine},null,2));
           JS

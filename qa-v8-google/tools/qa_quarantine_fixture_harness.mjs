@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { MODULES } from './process_review_decisions.mjs';
-import { rowContainsSyntheticMarker, publicNoticiaItem, publicEquipoItem, publicTablaItem, validateQuarantinePlan } from './process_review_decisions_qa_quarantine.mjs';
-import { mergeNoticiasQaOverride, mergeEquiposQaOverride, mergeTablaQaOverride } from './apply_qa_review_overrides.mjs';
+import { rowContainsSyntheticMarker, publicNoticiaItem, publicEquipoItem, publicPlantelItem, publicTablaItem, validateQuarantinePlan } from './process_review_decisions_qa_quarantine.mjs';
+import { mergeNoticiasQaOverride, mergeEquiposQaOverride, mergePlantelQaOverride, mergeTablaQaOverride } from './apply_qa_review_overrides.mjs';
 
 function planFor(module,marker,id){
   return {pending:1,summary:[{module,action:'PUBLISH',status:'APLICADO',identifier:marker,id}],mutations:[
@@ -26,6 +26,16 @@ assert.deepEqual(equipoItem,{id:'QA-EQU-001',nombre:equipoMarker,categoria:'TERC
 assert.equal(validateQuarantinePlan(planFor('EQUIPO',equipoMarker,'QA-EQU-001'),{expectedMarker:'CUDO-QA-SYNTH-',targetRow:equipo}).summary.module,'EQUIPO');
 assert.throws(()=>publicEquipoItem({...equipo,NOMBRE:'Equipo real',OBSERVACIONES:''},'QA-EQU-001'),/no sintético/);
 
+const plantelMarker='CUDO-QA-SYNTH-PLANTEL-TEST-001';
+const plantel={ID_INTERNO:'QA-PLA-001',NOMBRE_DEPORTIVO_PUBLICO:plantelMarker,NUMERO:'99',POSICION:'DEFENSA',CATEGORIA:'TERCERA',FOTO_REF:'',CAPITAN:'NO',OBSERVACIONES_VALIDACION:'SYNTHETIC_QA_DO_NOT_PUBLISH'};
+const plantelItem=publicPlantelItem(plantel,'QA-PLA-001');
+assert.deepEqual(plantelItem,{id:'QA-PLA-001',nombre_deportivo:plantelMarker,numero:99,posicion:'DEFENSA',categoria:'TERCERA',foto_ref:'',capitan:false});
+assert.equal(validateQuarantinePlan(planFor('PLANTEL',plantelMarker,'QA-PLA-001'),{expectedMarker:'CUDO-QA-SYNTH-',targetRow:plantel}).summary.module,'PLANTEL');
+assert.throws(()=>publicPlantelItem({...plantel,NOMBRE_DEPORTIVO_PUBLICO:'Jugador real',OBSERVACIONES_VALIDACION:''},'QA-PLA-001'),/no sintético/);
+assert.throws(()=>publicPlantelItem({...plantel,NUMERO:'0'},'QA-PLA-001'),/fuera de rango/);
+assert.throws(()=>publicPlantelItem({...plantel,POSICION:'LIBERO'},'QA-PLA-001'),/POSICION fuera de contrato/);
+assert.throws(()=>publicPlantelItem({...plantel,CAPITAN:'QUIZAS'},'QA-PLA-001'),/no booleano/);
+
 const tablaMarker='CUDO-QA-SYNTH-TABLA-TEST-001';
 const tabla={ID_TABLA:'QA-TAB-001',COMPETENCIA:'Copa QA',CATEGORIA:'TERCERA',POSICION:'1',EQUIPO:tablaMarker,PJ:'0',PG:'0',PE:'0',PP:'0',GF:'0',GC:'0',DG:'0',PTS:'0',OBSERVACIONES:'SYNTHETIC_QA_DO_NOT_PUBLISH'};
 const tablaItem=publicTablaItem(tabla,'QA-TAB-001');
@@ -36,7 +46,7 @@ assert.throws(()=>publicTablaItem({...tabla,EQUIPO:'Tabla real',OBSERVACIONES:''
 
 assert.throws(()=>validateQuarantinePlan({...noticiaPlan,pending:2},{expectedMarker:noticiaMarker,targetRow:noticia}),/exactamente 1/);
 assert.throws(()=>validateQuarantinePlan({...noticiaPlan,summary:[{...noticiaPlan.summary[0],identifier:'otra'}]},{expectedMarker:noticiaMarker,targetRow:noticia}),/identificador/);
-assert.throws(()=>validateQuarantinePlan({...noticiaPlan,summary:[{...noticiaPlan.summary[0],module:'PLANTEL'}]},{expectedMarker:noticiaMarker,targetRow:noticia}),/decisión no permitida/);
+assert.throws(()=>validateQuarantinePlan({...noticiaPlan,summary:[{...noticiaPlan.summary[0],module:'PARTIDO'}]},{expectedMarker:noticiaMarker,targetRow:noticia}),/decisión no permitida/);
 
 const noticiaPublic={schema_version:'1.0',generated_at:'old',source:'CUDO_WEB_NOTICIAS',items:[{id:'N-1',titulo:'Real'}]};
 const noticiaOverlay={schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'NOTICIA',items:[publicNoticiaItem(noticia,'QA-NOT-001')]};
@@ -48,9 +58,14 @@ const equipoMerged=mergeEquiposQaOverride(equipoPublic,{schema_version:'1.0',mod
 assert.deepEqual(equipoMerged.items,[equipoItem]);
 assert.throws(()=>mergeEquiposQaOverride(equipoPublic,{schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'EQUIPO',items:[{id:'X',nombre:'Real',categoria:'PRIMERA'}]}),/sintéticos/);
 
+const plantelPublic={schema_version:'1.0',generated_at:'old',source:'CUDO_WEB_PLANTEL',items:[]};
+const plantelMerged=mergePlantelQaOverride(plantelPublic,{schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'PLANTEL',items:[plantelItem]});
+assert.deepEqual(plantelMerged.items,[plantelItem]);
+assert.throws(()=>mergePlantelQaOverride(plantelPublic,{schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'PLANTEL',items:[{...plantelItem,nombre_deportivo:'Jugador real'}]}),/sintéticos/);
+
 const tablaPublic={schema_version:'1.0',generated_at:'old',source:'CUDO_WEB_TABLA',items:[]};
 const tablaMerged=mergeTablaQaOverride(tablaPublic,{schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'TABLA',items:[tablaItem]});
 assert.deepEqual(tablaMerged.items,[tablaItem]);
 assert.throws(()=>mergeTablaQaOverride(tablaPublic,{schema_version:'1.0',mode:'QA_SYNTHETIC_QUARANTINE',module:'TABLA',items:[{...tablaItem,equipo:'Real'}]}),/sintéticas/);
 
-console.log(JSON.stringify({ok:true,mode:'SYNTHETIC_IN_MEMORY_NO_EXTERNAL_WRITES',supported_modules:['NOTICIA','EQUIPO','TABLA'],shared_revision_suppressed:true,qa_overlay_contract:true},null,2));
+console.log(JSON.stringify({ok:true,mode:'SYNTHETIC_IN_MEMORY_NO_EXTERNAL_WRITES',supported_modules:['NOTICIA','EQUIPO','PLANTEL','TABLA'],shared_revision_suppressed:true,qa_overlay_contract:true},null,2));
