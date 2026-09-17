@@ -1,0 +1,107 @@
+name: CUDO Persona Decision E2E Certification
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-persona-decision-e2e-cert.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Certify bounded PERSONA decision
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { planPersonaReviewDecisions } from './qa-v8-google/tools/process_persona_review_decisions.mjs';
+          const PEOPLE='1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y';
+          const REVIEW='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms';
+          const run=String(process.env.GITHUB_RUN_ID||Date.now());
+          const sid=`SYNTHDEC${run}`, pid=`CUDO-PER-${sid}`, rid=`CUDO-QA-SYNTH-PERSONA-${run}`;
+          let token='',personRow=null,revisionRow=null,auditRow=null;
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          const summary={ok:false,run,persona_id:pid,review_id:rid,pre:null,post:null,audit_applied:false,cleanup:false};
+
+          async function auth(){
+            const body=new URLSearchParams({client_id:process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID,client_secret:process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET,refresh_token:process.env.CUDO_GOOGLE_REFRESH_TOKEN,grant_type:'refresh_token'});
+            const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+            const d=await r.json(); if(!r.ok||!d.access_token) throw new Error(`OAuth ${r.status}`); return d.access_token;
+          }
+          async function req(method,url,body){
+            const r=await fetch(url,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+            const text=await r.text(); const d=text?JSON.parse(text):{}; if(!r.ok) throw new Error(`Sheets ${r.status}: ${d?.error?.message||text.slice(0,160)}`); return d;
+          }
+          async function readValues(id,range){return (await req('GET',`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`)).values||[];}
+          async function updateValues(id,range,values){return req('PUT',`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,{range,majorDimension:'ROWS',values});}
+          async function appendValues(id,range,values){return req('POST',`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{range,majorDimension:'ROWS',values});}
+          async function clear(id,ranges){return req('POST',`https://sheets.googleapis.com/v4/spreadsheets/${id}/values:batchClear`,{ranges});}
+          function rowOf(range){const m=String(range||'').match(/![A-Z]+(\d+):/i);return m?Number(m[1]):null;}
+          async function findRow(id,sheet,col,value){const rows=await readValues(id,`${sheet}!${col}1:${col}2000`);for(let i=1;i<rows.length;i++)if(String(rows[i]?.[0]||'').trim()===value)return i+1;return null;}
+          async function state(){
+            const r=(await readValues(PEOPLE,`PERSONAS_CONTROL!A${personRow}:W${personRow}`))[0]||[];
+            return {estado:r[15]||'',decision:r[16]||'',revisor:r[17]||'',publicar:r[20]||'',privacidad:r[21]||'',destino:r[22]||''};
+          }
+          async function waitState(expected){for(let i=0;i<10;i++){const s=await state();if(s.estado===expected&&s.publicar==='NO'&&s.privacidad==='INTERNO')return s;await sleep(700);}throw new Error(`State did not reach ${expected}`);}
+
+          try{
+            token=await auth();
+            const audit=await readValues(REVIEW,'AUDITORIA_REVISION!A:P');
+            const existingPending=audit.slice(1).filter(r=>String(r?.[2]||'').trim().toUpperCase()==='PERSONA'&&String(r?.[3]||'').trim()&&String(r?.[4]||'').trim()&&!String(r?.[9]||'').trim());
+            if(existingPending.length!==0) throw new Error(`Fail closed: ${existingPending.length} PERSONA decisions already pending`);
+
+            const pa=await appendValues(PEOPLE,'PERSONAS_CONTROL!A:O',[[pid,sid,new Date().toISOString(),'Dirigente','CUDO Sintético Decisión E2E','','','','Certificación decisión E2E','','','','','', 'SI']]);
+            personRow=rowOf(pa.updates?.updatedRange); if(!personRow) throw new Error('Could not locate synthetic PERSONA row');
+            await updateValues(PEOPLE,`PERSONAS_CONTROL!W${personRow}`,[['PERSONA_CUDO']]);
+            summary.pre=await waitState('PENDIENTE_REVISION');
+
+            const aa=await appendValues(REVIEW,'AUDITORIA_REVISION!A:P',[[rid,new Date().toISOString(),'PERSONA',pid,'DAR_DE_ALTA','NO','NO APLICA','Certificación sintética acotada','sistemas@cudo.cl','','','','','','','']]);
+            auditRow=rowOf(aa.updates?.updatedRange); if(!auditRow) throw new Error('Could not locate synthetic audit row');
+
+            const plan=await planPersonaReviewDecisions({readValues,expectedPending:1,now:()=>new Date().toISOString()});
+            if(plan.pending_count!==1||plan.summary?.[0]?.id!==pid||plan.summary?.[0]?.status!=='APLICADO') throw new Error(`Unexpected bounded plan: ${JSON.stringify(plan.summary)}`);
+            for(const m of plan.mutations){if(m.op==='update')await updateValues(m.spreadsheetId,m.range,m.values);else if(m.op==='append')await appendValues(m.spreadsheetId,m.range,m.values);else throw new Error(`Unexpected mutation ${m.op}`);}
+
+            summary.post=await waitState('ALTA');
+            revisionRow=await findRow(PEOPLE,'REVISION','A',pid); if(!revisionRow) throw new Error('REVISION row missing');
+            const rev=(await readValues(PEOPLE,`REVISION!A${revisionRow}:H${revisionRow}`))[0]||[];
+            if(rev[1]!=='ALTA'||rev[2]!=='NO'||rev[3]!=='INTERNO') throw new Error(`Unexpected REVISION state ${JSON.stringify(rev)}`);
+            const ar=(await readValues(REVIEW,`AUDITORIA_REVISION!A${auditRow}:P${auditRow}`))[0]||[];
+            if(ar[9]!=='APLICADO'||ar[10]!==pid) throw new Error(`Audit not applied ${JSON.stringify(ar)}`);
+            summary.audit_applied=true; summary.ok=true;
+          } finally {
+            try{
+              if(!token) token=await auth();
+              if(!personRow) personRow=await findRow(PEOPLE,'PERSONAS_CONTROL','A',pid);
+              if(!revisionRow) revisionRow=await findRow(PEOPLE,'REVISION','A',pid);
+              if(!auditRow) auditRow=await findRow(REVIEW,'AUDITORIA_REVISION','A',rid);
+              if(personRow) await clear(PEOPLE,[`PERSONAS_CONTROL!A${personRow}:W${personRow}`]);
+              if(revisionRow) await clear(PEOPLE,[`REVISION!A${revisionRow}:H${revisionRow}`]);
+              if(auditRow) await clear(REVIEW,[`AUDITORIA_REVISION!A${auditRow}:P${auditRow}`]);
+              summary.cleanup=!(await findRow(PEOPLE,'PERSONAS_CONTROL','A',pid))&&!(await findRow(PEOPLE,'REVISION','A',pid))&&!(await findRow(REVIEW,'AUDITORIA_REVISION','A',rid));
+            } finally {
+              fs.writeFileSync('persona-decision-e2e-cert.json',JSON.stringify(summary,null,2));
+              console.log(JSON.stringify(summary,null,2));
+            }
+          }
+          if(!summary.ok||!summary.cleanup) process.exit(1);
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: persona-decision-e2e-cert
+          path: persona-decision-e2e-cert.json
+          retention-days: 14
