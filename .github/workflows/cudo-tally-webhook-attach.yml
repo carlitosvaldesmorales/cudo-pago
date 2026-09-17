@@ -1,0 +1,139 @@
+name: CUDO Tally Webhook Attach
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cudo-tally-webhook-attach.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  attach:
+    runs-on: self-hosted
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download certified intake endpoint artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: persona-intake-deployment
+          path: .persona-intake-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 35218195300
+
+      - name: Load endpoint without exposing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE='.persona-intake-artifact/persona-intake-deployment.json'
+          test -s "$FILE"
+          ENDPOINT="$(jq -r '.endpointUrl // empty' "$FILE")"
+          test -n "$ENDPOINT"
+          case "$ENDPOINT" in
+            https://script.google.com/macros/s/*/exec*) ;;
+            *) echo 'Unexpected intake endpoint shape' >&2; exit 3;;
+          esac
+          echo "::add-mask::$ENDPOINT"
+          printf 'CUDO_PERSONA_INTAKE_ENDPOINT=%s\n' "$ENDPOINT" >> "$GITHUB_ENV"
+
+      - name: Attach certified endpoint to Tally Mi ficha CUDO
+        shell: bash
+        env:
+          ENDPOINT: ${{ env.CUDO_PERSONA_INTAKE_ENDPOINT }}
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/cudo-persona
+          test "$(podman inspect -f '{{.State.Running}}' cudo-auth-browser 2>/dev/null || true)" = 'true'
+          test "$(curl -sS -o /tmp/cudo-cdp-version -w '%{http_code}' --max-time 3 http://127.0.0.1:19223/json/version || true)" = '200'
+          rm -f /tmp/cudo-cdp-version
+          RUNTIME="$HOME/.cudo-agent-browser-auth"
+          TOOL="$RUNTIME/playwright-core"
+          mkdir -p "$TOOL"
+          if [ ! -d "$TOOL/node_modules/playwright-core" ]; then
+            npm --prefix "$TOOL" init -y >/dev/null 2>&1
+            npm --prefix "$TOOL" install --silent playwright-core >/dev/null
+          fi
+          cat > "$RUNNER_TEMP/tally-webhook-attach.cjs" <<'JS'
+          const { chromium } = require(process.env.PWCORE + '/node_modules/playwright-core');
+          const fs=require('fs');
+          (async()=>{
+            const endpoint=process.env.ENDPOINT;
+            if(!endpoint) throw new Error('missing endpoint');
+            const browser=await chromium.connectOverCDP('http://127.0.0.1:19223');
+            const context=browser.contexts()[0];
+            if(!context) throw new Error('no persistent Tally browser context');
+            let page=context.pages()[0] || await context.newPage();
+            await page.goto('https://tally.so/forms/9qeq5p/integrations',{waitUntil:'domcontentloaded',timeout:60000});
+            await page.waitForTimeout(4000);
+            const body0=(await page.locator('body').innerText().catch(()=>''));
+            if(!/Mi ficha CUDO/i.test(body0) || !/Webhooks/i.test(body0)) throw new Error('wrong Tally form/integrations surface');
+
+            const hook=page.getByText('Webhooks',{exact:true}).first();
+            if(!await hook.count()) throw new Error('Webhooks card not found');
+            const card=hook.locator('xpath=ancestor::*[.//button[normalize-space()="Connect"]][1]');
+            let connectedAlready=false;
+            let writePerformed=false;
+            if(!await card.count()){
+              const pageText=(await page.locator('body').innerText().catch(()=>''));
+              connectedAlready=/webhook/i.test(pageText) && /disconnect|connected|manage/i.test(pageText);
+              if(!connectedAlready) throw new Error('Webhooks Connect action unavailable and no connected state detected');
+            } else {
+              await card.getByRole('button',{name:'Connect',exact:true}).click();
+              await page.waitForTimeout(1500);
+              const input=page.locator('input[placeholder="https://..."]').first();
+              if(!await input.count()) throw new Error('Webhook endpoint input not found');
+              await input.fill(endpoint);
+              const panel=input.locator('xpath=ancestor::*[.//button[normalize-space()="Connect"]][1]');
+              if(!await panel.count()) throw new Error('Webhook save panel not found');
+              const save=panel.getByRole('button',{name:'Connect',exact:true}).last();
+              await save.waitFor({state:'visible',timeout:10000});
+              await save.click();
+              writePerformed=true;
+              await page.waitForTimeout(5000);
+            }
+
+            const body=(await page.locator('body').innerText().catch(()=>''));
+            const redacted=body.split(endpoint).join('<REDACTED_ENDPOINT>');
+            const hookNow=page.getByText('Webhooks',{exact:true}).first();
+            let hookText='';
+            if(await hookNow.count()){
+              const container=hookNow.locator('xpath=ancestor::*[self::div or self::section][1]');
+              hookText=(await container.innerText().catch(()=>'' )).replace(endpoint,'<REDACTED_ENDPOINT>').replace(/\s+/g,' ').trim();
+            }
+            const stillHasEndpointInput=await page.locator('input[placeholder="https://..."]').count();
+            const result={
+              ok:true,
+              form_id:'9qeq5p',
+              form_title:'Mi ficha CUDO',
+              integration:'Webhooks',
+              connected_already:connectedAlready,
+              write_performed:writePerformed,
+              endpoint_redacted:true,
+              endpoint_input_still_visible:stillHasEndpointInput>0,
+              hook_text:hookText.slice(0,1200),
+              success_signal:/connected|disconnect|webhook endpoint|endpoint/i.test(redacted),
+              final_url:page.url()
+            };
+            fs.writeFileSync('evidence/cudo-persona/tally-webhook-attach-latest.json',JSON.stringify(result,null,2)+'\n');
+            console.log(JSON.stringify(result,null,2));
+            await browser.close();
+            if(!result.success_signal) process.exit(4);
+          })().catch(e=>{console.error(e.stack||e);process.exit(1)});
+          JS
+          PWCORE="$TOOL" node "$RUNNER_TEMP/tally-webhook-attach.cjs"
+
+      - name: Persist redacted evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .persona-intake-artifact
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add evidence/cudo-persona/tally-webhook-attach-latest.json 2>/dev/null || true
+          git commit -m 'evidence(cudo): record Tally persona webhook attachment' || true
+          git push || true
