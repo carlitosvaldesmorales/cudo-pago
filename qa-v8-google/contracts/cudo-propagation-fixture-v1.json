@@ -2,7 +2,8 @@
   "schema_version": "CUDO_PROPAGATION_FIXTURE_V1",
   "active_conditions": [
     "SUPPLIER_RETURN_MODEL_APPLIES",
-    "UNIT_COST_MODEL_APPLIES"
+    "UNIT_COST_MODEL_APPLIES",
+    "SINGLE_RESOURCE_DIRECT_SALES_MODEL"
   ],
   "objects": [
     {
@@ -23,15 +24,60 @@
         "stock_after_sales": 30
       },
       "field_semantics": {
-        "received_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/received_qty"]},
-        "returned_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/returned_qty"]},
-        "unit_cost": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/unit_cost"]},
-        "purchased_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/purchased_qty"]},
-        "purchase_total": {"state_kind": "DERIVED", "rule_ids": ["RULE_PURCHASE_TOTAL_V1"]},
-        "stock_available_before_sales": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/stock_available_before_sales"]},
-        "sold_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/sold_qty"]},
-        "sell_price": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/sell_price"]},
-        "stock_after_sales": {"state_kind": "DERIVED", "rule_ids": ["RULE_STOCK_AFTER_SALES_V1"]}
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/received_qty"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/returned_qty"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/unit_cost"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/purchased_qty"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/stock_available_before_sales"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://resource/sell_price"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        }
       },
       "relationships": [
         {
@@ -49,7 +95,9 @@
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://resource"]
+        "source_refs": [
+          "fixture://resource"
+        ]
       },
       "legacy_refs": []
     },
@@ -65,9 +113,24 @@
         "supplier_payable": 40000
       },
       "field_semantics": {
-        "obligation_kind": {"state_kind": "SOURCE", "source_refs": ["fixture://obligation/kind"]},
-        "payable_qty": {"state_kind": "DERIVED", "rule_ids": ["RULE_PAYABLE_QTY_AFTER_RETURN_V1"]},
-        "supplier_payable": {"state_kind": "DERIVED", "rule_ids": ["RULE_SUPPLIER_PAYABLE_V1"]}
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://obligation/kind"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        }
       },
       "relationships": [
         {
@@ -80,7 +143,9 @@
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://obligation"]
+        "source_refs": [
+          "fixture://obligation"
+        ]
       },
       "legacy_refs": []
     },
@@ -95,15 +160,27 @@
         "sales_revenue": 105000
       },
       "field_semantics": {
-        "activity_kind": {"state_kind": "SOURCE", "source_refs": ["fixture://event/activity_kind"]},
-        "sales_revenue": {"state_kind": "DERIVED", "rule_ids": ["RULE_SALES_REVENUE_V1"]}
+        "activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://event/activity_kind"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SALES_REVENUE_V1"
+          ]
+        }
       },
       "relationships": [],
       "provenance": {
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://event"]
+        "source_refs": [
+          "fixture://event"
+        ]
       },
       "legacy_refs": []
     }

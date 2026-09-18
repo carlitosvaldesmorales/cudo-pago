@@ -1,0 +1,55 @@
+name: Certify CUDO Complete San Ramon Event
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-real-flow-san-ramon-complete-event-v1.json'
+      - 'qa-v8-google/contracts/cudo-dependency-rule-registry-v1.json'
+      - 'qa-v8-google/contracts/cudo-dependency-rule-registry-schema-v1.json'
+      - 'qa-v8-google/contracts/cudo-propagation-fixture-v1.json'
+      - 'qa-v8-google/contracts/cudo-real-flow-san-ramon-corona-v1.json'
+      - 'qa-v8-google/tools/generic_propagation_executor.mjs'
+      - 'qa-v8-google/tools/certify_dependency_rule_registry.mjs'
+      - 'qa-v8-google/tools/certify_real_flow_san_ramon_complete_event.mjs'
+      - '.github/workflows/certify-cudo-san-ramon-complete-event.yml'
+  push:
+    branches:
+      - 'feat/cudo-san-ramon-complete-event-v1'
+    paths:
+      - 'qa-v8-google/contracts/cudo-real-flow-san-ramon-complete-event-v1.json'
+      - 'qa-v8-google/contracts/cudo-dependency-rule-registry-v1.json'
+      - 'qa-v8-google/contracts/cudo-dependency-rule-registry-schema-v1.json'
+      - 'qa-v8-google/contracts/cudo-propagation-fixture-v1.json'
+      - 'qa-v8-google/contracts/cudo-real-flow-san-ramon-corona-v1.json'
+      - 'qa-v8-google/tools/generic_propagation_executor.mjs'
+      - 'qa-v8-google/tools/certify_dependency_rule_registry.mjs'
+      - 'qa-v8-google/tools/certify_real_flow_san_ramon_complete_event.mjs'
+      - '.github/workflows/certify-cudo-san-ramon-complete-event.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate syntax
+        run: |
+          node --check qa-v8-google/tools/generic_propagation_executor.mjs
+          node --check qa-v8-google/tools/certify_dependency_rule_registry.mjs
+          node --check qa-v8-google/tools/certify_real_flow_san_ramon_complete_event.mjs
+      - name: Re-certify dependency registry
+        run: node qa-v8-google/tools/certify_dependency_rule_registry.mjs
+      - name: Re-certify generic propagation regression
+        run: node qa-v8-google/tools/certify_generic_propagation_executor.mjs
+      - name: Re-certify original single-product San Ramon flow
+        run: node qa-v8-google/tools/certify_real_flow_san_ramon_e2e.mjs
+      - name: Certify complete San Ramon event
+        run: node qa-v8-google/tools/certify_real_flow_san_ramon_complete_event.mjs

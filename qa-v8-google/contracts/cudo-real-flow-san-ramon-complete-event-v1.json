@@ -1,0 +1,1205 @@
+{
+  "schema_version": "CUDO_REAL_FLOW_SAN_RAMON_COMPLETE_EVENT_V1",
+  "flow_id": "CUDO-REAL-FLOW-SAN-RAMON-2025-COMPLETE-EVENT",
+  "source_artifact": "PEDIDO CUDO.xlsx",
+  "source_sheet": "Pedido vs San Ramon 04-05-2025",
+  "source_range": "B3:L8",
+  "production_write": false,
+  "source_interpretation_notes": [
+    "Rows 3,4,6,7 contain explicit remaining-stock quantities in column I.",
+    "I5 for Bebida CCU is blank. The model uses remaining_stock=0 as an inference from H5=D5-I5 with D5=24 and H5=24, corroborated by L5=0. It is not labeled as a direct cell value."
+  ],
+  "historical_evidence": {
+    "products": [
+      {
+        "product_name": "Cerveza Corona",
+        "row": 3,
+        "purchased_qty": 120,
+        "unit_cost": 840,
+        "purchase_total": 100800,
+        "sell_price": 2000,
+        "sold_qty": 52,
+        "remaining_stock": 68,
+        "remaining_stock_evidence": "DIRECT",
+        "sales_revenue": 104000,
+        "supplier_payable": 43680,
+        "remaining_stock_value": 57120
+      },
+      {
+        "product_name": "Bebida Cocacola-sprite-fanta",
+        "row": 4,
+        "purchased_qty": 120,
+        "unit_cost": 730,
+        "purchase_total": 87600,
+        "sell_price": 1500,
+        "sold_qty": 111,
+        "remaining_stock": 9,
+        "remaining_stock_evidence": "DIRECT",
+        "sales_revenue": 166500,
+        "supplier_payable": 81030,
+        "remaining_stock_value": 6570
+      },
+      {
+        "product_name": "Bebida CCU",
+        "row": 5,
+        "purchased_qty": 24,
+        "unit_cost": 580,
+        "purchase_total": 13920,
+        "sell_price": 1500,
+        "sold_qty": 24,
+        "remaining_stock": 0,
+        "remaining_stock_evidence": "INFERRED_ZERO_FROM_H5_FORMULA_AND_L5_VALUE",
+        "sales_revenue": 36000,
+        "supplier_payable": 13920,
+        "remaining_stock_value": 0
+      },
+      {
+        "product_name": "Johnnie walker",
+        "row": 6,
+        "purchased_qty": 6,
+        "unit_cost": 8890,
+        "purchase_total": 53340,
+        "sell_price": 13500,
+        "sold_qty": 1,
+        "remaining_stock": 5,
+        "remaining_stock_evidence": "DIRECT",
+        "sales_revenue": 13500,
+        "supplier_payable": 8890,
+        "remaining_stock_value": 44450
+      },
+      {
+        "product_name": "Vino Aromo",
+        "row": 7,
+        "purchased_qty": 12,
+        "unit_cost": 1550,
+        "purchase_total": 18600,
+        "sell_price": 3000,
+        "sold_qty": 11,
+        "remaining_stock": 1,
+        "remaining_stock_evidence": "DIRECT",
+        "sales_revenue": 33000,
+        "supplier_payable": 17050,
+        "remaining_stock_value": 1550
+      }
+    ],
+    "totals": {
+      "purchase_total": 274260,
+      "sales_revenue": 353000,
+      "supplier_payable": 164570,
+      "remaining_stock_value": 109690,
+      "purchased_qty": 282,
+      "sold_qty": 199,
+      "remaining_stock": 83
+    }
+  },
+  "active_conditions": [
+    "SUPPLIER_RETURN_MODEL_APPLIES",
+    "UNIT_COST_MODEL_APPLIES",
+    "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES",
+    "MULTI_RESOURCE_AGGREGATED_SALES_MODEL",
+    "RESOURCE_STOCK_VALUE_MODEL_APPLIES"
+  ],
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-SANRAMON-CORONA-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "RECONCILIATION_PENDING",
+      "data": {
+        "product_name": "Cerveza Corona",
+        "received_qty": 120,
+        "returned_qty": 69,
+        "unit_cost": 840,
+        "purchased_qty": 120,
+        "purchase_total": 100800,
+        "stock_available_before_sales": 120,
+        "sold_qty": 51,
+        "sell_price": 2000,
+        "stock_after_sales": 69,
+        "sales_revenue": 102000,
+        "remaining_stock_value": 57960
+      },
+      "field_semantics": {
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B3"
+          ]
+        },
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I3"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E3"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://complete-event/pre-correction/CORONA/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G3"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_SALES_REVENUE_V1"
+          ]
+        },
+        "remaining_stock_value": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_REMAINING_STOCK_VALUE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-CORONA-RESOURCE-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SANRAMON-CORONA-001"
+        },
+        {
+          "relationship_id": "REL-SANRAMON-CORONA-RESOURCE-EVENT-001",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SANRAMON-20250504-COMPLETE"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B3:L3"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SANRAMON-CORONA-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "payable_qty": 51,
+        "supplier_payable": 42840,
+        "amount": 42840
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://currency/CLP"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-CORONA-OBLIGATION-RESOURCE-001",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-SANRAMON-CORONA-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!K3"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-SANRAMON-COCA-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "RECONCILIATION_PENDING",
+      "data": {
+        "product_name": "Bebida Cocacola-sprite-fanta",
+        "received_qty": 120,
+        "returned_qty": 10,
+        "unit_cost": 730,
+        "purchased_qty": 120,
+        "purchase_total": 87600,
+        "stock_available_before_sales": 120,
+        "sold_qty": 110,
+        "sell_price": 1500,
+        "stock_after_sales": 10,
+        "sales_revenue": 165000,
+        "remaining_stock_value": 7300
+      },
+      "field_semantics": {
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B4"
+          ]
+        },
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D4"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I4"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E4"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D4"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D4"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://complete-event/pre-correction/COCA/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G4"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_SALES_REVENUE_V1"
+          ]
+        },
+        "remaining_stock_value": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_REMAINING_STOCK_VALUE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-COCA-RESOURCE-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SANRAMON-COCA-001"
+        },
+        {
+          "relationship_id": "REL-SANRAMON-COCA-RESOURCE-EVENT-001",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SANRAMON-20250504-COMPLETE"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B4:L4"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SANRAMON-COCA-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "payable_qty": 110,
+        "supplier_payable": 80300,
+        "amount": 80300
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://currency/CLP"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-COCA-OBLIGATION-RESOURCE-001",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-SANRAMON-COCA-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!K4"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-SANRAMON-CCU-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "RECONCILIATION_PENDING",
+      "data": {
+        "product_name": "Bebida CCU",
+        "received_qty": 24,
+        "returned_qty": 0,
+        "unit_cost": 580,
+        "purchased_qty": 24,
+        "purchase_total": 13920,
+        "stock_available_before_sales": 24,
+        "sold_qty": 23,
+        "sell_price": 1500,
+        "stock_after_sales": 1,
+        "sales_revenue": 34500,
+        "remaining_stock_value": 580
+      },
+      "field_semantics": {
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B5"
+          ]
+        },
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D5"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I5(blank)",
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H5=D5-I5; D5=24; H5=24",
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!L5=0"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E5"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D5"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D5"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://complete-event/pre-correction/CCU/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G5"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_SALES_REVENUE_V1"
+          ]
+        },
+        "remaining_stock_value": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_REMAINING_STOCK_VALUE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-CCU-RESOURCE-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SANRAMON-CCU-001"
+        },
+        {
+          "relationship_id": "REL-SANRAMON-CCU-RESOURCE-EVENT-001",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SANRAMON-20250504-COMPLETE"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B5:L5"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SANRAMON-CCU-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "payable_qty": 24,
+        "supplier_payable": 13920,
+        "amount": 13920
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://currency/CLP"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-CCU-OBLIGATION-RESOURCE-001",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-SANRAMON-CCU-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!K5"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-SANRAMON-JOHNNIE-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "RECONCILIATION_PENDING",
+      "data": {
+        "product_name": "Johnnie walker",
+        "received_qty": 6,
+        "returned_qty": 6,
+        "unit_cost": 8890,
+        "purchased_qty": 6,
+        "purchase_total": 53340,
+        "stock_available_before_sales": 6,
+        "sold_qty": 0,
+        "sell_price": 13500,
+        "stock_after_sales": 6,
+        "sales_revenue": 0,
+        "remaining_stock_value": 53340
+      },
+      "field_semantics": {
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B6"
+          ]
+        },
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D6"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I6"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E6"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D6"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D6"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://complete-event/pre-correction/JOHNNIE/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G6"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_SALES_REVENUE_V1"
+          ]
+        },
+        "remaining_stock_value": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_REMAINING_STOCK_VALUE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-JOHNNIE-RESOURCE-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SANRAMON-JOHNNIE-001"
+        },
+        {
+          "relationship_id": "REL-SANRAMON-JOHNNIE-RESOURCE-EVENT-001",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SANRAMON-20250504-COMPLETE"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B6:L6"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SANRAMON-JOHNNIE-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "payable_qty": 0,
+        "supplier_payable": 0,
+        "amount": 0
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://currency/CLP"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-JOHNNIE-OBLIGATION-RESOURCE-001",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-SANRAMON-JOHNNIE-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!K6"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-SANRAMON-AROMO-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "RECONCILIATION_PENDING",
+      "data": {
+        "product_name": "Vino Aromo",
+        "received_qty": 12,
+        "returned_qty": 2,
+        "unit_cost": 1550,
+        "purchased_qty": 12,
+        "purchase_total": 18600,
+        "stock_available_before_sales": 12,
+        "sold_qty": 10,
+        "sell_price": 3000,
+        "stock_after_sales": 2,
+        "sales_revenue": 30000,
+        "remaining_stock_value": 3100
+      },
+      "field_semantics": {
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B7"
+          ]
+        },
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D7"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I7"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E7"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D7"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D7"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://complete-event/pre-correction/AROMO/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G7"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_SALES_REVENUE_V1"
+          ]
+        },
+        "remaining_stock_value": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_RESOURCE_REMAINING_STOCK_VALUE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-AROMO-RESOURCE-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SANRAMON-AROMO-001"
+        },
+        {
+          "relationship_id": "REL-SANRAMON-AROMO-RESOURCE-EVENT-001",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SANRAMON-20250504-COMPLETE"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B7:L7"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SANRAMON-AROMO-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "payable_qty": 10,
+        "supplier_payable": 15500,
+        "amount": 15500
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://currency/CLP"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-SANRAMON-AROMO-OBLIGATION-RESOURCE-001",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-SANRAMON-AROMO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!K7"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-SANRAMON-20250504-COMPLETE",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "RECONCILIATION_PENDING",
+      "data": {
+        "event_name": "CUDO vs San Ramon 04-05-2025",
+        "sales_revenue": 331500
+      },
+      "field_semantics": {
+        "event_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_EVENT_SALES_REVENUE_SUM_V1"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_FLOW_COMPLETE_QA",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!J3:J8"
+        ]
+      },
+      "legacy_refs": [
+        {
+          "source_system": "CUDO_QA_REAL_FLOW_SAN_RAMON_COMPLETE",
+          "legacy_id": "SANRAMON-20250504-COMPLETE"
+        }
+      ]
+    }
+  ],
+  "correction_commands": [
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-CORONA-001",
+      "field": "sold_qty",
+      "value": 52,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook sold quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H3"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-CORONA-001",
+      "field": "returned_qty",
+      "value": 68,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook remaining stock / return quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I3"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-COCA-001",
+      "field": "sold_qty",
+      "value": 111,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook sold quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H4"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-COCA-001",
+      "field": "returned_qty",
+      "value": 9,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook remaining stock / return quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I4"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-CCU-001",
+      "field": "sold_qty",
+      "value": 24,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook sold quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H5"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-JOHNNIE-001",
+      "field": "sold_qty",
+      "value": 1,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook sold quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H6"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-JOHNNIE-001",
+      "field": "returned_qty",
+      "value": 5,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook remaining stock / return quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I6"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-AROMO-001",
+      "field": "sold_qty",
+      "value": 11,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook sold quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H7"
+      ]
+    },
+    {
+      "surface": "QA_EVIDENCE_REPLAY",
+      "object_id": "CUDO-RESOURCE-SANRAMON-AROMO-001",
+      "field": "returned_qty",
+      "value": 1,
+      "reason": "Align complete-event synthetic pre-correction state to observed workbook remaining stock / return quantity",
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I7"
+      ]
+    }
+  ],
+  "expected_after_commit": {
+    "event_sales_revenue": 353000,
+    "supplier_payable_total": 164570,
+    "remaining_stock_value_total": 109690,
+    "purchase_total": 274260,
+    "purchased_qty_total": 282,
+    "sold_qty_total": 199,
+    "remaining_stock_total": 83,
+    "obligations_open": 5,
+    "outstanding_payable": 164570
+  },
+  "projection": {
+    "legacy_public": [
+      {
+        "key": "san_ramon_complete",
+        "source": "CUDO_QA_REAL_FLOW_SAN_RAMON_COMPLETE",
+        "object_type": "ACTIVITY_EVENT",
+        "fields": [
+          "event_name",
+          "sales_revenue"
+        ]
+      }
+    ],
+    "targets": [
+      {
+        "kind": "JSON_FILE",
+        "document": "san_ramon_complete",
+        "path": "qa-v8-google/evidence/real-flow-san-ramon-complete/public.json"
+      },
+      {
+        "kind": "JSON_FILE",
+        "document": "ADMIN",
+        "path": "qa-v8-google/evidence/real-flow-san-ramon-complete/admin-finance.json"
+      },
+      {
+        "kind": "SHEETS_TABLE",
+        "table": "FINANCIAL_OBLIGATIONS",
+        "spreadsheet_id": "SYNTHETIC-CUDO-SAN-RAMON-COMPLETE-QA",
+        "range": "FINANCIAL_OBLIGATIONS!A:I"
+      }
+    ]
+  }
+}

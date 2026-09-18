@@ -23,6 +23,32 @@
       "items": {
         "$ref": "#/$defs/rule"
       }
+    },
+    "exclusive_condition_groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "group_id",
+          "condition_ids"
+        ],
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{2,127}$"
+          },
+          "condition_ids": {
+            "type": "array",
+            "minItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{2,127}$"
+            }
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -38,7 +64,8 @@
         "scope": {
           "enum": [
             "SOURCE_OBJECT",
-            "RELATED_OBJECT"
+            "RELATED_OBJECT",
+            "REVERSE_RELATED_OBJECTS"
           ]
         },
         "object_type": {
@@ -66,7 +93,10 @@
           "if": {
             "properties": {
               "scope": {
-                "const": "RELATED_OBJECT"
+                "enum": [
+                  "RELATED_OBJECT",
+                  "REVERSE_RELATED_OBJECTS"
+                ]
               }
             },
             "required": [
@@ -111,7 +141,8 @@
             "MULTIPLY",
             "SUBTRACT",
             "SUM_DIFFERENCE",
-            "IDENTITY"
+            "IDENTITY",
+            "SUM"
           ]
         },
         "args": {
