@@ -1,0 +1,42 @@
+{
+  "schema_version": "CUDO_PROJECTION_PERSISTENCE_ADAPTERS_V1",
+  "authority": {
+    "canonical_graph_is_source_of_truth": true,
+    "projections_are_read_models": true,
+    "sheets_are_not_independent_authority": true,
+    "json_files_are_not_independent_authority": true,
+    "admin_views_are_not_independent_authority": true
+  },
+  "projection_types": [
+    "LEGACY_PUBLIC_JSON",
+    "ADMIN_FINANCE_JSON",
+    "SHEETS_READ_MODEL"
+  ],
+  "ingress_policy": {
+    "allowed": "SOURCE_CHANGE_COMMAND_ONLY",
+    "derived_field_direct_write": "BLOCK",
+    "opaque_field_direct_write": "BLOCK",
+    "all_accepted_commands_require_transaction_layer": true
+  },
+  "persistence_policy": {
+    "default_mode": "DRY_RUN",
+    "source_revision_precondition": true,
+    "multi_target_external_atomicity_claimed": false,
+    "partial_failure": "RETURN_COMPENSATION_PLAN_DO_NOT_AUTO_EXECUTE",
+    "production_write": false
+  },
+  "legacy_compatibility": {
+    "current_public_json_envelope": {
+      "schema_version": "1.0",
+      "fields": ["generated_at", "source", "items"]
+    },
+    "legacy_ids": "resolved_from_object.legacy_refs"
+  },
+  "evidence_basis": [
+    "preview-v8/tools/sync_google_publico.mjs",
+    "preview-v8/data/partidos.json",
+    "preview-v8/admin/index.html",
+    "qa-v8-google/tools/process_review_decisions.mjs",
+    "qa-v8-google/tools/ingest_review_form_responses.mjs"
+  ]
+}
