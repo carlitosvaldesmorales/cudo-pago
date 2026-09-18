@@ -8,6 +8,10 @@ on:
       - 'qa-v8-google/contracts/cudo-shared-object-fixture-v1.json'
       - 'qa-v8-google/tools/certify_shared_object_contract.mjs'
       - 'qa-v8-google/contracts/cudo-work-item-contract-v1.json'
+      - 'qa-v8-google/tools/canonical_financial_core.mjs'
+      - 'qa-v8-google/tools/certify_work_financial_effects.mjs'
+      - 'qa-v8-google/tools/work_financial_effects.mjs'
+      - 'qa-v8-google/contracts/cudo-work-financial-effect-contract-v1.json'
       - 'qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json'
       - 'qa-v8-google/tools/certify_post_match_work_state.mjs'
       - 'qa-v8-google/contracts/cudo-real-work-post-match-v1.json'
@@ -53,6 +57,8 @@ jobs:
           node --check qa-v8-google/tools/certify_work_item_engine.mjs
           node --check qa-v8-google/tools/certify_post_match_work_state.mjs
           node --check qa-v8-google/tools/certify_irrigation_work_state.mjs
+          node --check qa-v8-google/tools/work_financial_effects.mjs
+          node --check qa-v8-google/tools/certify_work_financial_effects.mjs
           node --check qa-v8-google/tools/certify_operational_web_projection.mjs
       - name: Re-certify shared object contract
         run: node qa-v8-google/tools/certify_shared_object_contract.mjs
@@ -62,5 +68,7 @@ jobs:
         run: node qa-v8-google/tools/certify_post_match_work_state.mjs
       - name: Certify seasonal irrigation work
         run: node qa-v8-google/tools/certify_irrigation_work_state.mjs
+      - name: Certify completed work financial effect
+        run: node qa-v8-google/tools/certify_work_financial_effects.mjs
       - name: Certify CUDO Web operational projection
         run: node qa-v8-google/tools/certify_operational_web_projection.mjs
