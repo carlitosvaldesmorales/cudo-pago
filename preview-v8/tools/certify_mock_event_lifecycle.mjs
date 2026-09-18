@@ -24,7 +24,8 @@ let out=apply({
   kind:'MATCH',
   state:'SCHEDULED',
   starts_at:'2026-10-25T15:00:00-03:00',
-  resource_refs:['MOCK-RESOURCE-STADIUM-01']
+  resource_refs:['MOCK-RESOURCE-STADIUM-01'],
+  local:'CUDO',visita:'Rival Lifecycle',categoria:'PRIMERA',competencia:'Campeonato Club OS',recinto:'Cancha de la Orilla'
 });
 const eventId='MOCK-EVENT-LIFECYCLE-01';
 const prepId='MOCK-WORK-AUTO-PREP-LIFECYCLE-01';
@@ -62,7 +63,9 @@ out=apply({
   event_id:eventId,
   expected_state:'LIVE',
   next_state:'COMPLETED',
-  reason:'Partido finalizado mock'
+  reason:'Partido finalizado mock',
+  goles_local:2,
+  goles_visita:1
 },'2026-10-25T18:00:00-03:00');
 assert.equal(runtime.state.events.find(x=>x.event_id===eventId).state,'COMPLETED');
 const post=runtime.state.work_items.filter(x=>x.source_ref===eventId&&['STADIUM_CLEANING','KIT_WASHING'].includes(x.work_kind));
@@ -105,7 +108,8 @@ out=apply({
   kind:'MATCH',
   state:'SCHEDULED',
   starts_at:'2026-11-01T15:00:00-03:00',
-  resource_refs:['MOCK-RESOURCE-STADIUM-01']
+  resource_refs:['MOCK-RESOURCE-STADIUM-01'],
+  local:'CUDO',visita:'Rival Cancelable',categoria:'PRIMERA',competencia:'Campeonato Club OS',recinto:'Cancha de la Orilla'
 },'2026-09-18T20:03:00-03:00');
 const cancelEvent='MOCK-EVENT-CANCEL-FLOW-01';
 const cancelPrep='MOCK-WORK-AUTO-PREP-CANCEL-FLOW-01';
@@ -146,7 +150,8 @@ apply({
   display_name:'Partido Live Cancel',
   kind:'MATCH',
   state:'SCHEDULED',
-  resource_refs:['MOCK-RESOURCE-STADIUM-01']
+  resource_refs:['MOCK-RESOURCE-STADIUM-01'],
+  local:'CUDO',visita:'Rival Live Cancel',categoria:'PRIMERA',competencia:'Campeonato Club OS',recinto:'Cancha de la Orilla'
 },'2026-09-18T20:06:00-03:00');
 apply({
   action_id:'EVT-LIVE-003',
