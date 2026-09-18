@@ -1,11 +1,11 @@
 {
   "schema_version": "CUDO_CLUB_OPERATIONAL_STATE_V1",
-  "generated_at": "2026-09-18T16:21:00.000Z",
+  "generated_at": "2026-09-18T17:21:00.000Z",
   "reference_date": "2026-09-18",
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "summary": {
-    "total": 3,
-    "open": 3,
+    "total": 4,
+    "open": 4,
     "in_progress": 0,
     "blocked": 0,
     "waiting_external": 0,
@@ -35,6 +35,12 @@
         "display_name": "Partido QA sábado"
       },
       "trigger_reason": "MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-25",
+        "conditional_extension_date": null,
+        "condition": null
+      },
       "financial_context": {
         "amount_clp": 50000,
         "min_amount_clp": null,
@@ -48,6 +54,48 @@
       "evidence_refs": [
         "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4",
         "qa://synthetic-match/2026-09-26"
+      ],
+      "object_version": 1
+    },
+    {
+      "work_id": "CUDO-WORK-IRRIGATION-20261005",
+      "title": "Regadío del estadio",
+      "work_kind": "IRRIGATION",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "responsible": {
+        "actor_id": "CUDO-ACTOR-MARIO-DIAZ-001",
+        "display_name": "Mario Díaz"
+      },
+      "due_date": "2026-10-06",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "display_name": "Estadio CUDO"
+      },
+      "source": {
+        "object_id": "CUDO-RULE-SEASONAL-IRRIGATION-001",
+        "display_name": "Regadío del estadio"
+      },
+      "trigger_reason": "SEASONAL_RECURRING_SCHEDULE",
+      "schedule": {
+        "start_date": "2026-10-05",
+        "expected_end_date": "2026-10-06",
+        "conditional_extension_date": "2026-10-07",
+        "condition": "MAY_EXTEND_TO_WEDNESDAY_DEPENDING_ON_WATER"
+      },
+      "financial_context": {
+        "amount_clp": 50000,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": "PER_COMPLETED_IRRIGATION",
+        "condition": "MONTHLY_SETTLEMENT_FIRST_FIVE_DAYS",
+        "semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "evidence_refs": [
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
       ],
       "object_version": 1
     },
@@ -72,6 +120,12 @@
         "display_name": "Partido QA finalizado"
       },
       "trigger_reason": "EVENT_COMPLETED_REQUIRES_WORK",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": null,
+        "conditional_extension_date": null,
+        "condition": null
+      },
       "financial_context": {
         "amount_clp": null,
         "min_amount_clp": null,
@@ -109,6 +163,12 @@
         "display_name": "Partido QA finalizado"
       },
       "trigger_reason": "EVENT_COMPLETED_REQUIRES_WORK",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": null,
+        "conditional_extension_date": null,
+        "condition": null
+      },
       "financial_context": {
         "amount_clp": null,
         "min_amount_clp": 25000,
