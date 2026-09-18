@@ -34,13 +34,13 @@
     <div class="wrap">
       <div class="eyebrow">C.U.D.O. · Control operacional QA</div>
       <h1>Estado del club</h1>
-      <p>Primera proyección del estado operacional canónico: qué trabajo existe, quién responde, cuándo debe ocurrir, qué lo originó y qué contexto financiero tiene.</p>
+      <p>Proyección del estado operacional canónico: qué trabajo existe, quién responde, qué estado tiene, qué lo originó y qué contexto financiero u operativo requiere atención.</p>
       <div class="opsnav"><a href="../">← Inicio QA</a><a href="../partidos/">Partidos</a><a href="../equipos/">Equipos</a></div>
     </div>
   </header>
   <main class="opsmain">
     <div class="wrap">
-      <div class="opsnotice"><strong>Prueba QA controlada.</strong> La regla de corte de pasto y el responsable provienen del checklist real CUDO. El partido mostrado como causa es un trigger sintético QA; no representa un partido real publicado. El monto mostrado es contexto de pago de la regla, no una deuda actual.</div>
+      <div class="opsnotice"><strong>Prueba QA controlada.</strong> Las tareas y responsables provienen del checklist real CUDO. Los partidos mostrados como causa son triggers sintéticos QA y no representan partidos reales publicados. Los montos son contexto de las reglas de trabajo, no deudas actuales.</div>
       <section class="opskpis" aria-label="Resumen operacional">
         <div class="opskpi"><small>Trabajo total</small><strong id="kTotal">—</strong></div>
         <div class="opskpi"><small>Pendiente</small><strong id="kOpen">—</strong></div>
@@ -57,7 +57,23 @@
     const money=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(n||0));
     const reasonLabel=v=>v==='MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY'
       ? 'Partido el sábado: el corte se adelanta al viernes.'
-      : 'Mantención semanal en su día normal.';
+      : v==='EVENT_COMPLETED_REQUIRES_WORK'
+        ? 'El partido finalizado genera este trabajo posterior.'
+        : 'Mantención semanal en su día normal.';
+    const dueLabel=v=>v||'Sin fecha definida por la fuente';
+    const financialLabel=ctx=>{
+      if(ctx.amount_clp!=null) return money(ctx.amount_clp)+' · '+(ctx.cycle||'');
+      if(ctx.min_amount_clp!=null||ctx.max_amount_clp!=null){
+        const min=ctx.min_amount_clp!=null?money(ctx.min_amount_clp):'—';
+        const max=ctx.max_amount_clp!=null?money(ctx.max_amount_clp):'—';
+        return min+' – '+max+(ctx.condition==='DEPENDS_ON_DIRTINESS'?' · según suciedad':'');
+      }
+      if(ctx.unit_amount_clp!=null){
+        const unit=ctx.unit_label==='TEAM_WASHED'?'por equipo lavado':(ctx.unit_label||'por unidad');
+        return money(ctx.unit_amount_clp)+' '+unit;
+      }
+      return 'Sin monto definido';
+    };
     fetch('../data/operacion.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo cargar el estado');return r.json()}).then(data=>{
       document.getElementById('kTotal').textContent=data.summary.total;
       document.getElementById('kOpen').textContent=data.summary.open;
@@ -71,11 +87,11 @@
           <div class="worktop"><div><div class="section-kicker">${item.resource.display_name}</div><h2>${item.title}</h2></div><span class="state">${item.state}</span></div>
           <div class="meta">
             <div class="metabox"><small>Responsable</small><strong>${item.responsible.display_name}</strong></div>
-            <div class="metabox"><small>Fecha objetivo</small><strong>${item.due_date}</strong></div>
+            <div class="metabox"><small>Fecha objetivo</small><strong>${dueLabel(item.due_date)}</strong></div>
             <div class="metabox"><small>Atención</small><strong>${item.attention}</strong></div>
           </div>
           <div class="cause"><strong>Causa:</strong> ${item.source.display_name}<br><strong>Regla:</strong> ${reasonLabel(item.trigger_reason)}</div>
-          <div class="finance"><strong>Contexto financiero:</strong> ${money(item.financial_context.amount_clp)} · ${item.financial_context.cycle}. <strong>No constituye una obligación actual.</strong></div>
+          <div class="finance"><strong>Contexto financiero:</strong> ${financialLabel(item.financial_context)}. <strong>No constituye una obligación actual.</strong></div>
         `;
         target.appendChild(card);
       }
