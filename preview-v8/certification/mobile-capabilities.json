@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.2",
+  "schema_version": "1.3",
   "invariant": "NO_CAPABILITY_WITHOUT_AUTOMATED_CERTIFICATION",
   "release_rule": "PREMERGE_AND_POSTDEPLOY_AUTOMATED_EVIDENCE_REQUIRED",
   "human_test_policy": "NOT_A_NORMAL_RELEASE_GATE",
@@ -52,63 +52,119 @@
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PWA_SHELL_CONTRACT", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PWA_SHELL_CONTRACT",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "mobile_admin_entry",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "mobile_admin_action_entrypoints",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
+    },
+    {
+      "id": "activity_registry_google_web",
+      "status": "active",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": [
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "noticias",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PUBLIC_CONTRACTS",
+        "GOOGLE_TO_V8_E2E",
+        "RESPONSIVE_MEDIA_E2E",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "equipos_series",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PUBLIC_CONTRACTS",
+        "GOOGLE_TO_V8_E2E",
+        "RESPONSIVE_MEDIA_E2E",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "plantel_jugadores",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PUBLIC_CONTRACTS",
+        "GOOGLE_TO_V8_E2E",
+        "RESPONSIVE_MEDIA_E2E",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "partidos_resultados",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PUBLIC_CONTRACTS",
+        "GOOGLE_TO_V8_E2E",
+        "RESPONSIVE_MEDIA_E2E",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "tabla_posiciones",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PUBLIC_CONTRACTS",
+        "GOOGLE_TO_V8_E2E",
+        "RESPONSIVE_MEDIA_E2E",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     },
     {
       "id": "galeria",
       "status": "active",
       "release_blocking": true,
       "manual_gate": false,
-      "tests": ["PUBLIC_CONTRACTS", "GOOGLE_TO_V8_E2E", "RESPONSIVE_MEDIA_E2E", "MOBILE_WEBKIT_CHROMIUM_E2E", "LIVE_PRODUCTION_E2E"]
+      "tests": [
+        "PUBLIC_CONTRACTS",
+        "GOOGLE_TO_V8_E2E",
+        "RESPONSIVE_MEDIA_E2E",
+        "MOBILE_WEBKIT_CHROMIUM_E2E",
+        "LIVE_PRODUCTION_E2E"
+      ]
     }
   ],
   "escalation_rule": {
