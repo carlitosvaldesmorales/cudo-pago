@@ -16,6 +16,13 @@ const DECISION_TRANSITIONS={
   CANCELLED:new Set(['PENDING_HUMAN'])
 };
 
+const EVENT_TRANSITIONS={
+  SCHEDULED:new Set(['LIVE','CANCELLED']),
+  LIVE:new Set(['COMPLETED','CANCELLED']),
+  COMPLETED:new Set([]),
+  CANCELLED:new Set([])
+};
+
 function assertRuntime(runtime){
   if(!runtime||runtime.schema_version!=='CUDO_MOCK_ADMIN_RUNTIME_V1') throw new Error('invalid mock runtime');
   if(!runtime.state||runtime.state.schema_version!=='CUDO_CLUB_OS_GOLDEN_MOCK_V1') throw new Error('invalid golden mock state');
@@ -139,6 +146,71 @@ function deriveWorkFromCreatedEvent(state,event,at){
   state.work_items.push(work);
   appendAudit(state,{kind:'WORK_DERIVED_FROM_SOURCE_EVENT',object_ref:work.work_id,source_ref:event.event_id,rule_id:work.derived_by_rule},at);
   return work;
+}
+
+function derivePostEventWork(state,event,at){
+  if(event.kind!=='MATCH'||event.state!=='COMPLETED') return [];
+  const actor=(state.actors||[]).find(x=>x.role==='OPERACIONES_ESTADIO')||(state.actors||[])[0];
+  if(!actor) throw new Error('no mock actor available for post-event work');
+  const suffix=String(event.event_id).replace(/^MOCK-EVENT-/,'');
+  const resourceRef=(event.resource_refs||[])[0]||null;
+  const specs=[
+    {
+      work_id:`MOCK-WORK-AUTO-CLEAN-${suffix}`,
+      title:`Aseo post-partido · ${event.display_name}`,
+      work_kind:'STADIUM_CLEANING',
+      rule:'MOCK_RULE_COMPLETED_MATCH_TO_STADIUM_CLEANING_V1'
+    },
+    {
+      work_id:`MOCK-WORK-AUTO-KIT-${suffix}`,
+      title:`Lavado de camisetas · ${event.display_name}`,
+      work_kind:'KIT_WASHING',
+      rule:'MOCK_RULE_COMPLETED_MATCH_TO_KIT_WASHING_V1'
+    }
+  ];
+  const created=[];
+  for(const spec of specs){
+    if((state.work_items||[]).some(x=>x.work_id===spec.work_id)) continue;
+    const work={
+      work_id:spec.work_id,
+      title:spec.title,
+      work_kind:spec.work_kind,
+      state:'OPEN',
+      attention:'PENDING',
+      priority:'NORMAL',
+      responsible_actor_id:actor.actor_id,
+      due_at:null,
+      source_ref:event.event_id,
+      resource_ref:resourceRef,
+      blocker_refs:[],
+      dependency_refs:[],
+      evidence_refs:[],
+      financial_obligation_refs:[],
+      derived_by_rule:spec.rule,
+      mock:true
+    };
+    state.work_items.push(work);
+    appendAudit(state,{kind:'POST_EVENT_WORK_CREATED',object_ref:work.work_id,source_ref:event.event_id,rule_id:spec.rule},at);
+    created.push(work);
+  }
+  return created;
+}
+
+function cancelDerivedPreparationForEvent(state,event,at){
+  const changed=[];
+  for(const work of state.work_items||[]){
+    if(work.source_ref!==event.event_id) continue;
+    if(work.work_kind!=='EVENT_PREPARATION') continue;
+    if(work.derived_by_rule!=='MOCK_RULE_SCHEDULED_MATCH_TO_PREPARATION_WORK_V1') continue;
+    if(!['OPEN','IN_PROGRESS','BLOCKED','WAITING_EXTERNAL'].includes(work.state)) continue;
+    const from=work.state;
+    work.state='CANCELLED';
+    work.attention='CANCELLED';
+    work.blocker_reason=null;
+    appendAudit(state,{kind:'AUTO_CANCEL_EVENT_PREPARATION',object_ref:work.work_id,source_ref:event.event_id,from,to:'CANCELLED'},at);
+    changed.push({kind:'AUTO_CANCEL_EVENT_PREPARATION',work_id:work.work_id,from,to:'CANCELLED'});
+  }
+  return changed;
 }
 
 export function createMockRuntime(golden,{createdAt='2026-09-18T18:30:00-03:00'}={}){
@@ -282,6 +354,23 @@ export function applyMockAdminAction(runtime,action){
     state.financial_obligations.push(obligation);
     appendAudit(state,{kind:'SOURCE_FINANCIAL_OBLIGATION_CREATED',object_ref:obligation.obligation_id,cause_ref:obligation.cause_ref,amount_clp:amount},at);
     effects.push({kind:'SOURCE_FINANCIAL_OBLIGATION_CREATED',obligation_id:obligation.obligation_id,amount_clp:amount});
+  } else if(action.type==='EVENT_TRANSITION'){
+    const event=findBy(state.events,'event_id',action.event_id,'event');
+    const expected=action.expected_state||event.state;
+    if(event.state!==expected) throw new Error(`event state conflict: ${event.state} != ${expected}`);
+    const allowed=EVENT_TRANSITIONS[event.state]||new Set();
+    if(!allowed.has(action.next_state)) throw new Error(`invalid event transition ${event.state} -> ${action.next_state}`);
+    const from=event.state;
+    event.state=action.next_state;
+    appendAudit(state,{kind:'EVENT_TRANSITION',object_ref:event.event_id,from,to:event.state,reason:action.reason||null},at);
+    effects.push({kind:'EVENT_TRANSITION',event_id:event.event_id,from,to:event.state});
+    if(event.state==='COMPLETED'){
+      const post=derivePostEventWork(state,event,at);
+      for(const work of post) effects.push({kind:'POST_EVENT_WORK_CREATED',work_id:work.work_id,source_ref:event.event_id});
+    }
+    if(event.state==='CANCELLED'){
+      effects.push(...cancelDerivedPreparationForEvent(state,event,at));
+    }
   } else if(action.type==='WORK_TRANSITION'){
     const work=findBy(state.work_items,'work_id',action.work_id,'work');
     const expected=action.expected_state||work.state;
