@@ -1,0 +1,320 @@
+{
+  "schema_version": "CUDO_REAL_RESPONSIBILITY_WORK_STATE_IRRIGATION_V1",
+  "cluster_id": "CUDO-WORK-CLUSTER-SEASONAL-IRRIGATION-V1",
+  "production_write": false,
+  "real_source": {
+    "artifact": "Check-List tareas estadio y partidos.xlsx",
+    "sheet": "Check list",
+    "range": "B3:C3",
+    "observed_task": "Regadío del estadio",
+    "observed_schedule": [
+      "MONDAY",
+      "TUESDAY"
+    ],
+    "observed_conditional_extension": "WEDNESDAY_IF_WATER_REQUIRES",
+    "seasonal_responsibility": [
+      {
+        "months": [
+          10,
+          11
+        ],
+        "responsible": "Mario Díaz"
+      },
+      {
+        "months": [
+          12,
+          1,
+          2,
+          3,
+          4
+        ],
+        "responsible": "Andres Salinas \"Necho\""
+      }
+    ],
+    "payment_amount_clp": 50000,
+    "payment_basis": "PER_COMPLETED_IRRIGATION",
+    "payment_settlement_window": "FIRST_FIVE_DAYS_OF_MONTH"
+  },
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-MARIO-DIAZ-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Mario Díaz",
+        "role_kind": "IRRIGATION_COLLABORATOR"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C3"
+          ]
+        },
+        "role_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-ANDRES-SALINAS-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Andres Salinas \"Necho\"",
+        "role_kind": "IRRIGATION_COLLABORATOR"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C3"
+          ]
+        },
+        "role_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-ESTADIO-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "resource_kind": "STADIUM",
+        "display_name": "Estadio CUDO"
+      },
+      "field_semantics": {
+        "resource_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"
+          ]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RULE-SEASONAL-IRRIGATION-001",
+      "object_type": "RULE_DECISION",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "work_rule_kind": "SCHEDULED_SEASONAL_RESOURCE_WORK",
+        "rule_id": "WORK_RULE_SEASONAL_IRRIGATION_V1",
+        "work_kind": "IRRIGATION",
+        "title": "Regadío del estadio",
+        "schedule_weekdays": [
+          "MONDAY",
+          "TUESDAY"
+        ],
+        "conditional_extension_weekday": "WEDNESDAY",
+        "schedule_condition": "MAY_EXTEND_TO_WEDNESDAY_DEPENDING_ON_WATER",
+        "seasonal_assignments": [
+          {
+            "months": [
+              10,
+              11
+            ],
+            "actor_id": "CUDO-ACTOR-MARIO-DIAZ-001"
+          },
+          {
+            "months": [
+              12,
+              1,
+              2,
+              3,
+              4
+            ],
+            "actor_id": "CUDO-ACTOR-ANDRES-SALINAS-001"
+          }
+        ],
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "priority": "NORMAL",
+        "financial_context_amount_clp": 50000,
+        "financial_context_cycle": "PER_COMPLETED_IRRIGATION",
+        "financial_context_condition": "MONTHLY_SETTLEMENT_FIRST_FIVE_DAYS",
+        "financial_context_semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "field_semantics": {
+        "work_rule_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "rule_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "work_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "title": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "schedule_weekdays": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "conditional_extension_weekday": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "schedule_condition": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "seasonal_assignments": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "resource_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "priority": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "financial_context_amount_clp": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "financial_context_cycle": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "financial_context_condition": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        },
+        "financial_context_semantics": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-RULE-IRRIGATION-RESOURCE-001",
+          "relationship_type": "APPLIES_TO_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-ESTADIO-001"
+        },
+        {
+          "relationship_id": "REL-RULE-IRRIGATION-MARIO-001",
+          "relationship_type": "SEASONAL_ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-MARIO-DIAZ-001"
+        },
+        {
+          "relationship_id": "REL-RULE-IRRIGATION-ANDRES-001",
+          "relationship_type": "SEASONAL_ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-ANDRES-SALINAS-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T17:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B3:C3"
+        ]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "expected": {
+    "october": {
+      "planning_date": "2026-10-05",
+      "responsible": "Mario Díaz",
+      "work_id": "CUDO-WORK-IRRIGATION-20261005",
+      "start_date": "2026-10-05",
+      "expected_end_date": "2026-10-06",
+      "conditional_extension_date": "2026-10-07"
+    },
+    "december": {
+      "planning_date": "2026-12-07",
+      "responsible": "Andres Salinas \"Necho\"",
+      "work_id": "CUDO-WORK-IRRIGATION-20261207"
+    },
+    "september": {
+      "planning_date": "2026-09-21",
+      "created_work_items": 0
+    }
+  }
+}

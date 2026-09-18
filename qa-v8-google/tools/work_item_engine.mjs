@@ -48,11 +48,12 @@ function stableTransitionId(payload){
   return 'CUDO-WORK-TRANS-'+crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0,20).toUpperCase();
 }
 
-export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:00:00.000Z'}){
+export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:00:00.000Z',planningDate=null}){
   const state=clone(objects);
   const map=objectMap(state);
   const weeklyRules=state.filter(x=>x.object_type==='RULE_DECISION'&&x.data?.work_rule_kind==='WEEKLY_RESOURCE_MAINTENANCE_WITH_EVENT_CONFLICT');
   const postEventRules=state.filter(x=>x.object_type==='RULE_DECISION'&&x.data?.work_rule_kind==='POST_EVENT_RESOURCE_WORK');
+  const scheduledSeasonalRules=state.filter(x=>x.object_type==='RULE_DECISION'&&x.data?.work_rule_kind==='SCHEDULED_SEASONAL_RESOURCE_WORK');
   const created=[];
   const audited=[];
 
@@ -218,6 +219,93 @@ export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:0
     }
   }
 
+  const scheduleDate=planningDate||String(now).slice(0,10);
+  for(const rule of scheduledSeasonalRules){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(scheduleDate)) throw new Error(`invalid planningDate ${scheduleDate}`);
+    const month=Number(scheduleDate.slice(5,7));
+    const assignment=(rule.data.seasonal_assignments||[]).find(x=>(x.months||[]).includes(month));
+    if(!assignment){
+      audited.push({kind:'NOOP_OUTSIDE_ACTIVE_SEASON',rule_id:rule.object_id,planning_date:scheduleDate});
+      continue;
+    }
+    const actor=map.get(assignment.actor_id);
+    if(!actor||actor.object_type!=='ACTOR') throw new Error(`${rule.object_id}: seasonal actor ${assignment.actor_id} not found`);
+    const resource=relationTarget(rule,'APPLIES_TO_RESOURCE',map,'RESOURCE_FACILITY');
+    const weekStart=mondayOf(scheduleDate);
+    const scheduleDays=rule.data.schedule_weekdays||[];
+    if(scheduleDays.length<1) throw new Error(`${rule.object_id}: schedule_weekdays required`);
+    const startDate=dateForWeekday(weekStart,scheduleDays[0]);
+    const expectedEndDate=dateForWeekday(weekStart,scheduleDays[scheduleDays.length-1]);
+    const extensionDate=rule.data.conditional_extension_weekday
+      ? dateForWeekday(weekStart,rule.data.conditional_extension_weekday)
+      : null;
+    const workKindId=String(rule.data.work_kind).replaceAll('_','-');
+    const workId=`CUDO-WORK-${workKindId}-${weekStart.replaceAll('-','')}`;
+    if(map.has(workId)){
+      audited.push({kind:'NOOP_EXISTING_WORK',work_id:workId,planning_date:scheduleDate});
+      continue;
+    }
+    const work={
+      schema_version:'CUDO_SHARED_OBJECT_CONTRACT_V1',
+      object_id:workId,
+      object_type:'WORK_ITEM',
+      object_version:1,
+      lifecycle_state:'OPEN',
+      data:{
+        work_kind:rule.data.work_kind,
+        title:rule.data.title,
+        responsible_actor_id:actor.object_id,
+        responsible_display_name:actor.data.display_name,
+        resource_id:resource.object_id,
+        resource_display_name:resource.data.display_name,
+        source_object_id:rule.object_id,
+        source_display_name:rule.data.title,
+        due_date:expectedEndDate,
+        schedule_start_date:startDate,
+        schedule_expected_end_date:expectedEndDate,
+        schedule_conditional_extension_date:extensionDate,
+        schedule_condition:rule.data.schedule_condition??null,
+        priority:rule.data.priority,
+        trigger_reason:'SEASONAL_RECURRING_SCHEDULE',
+        financial_context_amount_clp:rule.data.financial_context_amount_clp??null,
+        financial_context_cycle:rule.data.financial_context_cycle??null,
+        financial_context_condition:rule.data.financial_context_condition??null,
+        financial_context_semantics:rule.data.financial_context_semantics
+      },
+      field_semantics:Object.fromEntries([
+        'work_kind','title','responsible_actor_id','responsible_display_name','resource_id',
+        'resource_display_name','source_object_id','source_display_name','due_date',
+        'schedule_start_date','schedule_expected_end_date','schedule_conditional_extension_date',
+        'schedule_condition','priority','trigger_reason','financial_context_amount_clp',
+        'financial_context_cycle','financial_context_condition','financial_context_semantics'
+      ].map(field=>[field,{state_kind:'DERIVED',rule_ids:[rule.data.rule_id||rule.object_id]}])),
+      relationships:[
+        {relationship_id:`REL-${workId}-ACTOR`,relationship_type:'ASSIGNED_TO',target_object_id:actor.object_id},
+        {relationship_id:`REL-${workId}-RESOURCE`,relationship_type:'APPLIES_TO_RESOURCE',target_object_id:resource.object_id},
+        {relationship_id:`REL-${workId}-RULE`,relationship_type:'DERIVED_FROM_RULE',target_object_id:rule.object_id}
+      ],
+      provenance:{
+        created_at:now,
+        updated_at:null,
+        source_system:'CUDO_WORK_ITEM_ENGINE',
+        source_refs:[...(rule.provenance?.source_refs||[])],
+        transition_id:null
+      },
+      legacy_refs:[]
+    };
+    state.push(work);
+    map.set(workId,work);
+    created.push(work);
+    audited.push({
+      kind:'WORK_ITEM_CREATED',
+      work_id:workId,
+      responsible_actor_id:actor.object_id,
+      source_object_id:rule.object_id,
+      due_date:expectedEndDate,
+      reason:work.data.trigger_reason
+    });
+  }
+
   return {ok:true,objects:state,created,audit:audited,production_write:false};
 }
 
@@ -291,6 +379,12 @@ export function buildClubOperationalStateProjection({
       resource:{resource_id:work.data.resource_id,display_name:work.data.resource_display_name},
       source:{object_id:work.data.source_object_id,display_name:work.data.source_display_name},
       trigger_reason:work.data.trigger_reason,
+      schedule:{
+        start_date:work.data.schedule_start_date??null,
+        expected_end_date:work.data.schedule_expected_end_date??dueDate,
+        conditional_extension_date:work.data.schedule_conditional_extension_date??null,
+        condition:work.data.schedule_condition??null
+      },
       financial_context:{
         amount_clp:work.data.financial_context_amount_clp??null,
         min_amount_clp:work.data.financial_context_min_amount_clp??null,

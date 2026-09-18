@@ -51,6 +51,17 @@ export function loadOperationalWorkState(statePath=DEFAULT_STATE_PATH){
   }
   return state;
 }
+function scheduleContextLabel(schedule){
+  if(!schedule?.start_date) return '';
+  let text=`${schedule.start_date} -> ${schedule.expected_end_date||''}`;
+  if(schedule.conditional_extension_date){
+    text+=` · posible extensión ${schedule.conditional_extension_date}`;
+  }
+  if(schedule.condition==='MAY_EXTEND_TO_WEDNESDAY_DEPENDING_ON_WATER'){
+    text+=' según agua';
+  }
+  return text;
+}
 function financialContextLabel(ctx){
   if(ctx?.amount_clp!=null) return `CLP ${ctx.amount_clp} · ${ctx.cycle||''}`;
   if(ctx?.min_amount_clp!=null||ctx?.max_amount_clp!=null){
@@ -67,10 +78,10 @@ function financialContextLabel(ctx){
 }
 function buildControlRows(projection){
   return [
-    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','OBJECT_VERSION','AUTHORITY'],
+    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','SCHEDULE_CONTEXT','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','OBJECT_VERSION','AUTHORITY'],
     ...projection.items.map(item=>[
       item.work_id,item.title,item.state,item.responsible.display_name,item.due_date,item.attention,
-      item.resource.display_name,item.source.display_name,financialContextLabel(item.financial_context),
+      item.resource.display_name,item.source.display_name,scheduleContextLabel(item.schedule),financialContextLabel(item.financial_context),
       item.financial_context.semantics,item.object_version,projection.authority
     ])
   ];
@@ -197,7 +208,7 @@ export function planWorkStateRequests({
     op:'replace',
     kind:'WORK_CONTROL',
     spreadsheetId:WORK_SHEET_ID,
-    range:`${WORK_CONTROL_SHEET}!A:L`,
+    range:`${WORK_CONTROL_SHEET}!A:M`,
     values:buildControlRows(projection)
   });
 

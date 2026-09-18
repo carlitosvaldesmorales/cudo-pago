@@ -32,5 +32,12 @@
     "transition_audit_required": true,
     "evidence_required_for_DONE": true,
     "production_write": false
-  }
+  },
+  "optional_schedule_fields": [
+    "schedule_start_date",
+    "schedule_expected_end_date",
+    "schedule_conditional_extension_date",
+    "schedule_condition"
+  ],
+  "due_date_semantics": "May be a concrete due date when the source supports one. Scheduled work can also expose an explicit operational window and conditional extension without inventing a deadline."
 }
