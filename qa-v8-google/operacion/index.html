@@ -40,7 +40,7 @@
   </header>
   <main class="opsmain">
     <div class="wrap">
-      <div class="opsnotice"><strong>Prueba QA controlada.</strong> Las tareas y responsables provienen del checklist real CUDO. Los partidos mostrados como causa son triggers sintéticos QA y no representan partidos reales publicados. Los montos son contexto de las reglas de trabajo, no deudas actuales.</div>
+      <div class="opsnotice"><strong>Prueba QA controlada.</strong> Las tareas y responsables provienen del checklist real CUDO. Los partidos mostrados como causa son triggers sintéticos QA y no representan partidos reales publicados. Los montos de las reglas son contexto hasta que un trabajo completado derive una obligación real; cuando exista, se muestra separada y explícitamente.</div>
       <section class="opskpis" aria-label="Resumen operacional">
         <div class="opskpi"><small>Trabajo total</small><strong id="kTotal">—</strong></div>
         <div class="opskpi"><small>Pendiente</small><strong id="kOpen">—</strong></div>
@@ -74,6 +74,11 @@
       }
       return text;
     };
+    const financialEffectLabel=effect=>{
+      if(!effect) return '';
+      const payee=effect.payee_display_name?' · a '+effect.payee_display_name:'';
+      return effect.state+' · '+money(effect.outstanding_amount_clp)+' pendiente'+payee;
+    };
     const financialLabel=ctx=>{
       if(ctx.amount_clp!=null) return money(ctx.amount_clp)+' · '+(ctx.cycle||'');
       if(ctx.min_amount_clp!=null||ctx.max_amount_clp!=null){
@@ -104,7 +109,7 @@
             <div class="metabox"><small>Atención</small><strong>${item.attention}</strong></div>
           </div>
           <div class="cause"><strong>Causa:</strong> ${item.source.display_name}<br><strong>Regla:</strong> ${reasonLabel(item.trigger_reason)}${scheduleLabel(item.schedule)?'<br><strong>Ventana:</strong> '+scheduleLabel(item.schedule):''}</div>
-          <div class="finance"><strong>Contexto financiero:</strong> ${financialLabel(item.financial_context)}. <strong>No constituye una obligación actual.</strong></div>
+          <div class="finance"><strong>Contexto financiero de la regla:</strong> ${financialLabel(item.financial_context)}.${item.financial_effect?'<br><strong>Efecto financiero real:</strong> '+financialEffectLabel(item.financial_effect):' <strong>Aún no constituye una obligación actual.</strong>'}</div>
         `;
         target.appendChild(card);
       }

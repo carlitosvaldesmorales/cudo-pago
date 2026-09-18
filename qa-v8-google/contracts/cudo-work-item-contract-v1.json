@@ -39,5 +39,10 @@
     "schedule_conditional_extension_date",
     "schedule_condition"
   ],
-  "due_date_semantics": "May be a concrete due date when the source supports one. Scheduled work can also expose an explicit operational window and conditional extension without inventing a deadline."
+  "due_date_semantics": "May be a concrete due date when the source supports one. Scheduled work can also expose an explicit operational window and conditional extension without inventing a deadline.",
+  "financial_effect_policy": {
+    "contract": "CUDO_WORK_FINANCIAL_EFFECT_CONTRACT_V1",
+    "rule": "A completed work item may derive a financial obligation only when source evidence resolves exact amount and payment basis. Completion never implies payment.",
+    "no_double_entry": true
+  }
 }
