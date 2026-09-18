@@ -13,6 +13,8 @@ on:
       - 'preview-v8/data/mock-manifest.json'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/tools/validate_full_club_os_mock.mjs'
+      - 'preview-v8/index.html'
+      - 'preview-v8/club-os-mock/index.html'
       - '.github/workflows/certify-cudo-full-club-os-mock.yml'
   workflow_dispatch:
 
