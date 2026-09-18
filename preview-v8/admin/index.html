@@ -58,7 +58,7 @@
     </section>
 
     <section class="section"><h2>Responsables</h2><div class="tablewrap"><table class="table"><thead><tr><th>NOMBRE</th><th>TIPO</th><th>ROL</th></tr></thead><tbody id="actors"></tbody></table></div></section>
-    <section class="section"><h2>Eventos</h2><div class="tablewrap"><table class="table"><thead><tr><th>EVENTO</th><th>TIPO</th><th>ESTADO</th><th>INICIO</th></tr></thead><tbody id="events"></tbody></table></div></section>
+    <section class="section"><h2>Eventos</h2><div class="tablewrap"><table class="table"><thead><tr><th>EVENTO</th><th>TIPO</th><th>ESTADO</th><th>INICIO</th><th>ACCIÓN</th></tr></thead><tbody id="events"></tbody></table></div></section>
     <section class="section"><h2>Trabajo</h2><div id="work" class="grid"></div></section>
     <section class="section"><h2>Recursos</h2><div id="resources" class="grid"></div></section>
     <section class="section"><h2>Decisiones</h2><div id="decisions" class="grid"></div></section>
@@ -113,6 +113,11 @@ function apply(action){
     toast(result.effects.map(x=>x.kind).join(' · ')||'Acción aplicada');
   }catch(err){toast(err.message||String(err),true)}
 }
+function eventButtons(e){
+  if(e.state==='SCHEDULED') return '<button class="btnx" data-event="'+esc(e.event_id)+'" data-event-next="LIVE">Iniciar</button> <button class="btnx warn" data-event="'+esc(e.event_id)+'" data-event-next="CANCELLED">Cancelar</button>';
+  if(e.state==='LIVE') return '<button class="btnx" data-event="'+esc(e.event_id)+'" data-event-next="COMPLETED">Finalizar</button> <button class="btnx warn" data-event="'+esc(e.event_id)+'" data-event-next="CANCELLED">Cancelar</button>';
+  return '—';
+}
 function workButtons(w){
   const buttons=[];
   const add=(label,next,cls='')=>buttons.push(`<button class="${cls}" data-work="${esc(w.work_id)}" data-next="${next}">${label}</button>`);
@@ -131,7 +136,11 @@ function render(){
   document.getElementById('sWaiting').textContent=v.operation.summary.waiting_external;
   document.getElementById('sPayable').textContent=money(v.finance.summary.outstanding_payable);
   document.getElementById('actors').innerHTML=v.club.actors.map(a=>`<tr><td>${esc(a.display_name)}</td><td>${esc(a.actor_kind)}</td><td>${esc(a.role)}</td></tr>`).join('');
-  document.getElementById('events').innerHTML=v.club.events.map(e=>`<tr><td>${esc(e.display_name)}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td></tr>`).join('');
+  document.getElementById('events').innerHTML=v.club.events.map(e=>`<tr><td>${esc(e.display_name)}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td><td>${eventButtons(e)}</td></tr>`).join('');
+  document.querySelectorAll('[data-event]').forEach(b=>b.addEventListener('click',()=>{
+    const e=v.club.events.find(x=>x.event_id===b.dataset.event);
+    apply({action_id:'EVT-'+Date.now(),type:'EVENT_TRANSITION',event_id:e.event_id,expected_state:e.state,next_state:b.dataset.eventNext,reason:'Acción desde Admin Mock'});
+  }));
   refreshSourceSelects();
 
   document.getElementById('work').innerHTML=v.operation.items.map(w=>`
