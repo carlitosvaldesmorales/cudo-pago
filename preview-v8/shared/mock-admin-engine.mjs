@@ -552,6 +552,10 @@ export function applyMockAdminAction(runtime,action){
     obligation.state=obligation.outstanding_amount_clp===0?'SETTLED':'PARTIALLY_SETTLED';
     appendAudit(state,{kind:'FINANCIAL_SETTLEMENT',object_ref:obligation.obligation_id,movement_ref:movementId,amount_clp:amount},at);
     effects.push({kind:'FINANCIAL_SETTLEMENT',obligation_id:obligation.obligation_id,movement_id:movementId,amount_clp:amount,new_state:obligation.state,outstanding_amount_clp:obligation.outstanding_amount_clp});
+    if(obligation.kind==='MEMBERSHIP_DUE'&&obligation.cause_ref){
+      const memberEffect=reconcileMemberFinancialState(state,obligation.cause_ref,at);
+      if(memberEffect) effects.push(memberEffect);
+    }
   } else {
     throw new Error(`unsupported action type ${action.type}`);
   }
