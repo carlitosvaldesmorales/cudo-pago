@@ -1,0 +1,64 @@
+name: Certify CUDO Real QA Sheets Refresh Adapter
+
+on:
+  push:
+    branches:
+      - 'feat/cudo-real-qa-sheet-refresh-adapter-v1'
+    paths:
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs'
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet_fixture_harness.mjs'
+      - 'qa-v8-google/evidence/real-flow-san-ramon/**'
+      - '.github/workflows/certify-cudo-real-qa-sheets-refresh-adapter.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs'
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet_fixture_harness.mjs'
+      - 'qa-v8-google/evidence/real-flow-san-ramon/**'
+      - '.github/workflows/certify-cudo-real-qa-sheets-refresh-adapter.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cudo-real-qa-sheets-refresh-adapter
+  cancel-in-progress: false
+
+jobs:
+  certify-planning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate adapter syntax
+        run: |
+          node --check qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs
+          node --check qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet_fixture_harness.mjs
+      - name: Certify idempotence and revision guards
+        run: node qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet_fixture_harness.mjs
+
+  apply-to-isolated-qa:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/cudo-real-qa-sheet-refresh-adapter-v1'
+    needs: certify-planning
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_QA_SAN_RAMON_SPREADSHEET_ID: '1SBeVjOan92rcJfW4T5jO47rLF2JuUuh3yiepLUqb_lk'
+      CUDO_QA_EXPECT_CURRENT_REVISION: 'CUDO-REVISION-QA-ADAPTER-PROBE-V0'
+      CUDO_QA_SHEET_APPLY: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply canonical read model to allowlisted isolated QA Sheet
+        run: node qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs
+      - name: Re-run to prove idempotent NOOP
+        run: node qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs
