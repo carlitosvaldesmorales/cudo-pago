@@ -59,7 +59,12 @@ out=apply({
   kind:'MATCH',
   state:'SCHEDULED',
   starts_at:'2026-10-11T15:00:00-03:00',
-  resource_refs:['MOCK-RESOURCE-RUNTIME-FIELD-01']
+  resource_refs:['MOCK-RESOURCE-RUNTIME-FIELD-01'],
+  local:'CUDO',
+  visita:'Rival Runtime',
+  categoria:'PRIMERA',
+  competencia:'Campeonato Club OS',
+  recinto:'Cancha Auxiliar'
 });
 const event=runtime.state.events.find(x=>x.event_id==='MOCK-EVENT-RUNTIME-MATCH-01');
 assert.equal(event.display_name,'Partido Nuevo (Mock)');
