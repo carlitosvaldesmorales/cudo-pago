@@ -64,11 +64,12 @@ function cudoWorkRender_(message){
         '<div class="actions">'+actions+'</div></form>'
       : '<div class="closed">Sin acciones pendientes para este estado.</div>';
     return '<article class="card">'+
-      '<div class="meta">'+cudoWorkEsc_(r.RESOURCE)+' · vence '+cudoWorkEsc_(r.DUE_DATE)+'</div>'+
+      '<div class="meta">'+cudoWorkEsc_(r.RESOURCE)+(r.DUE_DATE?' · vence '+cudoWorkEsc_(r.DUE_DATE):' · sin fecha definida')+'</div>'+
       '<h2>'+cudoWorkEsc_(r.TITLE)+'</h2>'+
       '<p><b>Responsable:</b> '+cudoWorkEsc_(r.RESPONSIBLE)+'</p>'+
       '<p><b>Estado:</b> '+cudoWorkEsc_(r.STATE)+' · <b>Atención:</b> '+cudoWorkEsc_(r.ATTENTION)+'</p>'+
       '<p><b>Causa:</b> '+cudoWorkEsc_(r.SOURCE)+'</p>'+
+      (r.FINANCIAL_CONTEXT?'<p><b>Contexto financiero:</b> '+cudoWorkEsc_(r.FINANCIAL_CONTEXT)+'</p>':'')+
       form+
       '</article>';
   }).join('');

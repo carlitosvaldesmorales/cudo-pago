@@ -47,6 +47,13 @@ assert.equal(start.projection.items[0].state,'IN_PROGRESS');
 assert.equal(start.state_store.audit.length,1);
 assert.equal(start.sheet_mutations.some(x=>x.kind==='WORK_AUDIT'),true);
 assert.equal(start.sheet_mutations.some(x=>x.kind==='WORK_CONTROL'),true);
+const controlMutation=start.sheet_mutations.find(x=>x.kind==='WORK_CONTROL');
+assert.equal(controlMutation.values[0][8],'FINANCIAL_CONTEXT');
+assert.equal(controlMutation.values[0][9],'FINANCIAL_CONTEXT_SEMANTICS');
+const controlText=controlMutation.values.slice(1).map(row=>String(row[8]||''));
+assert.ok(controlText.includes('CLP 50000 · EVERY_TWO_MONTHS'));
+assert.ok(controlText.includes('CLP 25000-30000 · según suciedad'));
+assert.ok(controlText.includes('CLP 15000 por equipo lavado'));
 
 const noEvidence=planWorkStateRequests({
   requestValues:[
