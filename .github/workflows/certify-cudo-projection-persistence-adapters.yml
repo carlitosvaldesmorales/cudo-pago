@@ -1,0 +1,40 @@
+name: Certify CUDO Projection Persistence Adapters
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-projection-persistence-adapters-v1.json'
+      - 'qa-v8-google/contracts/cudo-projection-persistence-fixture-v1.json'
+      - 'qa-v8-google/tools/projection_persistence_adapters.mjs'
+      - 'qa-v8-google/tools/certify_projection_persistence_adapters.mjs'
+      - '.github/workflows/certify-cudo-projection-persistence-adapters.yml'
+  push:
+    branches:
+      - 'feat/cudo-projection-persistence-adapters-v1'
+    paths:
+      - 'qa-v8-google/contracts/cudo-projection-persistence-adapters-v1.json'
+      - 'qa-v8-google/contracts/cudo-projection-persistence-fixture-v1.json'
+      - 'qa-v8-google/tools/projection_persistence_adapters.mjs'
+      - 'qa-v8-google/tools/certify_projection_persistence_adapters.mjs'
+      - '.github/workflows/certify-cudo-projection-persistence-adapters.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate adapter syntax
+        run: |
+          node --check qa-v8-google/tools/projection_persistence_adapters.mjs
+          node --check qa-v8-google/tools/certify_projection_persistence_adapters.mjs
+      - name: Certify projection and persistence adapters
+        run: node qa-v8-google/tools/certify_projection_persistence_adapters.mjs
