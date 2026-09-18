@@ -414,7 +414,121 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='OCTAGONAL_INCIDENT_APPLY'){
+  if(action.type==='FUNDRAISING_EVENT_PREPARE'){
+    const eventId=requireMockId(action.event_id,'MOCK-EVENT-FUNDRAISING-');
+    ensureUnique(state.events,'event_id',eventId,'fundraising event');
+    const permissionResponsible=findBy(state.actors,'actor_id',action.permission_responsible_actor_id,'permission responsible actor');
+    const prizeResponsible=findBy(state.actors,'actor_id',action.prize_responsible_actor_id,'prize responsible actor');
+    const permissionTarget=findBy(state.actors,'actor_id',action.permission_target_actor_id,'permission external target');
+    const prizeTarget=findBy(state.actors,'actor_id',action.prize_target_actor_id,'prize external target');
+    if(permissionResponsible.actor_kind!=='PERSON'||prizeResponsible.actor_kind!=='PERSON') throw new Error('fundraising responsible actors must be PERSON');
+    if(permissionTarget.actor_kind!=='EXTERNAL_ORGANIZATION'||prizeTarget.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('fundraising external targets must be EXTERNAL_ORGANIZATION');
+    if(action.resource_ref) findBy(state.resources,'resource_id',action.resource_ref,'fundraising venue resource');
+    const purpose=String(action.purpose_text||'').trim();
+    if(!purpose) throw new Error('fundraising purpose_text required');
+    const suffix=eventId.replace(/^MOCK-EVENT-FUNDRAISING-/,'');
+    const permissionWorkId=`MOCK-WORK-FUNDRAISING-PERMISSION-${suffix}`;
+    const prizeWorkId=`MOCK-WORK-FUNDRAISING-PRIZE-${suffix}`;
+    ensureUnique(state.work_items,'work_id',permissionWorkId,'fundraising permission work');
+    ensureUnique(state.work_items,'work_id',prizeWorkId,'fundraising prize work');
+    const event={
+      event_id:eventId,
+      kind:'FUNDRAISING',
+      display_name:syntheticName(action.display_name),
+      state:'SCHEDULED',
+      starts_at:action.starts_at||null,
+      resource_refs:action.resource_ref?[action.resource_ref]:[],
+      fundraising:{
+        purpose_text:purpose,
+        permission_work_ref:permissionWorkId,
+        prize_solicitation_work_ref:prizeWorkId,
+        donated_prize_resource_refs:[],
+        mock:true
+      },
+      mock:true
+    };
+    const permissionWork={
+      work_id:permissionWorkId,
+      title:`Gestionar permiso externo · ${event.display_name}`,
+      work_kind:'FUNDRAISING_PERMISSION_REQUEST',
+      state:'OPEN',
+      attention:'PENDING',
+      priority:'HIGH',
+      responsible_actor_id:permissionResponsible.actor_id,
+      external_target_actor_id:permissionTarget.actor_id,
+      due_at:action.permission_due_at||null,
+      source_ref:eventId,
+      resource_ref:action.resource_ref||null,
+      blocker_refs:[],
+      dependency_refs:[],
+      evidence_refs:[],
+      financial_obligation_refs:[],
+      derived_by_rule:'MOCK_RULE_FUNDRAISING_TO_PERMISSION_WORK_V1',
+      mock:true
+    };
+    const prizeWork={
+      work_id:prizeWorkId,
+      title:`Solicitar premio / donación · ${event.display_name}`,
+      work_kind:'FUNDRAISING_PRIZE_SOLICITATION',
+      state:'OPEN',
+      attention:'PENDING',
+      priority:'NORMAL',
+      responsible_actor_id:prizeResponsible.actor_id,
+      external_target_actor_id:prizeTarget.actor_id,
+      due_at:action.prize_due_at||null,
+      source_ref:eventId,
+      resource_ref:null,
+      blocker_refs:[],
+      dependency_refs:[],
+      evidence_refs:[],
+      financial_obligation_refs:[],
+      derived_by_rule:'MOCK_RULE_FUNDRAISING_TO_PRIZE_SOLICITATION_WORK_V1',
+      mock:true
+    };
+    state.events.push(event);
+    state.work_items.push(permissionWork,prizeWork);
+    appendAudit(state,{kind:'FUNDRAISING_EVENT_PLANNED',object_ref:eventId,purpose_text:purpose,permission_target_actor_ref:permissionTarget.actor_id,prize_target_actor_ref:prizeTarget.actor_id},at);
+    appendAudit(state,{kind:'FUNDRAISING_PERMISSION_WORK_DERIVED',object_ref:permissionWorkId,source_ref:eventId,responsible_actor_ref:permissionResponsible.actor_id,external_target_actor_ref:permissionTarget.actor_id},at);
+    appendAudit(state,{kind:'FUNDRAISING_PRIZE_WORK_DERIVED',object_ref:prizeWorkId,source_ref:eventId,responsible_actor_ref:prizeResponsible.actor_id,external_target_actor_ref:prizeTarget.actor_id},at);
+    effects.push({kind:'FUNDRAISING_EVENT_PLANNED',event_id:eventId});
+    effects.push({kind:'FUNDRAISING_PERMISSION_WORK_DERIVED',work_id:permissionWorkId,event_id:eventId});
+    effects.push({kind:'FUNDRAISING_PRIZE_WORK_DERIVED',work_id:prizeWorkId,event_id:eventId});
+  } else if(action.type==='DONATED_PRIZE_CONFIRM'){
+    const resourceId=requireMockId(action.resource_id,'MOCK-RESOURCE-DONATED-PRIZE-');
+    ensureUnique(state.resources,'resource_id',resourceId,'donated prize resource');
+    const work=findBy(state.work_items,'work_id',action.work_id,'prize solicitation work');
+    if(work.work_kind!=='FUNDRAISING_PRIZE_SOLICITATION') throw new Error('donated prize requires fundraising prize solicitation work');
+    if(work.state!=='DONE') throw new Error('donated prize requires completed solicitation work');
+    const evidenceRef=String(action.evidence_ref||'').trim();
+    if(!evidenceRef||!(work.evidence_refs||[]).includes(evidenceRef)) throw new Error('donated prize requires solicitation evidence');
+    const evidence=findBy(state.evidence,'evidence_id',evidenceRef,'donation evidence');
+    if(evidence.state!=='AVAILABLE') throw new Error('donation evidence must be AVAILABLE');
+    const donorActorId=String(action.donor_actor_id||work.external_target_actor_id||'').trim();
+    if(!work.external_target_actor_id||donorActorId!==work.external_target_actor_id) throw new Error('donor actor must match solicitation external target');
+    const donor=findBy(state.actors,'actor_id',donorActorId,'donor actor');
+    if(donor.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('donor actor must be EXTERNAL_ORGANIZATION');
+    const event=findBy(state.events,'event_id',work.source_ref,'fundraising event');
+    if(event.kind!=='FUNDRAISING'||!event.fundraising) throw new Error('donated prize source must be FUNDRAISING event');
+    const resource={
+      resource_id:resourceId,
+      kind:'DONATED_PRIZE',
+      display_name:syntheticName(action.display_name),
+      state:'AVAILABLE',
+      attention:'NORMAL',
+      donor_actor_id:donor.actor_id,
+      event_ref:event.event_id,
+      source_work_ref:work.work_id,
+      evidence_ref:evidenceRef,
+      valuation_state:'UNVALUED_NOT_FINANCIAL',
+      financial_effect:false,
+      mock:true
+    };
+    state.resources.push(resource);
+    event.fundraising.donated_prize_resource_refs=event.fundraising.donated_prize_resource_refs||[];
+    event.fundraising.donated_prize_resource_refs.push(resourceId);
+    appendAudit(state,{kind:'IN_KIND_DONATION_CONFIRMED',object_ref:resourceId,event_ref:event.event_id,source_work_ref:work.work_id,donor_actor_ref:donor.actor_id,evidence_ref:evidenceRef,valuation_state:'UNVALUED_NOT_FINANCIAL'},at);
+    effects.push({kind:'IN_KIND_DONATION_CONFIRMED',resource_id:resourceId,event_id:event.event_id,donor_actor_id:donor.actor_id,financial_effect:false});
+  } else if(action.type==='OCTAGONAL_INCIDENT_APPLY'){
     const incidentId=requireMockId(action.incident_id,'MOCK-DECISION-OCTAGONAL-INCIDENT-');
     const event=findBy(state.events,'event_id',action.event_id,'match event');
     if(event.kind!=='MATCH'||!event.sports) throw new Error('octagonal incident requires MATCH with sports contract');
@@ -1188,6 +1302,7 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
       work_id:w.work_id,title:w.title,work_kind:w.work_kind,state:w.state,
       attention:attentionForWork(w,date),
       responsible:{actor_id:w.responsible_actor_id,display_name:actors.get(w.responsible_actor_id)?.display_name||'Mock'},
+      external_target:w.external_target_actor_id?{actor_id:w.external_target_actor_id,display_name:actors.get(w.external_target_actor_id)?.display_name||w.external_target_actor_id}:null,
       due_date:w.due_at?String(w.due_at).slice(0,10):null,priority:w.priority,
       resource:w.resource_ref?{resource_id:w.resource_ref,display_name:resources.get(w.resource_ref)?.display_name||w.resource_ref}:{resource_id:null,display_name:'Sin recurso'},
       source:{object_id:w.source_ref,display_name:sources.get(w.source_ref)||w.source_ref},
