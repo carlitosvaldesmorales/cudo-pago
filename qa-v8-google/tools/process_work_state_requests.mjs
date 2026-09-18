@@ -51,13 +51,27 @@ export function loadOperationalWorkState(statePath=DEFAULT_STATE_PATH){
   }
   return state;
 }
+function financialContextLabel(ctx){
+  if(ctx?.amount_clp!=null) return `CLP ${ctx.amount_clp} · ${ctx.cycle||''}`;
+  if(ctx?.min_amount_clp!=null||ctx?.max_amount_clp!=null){
+    const min=ctx.min_amount_clp!=null?ctx.min_amount_clp:'';
+    const max=ctx.max_amount_clp!=null?ctx.max_amount_clp:'';
+    const condition=ctx.condition==='DEPENDS_ON_DIRTINESS'?' · según suciedad':'';
+    return `CLP ${min}-${max}${condition}`;
+  }
+  if(ctx?.unit_amount_clp!=null){
+    const unit=ctx.unit_label==='TEAM_WASHED'?'por equipo lavado':(ctx.unit_label||'por unidad');
+    return `CLP ${ctx.unit_amount_clp} ${unit}`;
+  }
+  return '';
+}
 function buildControlRows(projection){
   return [
-    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','FINANCIAL_CONTEXT_CLP','FINANCIAL_CONTEXT_CYCLE','OBJECT_VERSION','AUTHORITY'],
+    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','OBJECT_VERSION','AUTHORITY'],
     ...projection.items.map(item=>[
       item.work_id,item.title,item.state,item.responsible.display_name,item.due_date,item.attention,
-      item.resource.display_name,item.source.display_name,item.financial_context.amount_clp,
-      item.financial_context.cycle,item.object_version,projection.authority
+      item.resource.display_name,item.source.display_name,financialContextLabel(item.financial_context),
+      item.financial_context.semantics,item.object_version,projection.authority
     ])
   ];
 }
