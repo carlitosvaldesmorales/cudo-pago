@@ -1,0 +1,33 @@
+{
+  "schema_version": "CUDO_WORK_FINANCIAL_EFFECT_CONTRACT_V1",
+  "purpose": "Derive canonical financial obligations from completed WORK_ITEM state only when source evidence resolves an exact payable amount and payment basis.",
+  "trigger": {
+    "object_type": "WORK_ITEM",
+    "required_lifecycle_state": "DONE",
+    "completion_evidence_required": true
+  },
+  "v1_automatic_rules": [
+    {
+      "rule_id": "WORK_FINANCIAL_EFFECT_COMPLETED_IRRIGATION_V1",
+      "work_kind": "IRRIGATION",
+      "required_financial_context_cycle": "PER_COMPLETED_IRRIGATION",
+      "obligation_direction": "PAYABLE",
+      "obligation_kind": "STADIUM_IRRIGATION_SERVICE",
+      "amount_source": "WORK_ITEM.data.financial_context_amount_clp",
+      "currency": "CLP"
+    }
+  ],
+  "fail_closed": [
+    "OPEN or IN_PROGRESS work does not create an obligation.",
+    "DONE without completion evidence does not create an obligation.",
+    "Range-priced work does not auto-create an obligation until the exact amount is resolved.",
+    "Per-unit work does not auto-create an obligation until the performed quantity is resolved.",
+    "An existing stable obligation is not duplicated.",
+    "No FINANCIAL_MOVEMENT is created from work completion."
+  ],
+  "causality": {
+    "obligation_relationship": "CAUSED_BY_WORK_ITEM",
+    "trace": "WORK_ITEM -> FINANCIAL_OBLIGATION -> later settlement/payment evidence"
+  },
+  "production_write": false
+}
