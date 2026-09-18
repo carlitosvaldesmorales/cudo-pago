@@ -1,0 +1,64 @@
+{
+  "schema_version": "CUDO_OPERATIONAL_WORK_STATE_STORE_V1",
+  "base_fixture": "qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json",
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-WORK-GRASS-CUT-20260921",
+      "object_type": "WORK_ITEM",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "work_kind": "GRASS_CUT",
+        "title": "Corte de pasto del estadio",
+        "responsible_actor_id": "CUDO-ACTOR-MAX-FIGUEROA-001",
+        "responsible_display_name": "Maximiliano Figueroa",
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "resource_display_name": "Estadio CUDO",
+        "source_object_id": "CUDO-EVENT-QA-SATURDAY-MATCH-001",
+        "source_display_name": "Partido QA sábado",
+        "due_date": "2026-09-25",
+        "priority": "NORMAL",
+        "trigger_reason": "MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY",
+        "financial_context_amount_clp": 50000,
+        "financial_context_cycle": "EVERY_TWO_MONTHS",
+        "financial_context_semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "field_semantics": {
+        "work_kind": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "title": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "responsible_actor_id": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "responsible_display_name": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "resource_id": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "resource_display_name": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "source_object_id": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "source_display_name": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "due_date": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "priority": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "trigger_reason": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "financial_context_amount_clp": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "financial_context_cycle": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]},
+        "financial_context_semantics": {"state_kind": "DERIVED", "rule_ids": ["WORK_RULE_GRASS_CUT_SATURDAY_MATCH_V1"]}
+      },
+      "relationships": [
+        {"relationship_id": "REL-CUDO-WORK-GRASS-CUT-20260921-ACTOR", "relationship_type": "ASSIGNED_TO", "target_object_id": "CUDO-ACTOR-MAX-FIGUEROA-001"},
+        {"relationship_id": "REL-CUDO-WORK-GRASS-CUT-20260921-RESOURCE", "relationship_type": "APPLIES_TO_RESOURCE", "target_object_id": "CUDO-RESOURCE-ESTADIO-001"},
+        {"relationship_id": "REL-CUDO-WORK-GRASS-CUT-20260921-EVENT", "relationship_type": "CAUSED_BY_EVENT", "target_object_id": "CUDO-EVENT-QA-SATURDAY-MATCH-001"},
+        {"relationship_id": "REL-CUDO-WORK-GRASS-CUT-20260921-RULE", "relationship_type": "DERIVED_FROM_RULE", "target_object_id": "CUDO-RULE-GRASS-CUT-MATCH-CONFLICT-001"}
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T15:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_WORK_ITEM_ENGINE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4",
+          "qa://synthetic-match/2026-09-26"
+        ],
+        "transition_id": null
+      },
+      "legacy_refs": []
+    }
+  ],
+  "audit": [],
+  "production_write": false
+}

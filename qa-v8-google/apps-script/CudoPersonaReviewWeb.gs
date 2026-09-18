@@ -57,8 +57,7 @@ function cudoPersonaRender_(message){
   const status=[...followup,...closed].map(r=>`<li><b>${cudoPersonaEsc_(r.NOMBRE_PUBLICO)}</b> · ${cudoPersonaEsc_(r.RELACION_CUDO)} · <span>${cudoPersonaEsc_(r.ESTADO)}</span></li>`).join('');
   return HtmlService.createHtmlOutput(`<!doctype html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CUDO · Solicitudes de fichas</title><style>body{margin:0;background:#f4f2ed;color:#03163d;font-family:Arial,sans-serif}.head{background:#03163d;color:white;border-bottom:6px solid #e21b2d;padding:28px 18px}.wrap{max-width:860px;margin:auto}.head h1{margin:4px 0 6px;font-size:34px;text-transform:uppercase}.head p{margin:0;color:#dce5f5}.content{padding:22px 18px 50px}.summary{background:white;border-radius:16px;padding:16px;margin-bottom:16px;border:1px solid #c8d0dc}.card{background:white;border-radius:18px;padding:20px;margin:14px 0;border:1px solid #c8d0dc;box-shadow:0 8px 24px rgba(3,22,61,.08)}.card h2{margin:5px 0 10px;font-size:28px}.meta{font-size:12px;color:#56657d}.card p{margin:7px 0}.bio{background:#f4f7fb;border-radius:12px;padding:12px;margin:12px 0;line-height:1.45}.card label{display:block;font-weight:700;font-size:12px;margin:14px 0 6px}.card textarea{width:100%;box-sizing:border-box;border:1px solid #aeb8c8;border-radius:10px;padding:10px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{border:0;border-radius:10px;padding:11px 13px;font-weight:800;cursor:pointer}.ok{background:#0a7b48;color:white}.warn{background:#f0b429;color:#1d1600}.bad{background:#b50f20;color:white}.msg{background:#e7f6ee;border-left:4px solid #0a7b48;padding:12px 14px;margin-bottom:14px}.empty{padding:25px;text-align:center;color:#56657d;background:white;border-radius:16px}ul{padding-left:20px}small{color:#6b778c}@media(max-width:600px){.actions{display:grid;grid-template-columns:1fr}.actions button{width:100%}}</style></head><body><header class="head"><div class="wrap"><small>C.U.D.O. · Administración privada</small><h1>Solicitudes de fichas</h1><p>Acceso autorizado: ${cudoPersonaEsc_(reviewer)}</p></div></header><main class="wrap content">${message?`<div class="msg">${cudoPersonaEsc_(message)}</div>`:''}<div class="summary"><b>${pending.length} pendiente${pending.length===1?'':'s'}</b> · ${followup.length} con corrección solicitada · ${closed.length} cerrada${closed.length===1?'':'s'}</div>${cards||'<div class="empty">No hay fichas pendientes de revisión.</div>'}${status?`<section class="summary"><h3>Estado de otras solicitudes</h3><ul>${status}</ul></section>`:''}</main></body></html>`).setTitle('CUDO · Solicitudes de fichas').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DENY);
 }
-function doGet(){return cudoPersonaRender_('');}
-function doPost(e){
+function cudoPersonaHandlePost_(e){
   const reviewer=cudoPersonaReviewer_();
   const id=String(e.parameter.id||'').trim(),decision=String(e.parameter.decision||'').trim(),observations=String(e.parameter.observations||'').trim();
   if(!/^CUDO-PER-[A-Za-z0-9_-]+$/.test(id)) throw new Error('ID de ficha inválido');
@@ -69,4 +68,14 @@ function doPost(e){
   cudoPersonaMarkRequested_(id,decision,reviewer,observations);
   cudoReviewDispatch_('apps_script_persona_review');
   return cudoPersonaRender_('Decisión enviada al CUDO Review Engine. La ficha permanecerá visible hasta que el motor confirme el cambio de estado.');
+}
+function doGet(e){
+  const view=String((e&&e.parameter&&e.parameter.view)||'persona').trim().toLowerCase();
+  if(view==='work') return cudoWorkRender_('');
+  return cudoPersonaRender_('');
+}
+function doPost(e){
+  const kind=String((e&&e.parameter&&e.parameter.kind)||'PERSONA').trim().toUpperCase();
+  if(kind==='WORK_ITEM') return cudoWorkHandlePost_(e);
+  return cudoPersonaHandlePost_(e);
 }

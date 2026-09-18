@@ -7,6 +7,12 @@ on:
       - 'qa-v8-google/review_ingestion_state.json'
       - 'qa-v8-google/apps-script/CudoReviewEventBridge.gs'
       - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
+      - 'qa-v8-google/data/operacion.json'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/tools/work_state_web_fixture_harness.mjs'
+      - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
+      - 'qa-v8-google/tools/process_work_state_requests.mjs'
+      - 'qa-v8-google/state/operational-work-state.json'
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
       - 'qa-v8-google/tools/review_event_bridge_fixture_harness.mjs'
@@ -37,6 +43,12 @@ on:
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
+      - 'qa-v8-google/state/operational-work-state.json'
+      - 'qa-v8-google/tools/process_work_state_requests.mjs'
+      - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
+      - 'qa-v8-google/tools/work_state_web_fixture_harness.mjs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/data/operacion.json'
   workflow_dispatch:
     inputs:
       apply_changes:
@@ -45,7 +57,7 @@ on:
         default: false
         type: boolean
       source:
-        description: 'Origen operacional autorizado: apps_script_form_submit o apps_script_persona_review'
+        description: 'Origen operacional autorizado: apps_script_form_submit, apps_script_persona_review o apps_script_work_state'
         required: false
         default: 'manual'
         type: string
@@ -79,6 +91,9 @@ jobs:
           node --check qa-v8-google/tools/review_engine_fixture_harness.mjs
           node --check qa-v8-google/tools/process_persona_review_decisions.mjs
           node --check qa-v8-google/tools/persona_review_fixture_harness.mjs
+          node --check qa-v8-google/tools/process_work_state_requests.mjs
+          node --check qa-v8-google/tools/work_state_requests_fixture_harness.mjs
+          node --check qa-v8-google/tools/work_state_web_fixture_harness.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
       - name: Probar Form -> AUDITORIA de forma sintética
         run: node qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs
@@ -90,12 +105,16 @@ jobs:
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
       - name: Probar PERSONA -> alta interna con fixture sintético
         run: node qa-v8-google/tools/persona_review_fixture_harness.mjs
+      - name: Probar solicitudes Web -> estado operacional canónico
+        run: node qa-v8-google/tools/work_state_requests_fixture_harness.mjs
+      - name: Probar enrutamiento de Web privada operacional
+        run: node qa-v8-google/tools/work_state_web_fixture_harness.mjs
 
   review-and-sync:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.apply_changes == true &&
-      (inputs.source == 'apps_script_form_submit' || inputs.source == 'apps_script_persona_review')
+      (inputs.source == 'apps_script_form_submit' || inputs.source == 'apps_script_persona_review' || inputs.source == 'apps_script_work_state')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -122,6 +141,23 @@ jobs:
       - name: Procesar decisiones de fichas PERSONA
         if: inputs.source == 'apps_script_persona_review'
         run: node qa-v8-google/tools/process_persona_review_decisions.mjs
+      - name: Procesar transición de trabajo operacional
+        if: inputs.source == 'apps_script_work_state'
+        run: node qa-v8-google/tools/process_work_state_requests.mjs
+      - name: Persistir estado operacional QA si cambió
+        if: inputs.source == 'apps_script_work_state'
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- qa-v8-google/state/operational-work-state.json qa-v8-google/data/operacion.json; then
+            echo 'Sin cambios en estado operacional QA.'
+            exit 0
+          fi
+          git config user.name 'cudo-work-state-engine'
+          git config user.email 'actions@users.noreply.github.com'
+          git add qa-v8-google/state/operational-work-state.json qa-v8-google/data/operacion.json
+          git commit -m 'CUDO QA: actualizar estado operacional gobernado'
+          git push
+
       - name: Sincronizar PUBLICO_EXPORT con el adaptador V8 vigente
         if: inputs.source == 'apps_script_form_submit'
         run: node preview-v8/tools/sync_google_publico.mjs
