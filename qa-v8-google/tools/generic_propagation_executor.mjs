@@ -88,6 +88,9 @@ function evaluateExpression(rule,inputValues){
     return inputValues[name];
   });
   switch(rule.expression.operator){
+    case 'IDENTITY':
+      if(args.length!==1) throw new Error(`${rule.rule_id}: IDENTITY requires 1 arg`);
+      return clone(args[0]);
     case 'MULTIPLY':
       if(args.length!==2) throw new Error(`${rule.rule_id}: MULTIPLY requires 2 args`);
       return Number(args[0])*Number(args[1]);

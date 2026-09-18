@@ -1,27 +1,64 @@
 {
   "schema_version": "CUDO_DEPENDENCY_RULE_REGISTRY_V1",
-  "registry_version": 1,
+  "registry_version": 2,
   "rules": [
     {
       "rule_id": "RULE_ENTRY_REVENUE_V1",
       "version": 1,
       "status": "EXPERIMENTAL",
       "inputs": [
-        {"name": "paid_entries", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "paid_entries"}},
-        {"name": "entry_price", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "entry_price"}}
+        {
+          "name": "paid_entries",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "paid_entries"
+          }
+        },
+        {
+          "name": "entry_price",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "entry_price"
+          }
+        }
       ],
       "outputs": [
-        {"name": "entry_revenue", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "entry_revenue"}}
+        {
+          "name": "entry_revenue",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "entry_revenue"
+          }
+        }
       ],
-      "expression": {"operator": "MULTIPLY", "args": ["paid_entries", "entry_price"]},
-      "applicability": {"mode": "ALWAYS"},
+      "expression": {
+        "operator": "MULTIPLY",
+        "args": [
+          "paid_entries",
+          "entry_price"
+        ]
+      },
+      "applicability": {
+        "mode": "ALWAYS"
+      },
       "evidence": {
         "evidence_level": "SYNTHETIC_CONTRACT_EXAMPLE",
-        "source_refs": ["qa-v8-google/contracts/cudo-shared-object-fixture-v1.json"],
+        "source_refs": [
+          "qa-v8-google/contracts/cudo-shared-object-fixture-v1.json"
+        ],
         "note": "Used only to close the semantic contract introduced by piece 1; not asserted as an operational CUDO accounting rule."
       },
       "test_cases": [
-        {"inputs": {"paid_entries": 70, "entry_price": 1500}, "expected": 105000}
+        {
+          "inputs": {
+            "paid_entries": 70,
+            "entry_price": 1500
+          },
+          "expected": 105000
+        }
       ]
     },
     {
@@ -29,14 +66,43 @@
       "version": 1,
       "status": "ACTIVE",
       "inputs": [
-        {"name": "purchased_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "purchased_qty"}},
-        {"name": "unit_cost", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "unit_cost"}}
+        {
+          "name": "purchased_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "purchased_qty"
+          }
+        },
+        {
+          "name": "unit_cost",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "unit_cost"
+          }
+        }
       ],
       "outputs": [
-        {"name": "purchase_total", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "purchase_total"}}
+        {
+          "name": "purchase_total",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "purchase_total"
+          }
+        }
       ],
-      "expression": {"operator": "MULTIPLY", "args": ["purchased_qty", "unit_cost"]},
-      "applicability": {"mode": "ALWAYS"},
+      "expression": {
+        "operator": "MULTIPLY",
+        "args": [
+          "purchased_qty",
+          "unit_cost"
+        ]
+      },
+      "applicability": {
+        "mode": "ALWAYS"
+      },
       "evidence": {
         "evidence_level": "DIRECT",
         "source_refs": [
@@ -45,7 +111,13 @@
         ]
       },
       "test_cases": [
-        {"inputs": {"purchased_qty": 24, "unit_cost": 1550}, "expected": 37200}
+        {
+          "inputs": {
+            "purchased_qty": 24,
+            "unit_cost": 1550
+          },
+          "expected": 37200
+        }
       ]
     },
     {
@@ -53,14 +125,44 @@
       "version": 1,
       "status": "ACTIVE",
       "inputs": [
-        {"name": "sold_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "sold_qty"}},
-        {"name": "sell_price", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "sell_price"}}
+        {
+          "name": "sold_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sold_qty"
+          }
+        },
+        {
+          "name": "sell_price",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sell_price"
+          }
+        }
       ],
       "outputs": [
-        {"name": "sales_revenue", "selector": {"scope": "RELATED_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "sales_revenue", "relationship_type": "USED_BY_EVENT"}}
+        {
+          "name": "sales_revenue",
+          "selector": {
+            "scope": "RELATED_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "sales_revenue",
+            "relationship_type": "USED_BY_EVENT"
+          }
+        }
       ],
-      "expression": {"operator": "MULTIPLY", "args": ["sold_qty", "sell_price"]},
-      "applicability": {"mode": "ALWAYS"},
+      "expression": {
+        "operator": "MULTIPLY",
+        "args": [
+          "sold_qty",
+          "sell_price"
+        ]
+      },
+      "applicability": {
+        "mode": "ALWAYS"
+      },
       "evidence": {
         "evidence_level": "DIRECT",
         "source_refs": [
@@ -69,7 +171,13 @@
         ]
       },
       "test_cases": [
-        {"inputs": {"sold_qty": 70, "sell_price": 1500}, "expected": 105000}
+        {
+          "inputs": {
+            "sold_qty": 70,
+            "sell_price": 1500
+          },
+          "expected": 105000
+        }
       ]
     },
     {
@@ -77,14 +185,43 @@
       "version": 1,
       "status": "ACTIVE",
       "inputs": [
-        {"name": "stock_available_before_sales", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "stock_available_before_sales"}},
-        {"name": "sold_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "sold_qty"}}
+        {
+          "name": "stock_available_before_sales",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "stock_available_before_sales"
+          }
+        },
+        {
+          "name": "sold_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sold_qty"
+          }
+        }
       ],
       "outputs": [
-        {"name": "stock_after_sales", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "stock_after_sales"}}
+        {
+          "name": "stock_after_sales",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "stock_after_sales"
+          }
+        }
       ],
-      "expression": {"operator": "SUBTRACT", "args": ["stock_available_before_sales", "sold_qty"]},
-      "applicability": {"mode": "ALWAYS"},
+      "expression": {
+        "operator": "SUBTRACT",
+        "args": [
+          "stock_available_before_sales",
+          "sold_qty"
+        ]
+      },
+      "applicability": {
+        "mode": "ALWAYS"
+      },
       "evidence": {
         "evidence_level": "DIRECT",
         "source_refs": [
@@ -93,7 +230,13 @@
         ]
       },
       "test_cases": [
-        {"inputs": {"stock_available_before_sales": 100, "sold_qty": 70}, "expected": 30}
+        {
+          "inputs": {
+            "stock_available_before_sales": 100,
+            "sold_qty": 70
+          },
+          "expected": 30
+        }
       ]
     },
     {
@@ -101,13 +244,41 @@
       "version": 1,
       "status": "ACTIVE",
       "inputs": [
-        {"name": "received_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "received_qty"}},
-        {"name": "returned_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "returned_qty"}}
+        {
+          "name": "received_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "received_qty"
+          }
+        },
+        {
+          "name": "returned_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "returned_qty"
+          }
+        }
       ],
       "outputs": [
-        {"name": "payable_qty", "selector": {"scope": "RELATED_OBJECT", "object_type": "FINANCIAL_OBLIGATION", "field": "payable_qty", "relationship_type": "CREATES_OBLIGATION"}}
+        {
+          "name": "payable_qty",
+          "selector": {
+            "scope": "RELATED_OBJECT",
+            "object_type": "FINANCIAL_OBLIGATION",
+            "field": "payable_qty",
+            "relationship_type": "CREATES_OBLIGATION"
+          }
+        }
       ],
-      "expression": {"operator": "SUBTRACT", "args": ["received_qty", "returned_qty"]},
+      "expression": {
+        "operator": "SUBTRACT",
+        "args": [
+          "received_qty",
+          "returned_qty"
+        ]
+      },
       "applicability": {
         "mode": "CONDITIONAL",
         "condition_id": "SUPPLIER_RETURN_MODEL_APPLIES",
@@ -122,7 +293,13 @@
         ]
       },
       "test_cases": [
-        {"inputs": {"received_qty": 100, "returned_qty": 20}, "expected": 80}
+        {
+          "inputs": {
+            "received_qty": 100,
+            "returned_qty": 20
+          },
+          "expected": 80
+        }
       ]
     },
     {
@@ -130,13 +307,41 @@
       "version": 1,
       "status": "ACTIVE",
       "inputs": [
-        {"name": "payable_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "FINANCIAL_OBLIGATION", "field": "payable_qty"}},
-        {"name": "unit_cost", "selector": {"scope": "RELATED_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "unit_cost", "relationship_type": "CAUSED_BY_RESOURCE"}}
+        {
+          "name": "payable_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "FINANCIAL_OBLIGATION",
+            "field": "payable_qty"
+          }
+        },
+        {
+          "name": "unit_cost",
+          "selector": {
+            "scope": "RELATED_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "unit_cost",
+            "relationship_type": "CAUSED_BY_RESOURCE"
+          }
+        }
       ],
       "outputs": [
-        {"name": "supplier_payable", "selector": {"scope": "SOURCE_OBJECT", "object_type": "FINANCIAL_OBLIGATION", "field": "supplier_payable"}}
+        {
+          "name": "supplier_payable",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "FINANCIAL_OBLIGATION",
+            "field": "supplier_payable"
+          }
+        }
       ],
-      "expression": {"operator": "MULTIPLY", "args": ["payable_qty", "unit_cost"]},
+      "expression": {
+        "operator": "MULTIPLY",
+        "args": [
+          "payable_qty",
+          "unit_cost"
+        ]
+      },
       "applicability": {
         "mode": "CONDITIONAL",
         "condition_id": "UNIT_COST_MODEL_APPLIES",
@@ -150,7 +355,13 @@
         ]
       },
       "test_cases": [
-        {"inputs": {"payable_qty": 80, "unit_cost": 500}, "expected": 40000}
+        {
+          "inputs": {
+            "payable_qty": 80,
+            "unit_cost": 500
+          },
+          "expected": 40000
+        }
       ]
     },
     {
@@ -158,14 +369,43 @@
       "version": 1,
       "status": "ACTIVE",
       "inputs": [
-        {"name": "actual_revenue_streams", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "actual_revenue_streams"}},
-        {"name": "actual_expense_streams", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "actual_expense_streams"}}
+        {
+          "name": "actual_revenue_streams",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "actual_revenue_streams"
+          }
+        },
+        {
+          "name": "actual_expense_streams",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "actual_expense_streams"
+          }
+        }
       ],
       "outputs": [
-        {"name": "event_operating_result", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "event_operating_result"}}
+        {
+          "name": "event_operating_result",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "event_operating_result"
+          }
+        }
       ],
-      "expression": {"operator": "SUM_DIFFERENCE", "args": ["actual_revenue_streams", "actual_expense_streams"]},
-      "applicability": {"mode": "ALWAYS"},
+      "expression": {
+        "operator": "SUM_DIFFERENCE",
+        "args": [
+          "actual_revenue_streams",
+          "actual_expense_streams"
+        ]
+      },
+      "applicability": {
+        "mode": "ALWAYS"
+      },
       "evidence": {
         "evidence_level": "DIRECT_PATTERN",
         "source_refs": [
@@ -175,7 +415,72 @@
         "note": "Operational event result pattern only; not asserted as a statutory accounting definition."
       },
       "test_cases": [
-        {"inputs": {"actual_revenue_streams": [105000, 200000], "actual_expense_streams": [40000, 25000, 120000]}, "expected": 120000}
+        {
+          "inputs": {
+            "actual_revenue_streams": [
+              105000,
+              200000
+            ],
+            "actual_expense_streams": [
+              40000,
+              25000,
+              120000
+            ]
+          },
+          "expected": 120000
+        }
+      ]
+    },
+    {
+      "rule_id": "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {
+          "name": "supplier_payable",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "FINANCIAL_OBLIGATION",
+            "field": "supplier_payable"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "amount",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "FINANCIAL_OBLIGATION",
+            "field": "amount"
+          }
+        }
+      ],
+      "expression": {
+        "operator": "IDENTITY",
+        "args": [
+          "supplier_payable"
+        ]
+      },
+      "applicability": {
+        "mode": "CONDITIONAL",
+        "condition_id": "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES",
+        "description": "Apply only to obligations that already implement the canonical financial amount field."
+      },
+      "evidence": {
+        "evidence_level": "DIRECT_PATTERN",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!K3",
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_CANONICAL_FINANCIAL_CORE_CHECKPOINT_v1.yaml"
+        ],
+        "note": "For a supplier settlement obligation, the canonical obligation amount is the calculated supplier payable for the same causal resource."
+      },
+      "test_cases": [
+        {
+          "inputs": {
+            "supplier_payable": 43680
+          },
+          "expected": 43680
+        }
       ]
     }
   ]
