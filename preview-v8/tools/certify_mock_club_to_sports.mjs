@@ -9,7 +9,7 @@ function loadSeed(){
   const context={window:{},location:{href:'https://cudo.cl/preview-v8/partidos/'},URL,Response,console};
   vm.createContext(context);
   vm.runInContext(source,context);
-  return context.window.CUDO_SEED_DATA;
+  return JSON.parse(JSON.stringify(context.window.CUDO_SEED_DATA));
 }
 function comparableTable(items){
   return items.map(({id,...rest})=>rest);
