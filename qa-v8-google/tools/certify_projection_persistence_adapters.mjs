@@ -184,7 +184,10 @@ assert.equal(applied.status,'APPLIED');
 assert.equal(applied.writes_applied,3);
 assert.equal(memory.json.get('preview-v8/data/partidos.json').source_revision,bundle.source_revision);
 assert.equal(memory.json.get('preview-v8/admin/data/finance.json').summary.obligations_total,3);
-assert.equal(memory.sheets.get('SYNTHETIC-CUDO-ADMIN|FINANCIAL_OBLIGATIONS!A:I')[1][0],'CUDO-OBL-FIN-CLEAN-001');
+const projectedObligationRows=memory.sheets.get('SYNTHETIC-CUDO-ADMIN|FINANCIAL_OBLIGATIONS!A:I');
+assert.ok(projectedObligationRows.slice(1).some(row=>row[0]==='CUDO-OBL-FIN-CLEAN-001'));
+assert.ok(projectedObligationRows.slice(1).some(row=>row[0]==='CUDO-OBL-FIN-SUP-001'));
+assert.ok(projectedObligationRows.slice(1).some(row=>row[0]==='CUDO-OBL-FIN-SALE-001'));
 
 // Partial external failure returns reverse-order compensation plan and does not claim atomicity.
 let writes=0;
