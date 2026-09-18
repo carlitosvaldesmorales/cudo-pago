@@ -1,0 +1,158 @@
+{
+  "schema_version": "CUDO_PROPAGATION_FIXTURE_V1",
+  "active_conditions": [
+    "SUPPLIER_RETURN_MODEL_APPLIES",
+    "UNIT_COST_MODEL_APPLIES"
+  ],
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-SYNTH-BEV-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "AVAILABLE",
+      "data": {
+        "received_qty": 100,
+        "returned_qty": 20,
+        "unit_cost": 500,
+        "purchased_qty": 100,
+        "purchase_total": 50000,
+        "stock_available_before_sales": 100,
+        "sold_qty": 70,
+        "sell_price": 1500,
+        "stock_after_sales": 30
+      },
+      "field_semantics": {
+        "received_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/received_qty"]},
+        "returned_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/returned_qty"]},
+        "unit_cost": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/unit_cost"]},
+        "purchased_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/purchased_qty"]},
+        "purchase_total": {"state_kind": "DERIVED", "rule_ids": ["RULE_PURCHASE_TOTAL_V1"]},
+        "stock_available_before_sales": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/stock_available_before_sales"]},
+        "sold_qty": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/sold_qty"]},
+        "sell_price": {"state_kind": "SOURCE", "source_refs": ["fixture://resource/sell_price"]},
+        "stock_after_sales": {"state_kind": "DERIVED", "rule_ids": ["RULE_STOCK_AFTER_SALES_V1"]}
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-RESOURCE-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SYNTH-SUP-001"
+        },
+        {
+          "relationship_id": "REL-RESOURCE-EVENT-001",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SYNTH-SALE-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://resource"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SYNTH-SUP-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_kind": "SUPPLIER_PAYABLE",
+        "payable_qty": 80,
+        "supplier_payable": 40000
+      },
+      "field_semantics": {
+        "obligation_kind": {"state_kind": "SOURCE", "source_refs": ["fixture://obligation/kind"]},
+        "payable_qty": {"state_kind": "DERIVED", "rule_ids": ["RULE_PAYABLE_QTY_AFTER_RETURN_V1"]},
+        "supplier_payable": {"state_kind": "DERIVED", "rule_ids": ["RULE_SUPPLIER_PAYABLE_V1"]}
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-OBLIGATION-RESOURCE-001",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-SYNTH-BEV-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://obligation"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-SYNTH-SALE-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "IN_PROGRESS",
+      "data": {
+        "activity_kind": "MATCHDAY",
+        "sales_revenue": 105000
+      },
+      "field_semantics": {
+        "activity_kind": {"state_kind": "SOURCE", "source_refs": ["fixture://event/activity_kind"]},
+        "sales_revenue": {"state_kind": "DERIVED", "rule_ids": ["RULE_SALES_REVENUE_V1"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://event"]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "RETURN_PROPAGATES_TO_PAYABLE",
+      "changes": [
+        {
+          "object_id": "CUDO-RESOURCE-SYNTH-BEV-001",
+          "field": "returned_qty",
+          "value": 25,
+          "source_ref": "fixture://scenario/return"
+        }
+      ],
+      "expected": {
+        "CUDO-OBL-SYNTH-SUP-001.payable_qty": 75,
+        "CUDO-OBL-SYNTH-SUP-001.supplier_payable": 37500
+      }
+    },
+    {
+      "id": "UNIT_COST_REVERSE_RELATION_PROPAGATION",
+      "changes": [
+        {
+          "object_id": "CUDO-RESOURCE-SYNTH-BEV-001",
+          "field": "unit_cost",
+          "value": 600,
+          "source_ref": "fixture://scenario/unit-cost"
+        }
+      ],
+      "expected": {
+        "CUDO-RESOURCE-SYNTH-BEV-001.purchase_total": 60000,
+        "CUDO-OBL-SYNTH-SUP-001.supplier_payable": 48000
+      }
+    },
+    {
+      "id": "SOLD_QTY_CROSSES_OPERATION_AND_EVENT_FINANCE",
+      "changes": [
+        {
+          "object_id": "CUDO-RESOURCE-SYNTH-BEV-001",
+          "field": "sold_qty",
+          "value": 68,
+          "source_ref": "fixture://scenario/sold"
+        }
+      ],
+      "expected": {
+        "CUDO-RESOURCE-SYNTH-BEV-001.stock_after_sales": 32,
+        "CUDO-EVENT-SYNTH-SALE-001.sales_revenue": 102000
+      }
+    }
+  ]
+}

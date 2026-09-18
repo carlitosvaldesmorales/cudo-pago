@@ -1,0 +1,40 @@
+name: Certify CUDO Generic Propagation Executor
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-dependency-rule-registry-v1.json'
+      - 'qa-v8-google/contracts/cudo-propagation-fixture-v1.json'
+      - 'qa-v8-google/tools/generic_propagation_executor.mjs'
+      - 'qa-v8-google/tools/certify_generic_propagation_executor.mjs'
+      - '.github/workflows/certify-cudo-generic-propagation-executor.yml'
+  push:
+    branches:
+      - 'feat/cudo-generic-propagation-executor-v1'
+    paths:
+      - 'qa-v8-google/contracts/cudo-dependency-rule-registry-v1.json'
+      - 'qa-v8-google/contracts/cudo-propagation-fixture-v1.json'
+      - 'qa-v8-google/tools/generic_propagation_executor.mjs'
+      - 'qa-v8-google/tools/certify_generic_propagation_executor.mjs'
+      - '.github/workflows/certify-cudo-generic-propagation-executor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate executor syntax
+        run: |
+          node --check qa-v8-google/tools/generic_propagation_executor.mjs
+          node --check qa-v8-google/tools/certify_generic_propagation_executor.mjs
+      - name: Certify generic cross-domain propagation
+        run: node qa-v8-google/tools/certify_generic_propagation_executor.mjs
