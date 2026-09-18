@@ -2,19 +2,20 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 
-const readJson=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const show=(ref,path)=>execFileSync('git',['show',`${ref}:${path}`],{encoding:'utf8'});
-const showJson=(ref,path)=>JSON.parse(show(ref,path));
+const readText=(ref,path)=>ref==='HEAD'&&fs.existsSync(path)?fs.readFileSync(path,'utf8'):show(ref,path);
+const readJson=(ref,path)=>JSON.parse(readText(ref,path));
 
-const contract=readJson('preview-v8/contracts/cudo-mock-real-contract-parity-v1.json');
-const realWorkContract=readJson('qa-v8-google/contracts/cudo-work-item-contract-v1.json');
-const realWorkEngine=fs.readFileSync('qa-v8-google/tools/work_item_engine.mjs','utf8');
-const realOperation=readJson('qa-v8-google/data/operacion.json');
-
+const realRef=process.env.CUDO_REAL_REF||'HEAD';
 const mockRef=process.env.CUDO_MOCK_REF||'origin/qa-v8-mock';
-const mockManifest=showJson(mockRef,'preview-v8/data/mock-manifest.json');
-const mockEngine=show(mockRef,'preview-v8/shared/mock-admin-engine.mjs');
-const mockOperation=showJson(mockRef,'preview-v8/data/operacion.json');
+
+const contract=readJson('HEAD','preview-v8/contracts/cudo-mock-real-contract-parity-v1.json');
+const realWorkContract=readJson(realRef,'qa-v8-google/contracts/cudo-work-item-contract-v1.json');
+const realWorkEngine=readText(realRef,'qa-v8-google/tools/work_item_engine.mjs');
+const realOperation=readJson(realRef,'qa-v8-google/data/operacion.json');
+const mockManifest=readJson(mockRef,'preview-v8/data/mock-manifest.json');
+const mockEngine=readText(mockRef,'preview-v8/shared/mock-admin-engine.mjs');
+const mockOperation=readJson(mockRef,'preview-v8/data/operacion.json');
 
 function transitionMap(source,constName){
   const marker=`const ${constName}={`;
@@ -102,7 +103,7 @@ assert.ok(realWorkContract.financial_effect_policy?.no_double_entry===true);
 console.log(JSON.stringify({
   ok:true,
   contract:contract.schema_version,
-  real_ref:'HEAD',
+  real_ref:realRef,
   mock_ref:mockRef,
   shared_work_states:sorted(contract.shared_required.work_states),
   shared_transition_count:contract.shared_required.common_work_transitions.length,
