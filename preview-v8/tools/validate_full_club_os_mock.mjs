@@ -31,6 +31,9 @@ assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe res
 for(const id of ['actorForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
 assert.ok(dashboard.includes('id="actors"'));
 assert.ok(dashboard.includes('id="events"'));
+assert.ok(admin.includes("data-event-next"));
+assert.ok(admin.includes("Finalizar"));
+assert.ok(admin.includes("Cancelar"));
 assert.ok(admin.includes("Ninguna acción escribe Google Sheets, GitHub productivo ni CUDO real"));
 assert.ok(engine.includes("AUTO_UNBLOCK_DEPENDENCY"));
 assert.ok(engine.includes("AUTO_UNBLOCK_RESOURCE"));
@@ -40,6 +43,9 @@ assert.ok(engine.includes("SOURCE_EVENT_CREATED"));
 assert.ok(engine.includes("DERIVED_WORK_CREATED"));
 assert.ok(engine.includes("HUMAN_WORK_CREATED"));
 assert.ok(engine.includes("SOURCE_FINANCIAL_OBLIGATION_CREATED"));
+assert.ok(engine.includes("EVENT_TRANSITION"));
+assert.ok(engine.includes("POST_EVENT_WORK_CREATED"));
+assert.ok(engine.includes("AUTO_CANCEL_EVENT_PREPARATION"));
 assert.ok(engine.includes("DONE requires evidence"));
 assert.ok(dashboard.includes('100% DATOS MOCK'));
 assert.ok(dashboard.includes('Bloqueo:'));
@@ -133,6 +139,8 @@ console.log(JSON.stringify({
   source_fact_creation:true,
   scheduled_match_to_derived_work:true,
   human_created_work:true,
+  event_lifecycle_actions:true,
+  post_event_work_propagation:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
