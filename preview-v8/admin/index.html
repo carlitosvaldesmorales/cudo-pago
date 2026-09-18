@@ -18,8 +18,8 @@
     .row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.state{display:inline-flex;padding:5px 8px;border-radius:999px;background:#eef2f7;font-size:9px;font-weight:900}.BLOCKED{background:#ffe5e8;color:#a01120}.WAITING_EXTERNAL{background:#fff3cf;color:#7a5d00}.DONE{background:#e4f5ea;color:#17643b}.CANCELLED{background:#e6e8ed;color:#596174}.IN_PROGRESS{background:#e6efff;color:#174c9b}
     .meta{font-size:11px;color:#5f6b7d;line-height:1.55;margin:8px 0}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.actions button{border:0;border-radius:8px;padding:8px 10px;font-size:9px;font-weight:900;cursor:pointer;background:#e8eef7;color:#03163d}.actions button.primary{background:#03163d;color:#fff}.actions button.danger{background:#ffe5e8;color:#9b1320}
     .tablewrap{overflow:auto;background:#fff;border:1px solid #dfe4eb;border-radius:14px}.table{border-collapse:collapse;width:100%;font-size:11px}.table th,.table td{padding:10px 12px;border-bottom:1px solid #edf0f4;text-align:left;white-space:nowrap}.table th{font-size:9px;letter-spacing:.07em;color:#66738a}
-    .toast{position:fixed;right:14px;bottom:14px;background:#03163d;color:#fff;padding:12px 14px;border-radius:10px;font-size:11px;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.2)}.toast.error{background:#9b1320}
-    @media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+    .sourceforms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.formcard{background:#fff;border:1px solid #dfe4eb;border-radius:16px;padding:15px}.formcard h3{margin:0 0 10px}.formcard label{display:block;font-size:9px;font-weight:900;color:#66738a;letter-spacing:.05em;margin:8px 0 4px}.formcard input,.formcard select{width:100%;box-sizing:border-box;border:1px solid #cfd6df;border-radius:8px;padding:9px;background:#fff;color:#03163d;font:inherit}.formcard button{margin-top:10px;border:0;border-radius:8px;padding:9px 11px;background:#03163d;color:#fff;font-size:9px;font-weight:900;cursor:pointer}.toast{position:fixed;right:14px;bottom:14px;background:#03163d;color:#fff;padding:12px 14px;border-radius:10px;font-size:11px;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.2)}.toast.error{background:#9b1320}
+    @media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.grid,.sourceforms{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -37,6 +37,17 @@
       <button class="btnx warn" id="reset">Restablecer golden mock</button>
       <span id="revision" style="font-size:11px;font-weight:800;align-self:center"></span>
     </div>
+    <section class="section">
+      <h2>Registrar hechos fuente</h2>
+      <div class="sourceforms">
+        <form class="formcard" id="actorForm"><h3>Responsable</h3><label>Nombre visible</label><input name="name" required placeholder="Ej: Encargado cancha"><label>Rol</label><input name="role" value="COLLABORATOR"><button>Crear responsable</button></form>
+        <form class="formcard" id="resourceForm"><h3>Recurso</h3><label>Nombre</label><input name="name" required placeholder="Ej: Bomba de agua"><label>Tipo</label><input name="kind" value="EQUIPMENT"><button>Crear recurso</button></form>
+        <form class="formcard" id="eventForm"><h3>Evento</h3><label>Nombre</label><input name="name" required placeholder="Ej: Partido domingo"><label>Tipo</label><select name="kind"><option>MATCH</option><option>FUNDRAISING</option><option>MEETING</option><option>ACTIVITY</option></select><label>Inicio</label><input name="starts_at" type="datetime-local"><label>Recurso</label><select name="resource_ref" data-select="resources"><option value="">Sin recurso</option></select><button>Crear evento</button></form>
+        <form class="formcard" id="decisionForm"><h3>Decisión</h3><label>Descripción</label><input name="name" required placeholder="Ej: Aprobar compra"><label>Tipo</label><input name="kind" value="CLUB_DECISION"><label>Responsable</label><select name="responsible_actor_id" data-select="actors" required></select><button>Crear decisión</button></form>
+        <form class="formcard" id="workForm"><h3>Tarea humana</h3><label>Acción</label><input name="title" required placeholder="Ej: Coordinar árbitro"><label>Responsable</label><select name="responsible_actor_id" data-select="actors" required></select><label>Causa</label><select name="source_ref" data-select="sources" required></select><label>Recurso</label><select name="resource_ref" data-select="resources"><option value="">Sin recurso</option></select><label>Fecha esperada</label><input name="due_at" type="datetime-local"><button>Crear tarea</button></form>
+        <form class="formcard" id="obligationForm"><h3>Obligación</h3><label>Dirección</label><select name="direction"><option>PAYABLE</option><option>RECEIVABLE</option></select><label>Tipo</label><input name="kind" value="MOCK_SERVICE"><label>Monto CLP</label><input name="amount_clp" type="number" min="1" required><label>Causa</label><select name="cause_ref" data-select="sources" required></select><label>Contraparte</label><select name="counterparty_ref" data-select="actors"><option value="">Sin contraparte</option></select><button>Crear obligación</button></form>
+      </div>
+    </section>
     <section class="summary">
       <div class="kpi"><small>TRABAJOS</small><strong id="sTotal">—</strong></div>
       <div class="kpi"><small>ABIERTOS</small><strong id="sOpen">—</strong></div>
@@ -46,6 +57,8 @@
       <div class="kpi"><small>PENDIENTE $</small><strong id="sPayable">—</strong></div>
     </section>
 
+    <section class="section"><h2>Responsables</h2><div class="tablewrap"><table class="table"><thead><tr><th>NOMBRE</th><th>TIPO</th><th>ROL</th></tr></thead><tbody id="actors"></tbody></table></div></section>
+    <section class="section"><h2>Eventos</h2><div class="tablewrap"><table class="table"><thead><tr><th>EVENTO</th><th>TIPO</th><th>ESTADO</th><th>INICIO</th></tr></thead><tbody id="events"></tbody></table></div></section>
     <section class="section"><h2>Trabajo</h2><div id="work" class="grid"></div></section>
     <section class="section"><h2>Recursos</h2><div id="resources" class="grid"></div></section>
     <section class="section"><h2>Decisiones</h2><div id="decisions" class="grid"></div></section>
@@ -64,6 +77,28 @@ const money=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',ma
 const toast=(msg,error=false)=>{const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(error?' error':'');el.hidden=false;setTimeout(()=>el.hidden=true,3500)};
 function save(){localStorage.setItem(KEY,JSON.stringify(runtime))}
 function actorName(id){return runtime.state.actors.find(x=>x.actor_id===id)?.display_name||id}
+const token=()=>Date.now().toString(36).toUpperCase();
+function fillSelect(select,items,placeholder){
+  const current=select.value;
+  const fixed=[...select.querySelectorAll('option[data-fixed="1"]')].map(o=>({value:o.value,label:o.textContent}));
+  select.replaceChildren();
+  if(placeholder){const o=document.createElement('option');o.value='';o.textContent=placeholder;select.append(o)}
+  for(const item of items){const o=document.createElement('option');o.value=item.value;o.textContent=item.label;select.append(o)}
+  if([...select.options].some(o=>o.value===current)) select.value=current;
+}
+function refreshSourceSelects(){
+  const actors=runtime.state.actors.map(x=>({value:x.actor_id,label:x.display_name}));
+  const resources=runtime.state.resources.map(x=>({value:x.resource_id,label:x.display_name}));
+  const sources=[
+    ...runtime.state.events.map(x=>({value:x.event_id,label:'Evento · '+x.display_name})),
+    ...runtime.state.resources.map(x=>({value:x.resource_id,label:'Recurso · '+x.display_name})),
+    ...runtime.state.decisions.map(x=>({value:x.decision_id,label:'Decisión · '+x.display_name})),
+    ...runtime.state.work_items.map(x=>({value:x.work_id,label:'Trabajo · '+x.title}))
+  ];
+  document.querySelectorAll('[data-select="actors"]').forEach(s=>fillSelect(s,actors,s.name==='counterparty_ref'?'Sin contraparte':null));
+  document.querySelectorAll('[data-select="resources"]').forEach(s=>fillSelect(s,resources,'Sin recurso'));
+  document.querySelectorAll('[data-select="sources"]').forEach(s=>fillSelect(s,sources,'Selecciona una causa'));
+}
 function loadRuntime(){
   const raw=localStorage.getItem(KEY);
   if(raw){
@@ -95,6 +130,9 @@ function render(){
   document.getElementById('sBlocked').textContent=v.operation.summary.blocked;
   document.getElementById('sWaiting').textContent=v.operation.summary.waiting_external;
   document.getElementById('sPayable').textContent=money(v.finance.summary.outstanding_payable);
+  document.getElementById('actors').innerHTML=v.club.actors.map(a=>`<tr><td>${esc(a.display_name)}</td><td>${esc(a.actor_kind)}</td><td>${esc(a.role)}</td></tr>`).join('');
+  document.getElementById('events').innerHTML=v.club.events.map(e=>`<tr><td>${esc(e.display_name)}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td></tr>`).join('');
+  refreshSourceSelects();
 
   document.getElementById('work').innerHTML=v.operation.items.map(w=>`
     <article class="card"><div class="row"><div><small>${esc(w.work_kind)}</small><h3>${esc(w.title)}</h3></div><span class="state ${esc(w.state)}">${esc(w.state)}</span></div>
@@ -144,6 +182,19 @@ function render(){
 
   document.getElementById('audit').innerHTML=[...v.evidence.audit].reverse().slice(0,40).map(a=>`<tr><td>${esc(a.at||'')}</td><td>${esc(a.kind)}</td><td>${esc(a.object_ref||'')}</td><td>${esc(a.reason||a.amount_clp||a.to||'')}</td></tr>`).join('');
 }
+function bindForm(id,handler){
+  document.getElementById(id).addEventListener('submit',e=>{
+    e.preventDefault();
+    try{handler(new FormData(e.currentTarget));e.currentTarget.reset();render()}catch(err){toast(err.message||String(err),true)}
+  });
+}
+bindForm('actorForm',fd=>apply({action_id:'SRC-ACTOR-'+token(),type:'ACTOR_CREATE',actor_id:'MOCK-ACTOR-USER-'+token(),display_name:fd.get('name'),actor_kind:'PERSON',role:fd.get('role')||'COLLABORATOR'}));
+bindForm('resourceForm',fd=>apply({action_id:'SRC-RES-'+token(),type:'RESOURCE_CREATE',resource_id:'MOCK-RESOURCE-USER-'+token(),display_name:fd.get('name'),kind:fd.get('kind')||'RESOURCE',state:'AVAILABLE',attention:'NORMAL'}));
+bindForm('eventForm',fd=>apply({action_id:'SRC-EVENT-'+token(),type:'EVENT_CREATE',event_id:'MOCK-EVENT-USER-'+token(),display_name:fd.get('name'),kind:fd.get('kind')||'ACTIVITY',state:'SCHEDULED',starts_at:fd.get('starts_at')||null,resource_refs:fd.get('resource_ref')?[fd.get('resource_ref')]:[]}));
+bindForm('decisionForm',fd=>apply({action_id:'SRC-DEC-'+token(),type:'DECISION_CREATE',decision_id:'MOCK-DECISION-USER-'+token(),display_name:fd.get('name'),kind:fd.get('kind')||'CLUB_DECISION',responsible_actor_id:fd.get('responsible_actor_id')}));
+bindForm('workForm',fd=>apply({action_id:'SRC-WORK-'+token(),type:'HUMAN_WORK_CREATE',work_id:'MOCK-WORK-USER-'+token(),title:fd.get('title'),work_kind:'HUMAN_CREATED_WORK',responsible_actor_id:fd.get('responsible_actor_id'),source_ref:fd.get('source_ref'),resource_ref:fd.get('resource_ref')||null,due_at:fd.get('due_at')||null,priority:'NORMAL'}));
+bindForm('obligationForm',fd=>apply({action_id:'SRC-OBL-'+token(),type:'OBLIGATION_CREATE',obligation_id:'MOCK-OBL-USER-'+token(),direction:fd.get('direction'),kind:fd.get('kind')||'MOCK_SERVICE',amount_clp:Number(fd.get('amount_clp')),cause_ref:fd.get('cause_ref'),counterparty_ref:fd.get('counterparty_ref')||null}));
+
 document.getElementById('reset').addEventListener('click',()=>{runtime=createMockRuntime(golden,{createdAt:new Date().toISOString()});save();render();toast('Golden mock restablecido')});
 document.getElementById('refresh').addEventListener('click',()=>{runtime=loadRuntime();render();toast('Vista actualizada')});
 
