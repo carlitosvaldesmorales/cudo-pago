@@ -47,7 +47,10 @@ jobs:
           node --check qa-v8-google/tools/certify_shared_object_contract.mjs
           node --check qa-v8-google/tools/work_item_engine.mjs
           node --check qa-v8-google/tools/certify_work_item_engine.mjs
+          node --check qa-v8-google/tools/certify_operational_web_projection.mjs
       - name: Re-certify shared object contract
         run: node qa-v8-google/tools/certify_shared_object_contract.mjs
       - name: Certify responsibility work state cluster
         run: node qa-v8-google/tools/certify_work_item_engine.mjs
+      - name: Certify CUDO Web operational projection
+        run: node qa-v8-google/tools/certify_operational_web_projection.mjs
