@@ -23,6 +23,21 @@ const EVENT_TRANSITIONS={
   CANCELLED:new Set([])
 };
 
+const OCTAGONAL_BOND_RULESET_REF='CUDO_OCTAGONAL_FEB_2025_BOND_RULESET';
+const OCTAGONAL_BOND_AMOUNT_CLP=250000;
+const OCTAGONAL_BOND_FINE_RULES={
+  NO_SHOW_SECOND_HALF:{
+    amount_clp:50000,
+    rule_id:'CUDO_OCTAGONAL_RULE_6_NO_SHOW_SECOND_HALF',
+    sports_consequence:'POINTS_LOST_TO_RIVAL'
+  },
+  MISSING_SERIES:{
+    amount_clp:100000,
+    rule_id:'CUDO_OCTAGONAL_RULE_13_MISSING_SERIES',
+    sports_consequence:'POINTS_LOST_TO_RIVAL'
+  }
+};
+
 const CUDO_TOURNAMENT_RULESET_REF='CUDO_QUADRANGULAR_OTONO_BOUNDED_RULESET';
 const ADMIN_MATCH_RULESET_REF='CUDO_QUADRANGULAR_OTONO_ADMIN_RESULT_RULESET';
 const ADMIN_MATCH_POINTS={
@@ -321,7 +336,174 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='MATCH_ADMINISTRATIVE_OUTCOME_APPLY'){
+  if(action.type==='TOURNAMENT_BOND_RECEIVE'){
+    const obligationId=requireMockId(action.obligation_id,'MOCK-OBL-BOND-');
+    ensureUnique(state.financial_obligations,'obligation_id',obligationId,'tournament bond');
+    const club=findBy(state.actors,'actor_id',action.club_actor_id,'participating club');
+    if(club.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('tournament bond club must be EXTERNAL_ORGANIZATION');
+    const rulesetRef=String(action.ruleset_ref||OCTAGONAL_BOND_RULESET_REF);
+    if(rulesetRef!==OCTAGONAL_BOND_RULESET_REF) throw new Error('tournament bond ruleset scope not allowed');
+    if((state.financial_obligations||[]).some(x=>x.kind==='TOURNAMENT_BOND_REFUND'&&x.counterparty_ref===club.actor_id&&x.ruleset_ref===rulesetRef)){
+      throw new Error('tournament bond already exists for club and ruleset');
+    }
+    const suffix=obligationId.replace(/^MOCK-OBL-BOND-/,'');
+    const movementId=`MOCK-MOV-BOND-RECEIPT-${suffix}`;
+    if((state.financial_movements||[]).some(x=>x.movement_id===movementId)) throw new Error('duplicate bond receipt movement');
+    const movement={
+      movement_id:movementId,
+      kind:'TOURNAMENT_BOND_RECEIPT',
+      direction:'IN',
+      amount_clp:OCTAGONAL_BOND_AMOUNT_CLP,
+      channel:action.channel||'BANK_TRANSFER',
+      status:'CONFIRMED',
+      reconciliation_state:'RECONCILED',
+      occurred_at:at,
+      settlement_refs:[],
+      evidence_ref:action.evidence_ref||null,
+      economic_class:'REFUNDABLE_DEPOSIT',
+      revenue:false,
+      cash_effect:true,
+      mock:true
+    };
+    const obligation={
+      obligation_id:obligationId,
+      direction:'PAYABLE',
+      kind:'TOURNAMENT_BOND_REFUND',
+      amount_clp:OCTAGONAL_BOND_AMOUNT_CLP,
+      settled_amount_clp:0,
+      outstanding_amount_clp:OCTAGONAL_BOND_AMOUNT_CLP,
+      state:'OPEN',
+      cause_ref:movementId,
+      counterparty_ref:club.actor_id,
+      ruleset_ref:rulesetRef,
+      bond_state:'ACTIVE',
+      received_amount_clp:OCTAGONAL_BOND_AMOUNT_CLP,
+      fine_offset_amount_clp:0,
+      cash_refunded_amount_clp:0,
+      received_movement_ref:movementId,
+      mock:true
+    };
+    state.financial_movements.push(movement);
+    state.financial_obligations.push(obligation);
+    appendAudit(state,{kind:'TOURNAMENT_BOND_RECEIVED',object_ref:obligationId,club_actor_ref:club.actor_id,movement_ref:movementId,amount_clp:OCTAGONAL_BOND_AMOUNT_CLP,ruleset_ref:rulesetRef},at);
+    appendAudit(state,{kind:'TOURNAMENT_BOND_REFUND_PAYABLE_CREATED',object_ref:obligationId,counterparty_ref:club.actor_id,amount_clp:OCTAGONAL_BOND_AMOUNT_CLP},at);
+    effects.push({kind:'TOURNAMENT_BOND_RECEIVED',obligation_id:obligationId,movement_id:movementId,club_actor_id:club.actor_id,amount_clp:OCTAGONAL_BOND_AMOUNT_CLP});
+    effects.push({kind:'TOURNAMENT_BOND_REFUND_PAYABLE_CREATED',obligation_id:obligationId,amount_clp:OCTAGONAL_BOND_AMOUNT_CLP});
+  } else if(action.type==='TOURNAMENT_BOND_FINE_OFFSET_APPLY'){
+    const obligation=findBy(state.financial_obligations,'obligation_id',action.obligation_id,'tournament bond');
+    if(obligation.kind!=='TOURNAMENT_BOND_REFUND') throw new Error('obligation is not tournament bond refund');
+    if(obligation.bond_state!=='ACTIVE') throw new Error('tournament bond is not active');
+    const ruleCode=String(action.rule_code||'').toUpperCase();
+    const rule=OCTAGONAL_BOND_FINE_RULES[ruleCode];
+    if(!rule) throw new Error('unsupported tournament bond fine rule');
+    if(rule.amount_clp>Number(obligation.outstanding_amount_clp||0)) throw new Error('fine offset exceeds refundable bond balance');
+    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    if(responsible.actor_kind!=='PERSON') throw new Error('bond fine responsible actor must be PERSON');
+    const decisionId=requireMockId(action.decision_id,'MOCK-DECISION-BOND-FINE-');
+    ensureUnique(state.decisions,'decision_id',decisionId,'bond fine decision');
+    const suffix=decisionId.replace(/^MOCK-DECISION-BOND-FINE-/,'');
+    const movementId=`MOCK-MOV-BOND-OFFSET-${suffix}`;
+    const settlementId=`MOCK-SET-BOND-OFFSET-${suffix}`;
+    if((state.financial_movements||[]).some(x=>x.movement_id===movementId)) throw new Error('duplicate bond offset movement');
+    const decision={
+      decision_id:decisionId,
+      kind:'TOURNAMENT_BOND_FINE_OFFSET',
+      display_name:`${ruleCode} · ${obligation.counterparty_ref}`,
+      state:'APPLIED',
+      responsible_actor_id:responsible.actor_id,
+      bond_obligation_ref:obligation.obligation_id,
+      club_actor_id:obligation.counterparty_ref,
+      rule_code:ruleCode,
+      rule_id:rule.rule_id,
+      amount_clp:rule.amount_clp,
+      sports_consequence:rule.sports_consequence,
+      sports_consequence_state:'DEFERRED_OUT_OF_FINANCIAL_CLUSTER',
+      mock:true
+    };
+    const movement={
+      movement_id:movementId,
+      kind:'NON_CASH_BOND_OFFSET',
+      direction:'INTERNAL',
+      amount_clp:rule.amount_clp,
+      channel:'BOND_OFFSET',
+      status:'CONFIRMED',
+      reconciliation_state:'RECONCILED',
+      occurred_at:at,
+      settlement_refs:[settlementId],
+      cash_effect:false,
+      rule_id:rule.rule_id,
+      mock:true
+    };
+    const settlement={
+      settlement_id:settlementId,
+      movement_id:movementId,
+      obligation_id:obligation.obligation_id,
+      amount_clp:rule.amount_clp,
+      settlement_kind:'NON_CASH_OFFSET',
+      state:'ACTIVE',
+      mock:true
+    };
+    state.decisions.push(decision);
+    state.financial_movements.push(movement);
+    state.settlements=state.settlements||[];
+    state.settlements.push(settlement);
+    obligation.settled_amount_clp=Number(obligation.settled_amount_clp||0)+rule.amount_clp;
+    obligation.outstanding_amount_clp=Number(obligation.amount_clp)-obligation.settled_amount_clp;
+    obligation.state=obligation.outstanding_amount_clp===0?'SETTLED':'PARTIALLY_SETTLED';
+    obligation.fine_offset_amount_clp=Number(obligation.fine_offset_amount_clp||0)+rule.amount_clp;
+    appendAudit(state,{kind:'TOURNAMENT_BOND_FINE_OFFSET_APPLIED',object_ref:decisionId,bond_obligation_ref:obligation.obligation_id,rule_code:ruleCode,rule_id:rule.rule_id,amount_clp:rule.amount_clp,movement_ref:movementId,cash_effect:false},at);
+    appendAudit(state,{kind:'TOURNAMENT_BOND_REFUNDABLE_BALANCE_RECALCULATED',object_ref:obligation.obligation_id,outstanding_amount_clp:obligation.outstanding_amount_clp},at);
+    effects.push({kind:'TOURNAMENT_BOND_FINE_OFFSET_APPLIED',decision_id:decisionId,obligation_id:obligation.obligation_id,movement_id:movementId,amount_clp:rule.amount_clp,cash_effect:false});
+    effects.push({kind:'TOURNAMENT_BOND_REFUNDABLE_BALANCE_RECALCULATED',obligation_id:obligation.obligation_id,outstanding_amount_clp:obligation.outstanding_amount_clp});
+  } else if(action.type==='TOURNAMENT_BOND_REFUND'){
+    const obligation=findBy(state.financial_obligations,'obligation_id',action.obligation_id,'tournament bond');
+    if(obligation.kind!=='TOURNAMENT_BOND_REFUND') throw new Error('obligation is not tournament bond refund');
+    if(obligation.bond_state!=='ACTIVE') throw new Error('tournament bond is not active');
+    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    if(responsible.actor_kind!=='PERSON') throw new Error('bond refund responsible actor must be PERSON');
+    const amount=Number(obligation.outstanding_amount_clp||0);
+    let movementId=null;
+    if(amount>0){
+      const suffix=obligation.obligation_id.replace(/^MOCK-OBL-BOND-/,'');
+      movementId=action.movement_id||`MOCK-MOV-BOND-REFUND-${suffix}`;
+      const settlementId=action.settlement_id||`MOCK-SET-BOND-REFUND-${suffix}`;
+      if((state.financial_movements||[]).some(x=>x.movement_id===movementId)) throw new Error('duplicate bond refund movement');
+      const movement={
+        movement_id:movementId,
+        kind:'TOURNAMENT_BOND_REFUND',
+        direction:'OUT',
+        amount_clp:amount,
+        channel:action.channel||'BANK_TRANSFER',
+        status:'CONFIRMED',
+        reconciliation_state:'RECONCILED',
+        occurred_at:at,
+        settlement_refs:[settlementId],
+        evidence_ref:action.evidence_ref||null,
+        cash_effect:true,
+        mock:true
+      };
+      const settlement={
+        settlement_id:settlementId,
+        movement_id:movementId,
+        obligation_id:obligation.obligation_id,
+        amount_clp:amount,
+        settlement_kind:'CASH_REFUND',
+        state:'ACTIVE',
+        mock:true
+      };
+      state.financial_movements.push(movement);
+      state.settlements=state.settlements||[];
+      state.settlements.push(settlement);
+      obligation.settled_amount_clp=Number(obligation.settled_amount_clp||0)+amount;
+      obligation.outstanding_amount_clp=0;
+      obligation.state='SETTLED';
+      obligation.cash_refunded_amount_clp=Number(obligation.cash_refunded_amount_clp||0)+amount;
+    }
+    obligation.bond_state=amount>0?'CLOSED_REFUNDED':'CLOSED_NO_REFUND_BALANCE';
+    obligation.closed_at=at;
+    appendAudit(state,{kind:'TOURNAMENT_BOND_CLOSED',object_ref:obligation.obligation_id,responsible_actor_ref:responsible.actor_id,refund_amount_clp:amount,movement_ref:movementId},at);
+    effects.push({kind:'TOURNAMENT_BOND_CLOSED',obligation_id:obligation.obligation_id,refund_amount_clp:amount,movement_id:movementId,bond_state:obligation.bond_state});
+  } else if(action.type==='MATCH_ADMINISTRATIVE_OUTCOME_APPLY'){
     const decisionId=requireMockId(action.decision_id,'MOCK-DECISION-MATCH-ADMIN-');
     ensureUnique(state.decisions,'decision_id',decisionId,'administrative match outcome');
     const event=findBy(state.events,'event_id',action.event_id,'match event');
@@ -799,6 +981,7 @@ export function applyMockAdminAction(runtime,action){
     effects.push({kind:'EVIDENCE_ADDED',evidence_id:evidence.evidence_id});
   } else if(action.type==='FINANCIAL_SETTLE'){
     const obligation=findBy(state.financial_obligations,'obligation_id',action.obligation_id,'obligation');
+    if(obligation.kind==='TOURNAMENT_BOND_REFUND') throw new Error('tournament bond refund requires TOURNAMENT_BOND_REFUND action');
     const amount=Number(action.amount_clp);
     if(!Number.isInteger(amount)||amount<=0) throw new Error('positive integer amount_clp required');
     if(amount>Number(obligation.outstanding_amount_clp)) throw new Error('settlement exceeds outstanding');
@@ -899,8 +1082,10 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
       outstanding_receivable:state.financial_obligations.filter(x=>x.direction==='RECEIVABLE').reduce((s,x)=>s+Number(x.outstanding_amount_clp||0),0),
       confirmed_movements:state.financial_movements.filter(x=>x.status==='CONFIRMED').length,
       pending_movements:state.financial_movements.filter(x=>x.status==='PENDING').length,
-      reconciliation_complete:state.financial_movements.filter(x=>x.status==='CONFIRMED').every(x=>x.reconciliation_state==='RECONCILED')
-    },obligations:clone(state.financial_obligations),movements:clone(state.financial_movements),settlements:clone(state.settlements||[]),production_write:false
+      reconciliation_complete:state.financial_movements.filter(x=>x.status==='CONFIRMED').every(x=>x.reconciliation_state==='RECONCILED'),
+      tournament_bonds:state.financial_obligations.filter(x=>x.kind==='TOURNAMENT_BOND_REFUND').length,
+      refundable_bond_balance:state.financial_obligations.filter(x=>x.kind==='TOURNAMENT_BOND_REFUND'&&x.bond_state==='ACTIVE').reduce((sum,x)=>sum+Number(x.outstanding_amount_clp||0),0)
+    },obligations:clone(state.financial_obligations),movements:clone(state.financial_movements),settlements:clone(state.settlements||[]),tournament_bonds:clone(state.financial_obligations.filter(x=>x.kind==='TOURNAMENT_BOND_REFUND')),production_write:false
   };
   return {
     club:{
