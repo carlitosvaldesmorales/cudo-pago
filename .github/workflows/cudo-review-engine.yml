@@ -12,6 +12,10 @@ on:
       - 'qa-v8-google/tools/work_state_web_fixture_harness.mjs'
       - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_work_state_requests.mjs'
+      - 'qa-v8-google/tools/canonical_financial_core.mjs'
+      - 'qa-v8-google/tools/certify_work_financial_effects.mjs'
+      - 'qa-v8-google/tools/work_financial_effects.mjs'
+      - 'qa-v8-google/contracts/cudo-work-financial-effect-contract-v1.json'
       - 'qa-v8-google/state/operational-work-state.json'
       - 'qa-v8-google/tools/ingest_review_form_responses.mjs'
       - 'qa-v8-google/tools/review_form_ingestion_fixture_harness.mjs'
@@ -45,6 +49,10 @@ on:
       - '.github/workflows/cudo-review-event-observer.yml'
       - 'qa-v8-google/state/operational-work-state.json'
       - 'qa-v8-google/tools/process_work_state_requests.mjs'
+      - 'qa-v8-google/tools/canonical_financial_core.mjs'
+      - 'qa-v8-google/tools/certify_work_financial_effects.mjs'
+      - 'qa-v8-google/tools/work_financial_effects.mjs'
+      - 'qa-v8-google/contracts/cudo-work-financial-effect-contract-v1.json'
       - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
       - 'qa-v8-google/tools/work_state_web_fixture_harness.mjs'
       - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
@@ -92,6 +100,8 @@ jobs:
           node --check qa-v8-google/tools/process_persona_review_decisions.mjs
           node --check qa-v8-google/tools/persona_review_fixture_harness.mjs
           node --check qa-v8-google/tools/process_work_state_requests.mjs
+          node --check qa-v8-google/tools/work_financial_effects.mjs
+          node --check qa-v8-google/tools/certify_work_financial_effects.mjs
           node --check qa-v8-google/tools/work_state_requests_fixture_harness.mjs
           node --check qa-v8-google/tools/work_state_web_fixture_harness.mjs
           node --check preview-v8/tools/sync_google_publico.mjs
@@ -105,6 +115,8 @@ jobs:
         run: node qa-v8-google/tools/review_engine_fixture_harness.mjs
       - name: Probar PERSONA -> alta interna con fixture sintético
         run: node qa-v8-google/tools/persona_review_fixture_harness.mjs
+      - name: Probar trabajo completado -> obligación financiera
+        run: node qa-v8-google/tools/certify_work_financial_effects.mjs
       - name: Probar solicitudes Web -> estado operacional canónico
         run: node qa-v8-google/tools/work_state_requests_fixture_harness.mjs
       - name: Probar enrutamiento de Web privada operacional
