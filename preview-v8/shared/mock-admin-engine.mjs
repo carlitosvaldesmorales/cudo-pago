@@ -24,6 +24,17 @@ const EVENT_TRANSITIONS={
 };
 
 const CUDO_TOURNAMENT_RULESET_REF='CUDO_QUADRANGULAR_OTONO_BOUNDED_RULESET';
+const ADMIN_MATCH_RULESET_REF='CUDO_QUADRANGULAR_OTONO_ADMIN_RESULT_RULESET';
+const ADMIN_MATCH_POINTS={
+  TERCERA:{win:3,draw:1},
+  SEGUNDA:{win:3,draw:1},
+  PRIMERA:{win:6,draw:3}
+};
+const ADMIN_MATCH_AGGRESSION_RULE={
+  rule_id:'CUDO_QUADRANGULAR_OTONO_RULE_10_AGGRESSION',
+  financial_consequence:{kind:'PRIZE_DEDUCTION',amount_clp:100000,state:'DEFERRED_NO_PRIZE_CONTRACT'}
+};
+
 const SANCTION_RULES={
   DOUBLE_YELLOW:{
     fine_clp:10000,
@@ -310,7 +321,64 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='FACILITY_DAMAGE_REPORT'){
+  if(action.type==='MATCH_ADMINISTRATIVE_OUTCOME_APPLY'){
+    const decisionId=requireMockId(action.decision_id,'MOCK-DECISION-MATCH-ADMIN-');
+    ensureUnique(state.decisions,'decision_id',decisionId,'administrative match outcome');
+    const event=findBy(state.events,'event_id',action.event_id,'match event');
+    if(event.kind!=='MATCH'||!event.sports) throw new Error('administrative outcome requires MATCH with sports contract');
+    if(event.state!=='LIVE') throw new Error('administrative outcome requires LIVE match');
+    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    if(responsible.actor_kind!=='PERSON') throw new Error('administrative outcome responsible actor must be PERSON');
+    const category=String(event.sports.categoria||'').toUpperCase();
+    const scoring=ADMIN_MATCH_POINTS[category];
+    if(!scoring) throw new Error('administrative outcome category not supported by bounded ruleset');
+    const tournamentRef=String(action.tournament_ref||ADMIN_MATCH_RULESET_REF);
+    if(tournamentRef!==ADMIN_MATCH_RULESET_REF) throw new Error('administrative outcome tournament scope not allowed');
+    const offendingSide=String(action.offending_side||'').toUpperCase();
+    if(!['LOCAL','VISITA'].includes(offendingSide)) throw new Error('offending_side must be LOCAL or VISITA');
+    const winnerSide=offendingSide==='LOCAL'?'VISITA':'LOCAL';
+    const loserSide=offendingSide;
+    const pointsLocal=winnerSide==='LOCAL'?scoring.win:0;
+    const pointsVisita=winnerSide==='VISITA'?scoring.win:0;
+    const from=event.state;
+    event.state='COMPLETED';
+    event.sports.competencia='Cuadrangular Otoño CUDO (Mock)';
+    event.sports.tournament_ref=tournamentRef;
+    delete event.sports.goles_local;
+    delete event.sports.goles_visita;
+    event.sports.administrative_outcome={
+      kind:'AWARDED_WIN',
+      winner_side:winnerSide,
+      loser_side:loserSide,
+      offending_side:offendingSide,
+      points_local:pointsLocal,
+      points_visita:pointsVisita,
+      rule_id:ADMIN_MATCH_AGGRESSION_RULE.rule_id,
+      tournament_ref:tournamentRef,
+      mock:true
+    };
+    const decision={
+      decision_id:decisionId,
+      kind:'ADMINISTRATIVE_MATCH_OUTCOME',
+      display_name:`Resolución administrativa · ${event.display_name}`,
+      state:'APPLIED',
+      responsible_actor_id:responsible.actor_id,
+      event_ref:event.event_id,
+      offending_side:offendingSide,
+      winner_side:winnerSide,
+      category,
+      tournament_ref:tournamentRef,
+      rule_id:ADMIN_MATCH_AGGRESSION_RULE.rule_id,
+      financial_consequence:{...ADMIN_MATCH_AGGRESSION_RULE.financial_consequence},
+      mock:true
+    };
+    state.decisions.push(decision);
+    appendAudit(state,{kind:'EVENT_TRANSITION',object_ref:event.event_id,from,to:'COMPLETED',reason:'ADMINISTRATIVE_OUTCOME',score:null},at);
+    appendAudit(state,{kind:'ADMINISTRATIVE_MATCH_OUTCOME_APPLIED',object_ref:decisionId,event_ref:event.event_id,offending_side:offendingSide,winner_side:winnerSide,category,points_local:pointsLocal,points_visita:pointsVisita,rule_id:decision.rule_id},at);
+    effects.push({kind:'ADMINISTRATIVE_MATCH_OUTCOME_APPLIED',decision_id:decisionId,event_id:event.event_id,winner_side:winnerSide,points_local:pointsLocal,points_visita:pointsVisita});
+    const post=derivePostEventWork(state,event,at);
+    for(const work of post) effects.push({kind:'POST_EVENT_WORK_CREATED',work_id:work.work_id,source_ref:event.event_id});
+  } else if(action.type==='FACILITY_DAMAGE_REPORT'){
     const caseId=requireMockId(action.case_id,'MOCK-DECISION-DAMAGE-');
     ensureUnique(state.decisions,'decision_id',caseId,'facility damage case');
     const resource=findBy(state.resources,'resource_id',action.resource_id,'damaged resource');
