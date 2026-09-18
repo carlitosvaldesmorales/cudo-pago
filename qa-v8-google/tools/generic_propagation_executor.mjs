@@ -38,7 +38,19 @@ function relationTargets(anchor,selector,objectMap){
   }
   return matches;
 }
-function resolveBinding(binding,anchor,objectMap){
+function reverseRelationSources(anchor,selector,objects){
+  const matches=[];
+  for(const object of objects){
+    if(object.object_type!==selector.object_type) continue;
+    const linked=(object.relationships||[]).some(relation=>
+      relation.relationship_type===selector.relationship_type &&
+      relation.target_object_id===anchor.object_id
+    );
+    if(linked) matches.push(object);
+  }
+  return matches.sort((a,b)=>a.object_id.localeCompare(b.object_id));
+}
+function resolveBinding(binding,anchor,objectMap,objects){
   const selector=binding.selector;
   let object;
   if(selector.scope==='SOURCE_OBJECT'){
@@ -52,6 +64,17 @@ function resolveBinding(binding,anchor,objectMap){
       throw new Error(`${binding.name}: ${anchor.object_id} relation ${selector.relationship_type} resolved ${matches.length} objects`);
     }
     object=matches[0];
+  }else if(selector.scope==='REVERSE_RELATED_OBJECTS'){
+    const matches=reverseRelationSources(anchor,selector,objects);
+    if(matches.length===0){
+      throw new Error(`${binding.name}: ${anchor.object_id} reverse relation ${selector.relationship_type} resolved 0 objects`);
+    }
+    for(const match of matches){
+      if(!Object.hasOwn(match.data||{},selector.field)){
+        throw new Error(`${binding.name}: ${match.object_id} missing data field ${selector.field}`);
+      }
+    }
+    return {objects:matches,field:selector.field,value:matches.map(match=>match.data[selector.field])};
   }else{
     throw new Error(`${binding.name}: unsupported selector scope ${selector.scope}`);
   }
@@ -79,6 +102,13 @@ function candidateAnchors(rule,changedObject,changedField,objects,objectMap){
         }
       }
     }
+    if(selector.scope==='REVERSE_RELATED_OBJECTS'){
+      for(const relation of changedObject.relationships||[]){
+        if(relation.relationship_type!==selector.relationship_type) continue;
+        const target=objectMap.get(relation.target_object_id);
+        if(target&&target.object_type===anchorType) found.set(target.object_id,target);
+      }
+    }
   }
   return [...found.values()].sort((a,b)=>a.object_id.localeCompare(b.object_id));
 }
@@ -91,6 +121,9 @@ function evaluateExpression(rule,inputValues){
     case 'IDENTITY':
       if(args.length!==1) throw new Error(`${rule.rule_id}: IDENTITY requires 1 arg`);
       return clone(args[0]);
+    case 'SUM':
+      if(args.length!==1||!Array.isArray(args[0])) throw new Error(`${rule.rule_id}: SUM requires one array arg`);
+      return args[0].reduce((sum,v)=>sum+Number(v),0);
     case 'MULTIPLY':
       if(args.length!==2) throw new Error(`${rule.rule_id}: MULTIPLY requires 2 args`);
       return Number(args[0])*Number(args[1]);
@@ -153,6 +186,12 @@ export function planPropagation({
   const enabledRules=(registry.rules||[])
     .filter(rule=>rule.status==='ACTIVE'||(allowExperimental&&rule.status==='EXPERIMENTAL'))
     .sort((a,b)=>a.rule_id.localeCompare(b.rule_id));
+  for(const group of registry.exclusive_condition_groups||[]){
+    const active=(group.condition_ids||[]).filter(conditionId=>conditions.has(conditionId));
+    if(active.length>1){
+      throw new Error(`exclusive condition conflict ${group.group_id}: ${active.join(',')}`);
+    }
+  }
 
   const transitions=[];
   const failures=[];
@@ -209,9 +248,11 @@ export function planPropagation({
           const inputValues={};
           const inputRefs={};
           for(const binding of rule.inputs){
-            const resolved=resolveBinding(binding,anchor,objectMap);
+            const resolved=resolveBinding(binding,anchor,objectMap,state);
             inputValues[binding.name]=clone(resolved.value);
-            inputRefs[binding.name]={object_id:resolved.object.object_id,field:resolved.field};
+            inputRefs[binding.name]=resolved.objects
+              ? resolved.objects.map(object=>({object_id:object.object_id,field:resolved.field}))
+              : {object_id:resolved.object.object_id,field:resolved.field};
           }
           const signature=digest({rule_id:rule.rule_id,anchor:anchor.object_id,inputValues});
           const evaluationKey=`${rule.rule_id}|${anchor.object_id}|${signature}`;
@@ -219,7 +260,7 @@ export function planPropagation({
           evaluated.add(evaluationKey);
 
           if(rule.outputs.length!==1) throw new Error(`${rule.rule_id}: executor v1 supports exactly one output`);
-          const output=resolveBinding(rule.outputs[0],anchor,objectMap);
+          const output=resolveBinding(rule.outputs[0],anchor,objectMap,state);
           validateDerivedTarget(output.object,output.field,rule.rule_id);
           const invalidation={
             rule_id:rule.rule_id,
