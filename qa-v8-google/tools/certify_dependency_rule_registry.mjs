@@ -9,7 +9,7 @@ const allowedTypes=new Set([
   'FINANCIAL_OBLIGATION','FINANCIAL_MOVEMENT','DOCUMENT_EVIDENCE'
 ]);
 const allowedEvidence=new Set(['DIRECT','DIRECT_PATTERN','SYNTHETIC_CONTRACT_EXAMPLE','INFERENCE']);
-const allowedOperators=new Set(['MULTIPLY','SUBTRACT','SUM_DIFFERENCE']);
+const allowedOperators=new Set(['MULTIPLY','SUBTRACT','SUM_DIFFERENCE','IDENTITY']);
 
 function selectorKey(selector){
   return [selector.scope,selector.object_type,selector.relationship_type||'',selector.field].join(':');
@@ -20,6 +20,9 @@ function evaluate(rule,inputs){
     return inputs[name];
   });
   switch(rule.expression.operator){
+    case 'IDENTITY':
+      assert.equal(args.length,1,`${rule.rule_id}: IDENTITY requires 1 arg`);
+      return args[0];
     case 'MULTIPLY':
       assert.equal(args.length,2,`${rule.rule_id}: MULTIPLY requires 2 args`);
       return Number(args[0])*Number(args[1]);
