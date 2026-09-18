@@ -10,6 +10,10 @@ on:
       - '.github/workflows/deploy-cudo-activity-google-poc.yml'
   workflow_dispatch:
 
+concurrency:
+  group: cudo-activity-google-poc-apps-script
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -74,7 +78,7 @@ jobs:
             if f['type']=='SERVER_JS' and re.search(r'\bfunction\s+(doGet|doPost)\s*\(',f.get('source','')):
               removed_handlers.append(f['name'])
               continue
-            if f['name']=='CudoActivityQaWeb':
+            if f['name'] in ('CudoActivityQaWeb','CudoActivityQaView'):
               continue
             public_files.append(f)
           if manifest is None: manifest={}
