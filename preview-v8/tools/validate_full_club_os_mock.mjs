@@ -33,12 +33,14 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['memberForm','actorForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
 assert.ok(dashboard.includes('id="members"'));
 assert.ok(dashboard.includes('id="sanctions"'));
 assert.ok(admin.includes('id="sanctions"'));
 assert.ok(admin.includes('id="damageCases"'));
 assert.ok(dashboard.includes('id="damageCases"'));
+assert.ok(admin.includes('id="bonds"'));
+assert.ok(dashboard.includes('id="bonds"'));
 assert.ok(dashboard.includes('id="actors"'));
 assert.ok(dashboard.includes('id="events"'));
 assert.ok(admin.includes("data-event-next"));
@@ -84,6 +86,16 @@ assert.ok(sportsProjection.includes("AWARDED_WIN"));
 assert.ok(pageUx.includes("CUDO GANA · ADM."));
 assert.ok(pageUx.includes("RIVAL GANA · ADM."));
 assert.ok(admin.includes("data-admin-match"));
+assert.ok(engine.includes("TOURNAMENT_BOND_RECEIVE"));
+assert.ok(engine.includes("TOURNAMENT_BOND_FINE_OFFSET_APPLY"));
+assert.ok(engine.includes("TOURNAMENT_BOND_REFUND"));
+assert.ok(engine.includes("NON_CASH_BOND_OFFSET"));
+assert.ok(engine.includes("REFUNDABLE_DEPOSIT"));
+assert.ok(engine.includes("tournament bond refund requires TOURNAMENT_BOND_REFUND action"));
+assert.ok(engine.includes("fine offset exceeds refundable bond balance"));
+assert.ok(engine.includes("sports_consequence_state:'DEFERRED_OUT_OF_FINANCIAL_CLUSTER'"));
+assert.ok(admin.includes("data-bond-fine"));
+assert.ok(admin.includes("data-bond-refund"));
 assert.ok(engine.includes("event.sports={"));
 assert.ok(sportsProjection.includes("deriveMockSportsProjection"));
 assert.ok(sportsProjection.includes("CUDO_WEB_PARTIDOS"));
@@ -200,6 +212,9 @@ console.log(JSON.stringify({
   administrative_match_outcome_without_fake_score:true,
   bounded_category_points_to_standings:true,
   prize_deduction_deferred_without_financial_contract:true,
+  tournament_bond_receipt_to_refundable_liability:true,
+  tournament_bond_non_cash_fine_offset:true,
+  tournament_bond_remaining_balance_refund:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
