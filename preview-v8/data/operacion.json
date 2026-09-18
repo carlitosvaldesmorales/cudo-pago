@@ -1,0 +1,668 @@
+{
+  "schema_version": "CUDO_CLUB_OPERATIONAL_STATE_V1",
+  "generated_at": "2026-09-18T18:30:00-03:00",
+  "reference_date": "2026-09-18",
+  "authority": "GOLDEN_MOCK_READ_MODEL",
+  "mock": true,
+  "summary": {
+    "total": 12,
+    "open": 3,
+    "in_progress": 2,
+    "blocked": 2,
+    "waiting_external": 2,
+    "done": 2,
+    "cancelled": 1,
+    "overdue": 1
+  },
+  "items": [
+    {
+      "work_id": "MOCK-WORK-PREPARE-FIELD-01",
+      "title": "Preparar cancha para partido Mock",
+      "work_kind": "FIELD_PREPARATION",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-ESTADIO-01",
+        "display_name": "Encargado Estadio Mock 01"
+      },
+      "due_date": "2026-09-20",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-STADIUM-01",
+        "display_name": "Estadio CUDO Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-SCHEDULED-01",
+        "display_name": "Partido Mock Programado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-20",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-IRRIGATION-01",
+      "title": "Regadío de cancha Mock",
+      "work_kind": "IRRIGATION",
+      "state": "IN_PROGRESS",
+      "attention": "IN_PROGRESS",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-MANTENCION-01",
+        "display_name": "Mantención Mock 01"
+      },
+      "due_date": "2026-09-19",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-STADIUM-01",
+        "display_name": "Estadio CUDO Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-SCHEDULED-01",
+        "display_name": "Partido Mock Programado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-19",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-GRASS-CUT-01",
+      "title": "Cortar pasto del estadio Mock",
+      "work_kind": "GRASS_CUT",
+      "state": "BLOCKED",
+      "attention": "BLOCKED",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-MANTENCION-01",
+        "display_name": "Mantención Mock 01"
+      },
+      "due_date": "2026-09-19",
+      "priority": "HIGH",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-STADIUM-01",
+        "display_name": "Estadio CUDO Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-SCHEDULED-01",
+        "display_name": "Partido Mock Programado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-19",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [
+          "MOCK-RESOURCE-TRACTOR-01"
+        ],
+        "reason": "TRACTOR_IN_MAINTENANCE"
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-MUNICIPAL-AUTH-01",
+      "title": "Obtener autorización municipal Mock",
+      "work_kind": "EXTERNAL_AUTHORIZATION",
+      "state": "WAITING_EXTERNAL",
+      "attention": "WAITING_EXTERNAL",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-SECRETARIA-01",
+        "display_name": "Secretaría Mock 01"
+      },
+      "due_date": "2026-10-03",
+      "priority": "HIGH",
+      "resource": {
+        "resource_id": null,
+        "display_name": "Sin recurso"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-BINGO-01",
+        "display_name": "Bingo Mock del Club"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-10-03",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [
+          "MOCK-ACTOR-MUNICIPALIDAD-01"
+        ],
+        "reason": "WAITING_EXTERNAL_AUTHORITY"
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-CLEANING-01",
+      "title": "Aseo post-partido Mock",
+      "work_kind": "STADIUM_CLEANING",
+      "state": "DONE",
+      "attention": "DONE",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-ESTADIO-01",
+        "display_name": "Encargado Estadio Mock 01"
+      },
+      "due_date": "2026-09-14",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-STADIUM-01",
+        "display_name": "Estadio CUDO Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-DONE-01",
+        "display_name": "Partido Mock Finalizado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-14",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": {
+        "obligation_id": "MOCK-OBL-CLEANING-01",
+        "direction": "PAYABLE",
+        "kind": "CLEANING_SERVICE",
+        "amount_clp": 30000,
+        "settled_amount_clp": 0,
+        "outstanding_amount_clp": 30000,
+        "state": "OPEN"
+      },
+      "evidence_refs": [
+        "MOCK-EVIDENCE-CLEANING-PHOTO-01"
+      ],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-CANCELLED-EVENT-01",
+      "title": "Preparar amistoso suspendido Mock",
+      "work_kind": "EVENT_PREPARATION",
+      "state": "CANCELLED",
+      "attention": "CANCELLED",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-DEPORTES-01",
+        "display_name": "Delegado Deportivo Mock 01"
+      },
+      "due_date": "2026-09-25",
+      "priority": "LOW",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-STADIUM-01",
+        "display_name": "Estadio CUDO Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-AMISTOSO-CANCEL-01",
+        "display_name": "Amistoso Mock Suspendido"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-25",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [
+        "MOCK-EVIDENCE-CANCEL-DECISION-01"
+      ],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-CAMARIN-SUPPLY-01",
+      "title": "Reponer insumos de camarín Mock",
+      "work_kind": "FACILITY_SUPPLY",
+      "state": "OPEN",
+      "attention": "OVERDUE",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-ESTADIO-01",
+        "display_name": "Encargado Estadio Mock 01"
+      },
+      "due_date": "2026-09-15",
+      "priority": "HIGH",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-CAMARINES-01",
+        "display_name": "Camarines Mock"
+      },
+      "source": {
+        "object_id": "MOCK-RESOURCE-CAMARINES-01",
+        "display_name": "Camarines Mock"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-15",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-BEVERAGE-RETURN-01",
+      "title": "Devolver sobrante de bebestibles Mock",
+      "work_kind": "BEVERAGE_RETURN",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-TESORERIA-01",
+        "display_name": "Tesorería Mock 01"
+      },
+      "due_date": "2026-09-20",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-BEVERAGE-STOCK-01",
+        "display_name": "Stock bebestibles Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-DONE-01",
+        "display_name": "Partido Mock Finalizado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-20",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-BEVERAGE-SETTLEMENT-01",
+      "title": "Liquidar pedido de bebestibles Mock",
+      "work_kind": "BEVERAGE_SETTLEMENT",
+      "state": "BLOCKED",
+      "attention": "BLOCKED",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-TESORERIA-01",
+        "display_name": "Tesorería Mock 01"
+      },
+      "due_date": null,
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-BEVERAGE-STOCK-01",
+        "display_name": "Stock bebestibles Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-DONE-01",
+        "display_name": "Partido Mock Finalizado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": null,
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": "WAITING_FOR_REMAINDER_RETURN"
+      },
+      "dependencies": {
+        "refs": [
+          "MOCK-WORK-BEVERAGE-RETURN-01"
+        ],
+        "unresolved": [
+          "MOCK-WORK-BEVERAGE-RETURN-01"
+        ]
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": {
+        "obligation_id": "MOCK-OBL-BEVERAGE-01",
+        "direction": "PAYABLE",
+        "kind": "SUPPLIER_SETTLEMENT",
+        "amount_clp": 120000,
+        "settled_amount_clp": 50000,
+        "outstanding_amount_clp": 70000,
+        "state": "PARTIALLY_SETTLED"
+      },
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-KIT-WASH-01",
+      "title": "Lavado de camisetas Mock",
+      "work_kind": "KIT_WASHING",
+      "state": "DONE",
+      "attention": "DONE",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-ESTADIO-01",
+        "display_name": "Encargado Estadio Mock 01"
+      },
+      "due_date": "2026-09-14",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": null,
+        "display_name": "Sin recurso"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-DONE-01",
+        "display_name": "Partido Mock Finalizado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-14",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": {
+        "obligation_id": "MOCK-OBL-LAUNDRY-01",
+        "direction": "PAYABLE",
+        "kind": "KIT_LAUNDRY",
+        "amount_clp": 30000,
+        "settled_amount_clp": 30000,
+        "outstanding_amount_clp": 0,
+        "state": "SETTLED"
+      },
+      "evidence_refs": [
+        "MOCK-EVIDENCE-LAUNDRY-01"
+      ],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-SPONSOR-FOLLOWUP-01",
+      "title": "Confirmar transferencia de auspicio Mock",
+      "work_kind": "RECEIVABLE_FOLLOWUP",
+      "state": "WAITING_EXTERNAL",
+      "attention": "WAITING_EXTERNAL",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-TESORERIA-01",
+        "display_name": "Tesorería Mock 01"
+      },
+      "due_date": "2026-09-22",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": null,
+        "display_name": "Sin recurso"
+      },
+      "source": {
+        "object_id": "MOCK-OBL-SPONSOR-01",
+        "display_name": "MOCK-OBL-SPONSOR-01"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-22",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [
+          "MOCK-ACTOR-PROVEEDOR-01"
+        ],
+        "reason": "WAITING_EXTERNAL_PAYMENT"
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": {
+        "obligation_id": "MOCK-OBL-SPONSOR-01",
+        "direction": "RECEIVABLE",
+        "kind": "SPONSOR_RECEIVABLE",
+        "amount_clp": 250000,
+        "settled_amount_clp": 0,
+        "outstanding_amount_clp": 250000,
+        "state": "OPEN"
+      },
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-BROADCAST-01",
+      "title": "Preparar transmisión Chépica Play Mock",
+      "work_kind": "BROADCAST_PREPARATION",
+      "state": "IN_PROGRESS",
+      "attention": "IN_PROGRESS",
+      "responsible": {
+        "actor_id": "MOCK-ACTOR-COMUNICACIONES-01",
+        "display_name": "Comunicaciones Mock 01"
+      },
+      "due_date": "2026-09-20",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "MOCK-RESOURCE-STREAM-01",
+        "display_name": "Kit transmisión Mock"
+      },
+      "source": {
+        "object_id": "MOCK-EVENT-MATCH-SCHEDULED-01",
+        "display_name": "Partido Mock Programado"
+      },
+      "trigger_reason": "MOCK_SCENARIO",
+      "schedule": {
+        "start_date": null,
+        "expected_end_date": "2026-09-20",
+        "conditional_extension_date": null,
+        "condition": null
+      },
+      "blockers": {
+        "refs": [],
+        "reason": null
+      },
+      "dependencies": {
+        "refs": [],
+        "unresolved": []
+      },
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": null,
+        "condition": null,
+        "semantics": "MOCK_CONTEXT"
+      },
+      "financial_effect": null,
+      "evidence_refs": [],
+      "object_version": 1,
+      "mock": true
+    }
+  ],
+  "production_write": false
+}
