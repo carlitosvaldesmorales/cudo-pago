@@ -90,8 +90,13 @@
       const row=el('div','jornada-row');
       row.append(el('span','cat',m.categoria||'CATEGORÍA'));
       const finalizado=String(m.estado_partido).toUpperCase()==='FINALIZADO';
+      const resultado=finalizado
+        ? (m.resultado_administrativo==='AWARDED_WIN'
+            ? (m.ganador==='CUDO'?'CUDO GANA · ADM.':'RIVAL GANA · ADM.')
+            : `${m.goles_local ?? '-'} - ${m.goles_visita ?? '-'}`)
+        : null;
       row.append(el('span','',finalizado?'Finalizado':(m.hora||'Horario por confirmar')),
-        finalizado?el('span','result',`${m.goles_local ?? '-'} - ${m.goles_visita ?? '-'}`):el('span','time',m.hora||'POR CONFIRMAR'));
+        finalizado?el('span','result',resultado):el('span','time',m.hora||'POR CONFIRMAR'));
       list.append(row);
     });
     card.append(list);return card;

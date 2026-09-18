@@ -124,7 +124,11 @@ function apply(action){
 }
 function eventButtons(e){
   if(e.state==='SCHEDULED') return '<button class="btnx" data-event="'+esc(e.event_id)+'" data-event-next="LIVE">Iniciar</button> <button class="btnx warn" data-event="'+esc(e.event_id)+'" data-event-next="CANCELLED">Cancelar</button>';
-  if(e.state==='LIVE'&&e.kind==='MATCH') return '<span style="display:inline-flex;gap:5px;align-items:center"><input data-score-local="'+esc(e.event_id)+'" type="number" min="0" value="0" style="width:48px;padding:7px;border:1px solid #cfd6df;border-radius:7px">–<input data-score-away="'+esc(e.event_id)+'" type="number" min="0" value="0" style="width:48px;padding:7px;border:1px solid #cfd6df;border-radius:7px"><button class="btnx" data-event="'+esc(e.event_id)+'" data-event-next="COMPLETED">Finalizar</button><button class="btnx warn" data-event="'+esc(e.event_id)+'" data-event-next="CANCELLED">Cancelar</button></span>';
+  if(e.state==='LIVE'&&e.kind==='MATCH'){
+    const bounded=['TERCERA','SEGUNDA','PRIMERA'].includes(String(e.sports?.categoria||'').toUpperCase());
+    const admin=bounded?'<button class="btnx warn" data-admin-match="'+esc(e.event_id)+'" data-admin-offender="LOCAL">ADM: infractor local</button><button class="btnx warn" data-admin-match="'+esc(e.event_id)+'" data-admin-offender="VISITA">ADM: infractor visita</button>':'';
+    return '<span style="display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap"><input data-score-local="'+esc(e.event_id)+'" type="number" min="0" value="0" style="width:48px;padding:7px;border:1px solid #cfd6df;border-radius:7px">–<input data-score-away="'+esc(e.event_id)+'" type="number" min="0" value="0" style="width:48px;padding:7px;border:1px solid #cfd6df;border-radius:7px"><button class="btnx" data-event="'+esc(e.event_id)+'" data-event-next="COMPLETED">Finalizar</button><button class="btnx warn" data-event="'+esc(e.event_id)+'" data-event-next="CANCELLED">Cancelar</button>'+admin+'</span>';
+  }
   if(e.state==='LIVE') return '<button class="btnx" data-event="'+esc(e.event_id)+'" data-event-next="COMPLETED">Finalizar</button> <button class="btnx warn" data-event="'+esc(e.event_id)+'" data-event-next="CANCELLED">Cancelar</button>';
   return '—';
 }
@@ -177,7 +181,14 @@ function render(){
     apply({action_id:'DAMAGE-AMOUNT-'+Date.now(),type:'DAMAGE_AMOUNT_AGREE',decision_id:d.decision_id,amount_clp:amount,evidence_ref:evidenceRef});
   }));
   document.getElementById('actors').innerHTML=v.club.actors.map(a=>`<tr><td>${esc(a.display_name)}</td><td>${esc(a.actor_kind)}</td><td>${esc(a.role)}</td></tr>`).join('');
-  document.getElementById('events').innerHTML=v.club.events.map(e=>`<tr><td>${esc(e.display_name)}${e.sports?'<br><small>'+esc(e.sports.local)+' vs '+esc(e.sports.visita)+' · '+esc(e.sports.categoria)+'</small>':''}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td><td>${eventButtons(e)}</td></tr>`).join('');
+  document.getElementById('events').innerHTML=v.club.events.map(e=>`<tr><td>${esc(e.display_name)}${e.sports?'<br><small>'+esc(e.sports.local)+' vs '+esc(e.sports.visita)+' · '+esc(e.sports.categoria)+(e.sports.administrative_outcome?' · ADM gana '+esc(e.sports.administrative_outcome.winner_side):'')+'</small>':''}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td><td>${eventButtons(e)}</td></tr>`).join('');
+  document.querySelectorAll('[data-admin-match]').forEach(b=>b.addEventListener('click',()=>{
+    const e=v.club.events.find(x=>x.event_id===b.dataset.adminMatch);
+    const responsible=v.club.actors.find(x=>x.role==='DEPORTES'&&x.actor_kind==='PERSON');
+    if(!responsible){toast('Falta responsable DEPORTES en el mock',true);return}
+    const t=token();
+    apply({action_id:'MATCH-ADMIN-'+t,type:'MATCH_ADMINISTRATIVE_OUTCOME_APPLY',decision_id:'MOCK-DECISION-MATCH-ADMIN-'+t,event_id:e.event_id,offending_side:b.dataset.adminOffender,responsible_actor_id:responsible.actor_id});
+  }));
   document.querySelectorAll('[data-event]').forEach(b=>b.addEventListener('click',()=>{
     const e=v.club.events.find(x=>x.event_id===b.dataset.event);
     const action={action_id:'EVT-'+Date.now(),type:'EVENT_TRANSITION',event_id:e.event_id,expected_state:e.state,next_state:b.dataset.eventNext,reason:'Acción desde Admin Mock'};

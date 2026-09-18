@@ -34,11 +34,26 @@ function projectEvent(event){
     estado_partido:estado
   };
   if(estado==='FINALIZADO'){
-    if(!validScore(sports.goles_local)||!validScore(sports.goles_visita)){
-      throw new Error(`completed MATCH requires valid score: ${event.event_id}`);
+    const admin=sports.administrative_outcome;
+    if(admin?.kind==='AWARDED_WIN'){
+      if(!Number.isInteger(admin.points_local)||admin.points_local<0||!Number.isInteger(admin.points_visita)||admin.points_visita<0){
+        throw new Error(`administrative outcome requires valid points: ${event.event_id}`);
+      }
+      const winner=admin.winner_side==='LOCAL'?item.local:admin.winner_side==='VISITA'?item.visita:null;
+      if(!winner) throw new Error(`administrative outcome requires winner side: ${event.event_id}`);
+      item.resultado_administrativo='AWARDED_WIN';
+      item.ganador=winner;
+      item.puntos_local=admin.points_local;
+      item.puntos_visita=admin.points_visita;
+      item.regla_resolucion=admin.rule_id;
+      item.tournament_ref=admin.tournament_ref;
+    }else{
+      if(!validScore(sports.goles_local)||!validScore(sports.goles_visita)){
+        throw new Error(`completed MATCH requires valid score: ${event.event_id}`);
+      }
+      item.goles_local=sports.goles_local;
+      item.goles_visita=sports.goles_visita;
     }
-    item.goles_local=sports.goles_local;
-    item.goles_visita=sports.goles_visita;
   }
   return item;
 }
@@ -66,9 +81,17 @@ function deriveStandings(matches,seedTable,runtime){
     if(!eligiblePairs.has(`${comp}|${cat}`)) continue;
     init(comp,cat,m.local);init(comp,cat,m.visita);
     if(m.estado_partido!=='FINALIZADO') continue;
-    if(!validScore(m.goles_local)||!validScore(m.goles_visita)) continue;
     const hs=stats.get(standingsKey(comp,cat,m.local));
     const vs=stats.get(standingsKey(comp,cat,m.visita));
+    if(m.resultado_administrativo==='AWARDED_WIN'){
+      if(!Number.isInteger(m.puntos_local)||m.puntos_local<0||!Number.isInteger(m.puntos_visita)||m.puntos_visita<0) continue;
+      hs.pj++;vs.pj++;
+      hs.pts+=m.puntos_local;vs.pts+=m.puntos_visita;
+      if(m.ganador===m.local){hs.pg++;vs.pp++;}
+      else if(m.ganador===m.visita){vs.pg++;hs.pp++;}
+      continue;
+    }
+    if(!validScore(m.goles_local)||!validScore(m.goles_visita)) continue;
     hs.pj++;vs.pj++;hs.gf+=m.goles_local;hs.gc+=m.goles_visita;vs.gf+=m.goles_visita;vs.gc+=m.goles_local;
     if(m.goles_local>m.goles_visita){hs.pg++;hs.pts+=3;vs.pp++;}
     else if(m.goles_visita>m.goles_local){vs.pg++;vs.pts+=3;hs.pp++;}
