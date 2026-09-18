@@ -1,0 +1,158 @@
+{
+  "schema_version": "CUDO_SHARED_OBJECT_FIXTURE_V1",
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-SYNTH-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Persona Sintética CUDO",
+        "membership_state": "ACTIVE"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://actor/display_name"]
+        },
+        "membership_state": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://actor/membership_state"]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://actor"]
+      },
+      "legacy_refs": [
+        {
+          "source_system": "PERSONAS_CONTROL",
+          "legacy_id": "CUDO-PER-SYNTH-001"
+        }
+      ]
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-SYNTH-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "PLANNED",
+      "data": {
+        "activity_kind": "MATCH",
+        "entry_price": 1500,
+        "paid_entries": 70,
+        "entry_revenue": 105000
+      },
+      "field_semantics": {
+        "activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://event/activity_kind"]
+        },
+        "entry_price": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://event/entry_price"]
+        },
+        "paid_entries": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://event/paid_entries"]
+        },
+        "entry_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": ["RULE_ENTRY_REVENUE_V1"]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-EVENT-OBLIGATION-001",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-SYNTH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://event"]
+      },
+      "legacy_refs": [
+        {
+          "source_system": "CUDO_WEB_PARTIDOS",
+          "legacy_id": "QA-PAR-SYNTH-001"
+        }
+      ]
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-SYNTH-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_kind": "REFEREE_COST",
+        "amount": 25000,
+        "settlement_state": "PENDING"
+      },
+      "field_semantics": {
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://obligation/kind"]
+        },
+        "amount": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://obligation/amount"]
+        },
+        "settlement_state": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://obligation/settlement_state"]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-OBLIGATION-EVENT-001",
+          "relationship_type": "CAUSED_BY",
+          "target_object_id": "CUDO-EVENT-SYNTH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://obligation"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVID-SYNTH-001",
+      "object_type": "DOCUMENT_EVIDENCE",
+      "object_version": 1,
+      "lifecycle_state": "VERIFIED",
+      "data": {
+        "evidence_kind": "SYNTHETIC_FIXTURE",
+        "opaque_legacy_value": 813000
+      },
+      "field_semantics": {
+        "evidence_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": ["fixture://evidence/kind"]
+        },
+        "opaque_legacy_value": {
+          "state_kind": "OPAQUE",
+          "gap_id": "GAP_LEGACY_VALUE_SEMANTICS"
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://evidence"]
+      },
+      "legacy_refs": []
+    }
+  ]
+}
