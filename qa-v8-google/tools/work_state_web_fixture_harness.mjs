@@ -12,6 +12,8 @@ assert.ok(work.includes("WORK_STATE_REQUESTS"));
 assert.ok(work.includes("action==='COMPLETE'&&!evidenceRef"));
 assert.ok(work.includes("current.STATE!==expectedState"));
 assert.ok(work.includes("FINANCIAL_CONTEXT"));
+assert.ok(work.includes("SCHEDULE_CONTEXT"));
+assert.ok(work.includes("<b>Ventana:</b>"));
 assert.ok(work.includes("sin fecha definida"));
 assert.ok(work.includes("cudoReviewDispatch_('apps_script_work_state')"));
 assert.ok(work.includes("name=\"kind\" value=\"WORK_ITEM\""));
