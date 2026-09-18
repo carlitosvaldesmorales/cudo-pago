@@ -101,6 +101,15 @@ function syntheticName(value){
   if(!text) throw new Error('display_name required');
   return /mock/i.test(text)?text:`${text} (Mock)`;
 }
+function mockTeamName(value){
+  const text=String(value||'').trim();
+  if(!text) throw new Error('team required');
+  if(text.toUpperCase()==='CUDO') return 'CUDO';
+  return /mock/i.test(text)?text:`${text} (Mock)`;
+}
+function validScore(value){
+  return Number.isInteger(value)&&value>=0;
+}
 function requireMockId(value,prefix){
   const id=String(value||'').trim();
   if(!id.startsWith(prefix)) throw new Error(`id must start with ${prefix}`);
@@ -274,15 +283,30 @@ export function applyMockAdminAction(runtime,action){
     for(const ref of action.resource_refs||[]){
       findBy(state.resources,'resource_id',ref,'resource');
     }
+    const kind=action.kind||'ACTIVITY';
     const event={
       event_id:eventId,
-      kind:action.kind||'ACTIVITY',
+      kind,
       display_name:syntheticName(action.display_name),
       state:action.state||'SCHEDULED',
       starts_at:action.starts_at||null,
       resource_refs:[...(action.resource_refs||[])],
       mock:true
     };
+    if(kind==='MATCH'){
+      const local=mockTeamName(action.local||'CUDO');
+      const visita=mockTeamName(action.visita);
+      if(local===visita) throw new Error('MATCH local and visita must differ');
+      event.sports={
+        public_match_id:eventId.toLowerCase(),
+        local,
+        visita,
+        categoria:String(action.categoria||'PRIMERA').toUpperCase(),
+        competencia:syntheticName(action.competencia||'Campeonato Club OS'),
+        recinto:syntheticName(action.recinto||'Cancha de la Orilla'),
+        counts_for_standings:action.counts_for_standings!==false
+      };
+    }
     state.events.push(event);
     appendAudit(state,{kind:'SOURCE_EVENT_CREATED',object_ref:event.event_id,state:event.state},at);
     effects.push({kind:'SOURCE_EVENT_CREATED',event_id:event.event_id});
@@ -361,8 +385,15 @@ export function applyMockAdminAction(runtime,action){
     const allowed=EVENT_TRANSITIONS[event.state]||new Set();
     if(!allowed.has(action.next_state)) throw new Error(`invalid event transition ${event.state} -> ${action.next_state}`);
     const from=event.state;
+    if(action.next_state==='COMPLETED'&&event.kind==='MATCH'){
+      const gl=Number(action.goles_local),gv=Number(action.goles_visita);
+      if(!validScore(gl)||!validScore(gv)) throw new Error('completed MATCH requires non-negative integer score');
+      event.sports=event.sports||{};
+      event.sports.goles_local=gl;
+      event.sports.goles_visita=gv;
+    }
     event.state=action.next_state;
-    appendAudit(state,{kind:'EVENT_TRANSITION',object_ref:event.event_id,from,to:event.state,reason:action.reason||null},at);
+    appendAudit(state,{kind:'EVENT_TRANSITION',object_ref:event.event_id,from,to:event.state,reason:action.reason||null,score:event.kind==='MATCH'&&event.state==='COMPLETED'?{goles_local:event.sports.goles_local,goles_visita:event.sports.goles_visita}:null},at);
     effects.push({kind:'EVENT_TRANSITION',event_id:event.event_id,from,to:event.state});
     if(event.state==='COMPLETED'){
       const post=derivePostEventWork(state,event,at);
