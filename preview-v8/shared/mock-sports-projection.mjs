@@ -45,12 +45,13 @@ function projectEvent(event){
 
 function standingsKey(comp,cat,team){return `${comp}|${cat}|${team}`;}
 function deriveStandings(matches,seedTable,runtime){
-  const eligiblePairs=new Set(
-    (seedTable||[]).map(x=>`${x.competencia}|${x.categoria}`)
-  );
+  const eligibleOrder=[];
+  const eligiblePairs=new Set();
+  const rememberPair=pair=>{if(!eligiblePairs.has(pair)){eligiblePairs.add(pair);eligibleOrder.push(pair);}};
+  for(const x of seedTable||[]) rememberPair(`${x.competencia}|${x.categoria}`);
   for(const event of runtime?.state?.events||[]){
     if(event.kind!=='MATCH'||!event.sports?.counts_for_standings) continue;
-    eligiblePairs.add(`${event.sports.competencia||'Campeonato Club OS (Mock)'}|${String(event.sports.categoria||'PRIMERA').toUpperCase()}`);
+    rememberPair(`${event.sports.competencia||'Campeonato Club OS (Mock)'}|${String(event.sports.categoria||'PRIMERA').toUpperCase()}`);
   }
 
   const stats=new Map();
@@ -83,7 +84,9 @@ function deriveStandings(matches,seedTable,runtime){
   }
 
   const table=[];
-  for(const [pair,rows] of groups){
+  for(const pair of eligibleOrder){
+    const rows=groups.get(pair)||[];
+    if(!rows.length) continue;
     const split=pair.lastIndexOf('|');
     const competencia=pair.slice(0,split),categoria=pair.slice(split+1);
     rows.sort((a,b)=>b.pts-a.pts||b.dg-a.dg||b.gf-a.gf||a.equipo.localeCompare(b.equipo,'es'));
