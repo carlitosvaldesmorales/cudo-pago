@@ -462,7 +462,9 @@
         ]
       },
       "applicability": {
-        "mode": "ALWAYS"
+        "mode": "CONDITIONAL",
+        "condition_id": "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES",
+        "description": "Apply only to obligations that already implement the canonical financial amount field."
       },
       "evidence": {
         "evidence_level": "DIRECT_PATTERN",
