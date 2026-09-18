@@ -65,8 +65,9 @@ assert.equal(snapshot.reconciliation.complete,true);
 
 // Partial settlement is a derived state.
 const partialSettlements=fixture.settlements.filter(x=>x.settlement_id!=='CUDO-SET-FIN-003');
+const partialObjects=fixture.objects.filter(x=>x.object_id!=='CUDO-MOV-FIN-OUT-002');
 const partial=buildFinancialSnapshot({
-  objects:fixture.objects,
+  objects:partialObjects,
   settlements:partialSettlements,
   openingPositions:fixture.opening_positions
 });
