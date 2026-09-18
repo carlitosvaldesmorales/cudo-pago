@@ -91,7 +91,7 @@ function reconcileDependencies(state,at){
   return transitions;
 }
 function resourceStillBlocking(resource){
-  return resource && ['MAINTENANCE','UNAVAILABLE','BLOCKED','OUT_OF_SERVICE'].includes(resource.state);
+  return resource && ['MAINTENANCE','UNAVAILABLE','BLOCKED','OUT_OF_SERVICE','DAMAGED'].includes(resource.state);
 }
 function reconcileResourceBlockers(state,at){
   const resources=new Map(state.resources.map(x=>[x.resource_id,x]));
@@ -310,7 +310,101 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='SANCTION_APPLY'){
+  if(action.type==='FACILITY_DAMAGE_REPORT'){
+    const caseId=requireMockId(action.case_id,'MOCK-DECISION-DAMAGE-');
+    ensureUnique(state.decisions,'decision_id',caseId,'facility damage case');
+    const resource=findBy(state.resources,'resource_id',action.resource_id,'damaged resource');
+    const liable=findBy(state.actors,'actor_id',action.liable_actor_id,'liable actor');
+    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    if(liable.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('liable actor must be EXTERNAL_ORGANIZATION');
+    if(responsible.actor_kind!=='PERSON') throw new Error('responsible actor must be PERSON');
+    if(resource.state==='DAMAGED') throw new Error('resource already has unresolved damage state');
+    const workId=`MOCK-WORK-DAMAGE-ASSESS-${caseId.replace(/^MOCK-DECISION-DAMAGE-/,'')}`;
+    ensureUnique(state.work_items,'work_id',workId,'damage assessment work');
+    const fromResourceState=resource.state;
+    resource.state='DAMAGED';
+    resource.attention='ACTION_REQUIRED';
+    resource.damage_case_refs=[...(resource.damage_case_refs||[]),caseId];
+    const decision={
+      decision_id:caseId,
+      kind:'FACILITY_DAMAGE_COMPENSATION',
+      display_name:`Evaluar daño · ${resource.display_name}`,
+      state:'PENDING_HUMAN',
+      responsible_actor_id:responsible.actor_id,
+      resource_ref:resource.resource_id,
+      liable_actor_id:liable.actor_id,
+      assessment_work_ref:workId,
+      agreed_amount_clp:null,
+      evidence_ref:null,
+      rule_id:'CUDO_QUADRANGULAR_OTONO_RULE_17_FACILITY_DAMAGE',
+      mock:true
+    };
+    state.decisions.push(decision);
+    const work={
+      work_id:workId,
+      title:`Evaluar daño y acordar monto · ${resource.display_name}`,
+      work_kind:'FACILITY_DAMAGE_ASSESSMENT',
+      state:'OPEN',
+      attention:'PENDING',
+      priority:'HIGH',
+      responsible_actor_id:responsible.actor_id,
+      due_at:null,
+      source_ref:caseId,
+      resource_ref:resource.resource_id,
+      blocker_refs:[],
+      dependency_refs:[],
+      evidence_refs:[],
+      financial_obligation_refs:[],
+      derived_by_rule:'CUDO_QUADRANGULAR_OTONO_RULE_17_FACILITY_DAMAGE',
+      mock:true
+    };
+    state.work_items.push(work);
+    appendAudit(state,{kind:'FACILITY_DAMAGE_REPORTED',object_ref:caseId,resource_ref:resource.resource_id,liable_actor_ref:liable.actor_id,rule_id:decision.rule_id},at);
+    appendAudit(state,{kind:'RESOURCE_DAMAGE_STATE_SET',object_ref:resource.resource_id,from:fromResourceState,to:'DAMAGED',case_ref:caseId},at);
+    appendAudit(state,{kind:'DAMAGE_ASSESSMENT_WORK_CREATED',object_ref:workId,source_ref:caseId,responsible_actor_ref:responsible.actor_id},at);
+    effects.push({kind:'FACILITY_DAMAGE_REPORTED',case_id:caseId,resource_id:resource.resource_id,liable_actor_id:liable.actor_id});
+    effects.push({kind:'RESOURCE_DAMAGE_STATE_SET',resource_id:resource.resource_id,from:fromResourceState,to:'DAMAGED'});
+    effects.push({kind:'DAMAGE_ASSESSMENT_WORK_CREATED',work_id:workId,case_id:caseId});
+  } else if(action.type==='DAMAGE_AMOUNT_AGREE'){
+    const decision=findBy(state.decisions,'decision_id',action.decision_id,'facility damage case');
+    if(decision.kind!=='FACILITY_DAMAGE_COMPENSATION') throw new Error('decision is not facility damage compensation');
+    if(decision.state!=='PENDING_HUMAN') throw new Error('facility damage amount already resolved');
+    const work=findBy(state.work_items,'work_id',decision.assessment_work_ref,'damage assessment work');
+    if(work.state!=='DONE') throw new Error('damage assessment work must be DONE before amount agreement');
+    const evidenceRef=String(action.evidence_ref||'').trim();
+    if(!evidenceRef||!(work.evidence_refs||[]).includes(evidenceRef)) throw new Error('damage amount agreement requires assessment evidence');
+    const evidence=findBy(state.evidence,'evidence_id',evidenceRef,'damage assessment evidence');
+    if(evidence.state!=='AVAILABLE') throw new Error('damage assessment evidence must be AVAILABLE');
+    const amount=Number(action.amount_clp);
+    if(!Number.isInteger(amount)||amount<=0) throw new Error('positive integer damage amount_clp required');
+    const obligationId=`MOCK-OBL-DAMAGE-${decision.decision_id.replace(/^MOCK-DECISION-DAMAGE-/,'')}`;
+    ensureUnique(state.financial_obligations,'obligation_id',obligationId,'damage compensation receivable');
+    decision.state='APPLIED';
+    decision.agreed_amount_clp=amount;
+    decision.evidence_ref=evidenceRef;
+    decision.applied_at=at;
+    const obligation={
+      obligation_id:obligationId,
+      direction:'RECEIVABLE',
+      kind:'FACILITY_DAMAGE_COMPENSATION',
+      amount_clp:amount,
+      settled_amount_clp:0,
+      outstanding_amount_clp:amount,
+      state:'OPEN',
+      cause_ref:decision.decision_id,
+      counterparty_ref:decision.liable_actor_id,
+      resource_ref:decision.resource_ref,
+      evidence_ref:evidenceRef,
+      mock:true
+    };
+    state.financial_obligations.push(obligation);
+    work.financial_obligation_refs=work.financial_obligation_refs||[];
+    if(!work.financial_obligation_refs.includes(obligationId)) work.financial_obligation_refs.push(obligationId);
+    appendAudit(state,{kind:'DAMAGE_AMOUNT_AGREED',object_ref:decision.decision_id,amount_clp:amount,evidence_ref:evidenceRef,liable_actor_ref:decision.liable_actor_id},at);
+    appendAudit(state,{kind:'DAMAGE_COMPENSATION_RECEIVABLE_DERIVED',object_ref:obligationId,cause_ref:decision.decision_id,amount_clp:amount,counterparty_ref:decision.liable_actor_id},at);
+    effects.push({kind:'DAMAGE_AMOUNT_AGREED',decision_id:decision.decision_id,amount_clp:amount,evidence_ref:evidenceRef});
+    effects.push({kind:'DAMAGE_COMPENSATION_RECEIVABLE_DERIVED',obligation_id:obligationId,amount_clp:amount,counterparty_ref:decision.liable_actor_id});
+  } else if(action.type==='SANCTION_APPLY'){
     const sanctionId=requireMockId(action.sanction_id,'MOCK-DECISION-SANCTION-');
     ensureUnique(state.decisions,'decision_id',sanctionId,'sanction decision');
     const actor=findBy(state.actors,'actor_id',action.actor_id,'sanctioned actor');
@@ -612,6 +706,7 @@ export function applyMockAdminAction(runtime,action){
     effects.push(...reconcileResourceBlockers(state,at));
   } else if(action.type==='DECISION_TRANSITION'){
     const decision=findBy(state.decisions,'decision_id',action.decision_id,'decision');
+    if(decision.kind==='FACILITY_DAMAGE_COMPENSATION') throw new Error('facility damage decision requires DAMAGE_AMOUNT_AGREE');
     const expected=action.expected_state||decision.state;
     if(decision.state!==expected) throw new Error(`decision state conflict: ${decision.state} != ${expected}`);
     const allowed=DECISION_TRANSITIONS[decision.state]||new Set();
@@ -755,7 +850,7 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
     operation,
     finance,
     resources:{schema_version:'CUDO_RESOURCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.resources.length,blocking:state.resources.filter(x=>x.attention==='BLOCKING').length,action_required:state.resources.filter(x=>x.attention==='ACTION_REQUIRED').length},items:clone(state.resources),production_write:false},
-    governance:{schema_version:'CUDO_GOVERNANCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.decisions.length,pending_human:state.decisions.filter(x=>x.state==='PENDING_HUMAN').length,approved_or_applied:state.decisions.filter(x=>['APPROVED','APPLIED'].includes(x.state)).length,sanctions:state.decisions.filter(x=>x.kind==='TOURNAMENT_SANCTION').length},decisions:clone(state.decisions),production_write:false},
+    governance:{schema_version:'CUDO_GOVERNANCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.decisions.length,pending_human:state.decisions.filter(x=>x.state==='PENDING_HUMAN').length,approved_or_applied:state.decisions.filter(x=>['APPROVED','APPLIED'].includes(x.state)).length,sanctions:state.decisions.filter(x=>x.kind==='TOURNAMENT_SANCTION').length,damage_cases:state.decisions.filter(x=>x.kind==='FACILITY_DAMAGE_COMPENSATION').length},decisions:clone(state.decisions),damage_cases:clone(state.decisions.filter(x=>x.kind==='FACILITY_DAMAGE_COMPENSATION')),production_write:false},
     evidence:{schema_version:'CUDO_EVIDENCE_AUDIT_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{evidence_total:state.evidence.length,evidence_missing:state.evidence.filter(x=>x.state==='MISSING').length,audit_events:(state.audit||[]).length},evidence:clone(state.evidence),audit:clone(state.audit||[]),production_write:false}
   };
 }
