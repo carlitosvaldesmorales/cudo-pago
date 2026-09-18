@@ -1,0 +1,34 @@
+name: Certify CUDO Full Club OS Golden Mock
+
+on:
+  pull_request:
+    branches: [qa-v8-mock]
+    paths:
+      - 'preview-v8/data/club-os-mock.json'
+      - 'preview-v8/data/operacion.json'
+      - 'preview-v8/data/finanzas.json'
+      - 'preview-v8/data/recursos.json'
+      - 'preview-v8/data/gobernanza.json'
+      - 'preview-v8/data/evidencia.json'
+      - 'preview-v8/data/mock-manifest.json'
+      - 'preview-v8/shared/seed-data.js'
+      - 'preview-v8/tools/validate_full_club_os_mock.mjs'
+      - '.github/workflows/certify-cudo-full-club-os-mock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate syntax
+        run: node --check preview-v8/tools/validate_full_club_os_mock.mjs
+      - name: Certify full Club OS golden mock
+        run: node preview-v8/tools/validate_full_club_os_mock.mjs
