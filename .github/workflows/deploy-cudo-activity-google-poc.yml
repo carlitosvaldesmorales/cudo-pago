@@ -1,0 +1,165 @@
+name: Deploy CUDO Club OS Activity Google POC
+
+on:
+  push:
+    branches:
+      - qa/club-os-activity-google-poc-20260917
+    paths:
+      - 'qa-v8-google/apps-script/CudoActivityQaWeb.gs'
+      - '.github/workflows/deploy-cudo-activity-google-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: \${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: \${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: \${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy isolated synthetic activity web app and certify Google roundtrip
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,re,time,urllib.parse,urllib.request
+
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          SHEET_ID='1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA'
+          SOURCE_PATH=pathlib.Path('qa-v8-google/apps-script/CudoActivityQaWeb.gs')
+
+          token_body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token',
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=token_body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r:
+            access=json.load(r)['access_token']
+
+          def api(url,method='GET',payload=None):
+            req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(req,timeout=30) as r:
+              raw=r.read()
+              return json.loads(raw) if raw else {}
+
+          def http_json(url,method='GET',payload=None):
+            body=None if payload is None else json.dumps(payload).encode()
+            req=urllib.request.Request(url,data=body,headers={'Content-Type':'application/json','User-Agent':'CUDO-QA-Certifier'},method=method)
+            with urllib.request.urlopen(req,timeout=30) as r:
+              return json.loads(r.read().decode())
+
+          base=f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}'
+          current=api(base+'/content')
+          original_files=[{'name':f['name'],'type':f['type'],'source':f.get('source','')} for f in current.get('files',[])]
+          if not original_files:
+            raise SystemExit('Apps Script project content is empty')
+
+          source=SOURCE_PATH.read_text()
+          public_files=[]
+          manifest=None
+          removed_handlers=[]
+          for f in original_files:
+            if f['name']=='appsscript' and f['type']=='JSON':
+              manifest=json.loads(f.get('source') or '{}')
+              continue
+            if f['type']=='SERVER_JS' and re.search(r'\bfunction\s+(doGet|doPost)\s*\(',f.get('source','')):
+              removed_handlers.append(f['name'])
+              continue
+            if f['name']=='CudoActivityQaWeb':
+              continue
+            public_files.append(f)
+          if manifest is None: manifest={}
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING'}
+          public_files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          public_files.append({'name':'CudoActivityQaWeb','type':'SERVER_JS','source':source})
+
+          def sheet_values(a1):
+            enc=urllib.parse.quote(a1,safe='!:$')
+            return api(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{enc}').get('values') or []
+
+          try:
+            api(base+'/content','PUT',{'files':public_files})
+            version=api(base+'/versions','POST',{'description':'CUDO Club OS Activity Google QA '+os.environ.get('GITHUB_SHA','')[:12]})
+            vn=version['versionNumber']
+            dep=api(base+'/deployments','POST',{'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Club OS Activity Google QA'})
+            did=dep['deploymentId']
+            web_url='https://script.google.com/macros/s/'+did+'/exec'
+
+            state=None
+            last=None
+            for attempt in range(15):
+              try:
+                state=http_json(web_url+'?format=json')
+                if state.get('ok') and state.get('activity',{}).get('activity_id')=='QA-ACTIVITY-COMMUNITY-001':
+                  break
+              except Exception as exc:
+                last=exc
+                time.sleep(3)
+            if not state or not state.get('ok'):
+              raise SystemExit('Web state endpoint failed: '+repr(last))
+            if state.get('production_write') is not False or state.get('provenance')!='SYNTHETIC_QA':
+              raise SystemExit('Fail closed: endpoint provenance/production flags invalid')
+
+            before_events=len(sheet_values('EVENTOS!A2:A500'))
+            assign=http_json(web_url,'POST',{'action':'ASSIGN_DEMO','workstreamId':'QA-WS-004'})
+            if not assign.get('ok'):
+              raise SystemExit('ASSIGN_DEMO failed: '+json.dumps(assign))
+            rows=sheet_values('RESPONSABLES!A1:J20')
+            hdr=rows[0]
+            data=[dict(zip(hdr,r+['']*(len(hdr)-len(r)))) for r in rows[1:]]
+            target=next((r for r in data if r.get('workstream_id')=='QA-WS-004'),None)
+            if not target or target.get('assignment_state')!='ASSIGNED' or target.get('person_ref')!='QA-VISITOR':
+              raise SystemExit('Durable assignment not observed in Sheets')
+
+            reset=http_json(web_url,'POST',{'action':'RESET_FIXTURE'})
+            if not reset.get('ok'):
+              raise SystemExit('RESET_FIXTURE failed: '+json.dumps(reset))
+            rows=sheet_values('RESPONSABLES!A1:J20')
+            hdr=rows[0]
+            data=[dict(zip(hdr,r+['']*(len(hdr)-len(r)))) for r in rows[1:]]
+            target=next((r for r in data if r.get('workstream_id')=='QA-WS-004'),None)
+            if not target or target.get('assignment_state')!='UNASSIGNED' or target.get('person_ref'):
+              raise SystemExit('Baseline reset not observed in Sheets')
+            after_events=len(sheet_values('EVENTOS!A2:A500'))
+            if after_events < before_events + 2:
+              raise SystemExit(f'Append-only history did not grow as expected: {before_events}->{after_events}')
+
+            final_state=http_json(web_url+'?format=json')
+            out={
+              'ok':True,
+              'webAppUrl':web_url,
+              'spreadsheetId':SHEET_ID,
+              'scriptId':SCRIPT_ID,
+              'versionNumber':vn,
+              'deploymentId':did,
+              'access':'ANYONE_ANONYMOUS',
+              'executeAs':'USER_DEPLOYING',
+              'removedExistingWebHandlersDuringVersionBuild':removed_handlers,
+              'certification':{
+                'readFromGoogle':True,
+                'assignmentWritePersisted':True,
+                'resetPersisted':True,
+                'appendOnlyEventsBefore':before_events,
+                'appendOnlyEventsAfter':after_events,
+                'productionWrite':False,
+                'provenance':'SYNTHETIC_QA',
+                'finalSummary':final_state.get('summary',{})
+              }
+            }
+            pathlib.Path('club-os-activity-google-poc-deployment.json').write_text(json.dumps(out,indent=2,ensure_ascii=False))
+            print(json.dumps(out,indent=2,ensure_ascii=False))
+          finally:
+            api(base+'/content','PUT',{'files':original_files})
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: club-os-activity-google-poc-deployment
+          path: club-os-activity-google-poc-deployment.json
+          retention-days: 30
