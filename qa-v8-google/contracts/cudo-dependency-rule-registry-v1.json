@@ -1,6 +1,6 @@
 {
   "schema_version": "CUDO_DEPENDENCY_RULE_REGISTRY_V1",
-  "registry_version": 2,
+  "registry_version": 3,
   "rules": [
     {
       "rule_id": "RULE_ENTRY_REVENUE_V1",
@@ -161,7 +161,9 @@
         ]
       },
       "applicability": {
-        "mode": "ALWAYS"
+        "mode": "CONDITIONAL",
+        "condition_id": "SINGLE_RESOURCE_DIRECT_SALES_MODEL",
+        "description": "Legacy bounded single-resource event flow: one resource writes the event sales revenue directly."
       },
       "evidence": {
         "evidence_level": "DIRECT",
@@ -481,6 +483,195 @@
           },
           "expected": 43680
         }
+      ]
+    },
+    {
+      "rule_id": "RULE_RESOURCE_SALES_REVENUE_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {
+          "name": "sold_qty",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sold_qty"
+          }
+        },
+        {
+          "name": "sell_price",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sell_price"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sales_revenue",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sales_revenue"
+          }
+        }
+      ],
+      "expression": {
+        "operator": "MULTIPLY",
+        "args": [
+          "sold_qty",
+          "sell_price"
+        ]
+      },
+      "applicability": {
+        "mode": "CONDITIONAL",
+        "condition_id": "MULTI_RESOURCE_AGGREGATED_SALES_MODEL",
+        "description": "Multi-resource event model: calculate each resource sales stream before event aggregation."
+      },
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G3:J7"
+        ],
+        "note": "Each product sales stream is quantity sold multiplied by its sale price."
+      },
+      "test_cases": [
+        {
+          "inputs": {
+            "sold_qty": 52,
+            "sell_price": 2000
+          },
+          "expected": 104000
+        }
+      ]
+    },
+    {
+      "rule_id": "RULE_EVENT_SALES_REVENUE_SUM_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {
+          "name": "resource_sales_revenues",
+          "selector": {
+            "scope": "REVERSE_RELATED_OBJECTS",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "sales_revenue",
+            "relationship_type": "USED_BY_EVENT"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sales_revenue",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "ACTIVITY_EVENT",
+            "field": "sales_revenue"
+          }
+        }
+      ],
+      "expression": {
+        "operator": "SUM",
+        "args": [
+          "resource_sales_revenues"
+        ]
+      },
+      "applicability": {
+        "mode": "CONDITIONAL",
+        "condition_id": "MULTI_RESOURCE_AGGREGATED_SALES_MODEL",
+        "description": "Aggregate all resource sales streams related to the event."
+      },
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!J3:J8"
+        ],
+        "note": "J8 is SUM(J3:J7) in the real San Ramon workbook."
+      },
+      "test_cases": [
+        {
+          "inputs": {
+            "resource_sales_revenues": [
+              104000,
+              166500,
+              36000,
+              13500,
+              33000
+            ]
+          },
+          "expected": 353000
+        }
+      ]
+    },
+    {
+      "rule_id": "RULE_RESOURCE_REMAINING_STOCK_VALUE_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {
+          "name": "stock_after_sales",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "stock_after_sales"
+          }
+        },
+        {
+          "name": "unit_cost",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "unit_cost"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "remaining_stock_value",
+          "selector": {
+            "scope": "SOURCE_OBJECT",
+            "object_type": "RESOURCE_FACILITY",
+            "field": "remaining_stock_value"
+          }
+        }
+      ],
+      "expression": {
+        "operator": "MULTIPLY",
+        "args": [
+          "stock_after_sales",
+          "unit_cost"
+        ]
+      },
+      "applicability": {
+        "mode": "CONDITIONAL",
+        "condition_id": "RESOURCE_STOCK_VALUE_MODEL_APPLIES",
+        "description": "Value remaining event stock at the same unit cost evidenced by the order sheet."
+      },
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I3:L8"
+        ],
+        "note": "L3/L4 are I*E and L8 sums the per-product remaining-stock values."
+      },
+      "test_cases": [
+        {
+          "inputs": {
+            "stock_after_sales": 68,
+            "unit_cost": 840
+          },
+          "expected": 57120
+        }
+      ]
+    }
+  ],
+  "exclusive_condition_groups": [
+    {
+      "group_id": "EVENT_SALES_MODEL",
+      "condition_ids": [
+        "SINGLE_RESOURCE_DIRECT_SALES_MODEL",
+        "MULTI_RESOURCE_AGGREGATED_SALES_MODEL"
       ]
     }
   ]
