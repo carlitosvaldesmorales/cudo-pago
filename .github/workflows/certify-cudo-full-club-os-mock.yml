@@ -20,7 +20,9 @@ on:
       - 'preview-v8/tools/certify_mock_membership_dues.mjs'
       - 'preview-v8/tools/certify_mock_sanction_fine_eligibility.mjs'
       - 'preview-v8/tools/certify_mock_facility_damage_compensation.mjs'
+      - 'preview-v8/tools/certify_mock_administrative_match_outcome.mjs'
       - 'preview-v8/shared/mock-sports-projection.mjs'
+      - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/partidos/index.html'
       - 'preview-v8/shared/mock-admin-engine.mjs'
       - 'preview-v8/admin/index.html'
@@ -53,6 +55,8 @@ jobs:
           node --check preview-v8/tools/certify_mock_membership_dues.mjs
           node --check preview-v8/tools/certify_mock_sanction_fine_eligibility.mjs
           node --check preview-v8/tools/certify_mock_facility_damage_compensation.mjs
+          node --check preview-v8/tools/certify_mock_administrative_match_outcome.mjs
+          node --check preview-v8/shared/page-ux.js
       - name: Certify full Club OS golden mock
         run: node preview-v8/tools/validate_full_club_os_mock.mjs
       - name: Certify mock admin actions
@@ -69,3 +73,5 @@ jobs:
         run: node preview-v8/tools/certify_mock_sanction_fine_eligibility.mjs
       - name: Certify facility damage compensation
         run: node preview-v8/tools/certify_mock_facility_damage_compensation.mjs
+      - name: Certify administrative match outcome
+        run: node preview-v8/tools/certify_mock_administrative_match_outcome.mjs
