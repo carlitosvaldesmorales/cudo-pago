@@ -6,386 +6,83 @@
 <meta name="theme-color" content="#03163d">
 <title>CUDO · Actividades QA</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#f4f2ed;color:#172033;font-family:Arial,Helvetica,sans-serif}
-.hero{background:#03163d;color:#fff;border-bottom:6px solid #e21b2d;padding:24px 18px 22px}
-.wrap{max-width:920px;margin:auto}
-.ey{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-.hero h1{font-size:clamp(30px,7vw,48px);line-height:.95;margin:8px 0;text-transform:uppercase}
-.hero p{margin:0;color:#e8edf8;line-height:1.45;font-size:13px}
-.body{padding:0 16px 40px}
-.qa{margin:16px 0;background:#fff4cf;border-left:4px solid #c79b00;padding:11px 13px;border-radius:0 12px 12px 0;font-size:12px;line-height:1.5}
-.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:14px;position:sticky;top:0;background:#f4f2ed;padding:8px 0;z-index:5}
-.tabs button,.btn{min-height:42px;border-radius:10px;padding:9px 12px;border:1px solid #c8d0dc;background:#fff;color:#03163d;font-weight:800}
-.tabs button.active,.btn.primary{background:#03163d;color:#fff;border-color:#03163d}
-.btn.danger{border-color:#e4a3aa;color:#9b1c2f}
-.sectiontitle{font-size:21px;font-weight:900;color:#03163d;text-transform:uppercase;margin:5px 0 4px}
-.sectionlead{font-size:13px;color:#5e6d82;line-height:1.45;margin:0 0 12px}
-.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
-.stat{background:#fff;border:1px solid #d2d8e1;border-radius:14px;padding:12px}
-.stat strong{display:block;font-size:24px;color:#03163d}.stat span{font-size:10px;color:#64748b;font-weight:900;text-transform:uppercase}
-.card{background:#fff;border:1px solid #d2d8e1;border-radius:16px;padding:15px;margin-top:10px;box-shadow:0 2px 10px rgba(3,22,61,.03)}
-.card.attention{border-left:5px solid #e21b2d}.card.pending{border-left:5px solid #d29800}.card.okcard{border-left:5px solid #198754}
-.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-.role{font-size:19px;font-weight:900;color:#03163d;text-transform:uppercase;line-height:1.05}
-.context{font-size:11px;color:#7a8798;font-weight:800;text-transform:uppercase;margin-bottom:5px}
-.meta{font-size:12px;color:#64748b;margin-top:4px;line-height:1.45}
-.badge{display:inline-block;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
-.ok{background:#e8f6ed;color:#177245}.warn{background:#fff4cf;color:#956200}.bad{background:#fdecec;color:#a51c30}.neutral{background:#edf1f5;color:#455468}
-.label{font-size:10px;color:#718096;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
-.value{font-size:14px;line-height:1.45;color:#1d2a3d;margin-top:3px}
-.ownerbox{display:flex;justify-content:space-between;gap:10px;align-items:center;background:#f7f8fa;border-radius:11px;padding:10px 11px;margin-top:6px}
-.ownername{font-size:15px;font-weight:900;color:#03163d}
-.progress{height:9px;background:#e8ebf0;border-radius:999px;overflow:hidden;margin:8px 0 4px}.progress span{display:block;height:100%;background:#03163d}
-.progressline{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#64748b}
-.checklist{margin-top:6px;border-top:1px solid #edf0f3}
-.taskrow{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:start;padding:10px 0;border-bottom:1px solid #edf0f3}
-.taskicon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
-.taskicon.done{background:#e8f6ed;color:#177245}.taskicon.todo{background:#edf1f5;color:#5e6d82}.taskicon.blocked{background:#fdecec;color:#a51c30}.taskicon.progressing{background:#fff4cf;color:#956200}
-.tasktitle{font-size:13px;font-weight:800;color:#26354a;line-height:1.35}.taskmeta{font-size:10px;color:#7a8798;margin-top:2px}
-.callout{border-radius:11px;padding:10px 11px;margin-top:9px;font-size:12px;line-height:1.45}
-.callout.bad{background:#fff0f1;color:#8e2032}.callout.warn{background:#fff8dd;color:#7b5900}.callout.good{background:#edf8f1;color:#17653f}
-.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
-.inline-actions{display:flex;gap:7px;flex-wrap:wrap}
-.detail{margin-top:12px;padding-top:12px;border-top:1px solid #e6e9ee}
-.hidden{display:none!important}.loading{padding:30px;text-align:center;color:#64748b}.error{background:#fdecec;color:#8f1d2c;border-radius:12px;padding:12px}
-.exception-title{font-size:15px;font-weight:900;color:#03163d;margin-bottom:3px}
-.exception-copy{font-size:12px;color:#5e6d82;line-height:1.45}
-.timeline{border-left:2px solid #cfd6df;margin-left:8px;padding-left:17px}
-.event{position:relative;padding:0 0 16px}.event:before{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:#03163d;left:-23px;top:3px}
-.event-time{font-size:10px;color:#7a8798;font-weight:800}.event-role{font-size:13px;font-weight:900;color:#03163d;margin-top:2px}.event-copy{font-size:12px;color:#536176;line-height:1.4;margin-top:2px}
-.footer{font-size:11px;color:#64748b;margin-top:18px}
-@media(max-width:680px){
- .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
- .top{flex-direction:column}
- .ownerbox{align-items:flex-start;flex-direction:column}
- .actions .btn{width:100%}
- .taskrow{grid-template-columns:24px 1fr}
- .taskrow>.badge{grid-column:2}
-}
+*{box-sizing:border-box}body{margin:0;background:#f4f2ed;color:#172033;font-family:Arial,Helvetica,sans-serif}.hero{background:#03163d;color:#fff;border-bottom:6px solid #e21b2d;padding:22px 16px}.wrap{max-width:980px;margin:auto}.ey{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.hero h1{font-size:clamp(30px,7vw,48px);line-height:.95;margin:8px 0;text-transform:uppercase}.hero p{margin:0;color:#e8edf8;line-height:1.45;font-size:13px}.body{padding:16px 16px 46px}.qa{background:#fff4cf;border-left:4px solid #c79b00;padding:11px 13px;border-radius:0 12px 12px 0;font-size:12px;line-height:1.5;margin-bottom:16px}.sectiontitle{font-size:24px;font-weight:900;color:#03163d;text-transform:uppercase;margin:5px 0 4px}.sectionlead{font-size:13px;color:#5e6d82;line-height:1.45;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid #d2d8e1;border-radius:16px;padding:15px;box-shadow:0 2px 10px rgba(3,22,61,.04)}.card.alert{border-left:5px solid #e21b2d}.card.warn{border-left:5px solid #c79b00}.card.ok{border-left:5px solid #198754}.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.title{font-size:20px;font-weight:900;color:#03163d;line-height:1.08}.meta{font-size:11px;color:#64748b;line-height:1.45;margin-top:4px}.badge{display:inline-block;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}.b-ok{background:#e8f6ed;color:#177245}.b-warn{background:#fff4cf;color:#956200}.b-bad{background:#fdecec;color:#a51c30}.b-neutral{background:#edf1f5;color:#455468}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:12px}.stat{background:#f7f8fa;border-radius:10px;padding:9px}.stat strong{display:block;font-size:19px;color:#03163d}.stat span{font-size:9px;color:#64748b;font-weight:900;text-transform:uppercase}.btn{min-height:40px;border-radius:9px;padding:9px 12px;border:1px solid #c8d0dc;background:#fff;color:#03163d;font-weight:900;cursor:pointer}.btn.primary{background:#03163d;color:#fff;border-color:#03163d}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap}.loading{padding:30px;text-align:center;color:#64748b}.error{background:#fdecec;color:#8f1d2c;border-radius:12px;padding:12px}.hidden{display:none!important}.role{margin-top:10px}.owner{font-size:14px;font-weight:900;color:#03163d}.progress{height:8px;background:#e8ebf0;border-radius:999px;overflow:hidden;margin:8px 0}.progress span{display:block;height:100%;background:#03163d}.task{display:grid;grid-template-columns:20px 1fr auto;gap:8px;align-items:start;padding:8px 0;border-top:1px solid #edf0f3}.task strong{font-size:12px}.task small{display:block;color:#7a8798;margin-top:2px}.back{font-size:12px;font-weight:900;color:#03163d;background:none;border:0;padding:0;cursor:pointer}.empty{background:#fff;border:1px dashed #c8d0dc;border-radius:14px;padding:18px;color:#64748b}.footer{font-size:11px;color:#64748b;margin-top:18px}.timeline{border-left:2px solid #cfd6df;margin-left:8px;padding-left:15px}.event{position:relative;padding:0 0 13px}.event:before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;background:#03163d;left:-20px;top:3px}.event small{color:#7a8798}.event div{font-size:12px;line-height:1.4}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.top{flex-direction:column}.actions .btn{flex:1}.task{grid-template-columns:20px 1fr}.task>.btn{grid-column:2}}
 </style>
 </head>
 <body>
-<header class="hero">
-  <div class="wrap">
-    <div class="ey">C.U.D.O. · Club OS · QA</div>
-    <h1>Organización de actividad</h1>
-    <p id="activityTitle">Cargando actividad…</p>
-  </div>
-</header>
-
+<header class="hero"><div class="wrap"><div class="ey">C.U.D.O. · Administración · Google QA</div><h1>Actividades del club</h1><p>Registro visible de actividades, responsables, pendientes y bloqueos. Los datos de esta POC viven en Google Sheets.</p></div></header>
 <main class="wrap body">
-  <div class="qa"><strong>POC sintética:</strong> personas, tareas y estados son mock. La web lee y escribe un Google Sheet QA real; producción no se modifica.</div>
-
-  <div class="tabs">
-    <button class="active" data-view="summary">Resumen</button>
-    <button data-view="roles">Roles</button>
-    <button data-view="tracking">Seguimiento</button>
-    <button data-view="history">Historial</button>
-  </div>
-
-  <div id="loading" class="loading">Leyendo Google Sheets…</div>
+  <div class="qa"><strong>QA sintética:</strong> esta superficie usa el Google Sheet real de pruebas, pero personas y actividades son mock. No modifica datos productivos del club.</div>
+  <div id="loading" class="loading">Leyendo actividades desde Google…</div>
   <div id="error" class="error hidden"></div>
-  <section id="summary" class="hidden"></section>
-  <section id="roles" class="hidden"></section>
-  <section id="tracking" class="hidden"></section>
-  <section id="history" class="hidden"></section>
-
-  <div class="actions">
-    <button id="reset" class="btn">Restaurar escenario QA</button>
-    <button id="reload" class="btn">Recargar desde Google</button>
-  </div>
-
-  <div class="footer">Backend: Google Sheets · Historial en EVENTOS · Datos SYNTHETIC_QA</div>
+  <section id="registry" class="hidden">
+    <div class="toolbar"><div><div class="sectiontitle">Registro de actividades</div><p class="sectionlead">Aquí aparece lo que el club tiene que organizar y dónde falta una persona responsable.</p></div><button class="btn" id="reloadRegistry">Recargar</button></div>
+    <div id="activityGrid" class="grid"></div>
+  </section>
+  <section id="detail" class="hidden">
+    <div class="toolbar"><button class="back" id="back">← Todas las actividades</button><button class="btn" id="reloadActivity">Recargar desde Google</button></div>
+    <div id="activityHead"></div>
+    <div class="sectiontitle" style="margin-top:18px">Responsabilidades de esta actividad</div>
+    <p class="sectionlead">Cada responsabilidad conserva persona asignada, estado, tareas y trazabilidad.</p>
+    <div id="workstreamGrid" class="grid"></div>
+    <div class="sectiontitle" style="margin-top:20px">Historial</div>
+    <div class="card"><div id="timeline" class="timeline"></div></div>
+  </section>
+  <div class="footer">Backend operacional QA: Google Sheets · Acciones: Google Apps Script · Historial: EVENTOS · production_write=false</div>
 </main>
-
 <script>
 (function(){
-  var state=null;
-  var views=['summary','roles','tracking','history'];
-
-  var stateLabels={
-    CONFIRMED:'Confirmado',
-    ASSIGNED:'Asignado · falta confirmar',
-    UNASSIGNED:'Sin responsable',
-    IN_PROGRESS:'En curso',
-    READY:'Preparado',
-    BLOCKED:'Bloqueado',
-    REQUIRED_UNASSIGNED:'Sin responsable',
-    DONE:'Listo',
-    TODO:'Pendiente'
-  };
-
-  function esc(v){
-    return String(v==null?'':v).replace(/[&<>"]/g,function(c){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
-    });
+  var registry=null,state=null,currentActivityId=null;
+  var labels={CONFIRMED:'Confirmado',ASSIGNED:'Asignado · falta confirmar',UNASSIGNED:'Sin responsable',IN_PROGRESS:'En curso',READY:'Preparado',BLOCKED:'Bloqueado',REQUIRED_UNASSIGNED:'Sin responsable',DONE:'Listo',TODO:'Pendiente',IN_PREPARATION:'En preparación'};
+  function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function human(v){return labels[v]||String(v||'');}
+  function badge(v){var c=(v==='CONFIRMED'||v==='DONE'||v==='IN_PROGRESS')?'b-ok':(v==='ASSIGNED'||v==='READY'||v==='IN_PREPARATION')?'b-warn':(v==='UNASSIGNED'||v==='BLOCKED'||v==='REQUIRED_UNASSIGNED')?'b-bad':'b-neutral';return '<span class="badge '+c+'">'+esc(human(v))+'</span>';}
+  function setBusy(on,msg){var x=document.getElementById('loading');x.textContent=msg||'Leyendo Google…';x.classList.toggle('hidden',!on);}
+  function fail(e){setBusy(false);var x=document.getElementById('error');x.textContent='Error QA: '+(e&&e.message?e.message:e);x.classList.remove('hidden');}
+  function show(id){['registry','detail'].forEach(function(x){document.getElementById(x).classList.toggle('hidden',x!==id);});}
+  function activityCard(a){
+    var s=a.summary||{}, cls=s.unassigned||s.blocked?'alert':s.assigned_unconfirmed?'warn':'ok';
+    return '<article class="card '+cls+'"><div class="top"><div><div class="title">'+esc(a.title)+'</div><div class="meta">'+esc(a.starts_at||'Sin fecha')+' · '+esc(a.activity_type||'ACTIVITY')+'</div></div>'+badge(a.status)+'</div>'+
+      '<div class="stats"><div class="stat"><strong>'+Number(s.workstreams||0)+'</strong><span>responsabilidades</span></div><div class="stat"><strong>'+Number(s.unassigned||0)+'</strong><span>sin persona</span></div><div class="stat"><strong>'+Number(s.blocked||0)+'</strong><span>bloqueadas</span></div><div class="stat"><strong>'+Number(s.done||0)+'</strong><span>listas</span></div></div>'+
+      '<div class="actions"><button class="btn primary" onclick="openActivity(\''+esc(a.activity_id)+'\')">Abrir actividad</button></div></article>';
   }
-
-  function human(v){return stateLabels[v]||String(v||'');}
-
-  function badge(v){
-    var c=(v==='CONFIRMED'||v==='DONE'||v==='IN_PROGRESS')?'ok':
-          (v==='ASSIGNED'||v==='READY')?'warn':
-          (v==='UNASSIGNED'||v==='BLOCKED'||v==='REQUIRED_UNASSIGNED')?'bad':'neutral';
-    return '<span class="badge '+c+'">'+esc(human(v))+'</span>';
+  function renderRegistry(){
+    var list=(registry&&registry.activities)||[];
+    document.getElementById('activityGrid').innerHTML=list.length?list.map(activityCard).join(''):'<div class="empty">No hay actividades registradas en Google.</div>';
+    show('registry');setBusy(false);
   }
-
-  function roleTitle(w){
-    var r=((w.assignment||{}).display_role||('Responsable de '+w.label));
-    r=r.replace(/^Responsable de /i,'Encargado/a de ');
-    return r;
+  function taskHtml(t){
+    return '<div class="task"><span>'+ (t.state==='DONE'?'✓':'○') +'</span><div><strong>'+esc(t.title)+'</strong><small>'+esc(human(t.state))+(t.due_at?' · '+esc(t.due_at):'')+'</small></div>'+(t.state!=='DONE'?'<button class="btn" onclick="completeTask(\''+esc(t.task_id)+'\')">Lista</button>':'')+'</div>';
   }
-
-  function taskStateIcon(t){
-    if(t.state==='DONE')return '<span class="taskicon done">✓</span>';
-    if(t.state==='BLOCKED')return '<span class="taskicon blocked">!</span>';
-    if(t.state==='IN_PROGRESS')return '<span class="taskicon progressing">→</span>';
-    return '<span class="taskicon todo">○</span>';
+  function workstreamCard(w){
+    var a=w.assignment||{}, pct=parseInt(w.progress_pct||'0',10)||0, cls=(!a.person_ref||w.state==='BLOCKED')?'alert':a.assignment_state==='ASSIGNED'?'warn':'ok', actions=[];
+    if(!a.person_ref) actions.push('<button class="btn primary" onclick="act(\'ASSIGN_DEMO\',\''+esc(w.workstream_id)+'\')">Tomar responsabilidad (demo)</button>');
+    if(a.assignment_state==='ASSIGNED') actions.push('<button class="btn primary" onclick="act(\'CONFIRM\',\''+esc(w.workstream_id)+'\')">Confirmar</button>');
+    if(w.state==='BLOCKED') actions.push('<button class="btn" onclick="act(\'RESOLVE_BLOCKER\',\''+esc(w.workstream_id)+'\')">Resolver bloqueo</button>');
+    else if(w.state!=='DONE') actions.push('<button class="btn" onclick="act(\'REPORT_BLOCKER\',\''+esc(w.workstream_id)+'\')">Informar bloqueo</button>');
+    return '<article class="card '+cls+'"><div class="top"><div><div class="title">'+esc(w.label)+'</div><div class="meta">'+esc(w.purpose||w.activation_reason||'')+'</div></div>'+badge(w.state)+'</div>'+
+      '<div class="role"><div class="meta">Responsable</div><div class="owner">'+esc(a.person_display||'Sin responsable')+' · '+esc(human(a.assignment_state||'UNASSIGNED'))+'</div></div>'+
+      '<div class="progress"><span style="width:'+pct+'%"></span></div><div class="meta">'+pct+'% · '+Number(w.task_done||0)+' de '+Number(w.task_total||0)+' tareas listas</div>'+
+      ((w.tasks||[]).map(taskHtml).join(''))+'<div class="actions">'+actions.join('')+'</div></article>';
   }
-
-  function validEventsFor(w){
-    return (state.events||[]).filter(function(e){return e.workstream_id===w.workstream_id;});
+  function renderDetail(){
+    var a=state.activity||{}, s=state.summary||{};
+    document.getElementById('activityHead').innerHTML='<div class="sectiontitle">'+esc(a.title||'Actividad')+'</div><p class="sectionlead">'+esc(a.starts_at||'')+' · '+esc(human(a.status))+'</p>'+
+      '<div class="stats"><div class="stat"><strong>'+Number(s.workstreams||0)+'</strong><span>responsabilidades</span></div><div class="stat"><strong>'+Number(s.unassigned||0)+'</strong><span>sin persona</span></div><div class="stat"><strong>'+Number(s.blocked||0)+'</strong><span>bloqueadas</span></div><div class="stat"><strong>'+Number(s.confirmed||0)+'</strong><span>confirmadas</span></div></div>';
+    document.getElementById('workstreamGrid').innerHTML=(state.workstreams||[]).length?(state.workstreams||[]).map(workstreamCard).join(''):'<div class="empty">Actividad registrada, pero aún no tiene responsabilidades derivadas.</div>';
+    document.getElementById('timeline').innerHTML=(state.events||[]).length?(state.events||[]).map(function(e){return '<div class="event"><small>'+esc(e.timestamp)+'</small><div><strong>'+esc(e.event_type)+'</strong> · '+esc(e.comment||'')+'</div></div>';}).join(''):'<div class="empty">Sin eventos todavía.</div>';
+    show('detail');setBusy(false);
   }
-
-  function currentBlocker(w){
-    if(w.state!=='BLOCKED')return '';
-    var ev=validEventsFor(w).find(function(e){return e.event_type==='BLOCKER_REPORTED';});
-    return ev ? ev.comment : 'Existe un bloqueo pendiente de resolver.';
-  }
-
-  function nextTask(w){
-    var blocked=(w.tasks||[]).find(function(t){return t.state==='BLOCKED';});
-    if(blocked)return blocked;
-    var active=(w.tasks||[]).find(function(t){return t.state==='IN_PROGRESS';});
-    if(active)return active;
-    return (w.tasks||[]).find(function(t){return t.state!=='DONE';})||null;
-  }
-
-  function nextActionText(w){
-    if((w.assignment||{}).assignment_state==='UNASSIGNED')return 'Asignar una persona a este rol.';
-    if((w.assignment||{}).assignment_state==='ASSIGNED')return 'La persona asignada debe confirmar la responsabilidad.';
-    if(w.state==='BLOCKED')return 'Resolver el bloqueo: '+currentBlocker(w);
-    var t=nextTask(w);
-    if(t)return t.title;
-    return 'Cerrar la responsabilidad y adjuntar evidencia si corresponde.';
-  }
-
-  function evidenceCount(w){
-    return validEventsFor(w).filter(function(e){return e.event_type==='EVIDENCE_ATTACHED'||e.event_type==='TASK_COMPLETED'||e.event_type==='ROLE_ACCEPTED';}).length;
-  }
-
-  function roleStatusClass(w){
-    if((w.assignment||{}).assignment_state==='UNASSIGNED'||w.state==='BLOCKED')return 'attention';
-    if((w.assignment||{}).assignment_state==='ASSIGNED')return 'pending';
-    return 'okcard';
-  }
-
-  function roleHeader(w){
-    var a=w.assignment||{};
-    return '<div class="context">'+esc(state.activity.title||'Actividad')+'</div>'+
-      '<div class="top"><div><div class="role">'+esc(roleTitle(w))+'</div>'+
-      '<div class="meta">'+esc(w.label)+'</div></div>'+badge(w.state)+'</div>'+
-      '<div class="label">Para qué existe este rol</div>'+
-      '<div class="value">'+esc(w.purpose||'Objetivo operativo pendiente de definir.')+'</div>'+
-      '<div class="label">Asignado a</div>'+
-      '<div class="ownerbox"><div><div class="ownername">'+esc(a.person_display||'Nadie asignado')+'</div>'+
-      '<div class="meta">'+esc(human(a.assignment_state||'UNASSIGNED'))+'</div></div>'+badge(a.assignment_state||'UNASSIGNED')+'</div>';
-  }
-
-  function checklistHtml(w,interactive){
-    if(!(w.tasks||[]).length)return '<div class="value">Sin tareas definidas.</div>';
-    return '<div class="checklist">'+w.tasks.map(function(t){
-      var action=(interactive&&t.state!=='DONE')
-        ? '<button class="btn" onclick="cudoTask(\''+t.task_id+'\')">Marcar lista</button>'
-        : badge(t.state);
-      return '<div class="taskrow">'+taskStateIcon(t)+'<div><div class="tasktitle">'+esc(t.title)+'</div>'+
-        '<div class="taskmeta">'+esc(t.due_at||'')+(t.assignee_display?' · '+esc(t.assignee_display):'')+'</div></div>'+action+'</div>';
-    }).join('')+'</div>';
-  }
-
-  function roleActions(w){
-    var a=w.assignment||{}, out=[];
-    if(a.assignment_state==='UNASSIGNED'){
-      out.push('<button class="btn primary" onclick="cudoAct(\'ASSIGN_DEMO\',\''+w.workstream_id+'\')">Me hago responsable (demo)</button>');
-    }
-    if(a.assignment_state==='ASSIGNED'){
-      out.push('<button class="btn primary" onclick="cudoAct(\'CONFIRM\',\''+w.workstream_id+'\')">Confirmar responsabilidad</button>');
-    }
-    if(w.state==='BLOCKED'){
-      out.push('<button class="btn" onclick="cudoAct(\'RESOLVE_BLOCKER\',\''+w.workstream_id+'\')">Resolver bloqueo</button>');
-    } else if(w.state!=='DONE'){
-      out.push('<button class="btn" onclick="cudoAct(\'REPORT_BLOCKER\',\''+w.workstream_id+'\')">Informar problema</button>');
-    }
-    return '<div class="actions">'+out.join('')+'</div>';
-  }
-
-  function fullRoleCard(w,interactive){
-    var pct=parseInt(w.progress_pct||'0',10)||0;
-    var blocker=currentBlocker(w);
-    return '<article class="card '+roleStatusClass(w)+'">'+roleHeader(w)+
-      '<div class="label">Cómo va</div>'+
-      '<div class="progress"><span style="width:'+pct+'%"></span></div>'+
-      '<div class="progressline"><span>'+pct+'% de avance</span><span>'+w.task_done+' de '+w.task_total+' tareas listas</span></div>'+
-      (blocker?'<div class="callout bad"><strong>Bloqueo actual:</strong> '+esc(blocker)+'</div>':'')+
-      '<div class="label">Qué sigue</div><div class="callout '+(blocker?'bad':'warn')+'">'+esc(nextActionText(w))+'</div>'+
-      '<div class="label">Qué debe hacer</div>'+checklistHtml(w,interactive)+
-      '<div class="label">Trazabilidad</div><div class="value">'+validEventsFor(w).length+' eventos registrados · '+evidenceCount(w)+' hitos/evidencias de avance</div>'+
-      (w.dependencies?'<div class="label">Depende de</div><div class="value">'+esc(w.dependencies)+'</div>':'')+
-      roleActions(w)+'</article>';
-  }
-
-  function exceptionCard(w){
-    var a=w.assignment||{};
-    var reason=a.assignment_state==='UNASSIGNED' ? 'No hay nadie asignado a esta responsabilidad.' :
-      a.assignment_state==='ASSIGNED' ? 'Hay una persona asignada, pero todavía no confirmó.' :
-      w.state==='BLOCKED' ? currentBlocker(w) : nextActionText(w);
-    return '<article class="card '+roleStatusClass(w)+'"><div class="top"><div>'+
-      '<div class="context">'+esc(state.activity.title||'Actividad')+'</div>'+
-      '<div class="exception-title">'+esc(roleTitle(w))+'</div>'+
-      '<div class="exception-copy">'+esc(w.purpose||'')+'</div></div>'+badge(w.state)+'</div>'+
-      '<div class="label">Asignado a</div><div class="value">'+esc(a.person_display||'Nadie')+' · '+esc(human(a.assignment_state||'UNASSIGNED'))+'</div>'+
-      '<div class="label">Necesita atención porque</div><div class="callout '+(w.state==='BLOCKED'||a.assignment_state==='UNASSIGNED'?'bad':'warn')+'">'+esc(reason)+'</div>'+
-      '<div class="label">Próxima acción</div><div class="value">'+esc(nextActionText(w))+'</div>'+
-      '<div class="actions"><button class="btn" onclick="openRole(\''+w.workstream_id+'\')">Ver responsabilidad completa</button></div></article>';
-  }
-
-  function trackingCard(w){
-    var pct=parseInt(w.progress_pct||'0',10)||0;
-    return '<article class="card '+roleStatusClass(w)+'"><div class="top"><div>'+
-      '<div class="role">'+esc(roleTitle(w))+'</div><div class="meta">'+esc((w.assignment||{}).person_display||'Sin responsable')+'</div></div>'+badge(w.state)+'</div>'+
-      '<div class="progress"><span style="width:'+pct+'%"></span></div>'+
-      '<div class="progressline"><span>'+pct+'%</span><span>'+w.task_done+'/'+w.task_total+' tareas</span></div>'+
-      '<div class="label">Qué falta para cerrar</div>'+checklistHtml(w,true)+
-      '<div class="label">Próxima acción</div><div class="callout '+(w.state==='BLOCKED'?'bad':'warn')+'">'+esc(nextActionText(w))+'</div>'+
-      roleActions(w)+'</article>';
-  }
-
-  function eventRow(e){
-    var w=(state.workstreams||[]).find(function(x){return x.workstream_id===e.workstream_id;});
-    var t=w ? (w.tasks||[]).find(function(x){return x.task_id===e.task_id;}) : null;
-    var role=w?roleTitle(w):'Actividad general';
-    return '<div class="event"><div class="event-time">'+esc(e.timestamp)+'</div>'+
-      '<div class="event-role">'+esc(role)+'</div>'+
-      '<div class="event-copy">'+esc(e.comment||human(e.event_type))+
-      (t?' · Tarea: '+esc(t.title):'')+
-      ' · '+esc(human(e.previous_state))+(e.previous_state||e.new_state?' → ':'')+esc(human(e.new_state))+
-      '</div></div>';
-  }
-
-  function renderSummary(){
-    var s=state.summary;
-    var exceptions=state.workstreams.filter(function(w){
-      var a=w.assignment||{};
-      return a.assignment_state==='UNASSIGNED'||a.assignment_state==='ASSIGNED'||w.state==='BLOCKED';
-    });
-    var ready=Math.max(0,s.workstreams-exceptions.length);
-    document.getElementById('summary').innerHTML=
-      '<div class="sectiontitle">¿Qué requiere mi atención ahora?</div>'+
-      '<p class="sectionlead">No muestra datos sueltos: cada alerta conserva el rol, el objetivo, la persona y la próxima acción.</p>'+
-      '<div class="stats">'+
-      '<div class="stat"><strong>'+s.workstreams+'</strong><span>roles necesarios</span></div>'+
-      '<div class="stat"><strong>'+ready+'</strong><span>sin excepción</span></div>'+
-      '<div class="stat"><strong>'+s.unassigned+'</strong><span>sin persona</span></div>'+
-      '<div class="stat"><strong>'+s.blocked+'</strong><span>bloqueados</span></div></div>'+
-      (exceptions.length?exceptions.map(exceptionCard).join(''):'<div class="callout good">No hay excepciones abiertas.</div>')+
-      '<div class="sectiontitle" style="margin-top:20px">Resto de la organización</div>'+
-      state.workstreams.filter(function(w){return exceptions.indexOf(w)<0;}).map(function(w){
-        return '<article class="card"><div class="top"><div><div class="role">'+esc(roleTitle(w))+'</div>'+
-          '<div class="meta">'+esc((w.assignment||{}).person_display||'Sin responsable')+' · '+w.task_done+'/'+w.task_total+' tareas</div></div>'+badge(w.state)+'</div>'+
-          '<div class="actions"><button class="btn" onclick="openRole(\''+w.workstream_id+'\')">Ver rol</button></div></article>';
-      }).join('');
-  }
-
-  function render(){
-    if(!state)return;
-    document.getElementById('error').classList.add('hidden');
-    document.getElementById('activityTitle').textContent=(state.activity.title||'Actividad QA')+' · '+(state.activity.starts_at||'');
-    renderSummary();
-
-    document.getElementById('roles').innerHTML=
-      '<div class="sectiontitle">¿Qué responsabilidad existe y quién la asumió?</div>'+
-      '<p class="sectionlead">Cada ficha explica el rol completo: propósito, persona asignada, avance, tareas, bloqueo y próxima acción.</p>'+
-      state.workstreams.map(function(w){return fullRoleCard(w,false);}).join('');
-
-    document.getElementById('tracking').innerHTML=
-      '<div class="sectiontitle">¿Cómo va cada responsabilidad?</div>'+
-      '<p class="sectionlead">Seguimiento por rol, sin perder el contexto de quién responde y para qué.</p>'+
-      state.workstreams.map(trackingCard).join('');
-
-    document.getElementById('history').innerHTML=
-      '<div class="sectiontitle">¿Qué pasó, quién lo hizo y sobre qué?</div>'+
-      '<p class="sectionlead">Cada evento vuelve al rol y a la tarea que cambió.</p>'+
-      '<div class="card"><div class="timeline">'+(state.events||[]).map(eventRow).join('')+'</div></div>';
-
-    var active=document.querySelector('.tabs button.active');
-    showView(active?active.dataset.view:'summary');
-  }
-
-  function showView(v){
-    views.forEach(function(x){document.getElementById(x).classList.toggle('hidden',x!==v);});
-  }
-
-  function setBusy(b){document.getElementById('loading').classList.toggle('hidden',!b);}
-
-  function fail(e){
-    setBusy(false);
-    var x=document.getElementById('error');
-    x.textContent='Error QA: '+(e&&e.message?e.message:e);
-    x.classList.remove('hidden');
-  }
-
-  function call(action,ws,task){
-    setBusy(true);
-    google.script.run
-      .withSuccessHandler(function(s){state=s;render();setBusy(false);})
-      .withFailureHandler(fail)
-      .applyAction({action:action,workstreamId:ws||'',taskId:task||''});
-  }
-
-  function load(){
-    setBusy(true);
-    google.script.run
-      .withSuccessHandler(function(s){state=s;render();setBusy(false);})
-      .withFailureHandler(fail)
-      .getState();
-  }
-
-  window.openRole=function(ws){
-    var w=(state.workstreams||[]).find(function(x){return x.workstream_id===ws;});
-    if(!w)return;
-    document.querySelectorAll('.tabs button').forEach(function(x){x.classList.toggle('active',x.dataset.view==='roles');});
-    showView('roles');
-    setTimeout(function(){
-      var cards=document.querySelectorAll('#roles .card');
-      var idx=state.workstreams.indexOf(w);
-      if(cards[idx])cards[idx].scrollIntoView({behavior:'smooth',block:'start'});
-    },20);
-  };
-
-  window.cudoAct=function(a,w){call(a,w,'');};
-
-  window.cudoTask=function(taskId){
-    var ws='';
-    state.workstreams.some(function(w){
-      return (w.tasks||[]).some(function(t){
-        if(t.task_id===taskId){ws=w.workstream_id;return true;}
-        return false;
-      });
-    });
-    call('COMPLETE_TASK',ws,taskId);
-  };
-
-  document.querySelectorAll('.tabs button').forEach(function(b){
-    b.addEventListener('click',function(){
-      document.querySelectorAll('.tabs button').forEach(function(x){x.classList.toggle('active',x===b);});
-      showView(b.dataset.view);
-    });
-  });
-
-  document.getElementById('reload').onclick=load;
-  document.getElementById('reset').onclick=function(){call('RESET_FIXTURE','','');};
-  load();
+  function loadRegistry(){setBusy(true,'Leyendo registro de actividades desde Google…');google.script.run.withSuccessHandler(function(r){registry=r;renderRegistry();}).withFailureHandler(fail).getRegistry();}
+  window.openActivity=function(id){currentActivityId=id;setBusy(true,'Leyendo actividad desde Google…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();}).withFailureHandler(fail).getState(id);};
+  window.act=function(action,ws){setBusy(true,'Guardando cambio en Google…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();loadRegistrySilent();}).withFailureHandler(fail).applyAction({action:action,workstreamId:ws,activityId:currentActivityId});};
+  window.completeTask=function(task){setBusy(true,'Guardando tarea en Google…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();loadRegistrySilent();}).withFailureHandler(fail).applyAction({action:'COMPLETE_TASK',taskId:task,activityId:currentActivityId});};
+  function loadRegistrySilent(){google.script.run.withSuccessHandler(function(r){registry=r;}).getRegistry();}
+  document.getElementById('back').onclick=function(){loadRegistry();};
+  document.getElementById('reloadRegistry').onclick=loadRegistry;
+  document.getElementById('reloadActivity').onclick=function(){if(currentActivityId)openActivity(currentActivityId);};
+  loadRegistry();
 })();
 </script>
 </body>
