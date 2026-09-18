@@ -101,7 +101,7 @@ jobs:
             for attempt in range(15):
               try:
                 state=http_json(web_url+'?format=json')
-                if state.get('ok') and state.get('activity',{}).get('activity_id')=='QA-ACTIVITY-COMMUNITY-001':
+                if state.get('ok') and state.get('activity',{}).get('activity_id')=='QA-ACTIVITY-BINGO-002':
                   break
               except Exception as exc:
                 last=exc
@@ -112,13 +112,13 @@ jobs:
               raise SystemExit('Fail closed: endpoint provenance/production flags invalid')
 
             before_events=len(sheet_values('EVENTOS!A2:A500'))
-            assign=http_json(web_url,'POST',{'action':'ASSIGN_DEMO','workstreamId':'QA-WS-004'})
+            assign=http_json(web_url,'POST',{'action':'ASSIGN_DEMO','workstreamId':'QA-WS-104'})
             if not assign.get('ok'):
               raise SystemExit('ASSIGN_DEMO failed: '+json.dumps(assign))
             rows=sheet_values('RESPONSABLES!A1:J20')
             hdr=rows[0]
             data=[dict(zip(hdr,r+['']*(len(hdr)-len(r)))) for r in rows[1:]]
-            target=next((r for r in data if r.get('workstream_id')=='QA-WS-004'),None)
+            target=next((r for r in data if r.get('workstream_id')=='QA-WS-104'),None)
             if not target or target.get('assignment_state')!='ASSIGNED' or target.get('person_ref')!='QA-VISITOR':
               raise SystemExit('Durable assignment not observed in Sheets')
 
@@ -128,7 +128,7 @@ jobs:
             rows=sheet_values('RESPONSABLES!A1:J20')
             hdr=rows[0]
             data=[dict(zip(hdr,r+['']*(len(hdr)-len(r)))) for r in rows[1:]]
-            target=next((r for r in data if r.get('workstream_id')=='QA-WS-004'),None)
+            target=next((r for r in data if r.get('workstream_id')=='QA-WS-104'),None)
             if not target or target.get('assignment_state')!='UNASSIGNED' or target.get('person_ref'):
               raise SystemExit('Baseline reset not observed in Sheets')
             after_events=len(sheet_values('EVENTOS!A2:A500'))
