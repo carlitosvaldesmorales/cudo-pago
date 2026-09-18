@@ -9,6 +9,8 @@ const resources=read('preview-v8/data/recursos.json');
 const governance=read('preview-v8/data/gobernanza.json');
 const evidence=read('preview-v8/data/evidencia.json');
 const manifest=read('preview-v8/data/mock-manifest.json');
+const dashboard=fs.readFileSync('preview-v8/club-os-mock/index.html','utf8');
+const home=fs.readFileSync('preview-v8/index.html','utf8');
 
 assert.equal(mock.schema_version,'CUDO_CLUB_OS_GOLDEN_MOCK_V1');
 assert.equal(mock.environment,'qa-v8-mock');
@@ -16,6 +18,12 @@ assert.equal(mock.mock,true);
 assert.equal(mock.production_write,false);
 assert.equal(manifest.golden_fixture,true);
 assert.equal(manifest.strategy,'FULL_CLUB_OS_SCENARIO_NOT_ONLY_SPORTS_CONTENT');
+assert.ok(home.includes('href="club-os-mock/"'),'home must link golden mock dashboard');
+for(const name of ['operacion','finanzas','recursos','gobernanza','evidencia']) assert.ok(dashboard.includes(`load('${name}')`),`dashboard missing ${name}`);
+assert.ok(dashboard.includes('100% DATOS MOCK'));
+assert.ok(dashboard.includes('Bloqueo:'));
+assert.ok(dashboard.includes('Dependencias:'));
+assert.ok(dashboard.includes('Efecto financiero:'));
 
 const requiredObjectTypes=[
   'ACTOR','ACTIVITY_EVENT','RESOURCE_FACILITY','RULE_DECISION',
