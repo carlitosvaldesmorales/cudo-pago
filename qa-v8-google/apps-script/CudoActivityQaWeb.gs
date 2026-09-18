@@ -1,5 +1,5 @@
 const CUDO_ACTIVITY_QA_SHEET_ID = '1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA';
-const CUDO_ACTIVITY_QA_ACTIVITY_ID = 'QA-ACTIVITY-BINGO-002';
+const CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID = 'QA-ACTIVITY-BINGO-002';
 
 function cudoQaSs_() {
   return SpreadsheetApp.openById(CUDO_ACTIVITY_QA_SHEET_ID);
@@ -51,13 +51,13 @@ function cudoQaUpdateById_(sheetName, idColumn, idValue, changes) {
   return rowIndex;
 }
 
-function cudoQaAppendEvent_(eventType, workstreamId, taskId, actorType, actorRef, previousState, newState, comment) {
+function cudoQaAppendEvent_(activityId, eventType, workstreamId, taskId, actorType, actorRef, previousState, newState, comment) {
   const sh = cudoQaSheet_('EVENTOS');
   const eventId = 'QA-EVT-WEB-' + Utilities.getUuid().slice(0, 8).toUpperCase();
   const ts = Utilities.formatDate(new Date(), 'America/Santiago', "yyyy-MM-dd'T'HH:mm:ssXXX");
   sh.appendRow([
     eventId,
-    CUDO_ACTIVITY_QA_ACTIVITY_ID,
+    activityId || CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID,
     workstreamId || '',
     taskId || '',
     ts,
@@ -84,15 +84,17 @@ function cudoQaFindTask_(taskId) {
   return cudoQaRows_('TAREAS').find(r => r.task_id === taskId) || null;
 }
 
-function getState() {
-  const activities = cudoQaRows_('ACTIVIDADES').filter(r => r.activity_id === CUDO_ACTIVITY_QA_ACTIVITY_ID);
-  const fronts = cudoQaRows_('FRENTES').filter(r => r.activity_id === CUDO_ACTIVITY_QA_ACTIVITY_ID);
-  const assignments = cudoQaRows_('RESPONSABLES');
-  const tasks = cudoQaRows_('TAREAS');
+function getState(activityId) {
+  const resolvedActivityId = String(activityId || CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID);
+  const activities = cudoQaRows_('ACTIVIDADES').filter(r => r.activity_id === resolvedActivityId);
+  if (!activities.length) throw new Error('Activity not found: ' + resolvedActivityId);
+  const fronts = cudoQaRows_('FRENTES').filter(r => r.activity_id === resolvedActivityId);
   const validWorkstreamIds = new Set(fronts.map(f => f.workstream_id));
+  const assignments = cudoQaRows_('RESPONSABLES').filter(r => validWorkstreamIds.has(r.workstream_id));
+  const tasks = cudoQaRows_('TAREAS').filter(r => validWorkstreamIds.has(r.workstream_id));
   const events = cudoQaRows_('EVENTOS')
     .filter(r =>
-      r.activity_id === CUDO_ACTIVITY_QA_ACTIVITY_ID &&
+      r.activity_id === resolvedActivityId &&
       (!r.workstream_id || validWorkstreamIds.has(r.workstream_id))
     )
     .slice(-80)
@@ -119,10 +121,10 @@ function getState() {
 
   return {
     ok: true,
-    schema_version: 'CUDO_CLUB_OS_ACTIVITY_GOOGLE_QA_V1',
+    schema_version: 'CUDO_CLUB_OS_ACTIVITY_GOOGLE_QA_V2',
     provenance: 'SYNTHETIC_QA',
     production_write: false,
-    activity: activities[0] || {},
+    activity: activities[0],
     workstreams,
     events,
     summary: {
@@ -133,6 +135,34 @@ function getState() {
       blocked: workstreams.filter(w => w.state === 'BLOCKED').length,
       done: workstreams.filter(w => w.state === 'DONE').length
     }
+  };
+}
+
+function getRegistry() {
+  const activities = cudoQaRows_('ACTIVIDADES');
+  const fronts = cudoQaRows_('FRENTES');
+  const assignments = cudoQaRows_('RESPONSABLES');
+  const assignmentByWs = {};
+  assignments.forEach(a => assignmentByWs[a.workstream_id] = a);
+
+  return {
+    ok: true,
+    schema_version: 'CUDO_CLUB_OS_ACTIVITY_REGISTRY_GOOGLE_QA_V1',
+    provenance: 'SYNTHETIC_QA',
+    production_write: false,
+    activities: activities.map(activity => {
+      const ws = fronts.filter(f => f.activity_id === activity.activity_id);
+      return Object.assign({}, activity, {
+        summary: {
+          workstreams: ws.length,
+          confirmed: ws.filter(w => (assignmentByWs[w.workstream_id] || {}).assignment_state === 'CONFIRMED').length,
+          assigned_unconfirmed: ws.filter(w => (assignmentByWs[w.workstream_id] || {}).assignment_state === 'ASSIGNED').length,
+          unassigned: ws.filter(w => !(assignmentByWs[w.workstream_id] || {}).person_ref).length,
+          blocked: ws.filter(w => w.state === 'BLOCKED').length,
+          done: ws.filter(w => w.state === 'DONE').length
+        }
+      });
+    }).sort((a,b) => String(a.starts_at||'').localeCompare(String(b.starts_at||'')))
   };
 }
 
@@ -182,6 +212,7 @@ function cudoQaReset_() {
   );
 
   cudoQaAppendEvent_(
+    CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID,
     'ACTIVITY_UPDATED','','','SYSTEM','CUDO_QA_WEB',
     '','IN_PREPARATION','Escenario Bingo CUDO QA restaurado a baseline DEMO V2'
   );
@@ -200,7 +231,7 @@ function applyAction(payload) {
     try {
       cudoQaReset_();
       SpreadsheetApp.flush();
-      return getState();
+      return getState(CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID);
     } finally {
       lock.releaseLock();
     }
@@ -229,7 +260,9 @@ function applyAction(payload) {
         confirmed_at:''
       });
       cudoQaUpdateById_('FRENTES','workstream_id',workstreamId,{state:'READY'});
-      cudoQaAppendEvent_('ROLE_ASSIGNED',workstreamId,'','PERSON','QA-VISITOR',a.assignment_state,'ASSIGNED','Responsabilidad tomada desde la web QA');
+      const f = cudoQaFindFront_(workstreamId);
+      if (!f) throw new Error('Workstream not found');
+      cudoQaAppendEvent_(f.activity_id,'ROLE_ASSIGNED',workstreamId,'','PERSON','QA-VISITOR',a.assignment_state,'ASSIGNED','Responsabilidad tomada desde la web QA');
 
     } else if (action === 'CONFIRM') {
       const a = cudoQaFindAssignment_(workstreamId);
@@ -238,32 +271,46 @@ function applyAction(payload) {
         assignment_state:'CONFIRMED',
         confirmed_at:now
       });
-      cudoQaAppendEvent_('ROLE_ACCEPTED',workstreamId,'','PERSON',a.person_ref || 'QA-VISITOR',a.assignment_state,'CONFIRMED','Responsabilidad confirmada desde la web QA');
+      const f = cudoQaFindFront_(workstreamId);
+      if (!f) throw new Error('Workstream not found');
+      cudoQaAppendEvent_(f.activity_id,'ROLE_ACCEPTED',workstreamId,'','PERSON',a.person_ref || 'QA-VISITOR',a.assignment_state,'CONFIRMED','Responsabilidad confirmada desde la web QA');
 
     } else if (action === 'REPORT_BLOCKER') {
       const f = cudoQaFindFront_(workstreamId);
       if (!f) throw new Error('Workstream not found');
       cudoQaUpdateById_('FRENTES','workstream_id',workstreamId,{state:'BLOCKED'});
-      cudoQaAppendEvent_('BLOCKER_REPORTED',workstreamId,'','PERSON','QA-VISITOR',f.state,'BLOCKED','Bloqueo sintético informado desde la web QA');
+      cudoQaAppendEvent_(f.activity_id,'BLOCKER_REPORTED',workstreamId,'','PERSON','QA-VISITOR',f.state,'BLOCKED','Bloqueo sintético informado desde la web QA');
 
     } else if (action === 'RESOLVE_BLOCKER') {
       const f = cudoQaFindFront_(workstreamId);
       if (!f) throw new Error('Workstream not found');
       cudoQaUpdateById_('FRENTES','workstream_id',workstreamId,{state:'IN_PROGRESS'});
-      cudoQaAppendEvent_('BLOCKER_RESOLVED',workstreamId,'','PERSON','QA-VISITOR',f.state,'IN_PROGRESS','Bloqueo sintético resuelto desde la web QA');
+      cudoQaAppendEvent_(f.activity_id,'BLOCKER_RESOLVED',workstreamId,'','PERSON','QA-VISITOR',f.state,'IN_PROGRESS','Bloqueo sintético resuelto desde la web QA');
 
     } else if (action === 'COMPLETE_TASK') {
       const t = cudoQaFindTask_(taskId);
       if (!t) throw new Error('Task not found');
       cudoQaUpdateById_('TAREAS','task_id',taskId,{state:'DONE',updated_at:now});
-      cudoQaAppendEvent_('TASK_COMPLETED',t.workstream_id,taskId,'PERSON','QA-VISITOR',t.state,'DONE','Tarea sintética completada desde la web QA');
+      const f = cudoQaFindFront_(t.workstream_id);
+      if (!f) throw new Error('Workstream not found');
+      cudoQaAppendEvent_(f.activity_id,'TASK_COMPLETED',t.workstream_id,taskId,'PERSON','QA-VISITOR',t.state,'DONE','Tarea sintética completada desde la web QA');
 
     } else {
       throw new Error('Unsupported action');
     }
 
     SpreadsheetApp.flush();
-    return getState();
+    let resolvedActivityId = String(payload.activityId || '');
+    if (!resolvedActivityId && workstreamId) {
+      const f = cudoQaFindFront_(workstreamId);
+      if (f) resolvedActivityId = f.activity_id;
+    }
+    if (!resolvedActivityId && taskId) {
+      const t = cudoQaFindTask_(taskId);
+      const f = t ? cudoQaFindFront_(t.workstream_id) : null;
+      if (f) resolvedActivityId = f.activity_id;
+    }
+    return getState(resolvedActivityId || CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID);
   } finally {
     lock.releaseLock();
   }
@@ -285,12 +332,16 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.format === 'registry') {
+    return cudoQaJson_(getRegistry());
+  }
   if (e && e.parameter && e.parameter.format === 'json') {
-    return cudoQaJson_(getState());
+    return cudoQaJson_(getState((e.parameter && e.parameter.activity) || CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID));
   }
 
   return HtmlService
     .createHtmlOutputFromFile('CudoActivityQaView')
     .setTitle('CUDO · Actividades QA')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport','width=device-width,initial-scale=1,viewport-fit=cover');
 }
