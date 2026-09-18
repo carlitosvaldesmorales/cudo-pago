@@ -13,6 +13,9 @@ on:
       - 'preview-v8/data/mock-manifest.json'
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/tools/validate_full_club_os_mock.mjs'
+      - 'preview-v8/tools/certify_full_mock_admin_actions.mjs'
+      - 'preview-v8/shared/mock-admin-engine.mjs'
+      - 'preview-v8/admin/index.html'
       - 'preview-v8/index.html'
       - 'preview-v8/club-os-mock/index.html'
       - '.github/workflows/certify-cudo-full-club-os-mock.yml'
@@ -31,6 +34,11 @@ jobs:
         with:
           node-version: '24'
       - name: Validate syntax
-        run: node --check preview-v8/tools/validate_full_club_os_mock.mjs
+        run: |
+          node --check preview-v8/tools/validate_full_club_os_mock.mjs
+          node --check preview-v8/shared/mock-admin-engine.mjs
+          node --check preview-v8/tools/certify_full_mock_admin_actions.mjs
       - name: Certify full Club OS golden mock
         run: node preview-v8/tools/validate_full_club_os_mock.mjs
+      - name: Certify mock admin actions
+        run: node preview-v8/tools/certify_full_mock_admin_actions.mjs

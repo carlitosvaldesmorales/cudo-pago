@@ -10,6 +10,8 @@ const governance=read('preview-v8/data/gobernanza.json');
 const evidence=read('preview-v8/data/evidencia.json');
 const manifest=read('preview-v8/data/mock-manifest.json');
 const dashboard=fs.readFileSync('preview-v8/club-os-mock/index.html','utf8');
+const admin=fs.readFileSync('preview-v8/admin/index.html','utf8');
+const engine=fs.readFileSync('preview-v8/shared/mock-admin-engine.mjs','utf8');
 const home=fs.readFileSync('preview-v8/index.html','utf8');
 
 assert.equal(mock.schema_version,'CUDO_CLUB_OS_GOLDEN_MOCK_V1');
@@ -19,7 +21,18 @@ assert.equal(mock.production_write,false);
 assert.equal(manifest.golden_fixture,true);
 assert.equal(manifest.strategy,'FULL_CLUB_OS_SCENARIO_NOT_ONLY_SPORTS_CONTENT');
 assert.ok(home.includes('href="club-os-mock/"'),'home must link golden mock dashboard');
-for(const name of ['operacion','finanzas','recursos','gobernanza','evidencia']) assert.ok(dashboard.includes(`load('${name}')`),`dashboard missing ${name}`);
+assert.ok(dashboard.includes("deriveMockReadModels"),'dashboard must derive from shared mock runtime');
+assert.ok(dashboard.includes("CUDO_FULL_MOCK_ADMIN_RUNTIME_V1"),'dashboard must consume shared runtime key');
+assert.ok(dashboard.includes('href="../admin/"'),'dashboard must link admin');
+assert.ok(home.includes('href="admin/"'),'home must link mock admin');
+assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
+assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
+assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
+assert.ok(admin.includes("Ninguna acción escribe Google Sheets, GitHub productivo ni CUDO real"));
+assert.ok(engine.includes("AUTO_UNBLOCK_DEPENDENCY"));
+assert.ok(engine.includes("AUTO_UNBLOCK_RESOURCE"));
+assert.ok(engine.includes("FINANCIAL_SETTLEMENT"));
+assert.ok(engine.includes("DONE requires evidence"));
 assert.ok(dashboard.includes('100% DATOS MOCK'));
 assert.ok(dashboard.includes('Bloqueo:'));
 assert.ok(dashboard.includes('Dependencias:'));
@@ -104,6 +117,11 @@ console.log(JSON.stringify({
   governance:true,
   finance:true,
   evidence_audit:true,
+  mock_admin_actions:true,
+  shared_runtime_between_admin_and_dashboard:true,
+  automatic_dependency_propagation:true,
+  automatic_resource_unblock:true,
+  mock_financial_settlement:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
