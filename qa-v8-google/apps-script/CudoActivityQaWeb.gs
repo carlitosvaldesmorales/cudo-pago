@@ -1,5 +1,5 @@
 const CUDO_ACTIVITY_QA_SHEET_ID = '1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA';
-const CUDO_ACTIVITY_QA_ACTIVITY_ID = 'QA-ACTIVITY-COMMUNITY-001';
+const CUDO_ACTIVITY_QA_ACTIVITY_ID = 'QA-ACTIVITY-BINGO-002';
 
 function cudoQaSs_() {
   return SpreadsheetApp.openById(CUDO_ACTIVITY_QA_SHEET_ID);
@@ -134,39 +134,44 @@ function getState() {
 
 function cudoQaReset_() {
   const now = Utilities.formatDate(new Date(), 'America/Santiago', "yyyy-MM-dd'T'HH:mm:ssXXX");
+
   const frontBaseline = {
-    'QA-WS-001': {state:'IN_PROGRESS',progress_pct:80},
-    'QA-WS-002': {state:'BLOCKED',progress_pct:55},
-    'QA-WS-003': {state:'READY',progress_pct:25},
-    'QA-WS-004': {state:'REQUIRED_UNASSIGNED',progress_pct:0},
-    'QA-WS-005': {state:'DONE',progress_pct:100},
-    'QA-WS-006': {state:'READY',progress_pct:30}
+    'QA-WS-101': {state:'IN_PROGRESS',progress_pct:65},
+    'QA-WS-102': {state:'BLOCKED',progress_pct:45},
+    'QA-WS-103': {state:'READY',progress_pct:35},
+    'QA-WS-104': {state:'REQUIRED_UNASSIGNED',progress_pct:0},
+    'QA-WS-105': {state:'IN_PROGRESS',progress_pct:70},
+    'QA-WS-106': {state:'READY',progress_pct:50},
+    'QA-WS-107': {state:'IN_PROGRESS',progress_pct:60},
+    'QA-WS-108': {state:'READY',progress_pct:30}
   };
   Object.keys(frontBaseline).forEach(id =>
     cudoQaUpdateById_('FRENTES','workstream_id',id,frontBaseline[id])
   );
 
   const assignmentBaseline = {
-    'QA-ASG-001': {person_ref:'QA-PER-001',person_display:'Persona QA 01',assignment_state:'CONFIRMED',assigned_at:'2026-09-17T20:10:00-03:00',confirmed_at:'2026-09-17T20:14:00-03:00'},
-    'QA-ASG-002': {person_ref:'QA-PER-002',person_display:'Persona QA 02',assignment_state:'CONFIRMED',assigned_at:'2026-09-17T20:15:00-03:00',confirmed_at:'2026-09-17T20:18:00-03:00'},
-    'QA-ASG-003': {person_ref:'QA-PER-003',person_display:'Persona QA 03',assignment_state:'ASSIGNED',assigned_at:'2026-09-17T20:20:00-03:00',confirmed_at:''},
-    'QA-ASG-004': {person_ref:'',person_display:'',assignment_state:'UNASSIGNED',assigned_at:'',confirmed_at:''},
-    'QA-ASG-005': {person_ref:'QA-PER-004',person_display:'Persona QA 04',assignment_state:'CONFIRMED',assigned_at:'2026-09-17T19:45:00-03:00',confirmed_at:'2026-09-17T19:50:00-03:00'},
-    'QA-ASG-006': {person_ref:'QA-PER-005',person_display:'Persona QA 05',assignment_state:'CONFIRMED',assigned_at:'2026-09-17T20:25:00-03:00',confirmed_at:'2026-09-17T20:28:00-03:00'}
+    'QA-ASG-101': {person_ref:'QA-PER-101',person_display:'Persona QA 01',assignment_state:'CONFIRMED',assigned_at:'2026-09-18T00:10:00-03:00',confirmed_at:'2026-09-18T00:15:00-03:00'},
+    'QA-ASG-102': {person_ref:'QA-PER-102',person_display:'Persona QA 02',assignment_state:'CONFIRMED',assigned_at:'2026-09-18T00:16:00-03:00',confirmed_at:'2026-09-18T00:20:00-03:00'},
+    'QA-ASG-103': {person_ref:'QA-PER-103',person_display:'Persona QA 03',assignment_state:'ASSIGNED',assigned_at:'2026-09-18T00:22:00-03:00',confirmed_at:''},
+    'QA-ASG-104': {person_ref:'',person_display:'',assignment_state:'UNASSIGNED',assigned_at:'',confirmed_at:''},
+    'QA-ASG-105': {person_ref:'QA-PER-104',person_display:'Persona QA 04',assignment_state:'CONFIRMED',assigned_at:'2026-09-18T00:25:00-03:00',confirmed_at:'2026-09-18T00:28:00-03:00'},
+    'QA-ASG-106': {person_ref:'QA-PER-105',person_display:'Persona QA 05',assignment_state:'CONFIRMED',assigned_at:'2026-09-18T00:30:00-03:00',confirmed_at:'2026-09-18T00:34:00-03:00'},
+    'QA-ASG-107': {person_ref:'QA-PER-106',person_display:'Persona QA 06',assignment_state:'CONFIRMED',assigned_at:'2026-09-18T00:35:00-03:00',confirmed_at:'2026-09-18T00:38:00-03:00'},
+    'QA-ASG-108': {person_ref:'QA-PER-107',person_display:'Persona QA 07',assignment_state:'CONFIRMED',assigned_at:'2026-09-18T00:40:00-03:00',confirmed_at:'2026-09-18T00:44:00-03:00'}
   };
   Object.keys(assignmentBaseline).forEach(id =>
     cudoQaUpdateById_('RESPONSABLES','assignment_id',id,assignmentBaseline[id])
   );
 
   const taskBaseline = {
-    'QA-TASK-001':'DONE',
-    'QA-TASK-002':'TODO',
-    'QA-TASK-003':'DONE',
-    'QA-TASK-004':'BLOCKED',
-    'QA-TASK-005':'TODO',
-    'QA-TASK-006':'TODO',
-    'QA-TASK-007':'DONE',
-    'QA-TASK-008':'TODO'
+    'QA-TASK-101':'DONE','QA-TASK-102':'IN_PROGRESS','QA-TASK-103':'TODO',
+    'QA-TASK-104':'DONE','QA-TASK-105':'DONE','QA-TASK-106':'BLOCKED','QA-TASK-107':'TODO',
+    'QA-TASK-108':'DONE','QA-TASK-109':'TODO','QA-TASK-110':'TODO',
+    'QA-TASK-111':'TODO','QA-TASK-112':'TODO','QA-TASK-113':'TODO',
+    'QA-TASK-114':'DONE','QA-TASK-115':'IN_PROGRESS','QA-TASK-116':'DONE','QA-TASK-117':'TODO',
+    'QA-TASK-118':'DONE','QA-TASK-119':'TODO','QA-TASK-120':'TODO',
+    'QA-TASK-121':'DONE','QA-TASK-122':'IN_PROGRESS','QA-TASK-123':'TODO',
+    'QA-TASK-124':'DONE','QA-TASK-125':'TODO','QA-TASK-126':'TODO'
   };
   Object.keys(taskBaseline).forEach(id =>
     cudoQaUpdateById_('TAREAS','task_id',id,{state:taskBaseline[id],updated_at:now})
@@ -174,7 +179,7 @@ function cudoQaReset_() {
 
   cudoQaAppendEvent_(
     'ACTIVITY_UPDATED','','','SYSTEM','CUDO_QA_WEB',
-    '','IN_PREPARATION','Escenario QA restaurado a baseline'
+    '','IN_PREPARATION','Escenario Bingo CUDO QA restaurado a baseline DEMO V2'
   );
 }
 
