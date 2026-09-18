@@ -6,6 +6,7 @@ on:
     paths:
       - 'qa-v8-google/tools/real_flow_san_ramon_runtime.mjs'
       - 'qa-v8-google/tools/emit_real_flow_san_ramon_artifacts.mjs'
+      - 'qa-v8-google/tools/certify_real_flow_san_ramon_artifacts.mjs'
       - 'qa-v8-google/contracts/cudo-real-flow-san-ramon-corona-v1.json'
       - 'qa-v8-google/contracts/cudo-dependency-rule-registry-v1.json'
       - '.github/workflows/materialize-cudo-real-flow-san-ramon-artifacts.yml'
@@ -40,3 +41,5 @@ jobs:
           node --check qa-v8-google/tools/emit_real_flow_san_ramon_artifacts.mjs
       - name: Materialize deterministic QA artifacts to log
         run: node qa-v8-google/tools/emit_real_flow_san_ramon_artifacts.mjs
+      - name: Certify persisted QA artifacts match runtime
+        run: node qa-v8-google/tools/certify_real_flow_san_ramon_artifacts.mjs
