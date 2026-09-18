@@ -1,0 +1,40 @@
+name: Certify CUDO Canonical Financial Core
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-canonical-financial-core-v1.json'
+      - 'qa-v8-google/contracts/cudo-canonical-financial-fixture-v1.json'
+      - 'qa-v8-google/tools/canonical_financial_core.mjs'
+      - 'qa-v8-google/tools/certify_canonical_financial_core.mjs'
+      - '.github/workflows/certify-cudo-canonical-financial-core.yml'
+  push:
+    branches:
+      - 'feat/cudo-canonical-financial-core-v1'
+    paths:
+      - 'qa-v8-google/contracts/cudo-canonical-financial-core-v1.json'
+      - 'qa-v8-google/contracts/cudo-canonical-financial-fixture-v1.json'
+      - 'qa-v8-google/tools/canonical_financial_core.mjs'
+      - 'qa-v8-google/tools/certify_canonical_financial_core.mjs'
+      - '.github/workflows/certify-cudo-canonical-financial-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate financial core syntax
+        run: |
+          node --check qa-v8-google/tools/canonical_financial_core.mjs
+          node --check qa-v8-google/tools/certify_canonical_financial_core.mjs
+      - name: Certify canonical financial semantics
+        run: node qa-v8-google/tools/certify_canonical_financial_core.mjs
