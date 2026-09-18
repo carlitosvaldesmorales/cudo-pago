@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cudo.cl/schemas/shared-object-contract-v1.json",
+  "title": "CUDO Shared Object Contract V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "object_id",
+    "object_type",
+    "object_version",
+    "lifecycle_state",
+    "data",
+    "field_semantics",
+    "relationships",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "CUDO_SHARED_OBJECT_CONTRACT_V1"
+    },
+    "object_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_-]{2,127}$"
+    },
+    "object_type": {
+      "enum": [
+        "ACTOR",
+        "ACTIVITY_EVENT",
+        "RESOURCE_FACILITY",
+        "RULE_DECISION",
+        "FINANCIAL_OBLIGATION",
+        "FINANCIAL_MOVEMENT",
+        "DOCUMENT_EVIDENCE"
+      ]
+    },
+    "object_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "lifecycle_state": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "data": {
+      "type": "object"
+    },
+    "field_semantics": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/fieldSemantic"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationship"
+      }
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "legacy_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/legacyRef"
+      },
+      "default": []
+    }
+  },
+  "$defs": {
+    "fieldSemantic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state_kind"],
+      "properties": {
+        "state_kind": {
+          "enum": ["SOURCE", "DERIVED", "OPAQUE"]
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "rule_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "gap_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"state_kind": {"const": "SOURCE"}},
+            "required": ["state_kind"]
+          },
+          "then": {"required": ["source_refs"]}
+        },
+        {
+          "if": {
+            "properties": {"state_kind": {"const": "DERIVED"}},
+            "required": ["state_kind"]
+          },
+          "then": {"required": ["rule_ids"]}
+        },
+        {
+          "if": {
+            "properties": {"state_kind": {"const": "OPAQUE"}},
+            "required": ["state_kind"]
+          },
+          "then": {"required": ["gap_id"]}
+        }
+      ]
+    },
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationship_id",
+        "relationship_type",
+        "target_object_id"
+      ],
+      "properties": {
+        "relationship_id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_-]{2,127}$"
+        },
+        "relationship_type": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,79}$"
+        },
+        "target_object_id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_-]{2,127}$"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "created_at",
+        "source_system",
+        "source_refs"
+      ],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "source_system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "transition_id": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "legacyRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_system", "legacy_id"],
+      "properties": {
+        "source_system": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legacy_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
