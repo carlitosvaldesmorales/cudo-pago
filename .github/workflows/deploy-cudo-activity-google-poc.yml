@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      CUDO_GOOGLE_OAUTH_CLIENT_ID: \${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
-      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: \${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
-      CUDO_GOOGLE_REFRESH_TOKEN: \${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Deploy isolated synthetic activity web app and certify Google roundtrip
