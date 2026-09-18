@@ -33,7 +33,7 @@
       <span class="mocktag">GOLDEN FIXTURE · 100% DATOS MOCK</span>
       <h1>CLUB OS MOCK</h1>
       <p>Universo sintético integral para probar CUDO Web de punta a punta. Nada de esta vista representa personas, deudas, pagos, decisiones o eventos reales.</p>
-      <p><a href="../" style="color:#fff;font-weight:800">← Volver al portal mock</a></p>
+      <p><a href="../admin/" style="color:#fff;font-weight:900">Administrar Club OS Mock →</a> · <a href="../" style="color:#fff;font-weight:800">Portal mock</a></p>
     </div>
   </header>
   <main class="mockmain"><div class="wrap">
@@ -54,33 +54,39 @@
     <section class="section"><h2>Evidencia y auditoría</h2><div class="tablewrap"><table class="table"><thead><tr><th>EVIDENCIA</th><th>TIPO</th><th>ESTADO</th></tr></thead><tbody id="evidence"></tbody></table></div></section>
   </div></main>
 
-<script>
+<script type="module">
+import {createMockRuntime,deriveMockReadModels} from '../shared/mock-admin-engine.mjs';
+const KEY='CUDO_FULL_MOCK_ADMIN_RUNTIME_V1';
 const money=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(n||0));
 const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function load(name){const r=await fetch('../data/'+name+'.json',{cache:'no-store'});if(!r.ok)throw new Error(name);return r.json()}
-Promise.all([load('operacion'),load('finanzas'),load('recursos'),load('gobernanza'),load('evidencia')]).then(([ops,fin,res,gov,evi])=>{
-  document.getElementById('kWork').textContent=ops.summary.total;
-  document.getElementById('kBlocked').textContent=ops.summary.blocked;
-  document.getElementById('kWaiting').textContent=ops.summary.waiting_external;
-  document.getElementById('kPayable').textContent=money(fin.summary.outstanding_payable);
-  document.getElementById('kReceivable').textContent=money(fin.summary.outstanding_receivable);
-  document.getElementById('kEvidence').textContent=evi.summary.evidence_missing;
-
-  document.getElementById('work').innerHTML=ops.items.map(x=>`
-    <article class="card">
-      <div class="row"><div><small>${esc(x.work_kind)}</small><h3>${esc(x.title)}</h3></div><span class="state ${esc(x.state)}">${esc(x.state)}</span></div>
-      <div class="meta"><strong>Responsable:</strong> ${esc(x.responsible.display_name)}<br>
-      <strong>Fecha:</strong> ${esc(x.due_date||'Sin fecha')} · <strong>Atención:</strong> ${esc(x.attention)}<br>
-      <strong>Bloqueo:</strong> ${esc(x.blockers?.reason||'—')}<br>
-      <strong>Dependencias:</strong> ${esc((x.dependencies?.unresolved||[]).join(', ')||'—')}<br>
-      <strong>Efecto financiero:</strong> ${x.financial_effect?esc(x.financial_effect.state)+' · '+money(x.financial_effect.outstanding_amount_clp):'—'}</div>
-    </article>`).join('');
-
-  document.getElementById('finance').innerHTML=fin.obligations.map(x=>`<tr><td>${esc(x.obligation_id)}</td><td>${esc(x.direction+' · '+x.kind)}</td><td>${esc(x.state)}</td><td>${money(x.amount_clp)}</td><td>${money(x.settled_amount_clp)}</td><td>${money(x.outstanding_amount_clp)}</td></tr>`).join('');
-  document.getElementById('resources').innerHTML=res.items.map(x=>`<tr><td>${esc(x.display_name)}</td><td>${esc(x.state)}</td><td>${esc(x.attention)}</td></tr>`).join('');
-  document.getElementById('governance').innerHTML=gov.decisions.map(x=>`<tr><td>${esc(x.display_name)}</td><td>${esc(x.kind)}</td><td>${esc(x.state)}</td></tr>`).join('');
-  document.getElementById('evidence').innerHTML=evi.evidence.map(x=>`<tr><td>${esc(x.display_name)}</td><td>${esc(x.kind)}</td><td>${esc(x.state)}</td></tr>`).join('');
-}).catch(err=>{document.querySelector('.notice').textContent='No se pudo cargar el mock integral: '+err.message});
+const golden=await (await fetch('../data/club-os-mock.json',{cache:'no-store'})).json();
+let runtime=null;
+try{runtime=JSON.parse(localStorage.getItem(KEY)||'null')}catch{}
+if(!runtime||runtime.schema_version!=='CUDO_MOCK_ADMIN_RUNTIME_V1'){
+  runtime=createMockRuntime(golden,{createdAt:new Date().toISOString()});
+  localStorage.setItem(KEY,JSON.stringify(runtime));
+}
+const {operation:ops,finance:fin,resources:res,governance:gov,evidence:evi}=deriveMockReadModels(runtime,{referenceDate:new Date().toISOString().slice(0,10)});
+document.querySelector('.notice').innerHTML='<strong>Separación estricta:</strong> este ambiente es MOCK. Vista runtime <strong>revision '+runtime.revision+'</strong>. Usa Administración Mock para cambiar el estado y vuelve aquí: se recalcula desde el mismo runtime local.';
+document.getElementById('kWork').textContent=ops.summary.total;
+document.getElementById('kBlocked').textContent=ops.summary.blocked;
+document.getElementById('kWaiting').textContent=ops.summary.waiting_external;
+document.getElementById('kPayable').textContent=money(fin.summary.outstanding_payable);
+document.getElementById('kReceivable').textContent=money(fin.summary.outstanding_receivable);
+document.getElementById('kEvidence').textContent=evi.summary.evidence_missing;
+document.getElementById('work').innerHTML=ops.items.map(x=>`
+  <article class="card">
+    <div class="row"><div><small>${esc(x.work_kind)}</small><h3>${esc(x.title)}</h3></div><span class="state ${esc(x.state)}">${esc(x.state)}</span></div>
+    <div class="meta"><strong>Responsable:</strong> ${esc(x.responsible.display_name)}<br>
+    <strong>Fecha:</strong> ${esc(x.due_date||'Sin fecha')} · <strong>Atención:</strong> ${esc(x.attention)}<br>
+    <strong>Bloqueo:</strong> ${esc(x.blockers?.reason||'—')}<br>
+    <strong>Dependencias:</strong> ${esc((x.dependencies?.unresolved||[]).join(', ')||'—')}<br>
+    <strong>Efecto financiero:</strong> ${x.financial_effect?esc(x.financial_effect.state)+' · '+money(x.financial_effect.outstanding_amount_clp):'—'}</div>
+  </article>`).join('');
+document.getElementById('finance').innerHTML=fin.obligations.map(x=>`<tr><td>${esc(x.obligation_id)}</td><td>${esc(x.direction+' · '+x.kind)}</td><td>${esc(x.state)}</td><td>${money(x.amount_clp)}</td><td>${money(x.settled_amount_clp)}</td><td>${money(x.outstanding_amount_clp)}</td></tr>`).join('');
+document.getElementById('resources').innerHTML=res.items.map(x=>`<tr><td>${esc(x.display_name)}</td><td>${esc(x.state)}</td><td>${esc(x.attention)}</td></tr>`).join('');
+document.getElementById('governance').innerHTML=gov.decisions.map(x=>`<tr><td>${esc(x.display_name)}</td><td>${esc(x.kind)}</td><td>${esc(x.state)}</td></tr>`).join('');
+document.getElementById('evidence').innerHTML=evi.evidence.map(x=>`<tr><td>${esc(x.display_name)}</td><td>${esc(x.kind)}</td><td>${esc(x.state)}</td></tr>`).join('');
 </script>
 </body>
 </html>
