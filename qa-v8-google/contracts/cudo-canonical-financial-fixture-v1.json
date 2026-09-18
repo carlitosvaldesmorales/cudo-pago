@@ -1,0 +1,360 @@
+{
+  "schema_version": "CUDO_CANONICAL_FINANCIAL_FIXTURE_V1",
+  "currency": "CLP",
+  "evidence_patterns": {
+    "PEDIDO_SAN_RAMON_2025": {
+      "source": "artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025",
+      "purchase_total": 274260,
+      "supplier_payable": 164570,
+      "remaining_stock_value": 109690,
+      "sales_revenue": 353000,
+      "invariants": [
+        "purchase_total = supplier_payable + remaining_stock_value"
+      ]
+    },
+    "CHECKLIST_SERVICE_OBLIGATIONS": {
+      "source": "artifact:Check-List tareas estadio y partidos.xlsx",
+      "examples": [
+        {"kind": "STADIUM_IRRIGATION", "amount": 50000, "trigger": "completed irrigation", "payment_pattern": "monthly"},
+        {"kind": "STADIUM_CLEANING", "amount": 25000, "trigger": "cleaning service", "payment_pattern": "after service"},
+        {"kind": "KIT_LAUNDRY", "amount": 15000, "trigger": "team kit washed", "payment_pattern": "after service"}
+      ]
+    }
+  },
+  "opening_positions": {
+    "CASH": 0,
+    "BANK_TRANSFER": 200000
+  },
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-FIN-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "AVAILABLE",
+      "data": {
+        "resource_kind": "BEVERAGE_STOCK",
+        "source_pattern": "PEDIDO_SAN_RAMON_2025"
+      },
+      "field_semantics": {
+        "resource_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx"]},
+        "source_pattern": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_FINANCIAL_FIXTURE",
+        "source_refs": ["artifact:PEDIDO CUDO.xlsx"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-FIN-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "COMPLETED",
+      "data": {
+        "activity_kind": "MATCHDAY",
+        "source_pattern": "PEDIDO_SAN_RAMON_2025"
+      },
+      "field_semantics": {
+        "activity_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx"]},
+        "source_pattern": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_FINANCIAL_FIXTURE",
+        "source_refs": ["artifact:PEDIDO CUDO.xlsx"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RULE-FIN-001",
+      "object_type": "RULE_DECISION",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "rule_kind": "STADIUM_CLEANING_SERVICE",
+        "service_amount": 25000
+      },
+      "field_semantics": {
+        "rule_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]},
+        "service_amount": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_FINANCIAL_FIXTURE",
+        "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-FIN-SUP-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "amount": 164570,
+        "currency": "CLP"
+      },
+      "field_semantics": {
+        "obligation_direction": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx"]},
+        "obligation_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025!K8"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]}
+      },
+      "relationships": [
+        {"relationship_id": "REL-FIN-SUP-CAUSE-001", "relationship_type": "CAUSED_BY_RESOURCE", "target_object_id": "CUDO-RESOURCE-FIN-001"}
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_FINANCIAL_FIXTURE",
+        "source_refs": ["artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-FIN-CLEAN-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "STADIUM_CLEANING_SERVICE",
+        "amount": 25000,
+        "currency": "CLP"
+      },
+      "field_semantics": {
+        "obligation_direction": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]},
+        "obligation_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]}
+      },
+      "relationships": [
+        {"relationship_id": "REL-FIN-CLEAN-CAUSE-001", "relationship_type": "CAUSED_BY_RULE", "target_object_id": "CUDO-RULE-FIN-001"}
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_FINANCIAL_FIXTURE",
+        "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-FIN-SALE-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "RECEIVABLE",
+        "obligation_kind": "MATCHDAY_SALES",
+        "amount": 353000,
+        "currency": "CLP"
+      },
+      "field_semantics": {
+        "obligation_direction": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx"]},
+        "obligation_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025!J8"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]}
+      },
+      "relationships": [
+        {"relationship_id": "REL-FIN-SALE-CAUSE-001", "relationship_type": "CAUSED_BY_EVENT", "target_object_id": "CUDO-EVENT-FIN-001"}
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_FINANCIAL_FIXTURE",
+        "source_refs": ["artifact:PEDIDO CUDO.xlsx#Pedido vs San Ramon 04-05-2025"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-MOV-FIN-IN-001",
+      "object_type": "FINANCIAL_MOVEMENT",
+      "object_version": 1,
+      "lifecycle_state": "CONFIRMED",
+      "data": {
+        "movement_direction": "IN",
+        "amount": 353000,
+        "currency": "CLP",
+        "channel": "CASH",
+        "movement_status": "CONFIRMED",
+        "occurred_at": "2026-09-18T14:10:00.000Z",
+        "reconciliation_state": "RECONCILED"
+      },
+      "field_semantics": {
+        "movement_direction": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/in"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/in"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]},
+        "channel": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/in"]},
+        "movement_status": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/in"]},
+        "occurred_at": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/in"]},
+        "reconciliation_state": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/in"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:10:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://movement/in/evidence"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-MOV-FIN-OUT-001",
+      "object_type": "FINANCIAL_MOVEMENT",
+      "object_version": 1,
+      "lifecycle_state": "CONFIRMED",
+      "data": {
+        "movement_direction": "OUT",
+        "amount": 100000,
+        "currency": "CLP",
+        "channel": "BANK_TRANSFER",
+        "movement_status": "CONFIRMED",
+        "occurred_at": "2026-09-18T14:20:00.000Z",
+        "reconciliation_state": "RECONCILED"
+      },
+      "field_semantics": {
+        "movement_direction": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out1"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out1"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]},
+        "channel": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out1"]},
+        "movement_status": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out1"]},
+        "occurred_at": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out1"]},
+        "reconciliation_state": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out1"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:20:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://movement/out1/evidence"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-MOV-FIN-OUT-002",
+      "object_type": "FINANCIAL_MOVEMENT",
+      "object_version": 1,
+      "lifecycle_state": "CONFIRMED",
+      "data": {
+        "movement_direction": "OUT",
+        "amount": 64570,
+        "currency": "CLP",
+        "channel": "CASH",
+        "movement_status": "CONFIRMED",
+        "occurred_at": "2026-09-18T14:30:00.000Z",
+        "reconciliation_state": "RECONCILED"
+      },
+      "field_semantics": {
+        "movement_direction": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out2"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out2"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]},
+        "channel": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out2"]},
+        "movement_status": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out2"]},
+        "occurred_at": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out2"]},
+        "reconciliation_state": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/out2"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:30:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://movement/out2/evidence"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-MOV-FIN-CLEAN-001",
+      "object_type": "FINANCIAL_MOVEMENT",
+      "object_version": 1,
+      "lifecycle_state": "CONFIRMED",
+      "data": {
+        "movement_direction": "OUT",
+        "amount": 25000,
+        "currency": "CLP",
+        "channel": "CASH",
+        "movement_status": "CONFIRMED",
+        "occurred_at": "2026-09-18T14:40:00.000Z",
+        "reconciliation_state": "RECONCILED"
+      },
+      "field_semantics": {
+        "movement_direction": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/clean"]},
+        "amount": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/clean"]},
+        "currency": {"state_kind": "SOURCE", "source_refs": ["fixture://currency"]},
+        "channel": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/clean"]},
+        "movement_status": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/clean"]},
+        "occurred_at": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/clean"]},
+        "reconciliation_state": {"state_kind": "SOURCE", "source_refs": ["fixture://movement/clean"]}
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": ["fixture://movement/clean/evidence"]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "settlements": [
+    {
+      "settlement_id": "CUDO-SET-FIN-001",
+      "movement_id": "CUDO-MOV-FIN-IN-001",
+      "obligation_id": "CUDO-OBL-FIN-SALE-001",
+      "amount": 353000,
+      "currency": "CLP",
+      "state": "ACTIVE",
+      "created_at": "2026-09-18T14:11:00.000Z",
+      "evidence_refs": ["fixture://settlement/sale"]
+    },
+    {
+      "settlement_id": "CUDO-SET-FIN-002",
+      "movement_id": "CUDO-MOV-FIN-OUT-001",
+      "obligation_id": "CUDO-OBL-FIN-SUP-001",
+      "amount": 100000,
+      "currency": "CLP",
+      "state": "ACTIVE",
+      "created_at": "2026-09-18T14:21:00.000Z",
+      "evidence_refs": ["fixture://settlement/supplier/part1"]
+    },
+    {
+      "settlement_id": "CUDO-SET-FIN-003",
+      "movement_id": "CUDO-MOV-FIN-OUT-002",
+      "obligation_id": "CUDO-OBL-FIN-SUP-001",
+      "amount": 64570,
+      "currency": "CLP",
+      "state": "ACTIVE",
+      "created_at": "2026-09-18T14:31:00.000Z",
+      "evidence_refs": ["fixture://settlement/supplier/part2"]
+    },
+    {
+      "settlement_id": "CUDO-SET-FIN-004",
+      "movement_id": "CUDO-MOV-FIN-CLEAN-001",
+      "obligation_id": "CUDO-OBL-FIN-CLEAN-001",
+      "amount": 25000,
+      "currency": "CLP",
+      "state": "ACTIVE",
+      "created_at": "2026-09-18T14:41:00.000Z",
+      "evidence_refs": ["fixture://settlement/cleaning"]
+    }
+  ]
+}
