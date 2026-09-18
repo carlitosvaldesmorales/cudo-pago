@@ -1,0 +1,93 @@
+{
+  "schema_version": "CUDO_CANONICAL_FINANCIAL_CORE_V1",
+  "scope": "OPERATIONAL_FINANCE_NOT_STATUTORY_ACCOUNTING",
+  "currency_policy": {
+    "v1_currency": "CLP",
+    "amount_unit": "INTEGER_PESO"
+  },
+  "objects": {
+    "FINANCIAL_OBLIGATION": {
+      "required_data": [
+        "obligation_direction",
+        "obligation_kind",
+        "amount",
+        "currency"
+      ],
+      "obligation_direction": ["PAYABLE", "RECEIVABLE"],
+      "lifecycle_states": ["OPEN", "PARTIALLY_SETTLED", "SETTLED", "CANCELLED"],
+      "invariant": "Every non-cancelled obligation must be attributable to at least one causal non-financial object."
+    },
+    "FINANCIAL_MOVEMENT": {
+      "required_data": [
+        "movement_direction",
+        "amount",
+        "currency",
+        "channel",
+        "movement_status",
+        "occurred_at",
+        "reconciliation_state"
+      ],
+      "movement_direction": ["IN", "OUT"],
+      "movement_status": ["PENDING", "CONFIRMED", "VOIDED"],
+      "channel": ["CASH", "BANK_TRANSFER", "ELECTRONIC", "THIRD_PARTY", "OTHER"],
+      "reconciliation_state": ["UNRECONCILED", "RECONCILED"],
+      "invariant": "A confirmed movement must either settle at least one obligation or carry a causal non-financial relation explaining why the money moved."
+    }
+  },
+  "settlement_allocation": {
+    "role": "EDGE_WITH_AMOUNT_BETWEEN_MOVEMENT_AND_OBLIGATION",
+    "required_fields": [
+      "settlement_id",
+      "movement_id",
+      "obligation_id",
+      "amount",
+      "currency",
+      "state",
+      "created_at",
+      "evidence_refs"
+    ],
+    "states": ["ACTIVE", "VOIDED"],
+    "rules": [
+      "ACTIVE settlement requires CONFIRMED movement.",
+      "PAYABLE obligation can only be settled by OUT movement.",
+      "RECEIVABLE obligation can only be settled by IN movement.",
+      "Sum of ACTIVE settlements for a movement cannot exceed movement amount.",
+      "Sum of ACTIVE settlements for an obligation cannot exceed obligation amount.",
+      "Settlement currency must equal movement and obligation currency."
+    ]
+  },
+  "derived_views": {
+    "obligation_state": {
+      "settled_amount": "SUM(active settlement amounts)",
+      "outstanding_amount": "obligation amount - settled amount",
+      "derived_lifecycle": "OPEN | PARTIALLY_SETTLED | SETTLED"
+    },
+    "movement_state": {
+      "allocated_amount": "SUM(active settlement amounts)",
+      "unallocated_amount": "movement amount - allocated amount"
+    },
+    "operational_position": {
+      "formula": "opening_position + confirmed IN - confirmed OUT",
+      "group_by": "payment channel",
+      "warning": "This is an operational position, not a statutory accounting balance and not a bank reconciliation by itself."
+    },
+    "reconciliation": {
+      "complete_when": "All CONFIRMED movements in scope are RECONCILED."
+    }
+  },
+  "causality": {
+    "obligation_required_relation_prefixes": ["CAUSED_BY_", "APPLIES_TO_", "OWED_BY_", "OWED_TO_"],
+    "movement_orphan_rule": "A movement with no settlement must have a non-financial causal relationship.",
+    "money_traceability": "Every settled amount can navigate movement -> settlement -> obligation -> cause, and back."
+  },
+  "legacy_policy": {
+    "unknown_semantics": "OPAQUE_GAP",
+    "no_silent_reconstruction": true,
+    "approved_parser_failure": "LibroTESORERIA CLUBV3.xls remains outside canonical import until a supported parser or converted source is available."
+  },
+  "evidence_basis": [
+    "artifact:PEDIDO CUDO.xlsx",
+    "artifact:Check-List tareas estadio y partidos.xlsx",
+    "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml"
+  ]
+}
