@@ -43,6 +43,12 @@ on:
       - 'preview-v8/tools/sync_google_publico.mjs'
       - '.github/workflows/cudo-review-engine.yml'
       - '.github/workflows/cudo-review-event-observer.yml'
+      - 'qa-v8-google/state/operational-work-state.json'
+      - 'qa-v8-google/tools/process_work_state_requests.mjs'
+      - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
+      - 'qa-v8-google/tools/work_state_web_fixture_harness.mjs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/data/operacion.json'
   workflow_dispatch:
     inputs:
       apply_changes:
