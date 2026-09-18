@@ -96,9 +96,24 @@ jobs:
             api(base+'/content','PUT',{'files':public_files})
             version=api(base+'/versions','POST',{'description':'CUDO Club OS Activity Google QA '+os.environ.get('GITHUB_SHA','')[:12]})
             vn=version['versionNumber']
-            dep=api(base+'/deployments','POST',{'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Club OS Activity Google QA'})
-            did=dep['deploymentId']
+            did='AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ'
+            dep=api(base+'/deployments/'+did,'PUT',{'deploymentConfig':{'scriptId':SCRIPT_ID,'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Club OS Activity Google QA · stable deployment'}})
             web_url='https://script.google.com/macros/s/'+did+'/exec'
+
+            registry=None
+            last=None
+            for attempt in range(15):
+              try:
+                registry=http_json(web_url+'?format=registry')
+                if registry.get('ok') and len(registry.get('activities') or [])>=2:
+                  break
+              except Exception as exc:
+                last=exc
+                time.sleep(3)
+            if not registry or not registry.get('ok'):
+              raise SystemExit('Registry endpoint failed: '+repr(last))
+            if registry.get('production_write') is not False or registry.get('provenance')!='SYNTHETIC_QA':
+              raise SystemExit('Fail closed: registry provenance/production flags invalid')
 
             state=None
             last=None
@@ -152,6 +167,9 @@ jobs:
               'removedExistingWebHandlersDuringVersionBuild':removed_handlers,
               'certification':{
                 'readFromGoogle':True,
+                'activityRegistryVisible':True,
+                'activityRegistryCount':len(registry.get('activities') or []),
+                'stableDeploymentUpdated':True,
                 'assignmentWritePersisted':True,
                 'resetPersisted':True,
                 'appendOnlyEventsBefore':before_events,
