@@ -25,6 +25,11 @@ const EVENT_TRANSITIONS={
 
 const OCTAGONAL_BOND_RULESET_REF='CUDO_OCTAGONAL_FEB_2025_BOND_RULESET';
 const OCTAGONAL_BOND_AMOUNT_CLP=250000;
+const OCTAGONAL_WIN_POINTS={
+  SEGUNDA:3,
+  SENIOR:3,
+  PRIMERA:6
+};
 const OCTAGONAL_BOND_FINE_RULES={
   NO_SHOW_SECOND_HALF:{
     amount_clp:50000,
@@ -291,6 +296,79 @@ function reconcileSanctionEligibility(state,actorId,tournamentRef,at){
   return {kind:'PLAYER_ELIGIBILITY_RECALCULATED',actor_id:actorId,from,to:nextStatus,outstanding_amount_clp:outstanding};
 }
 
+function applyBondOffsetState(state,{obligation,ruleCode,responsibleActorId,decisionId,decisionKind='TOURNAMENT_BOND_FINE_OFFSET',eventRef=null,at}){
+  if(obligation.kind!=='TOURNAMENT_BOND_REFUND') throw new Error('obligation is not tournament bond refund');
+  if(obligation.bond_state!=='ACTIVE') throw new Error('tournament bond is not active');
+  const rule=OCTAGONAL_BOND_FINE_RULES[ruleCode];
+  if(!rule) throw new Error('unsupported tournament bond fine rule');
+  if(rule.amount_clp>Number(obligation.outstanding_amount_clp||0)) throw new Error('fine offset exceeds refundable bond balance');
+  const responsible=findBy(state.actors,'actor_id',responsibleActorId,'responsible actor');
+  if(responsible.actor_kind!=='PERSON') throw new Error('bond fine responsible actor must be PERSON');
+  ensureUnique(state.decisions,'decision_id',decisionId,'bond fine decision');
+  const suffix=decisionId.replace(/^MOCK-DECISION-(?:BOND-FINE|OCTAGONAL-INCIDENT)-/,'');
+  const movementId=`MOCK-MOV-BOND-OFFSET-${suffix}`;
+  const settlementId=`MOCK-SET-BOND-OFFSET-${suffix}`;
+  if((state.financial_movements||[]).some(x=>x.movement_id===movementId)) throw new Error('duplicate bond offset movement');
+  const decision={
+    decision_id:decisionId,
+    kind:decisionKind,
+    display_name:`${ruleCode} · ${obligation.counterparty_ref}`,
+    state:'APPLIED',
+    responsible_actor_id:responsible.actor_id,
+    bond_obligation_ref:obligation.obligation_id,
+    club_actor_id:obligation.counterparty_ref,
+    rule_code:ruleCode,
+    rule_id:rule.rule_id,
+    amount_clp:rule.amount_clp,
+    sports_consequence:rule.sports_consequence,
+    sports_consequence_state:decisionKind==='OCTAGONAL_INCIDENT'?'APPLIED_ATOMICALLY':'DEFERRED_OUT_OF_FINANCIAL_CLUSTER',
+    event_ref:eventRef,
+    mock:true
+  };
+  const movement={
+    movement_id:movementId,
+    kind:'NON_CASH_BOND_OFFSET',
+    direction:'INTERNAL',
+    amount_clp:rule.amount_clp,
+    channel:'BOND_OFFSET',
+    status:'CONFIRMED',
+    reconciliation_state:'RECONCILED',
+    occurred_at:at,
+    settlement_refs:[settlementId],
+    cash_effect:false,
+    rule_id:rule.rule_id,
+    event_ref:eventRef,
+    mock:true
+  };
+  const settlement={
+    settlement_id:settlementId,
+    movement_id:movementId,
+    obligation_id:obligation.obligation_id,
+    amount_clp:rule.amount_clp,
+    settlement_kind:'NON_CASH_OFFSET',
+    state:'ACTIVE',
+    event_ref:eventRef,
+    mock:true
+  };
+  state.decisions.push(decision);
+  state.financial_movements.push(movement);
+  state.settlements=state.settlements||[];
+  state.settlements.push(settlement);
+  obligation.settled_amount_clp=Number(obligation.settled_amount_clp||0)+rule.amount_clp;
+  obligation.outstanding_amount_clp=Number(obligation.amount_clp)-obligation.settled_amount_clp;
+  obligation.state=obligation.outstanding_amount_clp===0?'SETTLED':'PARTIALLY_SETTLED';
+  obligation.fine_offset_amount_clp=Number(obligation.fine_offset_amount_clp||0)+rule.amount_clp;
+  appendAudit(state,{kind:'TOURNAMENT_BOND_FINE_OFFSET_APPLIED',object_ref:decisionId,bond_obligation_ref:obligation.obligation_id,rule_code:ruleCode,rule_id:rule.rule_id,amount_clp:rule.amount_clp,movement_ref:movementId,cash_effect:false,event_ref:eventRef},at);
+  appendAudit(state,{kind:'TOURNAMENT_BOND_REFUNDABLE_BALANCE_RECALCULATED',object_ref:obligation.obligation_id,outstanding_amount_clp:obligation.outstanding_amount_clp,event_ref:eventRef},at);
+  return {
+    rule,decision,movement,settlement,
+    effects:[
+      {kind:'TOURNAMENT_BOND_FINE_OFFSET_APPLIED',decision_id:decisionId,obligation_id:obligation.obligation_id,movement_id:movementId,amount_clp:rule.amount_clp,cash_effect:false},
+      {kind:'TOURNAMENT_BOND_REFUNDABLE_BALANCE_RECALCULATED',obligation_id:obligation.obligation_id,outstanding_amount_clp:obligation.outstanding_amount_clp}
+    ]
+  };
+}
+
 function cancelDerivedPreparationForEvent(state,event,at){
   const changed=[];
   for(const work of state.work_items||[]){
@@ -336,7 +414,106 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='TOURNAMENT_BOND_RECEIVE'){
+  if(action.type==='OCTAGONAL_INCIDENT_APPLY'){
+    const incidentId=requireMockId(action.incident_id,'MOCK-DECISION-OCTAGONAL-INCIDENT-');
+    const event=findBy(state.events,'event_id',action.event_id,'match event');
+    if(event.kind!=='MATCH'||!event.sports) throw new Error('octagonal incident requires MATCH with sports contract');
+    if(event.state!=='LIVE') throw new Error('octagonal incident requires LIVE match');
+    const category=String(event.sports.categoria||'').toUpperCase();
+    const winPoints=OCTAGONAL_WIN_POINTS[category];
+    if(!winPoints) throw new Error('octagonal incident category not supported by bounded ruleset');
+    const rulesetRef=String(action.ruleset_ref||OCTAGONAL_BOND_RULESET_REF);
+    if(rulesetRef!==OCTAGONAL_BOND_RULESET_REF) throw new Error('octagonal incident ruleset scope not allowed');
+    const ruleCode=String(action.rule_code||'').toUpperCase();
+    const rule=OCTAGONAL_BOND_FINE_RULES[ruleCode];
+    if(!rule) throw new Error('unsupported tournament bond fine rule');
+    const offendingSide=String(action.offending_side||'').toUpperCase();
+    if(!['LOCAL','VISITA'].includes(offendingSide)) throw new Error('offending_side must be LOCAL or VISITA');
+    const localActorId=String(event.sports.local_club_actor_id||'');
+    const visitaActorId=String(event.sports.visita_club_actor_id||'');
+    if(!localActorId||!visitaActorId) throw new Error('octagonal incident requires stable club actor refs on both match sides');
+    const localActor=findBy(state.actors,'actor_id',localActorId,'local club actor');
+    const visitaActor=findBy(state.actors,'actor_id',visitaActorId,'visita club actor');
+    if(localActor.actor_kind!=='EXTERNAL_ORGANIZATION'||visitaActor.actor_kind!=='EXTERNAL_ORGANIZATION'){
+      throw new Error('match side club actors must be EXTERNAL_ORGANIZATION');
+    }
+    if(localActor.actor_id===visitaActor.actor_id) throw new Error('match side club actors must differ');
+    const offendingActor=offendingSide==='LOCAL'?localActor:visitaActor;
+    const winnerSide=offendingSide==='LOCAL'?'VISITA':'LOCAL';
+    const winnerActor=winnerSide==='LOCAL'?localActor:visitaActor;
+    const bond=(state.financial_obligations||[]).find(x=>
+      x.kind==='TOURNAMENT_BOND_REFUND'&&
+      x.counterparty_ref===offendingActor.actor_id&&
+      x.ruleset_ref===rulesetRef&&
+      x.bond_state==='ACTIVE'
+    );
+    if(!bond) throw new Error('active tournament bond not found for offending club actor');
+    if(rule.amount_clp>Number(bond.outstanding_amount_clp||0)) throw new Error('fine offset exceeds refundable bond balance');
+    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    if(responsible.actor_kind!=='PERSON') throw new Error('octagonal incident responsible actor must be PERSON');
+
+    // All validation above happens before mutating the cloned transaction state.
+    const from=event.state;
+    event.state='COMPLETED';
+    event.sports.competencia='Octagonal Febrero 2025 CUDO (Mock)';
+    event.sports.tournament_ref=rulesetRef;
+    delete event.sports.goles_local;
+    delete event.sports.goles_visita;
+    event.sports.administrative_outcome={
+      kind:'AWARDED_WIN',
+      winner_side:winnerSide,
+      loser_side:offendingSide,
+      offending_side:offendingSide,
+      winner_club_actor_id:winnerActor.actor_id,
+      offending_club_actor_id:offendingActor.actor_id,
+      points_local:winnerSide==='LOCAL'?winPoints:0,
+      points_visita:winnerSide==='VISITA'?winPoints:0,
+      rule_id:rule.rule_id,
+      tournament_ref:rulesetRef,
+      incident_ref:incidentId,
+      mock:true
+    };
+    appendAudit(state,{kind:'OCTAGONAL_INCIDENT_RECORDED',object_ref:incidentId,event_ref:event.event_id,rule_code:ruleCode,offending_side:offendingSide,offending_club_actor_ref:offendingActor.actor_id},at);
+    appendAudit(state,{kind:'EVENT_TRANSITION',object_ref:event.event_id,from,to:'COMPLETED',reason:'OCTAGONAL_INCIDENT',score:null,incident_ref:incidentId},at);
+    appendAudit(state,{kind:'OCTAGONAL_SPORTS_CONSEQUENCE_APPLIED',object_ref:incidentId,event_ref:event.event_id,winner_side:winnerSide,winner_club_actor_ref:winnerActor.actor_id,points_local:event.sports.administrative_outcome.points_local,points_visita:event.sports.administrative_outcome.points_visita,rule_id:rule.rule_id},at);
+
+    const offset=applyBondOffsetState(state,{
+      obligation:bond,
+      ruleCode,
+      responsibleActorId:responsible.actor_id,
+      decisionId:incidentId,
+      decisionKind:'OCTAGONAL_INCIDENT',
+      eventRef:event.event_id,
+      at
+    });
+    const incident=offset.decision;
+    incident.display_name=`${ruleCode} · ${event.display_name}`;
+    incident.event_ref=event.event_id;
+    incident.offending_side=offendingSide;
+    incident.winner_side=winnerSide;
+    incident.offending_club_actor_id=offendingActor.actor_id;
+    incident.winner_club_actor_id=winnerActor.actor_id;
+    incident.category=category;
+    incident.tournament_ref=rulesetRef;
+    incident.sports_points={local:event.sports.administrative_outcome.points_local,visita:event.sports.administrative_outcome.points_visita};
+    incident.financial_consequence_state='APPLIED_ATOMICALLY';
+
+    effects.push({
+      kind:'OCTAGONAL_INCIDENT_APPLIED',
+      incident_id:incidentId,
+      event_id:event.event_id,
+      rule_code:ruleCode,
+      offending_club_actor_id:offendingActor.actor_id,
+      winner_club_actor_id:winnerActor.actor_id,
+      winner_side:winnerSide,
+      bond_obligation_id:bond.obligation_id,
+      fine_offset_clp:rule.amount_clp
+    });
+    effects.push({kind:'ADMINISTRATIVE_MATCH_OUTCOME_APPLIED',decision_id:incidentId,event_id:event.event_id,winner_side:winnerSide,points_local:event.sports.administrative_outcome.points_local,points_visita:event.sports.administrative_outcome.points_visita});
+    effects.push(...offset.effects);
+    const post=derivePostEventWork(state,event,at);
+    for(const work of post) effects.push({kind:'POST_EVENT_WORK_CREATED',work_id:work.work_id,source_ref:event.event_id});
+  } else if(action.type==='TOURNAMENT_BOND_RECEIVE'){
     const obligationId=requireMockId(action.obligation_id,'MOCK-OBL-BOND-');
     ensureUnique(state.financial_obligations,'obligation_id',obligationId,'tournament bond');
     const club=findBy(state.actors,'actor_id',action.club_actor_id,'participating club');
@@ -391,70 +568,18 @@ export function applyMockAdminAction(runtime,action){
     effects.push({kind:'TOURNAMENT_BOND_REFUND_PAYABLE_CREATED',obligation_id:obligationId,amount_clp:OCTAGONAL_BOND_AMOUNT_CLP});
   } else if(action.type==='TOURNAMENT_BOND_FINE_OFFSET_APPLY'){
     const obligation=findBy(state.financial_obligations,'obligation_id',action.obligation_id,'tournament bond');
-    if(obligation.kind!=='TOURNAMENT_BOND_REFUND') throw new Error('obligation is not tournament bond refund');
-    if(obligation.bond_state!=='ACTIVE') throw new Error('tournament bond is not active');
     const ruleCode=String(action.rule_code||'').toUpperCase();
-    const rule=OCTAGONAL_BOND_FINE_RULES[ruleCode];
-    if(!rule) throw new Error('unsupported tournament bond fine rule');
-    if(rule.amount_clp>Number(obligation.outstanding_amount_clp||0)) throw new Error('fine offset exceeds refundable bond balance');
-    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
-    if(responsible.actor_kind!=='PERSON') throw new Error('bond fine responsible actor must be PERSON');
     const decisionId=requireMockId(action.decision_id,'MOCK-DECISION-BOND-FINE-');
-    ensureUnique(state.decisions,'decision_id',decisionId,'bond fine decision');
-    const suffix=decisionId.replace(/^MOCK-DECISION-BOND-FINE-/,'');
-    const movementId=`MOCK-MOV-BOND-OFFSET-${suffix}`;
-    const settlementId=`MOCK-SET-BOND-OFFSET-${suffix}`;
-    if((state.financial_movements||[]).some(x=>x.movement_id===movementId)) throw new Error('duplicate bond offset movement');
-    const decision={
-      decision_id:decisionId,
-      kind:'TOURNAMENT_BOND_FINE_OFFSET',
-      display_name:`${ruleCode} · ${obligation.counterparty_ref}`,
-      state:'APPLIED',
-      responsible_actor_id:responsible.actor_id,
-      bond_obligation_ref:obligation.obligation_id,
-      club_actor_id:obligation.counterparty_ref,
-      rule_code:ruleCode,
-      rule_id:rule.rule_id,
-      amount_clp:rule.amount_clp,
-      sports_consequence:rule.sports_consequence,
-      sports_consequence_state:'DEFERRED_OUT_OF_FINANCIAL_CLUSTER',
-      mock:true
-    };
-    const movement={
-      movement_id:movementId,
-      kind:'NON_CASH_BOND_OFFSET',
-      direction:'INTERNAL',
-      amount_clp:rule.amount_clp,
-      channel:'BOND_OFFSET',
-      status:'CONFIRMED',
-      reconciliation_state:'RECONCILED',
-      occurred_at:at,
-      settlement_refs:[settlementId],
-      cash_effect:false,
-      rule_id:rule.rule_id,
-      mock:true
-    };
-    const settlement={
-      settlement_id:settlementId,
-      movement_id:movementId,
-      obligation_id:obligation.obligation_id,
-      amount_clp:rule.amount_clp,
-      settlement_kind:'NON_CASH_OFFSET',
-      state:'ACTIVE',
-      mock:true
-    };
-    state.decisions.push(decision);
-    state.financial_movements.push(movement);
-    state.settlements=state.settlements||[];
-    state.settlements.push(settlement);
-    obligation.settled_amount_clp=Number(obligation.settled_amount_clp||0)+rule.amount_clp;
-    obligation.outstanding_amount_clp=Number(obligation.amount_clp)-obligation.settled_amount_clp;
-    obligation.state=obligation.outstanding_amount_clp===0?'SETTLED':'PARTIALLY_SETTLED';
-    obligation.fine_offset_amount_clp=Number(obligation.fine_offset_amount_clp||0)+rule.amount_clp;
-    appendAudit(state,{kind:'TOURNAMENT_BOND_FINE_OFFSET_APPLIED',object_ref:decisionId,bond_obligation_ref:obligation.obligation_id,rule_code:ruleCode,rule_id:rule.rule_id,amount_clp:rule.amount_clp,movement_ref:movementId,cash_effect:false},at);
-    appendAudit(state,{kind:'TOURNAMENT_BOND_REFUNDABLE_BALANCE_RECALCULATED',object_ref:obligation.obligation_id,outstanding_amount_clp:obligation.outstanding_amount_clp},at);
-    effects.push({kind:'TOURNAMENT_BOND_FINE_OFFSET_APPLIED',decision_id:decisionId,obligation_id:obligation.obligation_id,movement_id:movementId,amount_clp:rule.amount_clp,cash_effect:false});
-    effects.push({kind:'TOURNAMENT_BOND_REFUNDABLE_BALANCE_RECALCULATED',obligation_id:obligation.obligation_id,outstanding_amount_clp:obligation.outstanding_amount_clp});
+    const offset=applyBondOffsetState(state,{
+      obligation,
+      ruleCode,
+      responsibleActorId:action.responsible_actor_id,
+      decisionId,
+      decisionKind:'TOURNAMENT_BOND_FINE_OFFSET',
+      eventRef:null,
+      at
+    });
+    effects.push(...offset.effects);
   } else if(action.type==='TOURNAMENT_BOND_REFUND'){
     const obligation=findBy(state.financial_obligations,'obligation_id',action.obligation_id,'tournament bond');
     if(obligation.kind!=='TOURNAMENT_BOND_REFUND') throw new Error('obligation is not tournament bond refund');
@@ -815,10 +940,23 @@ export function applyMockAdminAction(runtime,action){
       const local=mockTeamName(action.local||'CUDO');
       const visita=mockTeamName(action.visita);
       if(local===visita) throw new Error('MATCH local and visita must differ');
+      const localClubActorId=String(action.local_club_actor_id||'').trim()||null;
+      const visitaClubActorId=String(action.visita_club_actor_id||'').trim()||null;
+      if(localClubActorId){
+        const localClub=findBy(state.actors,'actor_id',localClubActorId,'local club actor');
+        if(localClub.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('local club actor must be EXTERNAL_ORGANIZATION');
+      }
+      if(visitaClubActorId){
+        const visitaClub=findBy(state.actors,'actor_id',visitaClubActorId,'visita club actor');
+        if(visitaClub.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('visita club actor must be EXTERNAL_ORGANIZATION');
+      }
+      if(localClubActorId&&visitaClubActorId&&localClubActorId===visitaClubActorId) throw new Error('MATCH side club actors must differ');
       event.sports={
         public_match_id:eventId.toLowerCase(),
         local,
         visita,
+        local_club_actor_id:localClubActorId,
+        visita_club_actor_id:visitaClubActorId,
         categoria:String(action.categoria||'PRIMERA').toUpperCase(),
         competencia:syntheticName(action.competencia||'Campeonato Club OS'),
         recinto:syntheticName(action.recinto||'Cancha de la Orilla'),
