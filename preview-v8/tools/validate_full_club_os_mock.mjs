@@ -32,7 +32,8 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['actorForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+assert.ok(dashboard.includes('id="members"'));
 assert.ok(dashboard.includes('id="actors"'));
 assert.ok(dashboard.includes('id="events"'));
 assert.ok(admin.includes("data-event-next"));
@@ -51,6 +52,10 @@ assert.ok(engine.includes("EVENT_TRANSITION"));
 assert.ok(engine.includes("POST_EVENT_WORK_CREATED"));
 assert.ok(engine.includes("AUTO_CANCEL_EVENT_PREPARATION"));
 assert.ok(engine.includes("completed MATCH requires non-negative integer score"));
+assert.ok(engine.includes("MEMBER_ENROLL"));
+assert.ok(engine.includes("MEMBERSHIP_DUE"));
+assert.ok(engine.includes("MEMBER_FINANCIAL_STATUS_RECALCULATED"));
+assert.ok(engine.includes("membership monthly amount must be integer >= 2000 CLP"));
 assert.ok(engine.includes("event.sports={"));
 assert.ok(sportsProjection.includes("deriveMockSportsProjection"));
 assert.ok(sportsProjection.includes("CUDO_WEB_PARTIDOS"));
@@ -156,6 +161,8 @@ console.log(JSON.stringify({
   completed_match_result_to_standings:true,
   sports_runtime_precedes_seed_on_collision:true,
   home_and_partidos_share_club_sports_projection:true,
+  membership_enrollment_to_due:true,
+  membership_payment_to_financial_status:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
