@@ -29,7 +29,7 @@
       }
     ]
   },
-  "qa_trigger_note": "The completed match below is synthetic QA. The post-match tasks, responsible people and payment context come from the real CUDO checklist.",
+  "qa_trigger_note": "The completed match below is synthetic QA and shares the same operational week as the grass-cut fixture so the combined certification tests event fan-out without introducing a second weekly-maintenance horizon. The post-match tasks, responsible people and payment context come from the real CUDO checklist.",
   "objects": [
     {
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
@@ -398,7 +398,7 @@
       "data": {
         "activity_kind": "MATCH",
         "display_name": "Partido QA finalizado",
-        "scheduled_date": "2026-09-20",
+        "scheduled_date": "2026-09-27",
         "qa_synthetic": true
       },
       "field_semantics": {
@@ -417,7 +417,7 @@
         "scheduled_date": {
           "state_kind": "SOURCE",
           "source_refs": [
-            "qa://synthetic-completed-match/scheduled_date"
+            "qa://synthetic-completed-match/scheduled_date/2026-09-27"
           ]
         },
         "qa_synthetic": {
@@ -439,7 +439,7 @@
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA_TRIGGER",
         "source_refs": [
-          "qa://synthetic-completed-match/2026-09-20"
+          "qa://synthetic-completed-match/2026-09-27"
         ]
       },
       "legacy_refs": []
