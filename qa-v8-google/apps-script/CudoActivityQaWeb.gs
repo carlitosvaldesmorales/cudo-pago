@@ -89,8 +89,12 @@ function getState() {
   const fronts = cudoQaRows_('FRENTES').filter(r => r.activity_id === CUDO_ACTIVITY_QA_ACTIVITY_ID);
   const assignments = cudoQaRows_('RESPONSABLES');
   const tasks = cudoQaRows_('TAREAS');
+  const validWorkstreamIds = new Set(fronts.map(f => f.workstream_id));
   const events = cudoQaRows_('EVENTOS')
-    .filter(r => r.activity_id === CUDO_ACTIVITY_QA_ACTIVITY_ID)
+    .filter(r =>
+      r.activity_id === CUDO_ACTIVITY_QA_ACTIVITY_ID &&
+      (!r.workstream_id || validWorkstreamIds.has(r.workstream_id))
+    )
     .slice(-80)
     .reverse();
 
