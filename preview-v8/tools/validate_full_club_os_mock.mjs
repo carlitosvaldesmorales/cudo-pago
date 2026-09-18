@@ -15,6 +15,7 @@ const engine=fs.readFileSync('preview-v8/shared/mock-admin-engine.mjs','utf8');
 const home=fs.readFileSync('preview-v8/index.html','utf8');
 const partidosPage=fs.readFileSync('preview-v8/partidos/index.html','utf8');
 const sportsProjection=fs.readFileSync('preview-v8/shared/mock-sports-projection.mjs','utf8');
+const pageUx=fs.readFileSync('preview-v8/shared/page-ux.js','utf8');
 
 assert.equal(mock.schema_version,'CUDO_CLUB_OS_GOLDEN_MOCK_V1');
 assert.equal(mock.environment,'qa-v8-mock');
@@ -73,6 +74,16 @@ assert.ok(engine.includes("FACILITY_DAMAGE_COMPENSATION"));
 assert.ok(engine.includes("damage assessment work must be DONE before amount agreement"));
 assert.ok(engine.includes("damage amount agreement requires assessment evidence"));
 assert.ok(engine.includes("facility damage decision requires DAMAGE_AMOUNT_AGREE"));
+assert.ok(engine.includes("MATCH_ADMINISTRATIVE_OUTCOME_APPLY"));
+assert.ok(engine.includes("ADMINISTRATIVE_MATCH_OUTCOME"));
+assert.ok(engine.includes("DEFERRED_NO_PRIZE_CONTRACT"));
+assert.ok(engine.includes("administrative outcome category not supported by bounded ruleset"));
+assert.ok(sportsProjection.includes("resultado_administrativo"));
+assert.ok(sportsProjection.includes("puntos_local"));
+assert.ok(sportsProjection.includes("AWARDED_WIN"));
+assert.ok(pageUx.includes("CUDO GANA · ADM."));
+assert.ok(pageUx.includes("RIVAL GANA · ADM."));
+assert.ok(admin.includes("data-admin-match"));
 assert.ok(engine.includes("event.sports={"));
 assert.ok(sportsProjection.includes("deriveMockSportsProjection"));
 assert.ok(sportsProjection.includes("CUDO_WEB_PARTIDOS"));
@@ -186,6 +197,9 @@ console.log(JSON.stringify({
   facility_damage_report_to_assessment_work:true,
   evidence_backed_damage_amount_to_receivable:true,
   settlement_does_not_fake_resource_repair:true,
+  administrative_match_outcome_without_fake_score:true,
+  bounded_category_points_to_standings:true,
+  prize_deduction_deferred_without_financial_contract:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
