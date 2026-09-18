@@ -9,7 +9,7 @@ const allowedTypes=new Set([
   'FINANCIAL_OBLIGATION','FINANCIAL_MOVEMENT','DOCUMENT_EVIDENCE'
 ]);
 const allowedEvidence=new Set(['DIRECT','DIRECT_PATTERN','SYNTHETIC_CONTRACT_EXAMPLE','INFERENCE']);
-const allowedOperators=new Set(['MULTIPLY','SUBTRACT','SUM_DIFFERENCE','IDENTITY']);
+const allowedOperators=new Set(['MULTIPLY','SUBTRACT','SUM_DIFFERENCE','IDENTITY','SUM']);
 
 function selectorKey(selector){
   return [selector.scope,selector.object_type,selector.relationship_type||'',selector.field].join(':');
@@ -23,6 +23,10 @@ function evaluate(rule,inputs){
     case 'IDENTITY':
       assert.equal(args.length,1,`${rule.rule_id}: IDENTITY requires 1 arg`);
       return args[0];
+    case 'SUM':
+      assert.equal(args.length,1,`${rule.rule_id}: SUM requires 1 arg`);
+      assert.ok(Array.isArray(args[0]),`${rule.rule_id}: SUM arg must be array`);
+      return args[0].reduce((a,b)=>a+Number(b),0);
     case 'MULTIPLY':
       assert.equal(args.length,2,`${rule.rule_id}: MULTIPLY requires 2 args`);
       return Number(args[0])*Number(args[1]);
@@ -45,6 +49,20 @@ assert.ok(Array.isArray(registry.rules)&&registry.rules.length>0);
 
 const ids=new Set();
 const producerKeys=new Map();
+const exclusiveGroups=registry.exclusive_condition_groups||[];
+const seenGroupIds=new Set();
+const seenExclusiveConditions=new Set();
+for(const group of exclusiveGroups){
+  assert.match(group.group_id,/^[A-Z][A-Z0-9_]{2,127}$/);
+  assert.ok(!seenGroupIds.has(group.group_id),`duplicate exclusive group ${group.group_id}`);
+  seenGroupIds.add(group.group_id);
+  assert.ok(Array.isArray(group.condition_ids)&&group.condition_ids.length>=2);
+  for(const conditionId of group.condition_ids){
+    assert.match(conditionId,/^[A-Z][A-Z0-9_]{2,127}$/);
+    assert.ok(!seenExclusiveConditions.has(conditionId),`condition ${conditionId} appears in multiple exclusive groups`);
+    seenExclusiveConditions.add(conditionId);
+  }
+}
 let testCount=0;
 for(const rule of registry.rules){
   assert.match(rule.rule_id,/^RULE_[A-Z0-9_]+_V[0-9]+$/);
@@ -65,10 +83,10 @@ for(const rule of registry.rules){
     assert.ok(!bindingNames.has(binding.name)||rule.inputs.some(x=>x.name===binding.name),`${rule.rule_id}: duplicate binding ${binding.name}`);
     bindingNames.add(binding.name);
     const s=binding.selector;
-    assert.ok(['SOURCE_OBJECT','RELATED_OBJECT'].includes(s.scope));
+    assert.ok(['SOURCE_OBJECT','RELATED_OBJECT','REVERSE_RELATED_OBJECTS'].includes(s.scope));
     assert.ok(allowedTypes.has(s.object_type));
     assert.match(s.field,/^[a-z][a-z0-9_]{1,79}$/);
-    if(s.scope==='RELATED_OBJECT') assert.match(s.relationship_type,/^[A-Z][A-Z0-9_]{2,79}$/);
+    if(s.scope==='RELATED_OBJECT'||s.scope==='REVERSE_RELATED_OBJECTS') assert.match(s.relationship_type,/^[A-Z][A-Z0-9_]{2,79}$/);
   }
 
   const inputNames=new Set(rule.inputs.map(x=>x.name));
