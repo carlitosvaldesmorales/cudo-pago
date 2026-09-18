@@ -48,12 +48,16 @@ assert.equal(start.state_store.audit.length,1);
 assert.equal(start.sheet_mutations.some(x=>x.kind==='WORK_AUDIT'),true);
 assert.equal(start.sheet_mutations.some(x=>x.kind==='WORK_CONTROL'),true);
 const controlMutation=start.sheet_mutations.find(x=>x.kind==='WORK_CONTROL');
-assert.equal(controlMutation.values[0][8],'FINANCIAL_CONTEXT');
-assert.equal(controlMutation.values[0][9],'FINANCIAL_CONTEXT_SEMANTICS');
-const controlText=controlMutation.values.slice(1).map(row=>String(row[8]||''));
+assert.equal(controlMutation.values[0][8],'SCHEDULE_CONTEXT');
+assert.equal(controlMutation.values[0][9],'FINANCIAL_CONTEXT');
+assert.equal(controlMutation.values[0][10],'FINANCIAL_CONTEXT_SEMANTICS');
+const scheduleText=controlMutation.values.slice(1).map(row=>String(row[8]||''));
+const controlText=controlMutation.values.slice(1).map(row=>String(row[9]||''));
 assert.ok(controlText.includes('CLP 50000 · EVERY_TWO_MONTHS'));
 assert.ok(controlText.includes('CLP 25000-30000 · según suciedad'));
 assert.ok(controlText.includes('CLP 15000 por equipo lavado'));
+assert.ok(controlText.includes('CLP 50000 · PER_COMPLETED_IRRIGATION'));
+assert.ok(scheduleText.includes('2026-10-05 -> 2026-10-06 · posible extensión 2026-10-07 según agua'));
 
 const noEvidence=planWorkStateRequests({
   requestValues:[
