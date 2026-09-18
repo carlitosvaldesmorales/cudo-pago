@@ -1,0 +1,8 @@
+{
+  "schema_version": "CUDO_TRANSACTION_OVERRIDE_FIXTURE_V1",
+  "requested_by": "sistemas@cudo.cl",
+  "approved_by": "sistemas@cudo.cl",
+  "reason": "Certificación sintética de integridad transaccional",
+  "evidence_refs": ["fixture://transaction-override"],
+  "active_conditions": ["SUPPLIER_RETURN_MODEL_APPLIES", "UNIT_COST_MODEL_APPLIES"]
+}
