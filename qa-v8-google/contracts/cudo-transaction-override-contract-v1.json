@@ -1,0 +1,34 @@
+{
+  "schema_version": "CUDO_TRANSACTION_OVERRIDE_CONTRACT_V1",
+  "transaction_policy": {
+    "canonical_state_boundary": "ALL_OR_NONE",
+    "concurrency_control": "OPTIMISTIC_OBJECT_VERSION",
+    "propagation_failure": "FAIL_CLOSED",
+    "precondition_conflict": "FAIL_CLOSED",
+    "external_persistence": "COORDINATED_WITH_COMPENSATION",
+    "external_atomicity_claimed": false,
+    "audit_required": true
+  },
+  "override_policy": {
+    "target_state_kind": "DERIVED_ONLY",
+    "canonical_value_mutated": false,
+    "requires_human_requester": true,
+    "requires_human_approver": true,
+    "requires_reason": true,
+    "requires_evidence": true,
+    "approval_states": ["PENDING_APPROVAL", "ACTIVE", "REJECTED", "REVOKED", "EXPIRED"],
+    "source_corrections_use_normal_transaction": true,
+    "multiple_active_overrides_same_target": "BLOCK"
+  },
+  "compensation_policy": {
+    "generated_from_committed_transition_old_values": true,
+    "reverse_order": true,
+    "automatic_external_execution": false,
+    "requires_audit": true
+  },
+  "evidence_basis": [
+    "qa-v8-google/tools/process_review_decisions.mjs",
+    "qa-v8-google/tools/process_persona_review_decisions.mjs",
+    "qa-v8-google/tools/generic_propagation_executor.mjs"
+  ]
+}

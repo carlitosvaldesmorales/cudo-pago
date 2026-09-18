@@ -1,0 +1,42 @@
+name: Certify CUDO Transaction Override Contract
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-transaction-override-contract-v1.json'
+      - 'qa-v8-google/contracts/cudo-transaction-override-fixture-v1.json'
+      - 'qa-v8-google/tools/transaction_override_contract.mjs'
+      - 'qa-v8-google/tools/certify_transaction_override_contract.mjs'
+      - 'qa-v8-google/tools/generic_propagation_executor.mjs'
+      - '.github/workflows/certify-cudo-transaction-override-contract.yml'
+  push:
+    branches:
+      - 'feat/cudo-transaction-override-contract-v1'
+    paths:
+      - 'qa-v8-google/contracts/cudo-transaction-override-contract-v1.json'
+      - 'qa-v8-google/contracts/cudo-transaction-override-fixture-v1.json'
+      - 'qa-v8-google/tools/transaction_override_contract.mjs'
+      - 'qa-v8-google/tools/certify_transaction_override_contract.mjs'
+      - 'qa-v8-google/tools/generic_propagation_executor.mjs'
+      - '.github/workflows/certify-cudo-transaction-override-contract.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate transaction contract syntax
+        run: |
+          node --check qa-v8-google/tools/transaction_override_contract.mjs
+          node --check qa-v8-google/tools/certify_transaction_override_contract.mjs
+      - name: Certify transaction and override semantics
+        run: node qa-v8-google/tools/certify_transaction_override_contract.mjs
