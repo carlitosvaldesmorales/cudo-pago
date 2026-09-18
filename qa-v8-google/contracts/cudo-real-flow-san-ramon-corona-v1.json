@@ -27,7 +27,8 @@
   "qa_pre_correction_note": "The pre-correction values 51 sold / 69 returned are deliberately synthetic and are not claimed as historical facts. They exist only to prove correction toward the observed workbook evidence.",
   "active_conditions": [
     "SUPPLIER_RETURN_MODEL_APPLIES",
-    "UNIT_COST_MODEL_APPLIES"
+    "UNIT_COST_MODEL_APPLIES",
+    "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES"
   ],
   "objects": [
     {
@@ -49,16 +50,66 @@
         "stock_after_sales": 69
       },
       "field_semantics": {
-        "product_name": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B3"]},
-        "received_qty": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"]},
-        "returned_qty": {"state_kind": "SOURCE", "source_refs": ["qa://pre-correction/returned_qty"]},
-        "unit_cost": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E3"]},
-        "purchased_qty": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"]},
-        "purchase_total": {"state_kind": "DERIVED", "rule_ids": ["RULE_PURCHASE_TOTAL_V1"]},
-        "stock_available_before_sales": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"]},
-        "sold_qty": {"state_kind": "SOURCE", "source_refs": ["qa://pre-correction/sold_qty"]},
-        "sell_price": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G3"]},
-        "stock_after_sales": {"state_kind": "DERIVED", "rule_ids": ["RULE_STOCK_AFTER_SALES_V1"]}
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B3"
+          ]
+        },
+        "received_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"
+          ]
+        },
+        "returned_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://pre-correction/returned_qty"
+          ]
+        },
+        "unit_cost": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!E3"
+          ]
+        },
+        "purchased_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"
+          ]
+        },
+        "purchase_total": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PURCHASE_TOTAL_V1"
+          ]
+        },
+        "stock_available_before_sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!D3"
+          ]
+        },
+        "sold_qty": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://pre-correction/sold_qty"
+          ]
+        },
+        "sell_price": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!G3"
+          ]
+        },
+        "stock_after_sales": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_STOCK_AFTER_SALES_V1"
+          ]
+        }
       },
       "relationships": [
         {
@@ -97,12 +148,42 @@
         "amount": 42840
       },
       "field_semantics": {
-        "obligation_direction": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"]},
-        "obligation_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"]},
-        "currency": {"state_kind": "SOURCE", "source_refs": ["qa://currency/CLP"]},
-        "payable_qty": {"state_kind": "DERIVED", "rule_ids": ["RULE_PAYABLE_QTY_AFTER_RETURN_V1"]},
-        "supplier_payable": {"state_kind": "DERIVED", "rule_ids": ["RULE_SUPPLIER_PAYABLE_V1"]},
-        "amount": {"state_kind": "DERIVED", "rule_ids": ["RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"]}
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#supplier-payable-pattern"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://currency/CLP"
+          ]
+        },
+        "payable_qty": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SUPPLIER_PAYABLE_V1"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
       },
       "relationships": [
         {
@@ -133,9 +214,24 @@
         "sales_revenue": 102000
       },
       "field_semantics": {
-        "event_name": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'"]},
-        "product_name": {"state_kind": "SOURCE", "source_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B3"]},
-        "sales_revenue": {"state_kind": "DERIVED", "rule_ids": ["RULE_SALES_REVENUE_V1"]}
+        "event_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'"
+          ]
+        },
+        "product_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!B3"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SALES_REVENUE_V1"
+          ]
+        }
       },
       "relationships": [],
       "provenance": {
@@ -161,7 +257,9 @@
       "field": "sold_qty",
       "value": 52,
       "reason": "Align synthetic pre-correction state to observed workbook evidence",
-      "evidence_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H3"]
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!H3"
+      ]
     },
     {
       "surface": "QA_EVIDENCE_REPLAY",
@@ -169,7 +267,9 @@
       "field": "returned_qty",
       "value": 68,
       "reason": "Align synthetic pre-correction state to observed workbook evidence",
-      "evidence_refs": ["artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I3"]
+      "evidence_refs": [
+        "artifact:PEDIDO CUDO.xlsx#'Pedido vs San Ramon 04-05-2025'!I3"
+      ]
     }
   ],
   "expected_after_commit": {
@@ -186,7 +286,11 @@
         "key": "san_ramon_corona",
         "source": "CUDO_QA_REAL_FLOW_SAN_RAMON",
         "object_type": "ACTIVITY_EVENT",
-        "fields": ["event_name", "product_name", "sales_revenue"]
+        "fields": [
+          "event_name",
+          "product_name",
+          "sales_revenue"
+        ]
       }
     ],
     "targets": [
