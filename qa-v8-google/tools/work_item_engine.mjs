@@ -70,7 +70,8 @@ export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:0
       const normalDue=dateForWeekday(weekStart,rule.data.normal_weekday);
       const conflict=weekday(eventDate)===rule.data.conflict_weekday && eventDate===normalDue;
       const dueDate=conflict?addDays(normalDue,Number(rule.data.conflict_shift_days)):normalDue;
-      const workId=`CUDO-WORK-${rule.data.work_kind}-${weekStart.replaceAll('-','')}`;
+      const workKindId=String(rule.data.work_kind).replaceAll('_','-');
+      const workId=`CUDO-WORK-${workKindId}-${weekStart.replaceAll('-','')}`;
       const existing=map.get(workId);
       if(existing){
         audited.push({kind:'NOOP_EXISTING_WORK',work_id:workId,event_id:event.object_id});
