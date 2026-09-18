@@ -32,10 +32,12 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['memberForm','actorForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
 assert.ok(dashboard.includes('id="members"'));
 assert.ok(dashboard.includes('id="sanctions"'));
 assert.ok(admin.includes('id="sanctions"'));
+assert.ok(admin.includes('id="damageCases"'));
+assert.ok(dashboard.includes('id="damageCases"'));
 assert.ok(dashboard.includes('id="actors"'));
 assert.ok(dashboard.includes('id="events"'));
 assert.ok(admin.includes("data-event-next"));
@@ -64,6 +66,13 @@ assert.ok(engine.includes("SUSPENDED_PENDING_FINE"));
 assert.ok(engine.includes("ELIGIBLE_NEXT_DATE"));
 assert.ok(engine.includes("EXPELLED_TOURNAMENT"));
 assert.ok(engine.includes("serious aggression is non-payable in bounded ruleset"));
+assert.ok(engine.includes("FACILITY_DAMAGE_REPORT"));
+assert.ok(engine.includes("DAMAGE_AMOUNT_AGREE"));
+assert.ok(engine.includes("FACILITY_DAMAGE_ASSESSMENT"));
+assert.ok(engine.includes("FACILITY_DAMAGE_COMPENSATION"));
+assert.ok(engine.includes("damage assessment work must be DONE before amount agreement"));
+assert.ok(engine.includes("damage amount agreement requires assessment evidence"));
+assert.ok(engine.includes("facility damage decision requires DAMAGE_AMOUNT_AGREE"));
 assert.ok(engine.includes("event.sports={"));
 assert.ok(sportsProjection.includes("deriveMockSportsProjection"));
 assert.ok(sportsProjection.includes("CUDO_WEB_PARTIDOS"));
@@ -174,6 +183,9 @@ console.log(JSON.stringify({
   sanction_incident_to_fine:true,
   sanction_settlement_to_eligibility:true,
   serious_aggression_non_payable_expulsion:true,
+  facility_damage_report_to_assessment_work:true,
+  evidence_backed_damage_amount_to_receivable:true,
+  settlement_does_not_fake_resource_repair:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));

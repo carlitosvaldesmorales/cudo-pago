@@ -40,7 +40,8 @@
     <section class="section">
       <h2>Registrar hechos fuente</h2>
       <div class="sourceforms"><form class="formcard" id="memberForm"><h3>Socio</h3><label>Nombre</label><input name="name" required placeholder="Ej: Socio colaborador"><label>Período de cuota</label><input name="period" type="month" required><label>Aporte mensual CLP</label><input name="amount_clp" type="number" min="2000" value="2000" required><button>Registrar socio</button></form>
-        <form class="formcard" id="actorForm"><h3>Responsable</h3><label>Nombre visible</label><input name="name" required placeholder="Ej: Encargado cancha"><label>Rol</label><input name="role" value="COLLABORATOR"><button>Crear responsable</button></form>
+        <form class="formcard" id="actorForm"><h3>Actor</h3><label>Nombre visible</label><input name="name" required placeholder="Ej: Encargado cancha"><label>Tipo</label><select name="actor_kind"><option value="PERSON">Persona</option><option value="EXTERNAL_ORGANIZATION">Organización externa</option></select><label>Rol</label><input name="role" value="COLLABORATOR"><button>Crear actor</button></form>
+        <form class="formcard" id="damageForm"><h3>Daño al recinto</h3><label>Recurso afectado</label><select name="resource_id" data-select="resources" required></select><label>Club / organización responsable</label><select name="liable_actor_id" data-select="external-actors" required></select><label>Responsable de evaluar</label><select name="responsible_actor_id" data-select="people" required></select><button>Reportar daño</button><small>El reporte no crea una deuda. Primero debe evaluarse el daño y acordarse el monto con evidencia.</small></form>
         <form class="formcard" id="sanctionForm"><h3>Sanción de torneo</h3><label>Jugador / persona</label><select name="actor_id" data-select="actors" required></select><label>Incidente</label><select name="sanction_kind"><option value="DOUBLE_YELLOW">Doble amarilla · $10.000</option><option value="DIRECT_RED">Roja directa · $15.000</option><option value="SERIOUS_FOUL_OR_AGGRESSION">Falta grave / agresión · expulsión</option></select><button>Aplicar sanción</button><small>Regla acotada a Bases Cuadrangular Otoño CUDO.</small></form>
         <form class="formcard" id="resourceForm"><h3>Recurso</h3><label>Nombre</label><input name="name" required placeholder="Ej: Bomba de agua"><label>Tipo</label><input name="kind" value="EQUIPMENT"><button>Crear recurso</button></form>
         <form class="formcard" id="eventForm"><h3>Evento</h3><label>Nombre</label><input name="name" required placeholder="Ej: Partido domingo"><label>Tipo</label><select name="kind"><option>MATCH</option><option>FUNDRAISING</option><option>MEETING</option><option>ACTIVITY</option></select><label>Inicio</label><input name="starts_at" type="datetime-local"><label>Local</label><input name="local" value="CUDO"><label>Visita</label><input name="visita" placeholder="Ej: Santa Elena"><label>Categoría</label><select name="categoria"><option>TERCERA</option><option>SEGUNDA</option><option>SENIOR</option><option selected>PRIMERA</option></select><label>Competencia</label><input name="competencia" value="Campeonato Club OS"><label>Recinto</label><input name="recinto" value="Cancha de la Orilla"><label>Recurso</label><select name="resource_ref" data-select="resources"><option value="">Sin recurso</option></select><button>Crear evento</button></form>
@@ -60,6 +61,7 @@
 
     <section class="section"><h2>Socios</h2><div class="tablewrap"><table class="table"><thead><tr><th>SOCIO</th><th>PERÍODO</th><th>CUOTA</th><th>ESTADO</th><th>PENDIENTE</th><th>ACCIÓN</th></tr></thead><tbody id="members"></tbody></table></div></section>
     <section class="section"><h2>Sanciones / elegibilidad</h2><div class="tablewrap"><table class="table"><thead><tr><th>ACTOR</th><th>ESTADO</th><th>PENDIENTE</th><th>SANCIONES</th><th>ACCIÓN</th></tr></thead><tbody id="sanctions"></tbody></table></div></section>
+    <section class="section"><h2>Daños / compensaciones</h2><div class="tablewrap"><table class="table"><thead><tr><th>RECURSO</th><th>RESPONSABLE EXTERNO</th><th>EVALUACIÓN</th><th>DECISIÓN</th><th>MONTO</th><th>ACCIÓN</th></tr></thead><tbody id="damageCases"></tbody></table></div></section>
     <section class="section"><h2>Responsables</h2><div class="tablewrap"><table class="table"><thead><tr><th>NOMBRE</th><th>TIPO</th><th>ROL</th></tr></thead><tbody id="actors"></tbody></table></div></section>
     <section class="section"><h2>Eventos</h2><div class="tablewrap"><table class="table"><thead><tr><th>EVENTO</th><th>TIPO</th><th>ESTADO</th><th>INICIO</th><th>ACCIÓN</th></tr></thead><tbody id="events"></tbody></table></div></section>
     <section class="section"><h2>Trabajo</h2><div id="work" class="grid"></div></section>
@@ -91,6 +93,8 @@ function fillSelect(select,items,placeholder){
 }
 function refreshSourceSelects(){
   const actors=runtime.state.actors.map(x=>({value:x.actor_id,label:x.display_name}));
+  const people=runtime.state.actors.filter(x=>x.actor_kind==='PERSON').map(x=>({value:x.actor_id,label:x.display_name}));
+  const externalActors=runtime.state.actors.filter(x=>x.actor_kind==='EXTERNAL_ORGANIZATION').map(x=>({value:x.actor_id,label:x.display_name}));
   const resources=runtime.state.resources.map(x=>({value:x.resource_id,label:x.display_name}));
   const sources=[
     ...runtime.state.events.map(x=>({value:x.event_id,label:'Evento · '+x.display_name})),
@@ -99,6 +103,8 @@ function refreshSourceSelects(){
     ...runtime.state.work_items.map(x=>({value:x.work_id,label:'Trabajo · '+x.title}))
   ];
   document.querySelectorAll('[data-select="actors"]').forEach(s=>fillSelect(s,actors,s.name==='counterparty_ref'?'Sin contraparte':null));
+  document.querySelectorAll('[data-select="people"]').forEach(s=>fillSelect(s,people,'Selecciona responsable'));
+  document.querySelectorAll('[data-select="external-actors"]').forEach(s=>fillSelect(s,externalActors,'Selecciona organización'));
   document.querySelectorAll('[data-select="resources"]').forEach(s=>fillSelect(s,resources,'Sin recurso'));
   document.querySelectorAll('[data-select="sources"]').forEach(s=>fillSelect(s,sources,'Selecciona una causa'));
 }
@@ -152,6 +158,24 @@ function render(){
     if(!due) return;
     apply({action_id:'SANCTION-PAY-'+Date.now(),type:'FINANCIAL_SETTLE',obligation_id:due.obligation_id,amount_clp:due.outstanding_amount_clp,channel:'BANK_TRANSFER',evidence_ref:'MOCK-EVIDENCE-SANCTION-PAY-'+Date.now()});
   }));
+  document.getElementById('damageCases').innerHTML=(v.governance.damage_cases||[]).map(d=>{
+    const work=v.operation.items.find(x=>x.work_id===d.assessment_work_ref);
+    const obligation=v.finance.obligations.find(x=>x.cause_ref===d.decision_id);
+    let action='—';
+    if(d.state==='PENDING_HUMAN'){
+      action=work?.state==='DONE'
+        ? '<span style="display:inline-flex;gap:5px;align-items:center"><input data-damage-amount="'+esc(d.decision_id)+'" type="number" min="1" placeholder="Monto CLP" style="width:110px;padding:7px;border:1px solid #cfd6df;border-radius:7px"><button class="btnx" data-damage-agree="'+esc(d.decision_id)+'">Acordar monto</button></span>'
+        : 'Completar evaluación primero';
+    }
+    return `<tr><td>${esc(v.resources.items.find(x=>x.resource_id===d.resource_ref)?.display_name||d.resource_ref)}</td><td>${esc(actorName(d.liable_actor_id))}</td><td>${esc(work?.state||'—')}</td><td>${esc(d.state)}</td><td>${d.agreed_amount_clp?money(d.agreed_amount_clp):'Sin acordar'}${obligation?'<br><small>'+esc(obligation.state)+' · pendiente '+money(obligation.outstanding_amount_clp)+'</small>':''}</td><td>${action}</td></tr>`;
+  }).join('');
+  document.querySelectorAll('[data-damage-agree]').forEach(b=>b.addEventListener('click',()=>{
+    const d=v.governance.damage_cases.find(x=>x.decision_id===b.dataset.damageAgree);
+    const work=v.operation.items.find(x=>x.work_id===d.assessment_work_ref);
+    const amount=Number(document.querySelector('[data-damage-amount="'+CSS.escape(d.decision_id)+'"]')?.value);
+    const evidenceRef=(work?.evidence_refs||[]).slice(-1)[0]||null;
+    apply({action_id:'DAMAGE-AMOUNT-'+Date.now(),type:'DAMAGE_AMOUNT_AGREE',decision_id:d.decision_id,amount_clp:amount,evidence_ref:evidenceRef});
+  }));
   document.getElementById('actors').innerHTML=v.club.actors.map(a=>`<tr><td>${esc(a.display_name)}</td><td>${esc(a.actor_kind)}</td><td>${esc(a.role)}</td></tr>`).join('');
   document.getElementById('events').innerHTML=v.club.events.map(e=>`<tr><td>${esc(e.display_name)}${e.sports?'<br><small>'+esc(e.sports.local)+' vs '+esc(e.sports.visita)+' · '+esc(e.sports.categoria)+'</small>':''}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td><td>${eventButtons(e)}</td></tr>`).join('');
   document.querySelectorAll('[data-event]').forEach(b=>b.addEventListener('click',()=>{
@@ -196,7 +220,7 @@ function render(){
     apply({action_id:'RES-'+Date.now(),type:'RESOURCE_STATE_SET',resource_id:r.resource_id,expected_state:r.state,next_state:b.dataset.resourceNext,attention:b.dataset.resourceNext==='AVAILABLE'?'NORMAL':'BLOCKING',reason:'Acción desde Admin Mock'});
   }));
 
-  document.getElementById('decisions').innerHTML=v.governance.decisions.map(d=>`
+  document.getElementById('decisions').innerHTML=v.governance.decisions.filter(d=>d.kind!=='FACILITY_DAMAGE_COMPENSATION').map(d=>`
     <article class="card"><div class="row"><div><small>${esc(d.kind)}</small><h3>${esc(d.display_name)}</h3></div><span class="state">${esc(d.state)}</span></div>
     <div class="meta"><strong>Responsable:</strong> ${esc(actorName(d.responsible_actor_id))}</div>
     <div class="actions">${d.state==='PENDING_HUMAN'?'<button class="primary" data-decision="'+esc(d.decision_id)+'" data-decision-next="APPROVED">Aprobar</button>':d.state==='APPROVED'?'<button class="primary" data-decision="'+esc(d.decision_id)+'" data-decision-next="APPLIED">Aplicar</button>':''}</div></article>`).join('');
@@ -220,7 +244,8 @@ function bindForm(id,handler){
   });
 }
 bindForm('memberForm',fd=>apply({action_id:'MEMBER-'+token(),type:'MEMBER_ENROLL',actor_id:'MOCK-ACTOR-MEMBER-'+token(),display_name:fd.get('name'),period:fd.get('period'),amount_clp:Number(fd.get('amount_clp')||2000)}));
-bindForm('actorForm',fd=>apply({action_id:'SRC-ACTOR-'+token(),type:'ACTOR_CREATE',actor_id:'MOCK-ACTOR-USER-'+token(),display_name:fd.get('name'),actor_kind:'PERSON',role:fd.get('role')||'COLLABORATOR'}));
+bindForm('actorForm',fd=>apply({action_id:'SRC-ACTOR-'+token(),type:'ACTOR_CREATE',actor_id:'MOCK-ACTOR-USER-'+token(),display_name:fd.get('name'),actor_kind:fd.get('actor_kind')||'PERSON',role:fd.get('role')||'COLLABORATOR'}));
+bindForm('damageForm',fd=>apply({action_id:'DAMAGE-'+token(),type:'FACILITY_DAMAGE_REPORT',case_id:'MOCK-DECISION-DAMAGE-'+token(),resource_id:fd.get('resource_id'),liable_actor_id:fd.get('liable_actor_id'),responsible_actor_id:fd.get('responsible_actor_id')}));
 bindForm('sanctionForm',fd=>apply({action_id:'SANCTION-'+token(),type:'SANCTION_APPLY',sanction_id:'MOCK-DECISION-SANCTION-'+token(),actor_id:fd.get('actor_id'),sanction_kind:fd.get('sanction_kind')}));
 bindForm('resourceForm',fd=>apply({action_id:'SRC-RES-'+token(),type:'RESOURCE_CREATE',resource_id:'MOCK-RESOURCE-USER-'+token(),display_name:fd.get('name'),kind:fd.get('kind')||'RESOURCE',state:'AVAILABLE',attention:'NORMAL'}));
 bindForm('eventForm',fd=>apply({action_id:'SRC-EVENT-'+token(),type:'EVENT_CREATE',event_id:'MOCK-EVENT-USER-'+token(),display_name:fd.get('name'),kind:fd.get('kind')||'ACTIVITY',state:'SCHEDULED',starts_at:fd.get('starts_at')||null,resource_refs:fd.get('resource_ref')?[fd.get('resource_ref')]:[],local:fd.get('local')||'CUDO',visita:fd.get('visita')||'',categoria:fd.get('categoria')||'PRIMERA',competencia:fd.get('competencia')||'Campeonato Club OS',recinto:fd.get('recinto')||'Cancha de la Orilla',counts_for_standings:true}));
