@@ -33,7 +33,7 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['memberForm','actorForm','octagonalIncidentForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','fundraisingForm','donatedPrizeForm','octagonalIncidentForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
 assert.ok(dashboard.includes('id="members"'));
 assert.ok(dashboard.includes('id="sanctions"'));
 assert.ok(admin.includes('id="sanctions"'));
@@ -102,6 +102,16 @@ assert.ok(engine.includes("visita_club_actor_id"));
 assert.ok(engine.includes("OCTAGONAL_SPORTS_CONSEQUENCE_APPLIED"));
 assert.ok(admin.includes('id="octagonalIncidentForm"'));
 assert.ok(admin.includes('data-select="linked-live-matches"'));
+assert.ok(engine.includes("FUNDRAISING_EVENT_PREPARE"));
+assert.ok(engine.includes("FUNDRAISING_PERMISSION_REQUEST"));
+assert.ok(engine.includes("FUNDRAISING_PRIZE_SOLICITATION"));
+assert.ok(engine.includes("DONATED_PRIZE_CONFIRM"));
+assert.ok(engine.includes("UNVALUED_NOT_FINANCIAL"));
+assert.ok(engine.includes("donated prize requires completed solicitation work"));
+assert.ok(engine.includes("donor actor must match solicitation external target"));
+assert.ok(engine.includes("external_target_actor_id"));
+assert.ok(admin.includes('data-select="completed-prize-work"'));
+assert.ok(dashboard.includes("Contraparte externa:"));
 assert.ok(admin.includes("data-bond-fine"));
 assert.ok(admin.includes("data-bond-refund"));
 assert.ok(engine.includes("event.sports={"));
@@ -226,6 +236,9 @@ console.log(JSON.stringify({
   stable_club_actor_refs_on_match_sides:true,
   one_incident_to_sports_and_bond:true,
   cross_plane_incident_uses_actor_identity_not_text:true,
+  fundraising_event_to_external_work:true,
+  completed_prize_solicitation_to_unvalued_donated_resource:true,
+  in_kind_donation_has_no_invented_financial_effect:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
