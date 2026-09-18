@@ -13,6 +13,8 @@ const dashboard=fs.readFileSync('preview-v8/club-os-mock/index.html','utf8');
 const admin=fs.readFileSync('preview-v8/admin/index.html','utf8');
 const engine=fs.readFileSync('preview-v8/shared/mock-admin-engine.mjs','utf8');
 const home=fs.readFileSync('preview-v8/index.html','utf8');
+const partidosPage=fs.readFileSync('preview-v8/partidos/index.html','utf8');
+const sportsProjection=fs.readFileSync('preview-v8/shared/mock-sports-projection.mjs','utf8');
 
 assert.equal(mock.schema_version,'CUDO_CLUB_OS_GOLDEN_MOCK_V1');
 assert.equal(mock.environment,'qa-v8-mock');
@@ -25,6 +27,8 @@ assert.ok(dashboard.includes("deriveMockReadModels"),'dashboard must derive from
 assert.ok(dashboard.includes("CUDO_FULL_MOCK_ADMIN_RUNTIME_V1"),'dashboard must consume shared runtime key');
 assert.ok(dashboard.includes('href="../admin/"'),'dashboard must link admin');
 assert.ok(home.includes('href="admin/"'),'home must link mock admin');
+assert.ok(home.includes("mock-sports-projection.mjs"),'home must consume Club sports projection');
+assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must consume Club sports projection');
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
@@ -46,6 +50,13 @@ assert.ok(engine.includes("SOURCE_FINANCIAL_OBLIGATION_CREATED"));
 assert.ok(engine.includes("EVENT_TRANSITION"));
 assert.ok(engine.includes("POST_EVENT_WORK_CREATED"));
 assert.ok(engine.includes("AUTO_CANCEL_EVENT_PREPARATION"));
+assert.ok(engine.includes("completed MATCH requires non-negative integer score"));
+assert.ok(engine.includes("event.sports={"));
+assert.ok(sportsProjection.includes("deriveMockSportsProjection"));
+assert.ok(sportsProjection.includes("CUDO_WEB_PARTIDOS"));
+assert.ok(sportsProjection.includes("CUDO_WEB_TABLA"));
+assert.ok(sportsProjection.includes("counts_for_standings"));
+assert.ok(sportsProjection.includes("runtime_match_ids"));
 assert.ok(engine.includes("DONE requires evidence"));
 assert.ok(dashboard.includes('100% DATOS MOCK'));
 assert.ok(dashboard.includes('Bloqueo:'));
@@ -141,6 +152,10 @@ console.log(JSON.stringify({
   human_created_work:true,
   event_lifecycle_actions:true,
   post_event_work_propagation:true,
+  club_event_to_public_match_projection:true,
+  completed_match_result_to_standings:true,
+  sports_runtime_precedes_seed_on_collision:true,
+  home_and_partidos_share_club_sports_projection:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));

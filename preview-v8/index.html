@@ -120,7 +120,9 @@
   <script src="shared/site.js"></script>
   <script src="shared/page-ux.js"></script>
   <script src="shared/home.js"></script>
-  <script>
+  <script type="module">
+    import {installMockSportsProjection} from './shared/mock-sports-projection.mjs';
+    installMockSportsProjection();
     (async()=>{
       try{const d=await cudoLoadPublicData('data/partidos.json','partidos');cudoRenderHomeJornadas('homeMatchCenter',d)}catch{}
       try{const u=await cudoResolveDataUrl('data/noticias.json','noticias');await cudoRenderCollection({url:u,target:'homeNews',status:'homeNewsStatus',type:'noticias'})}catch{}
