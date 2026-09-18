@@ -41,6 +41,7 @@
       <h2>Registrar hechos fuente</h2>
       <div class="sourceforms"><form class="formcard" id="memberForm"><h3>Socio</h3><label>Nombre</label><input name="name" required placeholder="Ej: Socio colaborador"><label>Período de cuota</label><input name="period" type="month" required><label>Aporte mensual CLP</label><input name="amount_clp" type="number" min="2000" value="2000" required><button>Registrar socio</button></form>
         <form class="formcard" id="actorForm"><h3>Actor</h3><label>Nombre visible</label><input name="name" required placeholder="Ej: Encargado cancha"><label>Tipo</label><select name="actor_kind"><option value="PERSON">Persona</option><option value="EXTERNAL_ORGANIZATION">Organización externa</option></select><label>Rol</label><input name="role" value="COLLABORATOR"><button>Crear actor</button></form>
+        <form class="formcard" id="grantForm"><h3>Solicitud de financiamiento externo</h3><label>Nombre</label><input name="name" required value="Subvención municipal Mock"><label>Monto solicitado CLP</label><input name="requested_amount_clp" type="number" min="1" value="1400000" required><label>Propósito</label><input name="purpose_text" required value="Indumentaria, mejoras de camarines, balones y material de demarcación"><label>Responsable interno</label><select name="responsible_actor_id" data-select="people" required></select><label>Autoridad externa</label><select name="external_target_actor_id" data-select="external-actors" required></select><button>Preparar solicitud</button><small>La solicitud no crea dinero por cobrar. La decisión externa debe registrarse después con evidencia.</small></form>
         <form class="formcard" id="fundraisingForm"><h3>Evento de recaudación</h3><label>Nombre</label><input name="name" required value="Bingo CUDO Mock"><label>Inicio</label><input name="starts_at" type="datetime-local"><label>Propósito</label><input name="purpose_text" required value="Apoyar mantención del estadio y actividades del club"><label>Responsable permiso</label><select name="permission_responsible_actor_id" data-select="people" required></select><label>Autoridad / contraparte permiso</label><select name="permission_target_actor_id" data-select="external-actors" required></select><label>Responsable premios</label><select name="prize_responsible_actor_id" data-select="people" required></select><label>Donante / contraparte premio</label><select name="prize_target_actor_id" data-select="external-actors" required></select><label>Recinto / recurso</label><select name="resource_ref" data-select="resources"></select><button>Planificar fundraising</button><small>Deriva trabajo humano; no presume permiso aprobado ni premio donado.</small></form>
         <form class="formcard" id="donatedPrizeForm"><h3>Confirmar premio donado</h3><label>Solicitud completada</label><select name="work_id" data-select="completed-prize-work" required></select><label>Premio en especie</label><input name="name" required placeholder="Ej: Premio principal"><button>Confirmar donación en especie</button><small>Exige trabajo completado con evidencia. No asigna valor monetario.</small></form>
         <form class="formcard" id="octagonalIncidentForm"><h3>Incidente Octagonal</h3><label>Partido LIVE enlazado</label><select name="event_id" data-select="linked-live-matches" required></select><label>Lado infractor</label><select name="offending_side"><option value="LOCAL">Local</option><option value="VISITA">Visita</option></select><label>Regla</label><select name="rule_code"><option value="NO_SHOW_SECOND_HALF">No se presenta al 2º tiempo · $50.000 fianza</option><option value="MISSING_SERIES">No presenta serie · $100.000 fianza</option></select><label>Responsable</label><select name="responsible_actor_id" data-select="people" required></select><button>Aplicar incidente completo</button><small>Una acción: resolución deportiva + Tabla + descuento de fianza. Requiere IDs estables en ambos clubes y fianza activa del infractor.</small></form>
@@ -63,6 +64,7 @@
       <div class="kpi"><small>PENDIENTE $</small><strong id="sPayable">—</strong></div>
     </section>
 
+    <section class="section"><h2>Financiamiento externo</h2><div class="tablewrap"><table class="table"><thead><tr><th>SOLICITUD</th><th>AUTORIDAD</th><th>TRABAJO</th><th>SOLICITADO</th><th>RESULTADO</th><th>RECEIVABLE</th><th>ACCIÓN</th></tr></thead><tbody id="grants"></tbody></table></div></section>
     <section class="section"><h2>Socios</h2><div class="tablewrap"><table class="table"><thead><tr><th>SOCIO</th><th>PERÍODO</th><th>CUOTA</th><th>ESTADO</th><th>PENDIENTE</th><th>ACCIÓN</th></tr></thead><tbody id="members"></tbody></table></div></section>
     <section class="section"><h2>Sanciones / elegibilidad</h2><div class="tablewrap"><table class="table"><thead><tr><th>ACTOR</th><th>ESTADO</th><th>PENDIENTE</th><th>SANCIONES</th><th>ACCIÓN</th></tr></thead><tbody id="sanctions"></tbody></table></div></section>
     <section class="section"><h2>Daños / compensaciones</h2><div class="tablewrap"><table class="table"><thead><tr><th>RECURSO</th><th>RESPONSABLE EXTERNO</th><th>EVALUACIÓN</th><th>DECISIÓN</th><th>MONTO</th><th>ACCIÓN</th></tr></thead><tbody id="damageCases"></tbody></table></div></section>
@@ -158,6 +160,30 @@ function render(){
   document.getElementById('sBlocked').textContent=v.operation.summary.blocked;
   document.getElementById('sWaiting').textContent=v.operation.summary.waiting_external;
   document.getElementById('sPayable').textContent=money(v.finance.summary.outstanding_payable);
+  document.getElementById('grants').innerHTML=(v.governance.external_funding_requests||[]).map(d=>{
+    const work=v.operation.items.find(x=>x.work_id===d.application_work_ref);
+    const obligation=v.finance.obligations.find(x=>x.cause_ref===d.decision_id);
+    const authority=v.club.actors.find(x=>x.actor_id===d.external_target_actor_id);
+    let action='—';
+    if(d.state==='PENDING_EXTERNAL'){
+      action=work?.state==='DONE'
+        ? '<span style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"><input data-grant-amount="'+esc(d.decision_id)+'" type="number" min="1" max="'+esc(d.requested_amount_clp)+'" value="'+esc(d.requested_amount_clp)+'" style="width:115px;padding:7px;border:1px solid #cfd6df;border-radius:7px"><button class="btnx" data-grant-decision="'+esc(d.decision_id)+'" data-grant-result="APPROVED">Aprobar total</button><button class="btnx" data-grant-decision="'+esc(d.decision_id)+'" data-grant-result="PARTIAL">Aprobar parcial</button><button class="btnx warn" data-grant-decision="'+esc(d.decision_id)+'" data-grant-result="REJECTED">Rechazar</button></span>'
+        : 'Completar postulación primero';
+    }
+    return `<tr><td>${esc(d.display_name)}</td><td>${esc(authority?.display_name||d.external_target_actor_id)}</td><td>${esc(work?.state||'—')}</td><td>${money(d.requested_amount_clp)}</td><td>${esc(d.external_result||d.state)}</td><td>${obligation?esc(obligation.state)+' · '+money(obligation.outstanding_amount_clp):'Sin receivable'}</td><td>${action}</td></tr>`;
+  }).join('');
+  document.querySelectorAll('[data-grant-decision]').forEach(b=>b.addEventListener('click',()=>{
+    const d=v.governance.external_funding_requests.find(x=>x.decision_id===b.dataset.grantDecision);
+    const result=b.dataset.grantResult;
+    let amount=result==='REJECTED'?0:Number(document.querySelector('[data-grant-amount="'+CSS.escape(d.decision_id)+'"]')?.value);
+    if(result==='APPROVED') amount=Number(d.requested_amount_clp);
+    if(result==='PARTIAL'&&(!Number.isInteger(amount)||amount<=0||amount>=Number(d.requested_amount_clp))){toast('Monto parcial debe ser mayor a 0 y menor al solicitado',true);return}
+    const evidence='MOCK-EVIDENCE-GRANT-RESPONSE-'+Date.now();
+    const work=v.operation.items.find(x=>x.work_id===d.application_work_ref);
+    const add=applyMockAdminAction(runtime,{action_id:'GRANT-EVID-'+Date.now(),type:'EVIDENCE_ADD',evidence_id:evidence,kind:'EXTERNAL_FUNDING_RESPONSE',display_name:'Respuesta externa '+d.display_name,related_refs:[d.decision_id,work.work_id],expected_revision:runtime.revision,at:new Date().toISOString()});
+    runtime=add.runtime;save();
+    apply({action_id:'GRANT-DEC-'+Date.now(),type:'EXTERNAL_FUNDING_DECISION_RECORD',decision_id:d.decision_id,result,approved_amount_clp:amount,authority_actor_id:d.external_target_actor_id,evidence_ref:evidence});
+  }));
   document.getElementById('members').innerHTML=v.club.members.map(m=>`<tr><td>${esc(m.display_name)}</td><td>${esc(m.membership.period)}</td><td>${money(m.membership.monthly_due_amount_clp)}</td><td>${esc(m.membership.financial_status)}</td><td>${money(m.membership.outstanding_amount_clp)}</td><td>${m.membership.outstanding_amount_clp>0?'<button class="btnx" data-member-pay="'+esc(m.actor_id)+'">Pagar cuota</button>':'—'}</td></tr>`).join('');
   document.querySelectorAll('[data-member-pay]').forEach(b=>b.addEventListener('click',()=>{
     const member=v.club.members.find(x=>x.actor_id===b.dataset.memberPay);
@@ -264,7 +290,7 @@ function render(){
     apply({action_id:'RES-'+Date.now(),type:'RESOURCE_STATE_SET',resource_id:r.resource_id,expected_state:r.state,next_state:b.dataset.resourceNext,attention:b.dataset.resourceNext==='AVAILABLE'?'NORMAL':'BLOCKING',reason:'Acción desde Admin Mock'});
   }));
 
-  document.getElementById('decisions').innerHTML=v.governance.decisions.filter(d=>d.kind!=='FACILITY_DAMAGE_COMPENSATION').map(d=>`
+  document.getElementById('decisions').innerHTML=v.governance.decisions.filter(d=>!['FACILITY_DAMAGE_COMPENSATION','EXTERNAL_FUNDING_REQUEST'].includes(d.kind)).map(d=>`
     <article class="card"><div class="row"><div><small>${esc(d.kind)}</small><h3>${esc(d.display_name)}</h3></div><span class="state">${esc(d.state)}</span></div>
     <div class="meta"><strong>Responsable:</strong> ${esc(actorName(d.responsible_actor_id))}</div>
     <div class="actions">${d.state==='PENDING_HUMAN'?'<button class="primary" data-decision="'+esc(d.decision_id)+'" data-decision-next="APPROVED">Aprobar</button>':d.state==='APPROVED'?'<button class="primary" data-decision="'+esc(d.decision_id)+'" data-decision-next="APPLIED">Aplicar</button>':''}</div></article>`).join('');
@@ -289,6 +315,7 @@ function bindForm(id,handler){
 }
 bindForm('memberForm',fd=>apply({action_id:'MEMBER-'+token(),type:'MEMBER_ENROLL',actor_id:'MOCK-ACTOR-MEMBER-'+token(),display_name:fd.get('name'),period:fd.get('period'),amount_clp:Number(fd.get('amount_clp')||2000)}));
 bindForm('actorForm',fd=>apply({action_id:'SRC-ACTOR-'+token(),type:'ACTOR_CREATE',actor_id:'MOCK-ACTOR-USER-'+token(),display_name:fd.get('name'),actor_kind:fd.get('actor_kind')||'PERSON',role:fd.get('role')||'COLLABORATOR'}));
+bindForm('grantForm',fd=>{const t=token();apply({action_id:'GRANT-'+t,type:'EXTERNAL_FUNDING_REQUEST_PREPARE',decision_id:'MOCK-DECISION-GRANT-'+t,display_name:fd.get('name'),requested_amount_clp:Number(fd.get('requested_amount_clp')),purpose_text:fd.get('purpose_text'),responsible_actor_id:fd.get('responsible_actor_id'),external_target_actor_id:fd.get('external_target_actor_id')})});
 bindForm('fundraisingForm',fd=>{const t=token();apply({action_id:'FUND-'+t,type:'FUNDRAISING_EVENT_PREPARE',event_id:'MOCK-EVENT-FUNDRAISING-'+t,display_name:fd.get('name'),starts_at:fd.get('starts_at')||null,purpose_text:fd.get('purpose_text'),permission_responsible_actor_id:fd.get('permission_responsible_actor_id'),permission_target_actor_id:fd.get('permission_target_actor_id'),prize_responsible_actor_id:fd.get('prize_responsible_actor_id'),prize_target_actor_id:fd.get('prize_target_actor_id'),resource_ref:fd.get('resource_ref')||null})});
 bindForm('donatedPrizeForm',fd=>{const work=runtime.state.work_items.find(x=>x.work_id===fd.get('work_id'));const evidenceRef=(work?.evidence_refs||[]).slice(-1)[0]||null;const t=token();apply({action_id:'DONATED-PRIZE-'+t,type:'DONATED_PRIZE_CONFIRM',resource_id:'MOCK-RESOURCE-DONATED-PRIZE-'+t,work_id:fd.get('work_id'),display_name:fd.get('name'),donor_actor_id:work?.external_target_actor_id||null,evidence_ref:evidenceRef})});
 bindForm('octagonalIncidentForm',fd=>{const t=token();apply({action_id:'OCT-INC-'+t,type:'OCTAGONAL_INCIDENT_APPLY',incident_id:'MOCK-DECISION-OCTAGONAL-INCIDENT-'+t,event_id:fd.get('event_id'),offending_side:fd.get('offending_side'),rule_code:fd.get('rule_code'),responsible_actor_id:fd.get('responsible_actor_id')})});
