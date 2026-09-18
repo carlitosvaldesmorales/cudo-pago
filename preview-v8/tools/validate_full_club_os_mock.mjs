@@ -28,10 +28,18 @@ assert.ok(home.includes('href="admin/"'),'home must link mock admin');
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
+for(const id of ['actorForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+assert.ok(dashboard.includes('id="actors"'));
+assert.ok(dashboard.includes('id="events"'));
 assert.ok(admin.includes("Ninguna acción escribe Google Sheets, GitHub productivo ni CUDO real"));
 assert.ok(engine.includes("AUTO_UNBLOCK_DEPENDENCY"));
 assert.ok(engine.includes("AUTO_UNBLOCK_RESOURCE"));
 assert.ok(engine.includes("FINANCIAL_SETTLEMENT"));
+assert.ok(engine.includes("SOURCE_ACTOR_CREATED"));
+assert.ok(engine.includes("SOURCE_EVENT_CREATED"));
+assert.ok(engine.includes("DERIVED_WORK_CREATED"));
+assert.ok(engine.includes("HUMAN_WORK_CREATED"));
+assert.ok(engine.includes("SOURCE_FINANCIAL_OBLIGATION_CREATED"));
 assert.ok(engine.includes("DONE requires evidence"));
 assert.ok(dashboard.includes('100% DATOS MOCK'));
 assert.ok(dashboard.includes('Bloqueo:'));
@@ -122,6 +130,9 @@ console.log(JSON.stringify({
   automatic_dependency_propagation:true,
   automatic_resource_unblock:true,
   mock_financial_settlement:true,
+  source_fact_creation:true,
+  scheduled_match_to_derived_work:true,
+  human_created_work:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
