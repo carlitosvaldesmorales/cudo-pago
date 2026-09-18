@@ -9,6 +9,8 @@ on:
       - 'qa-v8-google/tools/certify_shared_object_contract.mjs'
       - 'qa-v8-google/contracts/cudo-work-item-contract-v1.json'
       - 'qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json'
+      - 'qa-v8-google/tools/certify_post_match_work_state.mjs'
+      - 'qa-v8-google/contracts/cudo-real-work-post-match-v1.json'
       - 'qa-v8-google/tools/work_item_engine.mjs'
       - 'qa-v8-google/tools/certify_work_item_engine.mjs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
@@ -47,10 +49,13 @@ jobs:
           node --check qa-v8-google/tools/certify_shared_object_contract.mjs
           node --check qa-v8-google/tools/work_item_engine.mjs
           node --check qa-v8-google/tools/certify_work_item_engine.mjs
+          node --check qa-v8-google/tools/certify_post_match_work_state.mjs
           node --check qa-v8-google/tools/certify_operational_web_projection.mjs
       - name: Re-certify shared object contract
         run: node qa-v8-google/tools/certify_shared_object_contract.mjs
       - name: Certify responsibility work state cluster
         run: node qa-v8-google/tools/certify_work_item_engine.mjs
+      - name: Certify post-match operational fan-out
+        run: node qa-v8-google/tools/certify_post_match_work_state.mjs
       - name: Certify CUDO Web operational projection
         run: node qa-v8-google/tools/certify_operational_web_projection.mjs

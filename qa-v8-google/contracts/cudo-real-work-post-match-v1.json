@@ -1,0 +1,458 @@
+{
+  "schema_version": "CUDO_REAL_RESPONSIBILITY_WORK_STATE_POST_MATCH_V1",
+  "cluster_id": "CUDO-WORK-CLUSTER-POST-MATCH-FANOUT-V1",
+  "production_write": false,
+  "real_source": {
+    "artifact": "Check-List tareas estadio y partidos.xlsx",
+    "sheet": "Check list",
+    "ranges": [
+      "B5:C5",
+      "B6:C6"
+    ],
+    "observed": [
+      {
+        "task": "Aseo del estadio",
+        "responsible": "Sandra Salinas",
+        "trigger": "POST_MATCH",
+        "payment_min_clp": 25000,
+        "payment_max_clp": 30000,
+        "payment_condition": "DEPENDS_ON_DIRTINESS",
+        "payment_cycle": "PER_COMPLETED_CLEANING"
+      },
+      {
+        "task": "Lavados de camisetas",
+        "responsible": "Cecilia",
+        "trigger": "POST_MATCH",
+        "payment_unit_clp": 15000,
+        "payment_unit": "TEAM_WASHED",
+        "payment_cycle": "PER_TEAM_WASHED"
+      }
+    ]
+  },
+  "qa_trigger_note": "The completed match below is synthetic QA and shares the same operational week as the grass-cut fixture so the combined certification tests event fan-out without introducing a second weekly-maintenance horizon. The post-match tasks, responsible people and payment context come from the real CUDO checklist.",
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-SANDRA-SALINAS-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Sandra Salinas",
+        "role_kind": "STADIUM_CLEANING_COLLABORATOR"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C5"
+          ]
+        },
+        "role_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T16:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-CECILIA-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Cecilia",
+        "role_kind": "KIT_WASHING_COLLABORATOR"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C6"
+          ]
+        },
+        "role_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T16:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-ESTADIO-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "resource_kind": "STADIUM",
+        "display_name": "Estadio CUDO"
+      },
+      "field_semantics": {
+        "resource_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"
+          ]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T16:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RULE-POST-MATCH-CLEANING-001",
+      "object_type": "RULE_DECISION",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "work_rule_kind": "POST_EVENT_RESOURCE_WORK",
+        "rule_id": "WORK_RULE_POST_MATCH_CLEANING_V1",
+        "work_kind": "STADIUM_CLEANING",
+        "title": "Aseo general del estadio",
+        "trigger_activity_kind": "MATCH",
+        "trigger_lifecycle_state": "COMPLETED",
+        "responsible_actor_id": "CUDO-ACTOR-SANDRA-SALINAS-001",
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "priority": "NORMAL",
+        "financial_context_min_amount_clp": 25000,
+        "financial_context_max_amount_clp": 30000,
+        "financial_context_cycle": "PER_COMPLETED_CLEANING",
+        "financial_context_condition": "DEPENDS_ON_DIRTINESS",
+        "financial_context_semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "field_semantics": {
+        "work_rule_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "rule_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "work_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "title": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "trigger_activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "trigger_lifecycle_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "responsible_actor_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "resource_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "priority": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "financial_context_min_amount_clp": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "financial_context_max_amount_clp": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "financial_context_cycle": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "financial_context_condition": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        },
+        "financial_context_semantics": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-RULE-CLEAN-ACTOR-001",
+          "relationship_type": "ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-SANDRA-SALINAS-001"
+        },
+        {
+          "relationship_id": "REL-RULE-CLEAN-RESOURCE-001",
+          "relationship_type": "APPLIES_TO_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-ESTADIO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T16:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RULE-POST-MATCH-KIT-WASH-001",
+      "object_type": "RULE_DECISION",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "work_rule_kind": "POST_EVENT_RESOURCE_WORK",
+        "rule_id": "WORK_RULE_POST_MATCH_KIT_WASH_V1",
+        "work_kind": "KIT_WASHING",
+        "title": "Lavado de camisetas del partido",
+        "trigger_activity_kind": "MATCH",
+        "trigger_lifecycle_state": "COMPLETED",
+        "responsible_actor_id": "CUDO-ACTOR-CECILIA-001",
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "priority": "NORMAL",
+        "financial_context_unit_amount_clp": 15000,
+        "financial_context_unit_label": "TEAM_WASHED",
+        "financial_context_cycle": "PER_TEAM_WASHED",
+        "financial_context_semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "field_semantics": {
+        "work_rule_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "rule_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "work_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "title": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "trigger_activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "trigger_lifecycle_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "responsible_actor_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "resource_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "priority": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "financial_context_unit_amount_clp": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "financial_context_unit_label": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "financial_context_cycle": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        },
+        "financial_context_semantics": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-RULE-WASH-ACTOR-001",
+          "relationship_type": "ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-CECILIA-001"
+        },
+        {
+          "relationship_id": "REL-RULE-WASH-RESOURCE-001",
+          "relationship_type": "APPLIES_TO_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-ESTADIO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T16:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-QA-MATCH-COMPLETED-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "COMPLETED",
+      "data": {
+        "activity_kind": "MATCH",
+        "display_name": "Partido QA finalizado",
+        "scheduled_date": "2026-09-27",
+        "qa_synthetic": true
+      },
+      "field_semantics": {
+        "activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://synthetic-completed-match/activity_kind"
+          ]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://synthetic-completed-match/display_name"
+          ]
+        },
+        "scheduled_date": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://synthetic-completed-match/scheduled_date/2026-09-27"
+          ]
+        },
+        "qa_synthetic": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://synthetic-completed-match/flag"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-QA-COMPLETED-MATCH-STADIUM-001",
+          "relationship_type": "USES_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-ESTADIO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T16:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA_TRIGGER",
+        "source_refs": [
+          "qa://synthetic-completed-match/2026-09-27"
+        ]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "expected": {
+    "created_work_items": 2,
+    "work_ids": [
+      "CUDO-WORK-STADIUM-CLEANING-QA-MATCH-COMPLETED-001",
+      "CUDO-WORK-KIT-WASHING-QA-MATCH-COMPLETED-001"
+    ],
+    "due_date": null,
+    "source_object_id": "CUDO-EVENT-QA-MATCH-COMPLETED-001",
+    "trigger_reason": "EVENT_COMPLETED_REQUIRES_WORK"
+  }
+}
