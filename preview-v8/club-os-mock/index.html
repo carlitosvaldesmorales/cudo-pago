@@ -48,6 +48,7 @@
     </section>
 
     <section class="section"><h2>Socios</h2><div class="tablewrap"><table class="table"><thead><tr><th>SOCIO</th><th>PERÍODO</th><th>CUOTA</th><th>ESTADO FINANCIERO</th><th>PENDIENTE</th></tr></thead><tbody id="members"></tbody></table></div></section>
+    <section class="section"><h2>Sanciones / elegibilidad</h2><div class="tablewrap"><table class="table"><thead><tr><th>ACTOR</th><th>ESTADO</th><th>PENDIENTE</th><th>SANCIONES</th></tr></thead><tbody id="sanctions"></tbody></table></div></section>
     <section class="section"><h2>Responsables</h2><div class="tablewrap"><table class="table"><thead><tr><th>NOMBRE</th><th>TIPO</th><th>ROL</th></tr></thead><tbody id="actors"></tbody></table></div></section>
     <section class="section"><h2>Eventos</h2><div class="tablewrap"><table class="table"><thead><tr><th>EVENTO</th><th>TIPO</th><th>ESTADO</th><th>INICIO</th></tr></thead><tbody id="events"></tbody></table></div></section>
     <section class="section"><h2>Trabajo y responsabilidades</h2><div id="work" class="grid workgrid"></div></section>
@@ -78,6 +79,7 @@ document.getElementById('kPayable').textContent=money(fin.summary.outstanding_pa
 document.getElementById('kReceivable').textContent=money(fin.summary.outstanding_receivable);
 document.getElementById('kEvidence').textContent=evi.summary.evidence_missing;
 document.getElementById('members').innerHTML=club.members.map(m=>`<tr><td>${esc(m.display_name)}</td><td>${esc(m.membership.period)}</td><td>${money(m.membership.monthly_due_amount_clp)}</td><td>${esc(m.membership.financial_status)}</td><td>${money(m.membership.outstanding_amount_clp)}</td></tr>`).join('');
+document.getElementById('sanctions').innerHTML=(club.sanctioned_actors||[]).map(a=>{const e=a.sports_eligibility||{};return `<tr><td>${esc(a.display_name)}</td><td>${esc(e.status||'—')}</td><td>${money(e.outstanding_amount_clp)}</td><td>${esc((e.sanction_refs||[]).join(', ')||'—')}</td></tr>`}).join('');
 document.getElementById('actors').innerHTML=club.actors.map(a=>`<tr><td>${esc(a.display_name)}</td><td>${esc(a.actor_kind)}</td><td>${esc(a.role)}</td></tr>`).join('');
 document.getElementById('events').innerHTML=club.events.map(e=>`<tr><td>${esc(e.display_name)}</td><td>${esc(e.kind)}</td><td>${esc(e.state)}</td><td>${esc(e.starts_at||'—')}</td></tr>`).join('');
 document.getElementById('work').innerHTML=ops.items.map(x=>`
