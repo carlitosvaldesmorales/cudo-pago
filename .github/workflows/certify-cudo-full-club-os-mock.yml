@@ -17,6 +17,7 @@ on:
       - 'preview-v8/tools/certify_mock_source_fact_creation.mjs'
       - 'preview-v8/tools/certify_mock_event_lifecycle.mjs'
       - 'preview-v8/tools/certify_mock_club_to_sports.mjs'
+      - 'preview-v8/tools/certify_mock_membership_dues.mjs'
       - 'preview-v8/shared/mock-sports-projection.mjs'
       - 'preview-v8/partidos/index.html'
       - 'preview-v8/shared/mock-admin-engine.mjs'
@@ -47,6 +48,7 @@ jobs:
           node --check preview-v8/tools/certify_mock_event_lifecycle.mjs
           node --check preview-v8/shared/mock-sports-projection.mjs
           node --check preview-v8/tools/certify_mock_club_to_sports.mjs
+          node --check preview-v8/tools/certify_mock_membership_dues.mjs
       - name: Certify full Club OS golden mock
         run: node preview-v8/tools/validate_full_club_os_mock.mjs
       - name: Certify mock admin actions
@@ -57,3 +59,5 @@ jobs:
         run: node preview-v8/tools/certify_mock_event_lifecycle.mjs
       - name: Certify Club to sports projection
         run: node preview-v8/tools/certify_mock_club_to_sports.mjs
+      - name: Certify membership dues
+        run: node preview-v8/tools/certify_mock_membership_dues.mjs
