@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {transitionWorkItem,buildClubOperationalStateProjection} from './work_item_engine.mjs';
+import {deriveFinancialObligationsFromCompletedWork,enrichOperationalProjectionWithFinancialEffects} from './work_financial_effects.mjs';
+import {buildFinancialSnapshot} from './canonical_financial_core.mjs';
 
 export const WORK_SHEET_ID='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw';
 export const WORK_CONTROL_SHEET='WORK_CONTROL';
@@ -78,11 +80,14 @@ function financialContextLabel(ctx){
 }
 function buildControlRows(projection){
   return [
-    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','SCHEDULE_CONTEXT','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','OBJECT_VERSION','AUTHORITY'],
+    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','SCHEDULE_CONTEXT','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','FINANCIAL_EFFECT','OUTSTANDING_CLP','OBJECT_VERSION','AUTHORITY'],
     ...projection.items.map(item=>[
       item.work_id,item.title,item.state,item.responsible.display_name,item.due_date,item.attention,
       item.resource.display_name,item.source.display_name,scheduleContextLabel(item.schedule),financialContextLabel(item.financial_context),
-      item.financial_context.semantics,item.object_version,projection.authority
+      item.financial_context.semantics,
+      item.financial_effect?`${item.financial_effect.state} · ${item.financial_effect.obligation_id}`:'',
+      item.financial_effect?.outstanding_amount_clp??'',
+      item.object_version,projection.authority
     ])
   ];
 }
@@ -199,16 +204,41 @@ export function planWorkStateRequests({
   }
 
   const generatedAt=now();
-  const projection=buildClubOperationalStateProjection({
+  const financialEffects=deriveFinancialObligationsFromCompletedWork({
+    objects:state.objects,
+    now:generatedAt
+  });
+  state.objects=financialEffects.objects;
+  state.financial_audit=[
+    ...(state.financial_audit||[]),
+    ...financialEffects.audit.filter(x=>x.kind==='FINANCIAL_OBLIGATION_CREATED')
+  ];
+
+  const financialSnapshot=buildFinancialSnapshot({
+    objects:state.objects,
+    settlements:[],
+    openingPositions:{},
+    currency:'CLP'
+  });
+  if(!financialSnapshot.ok){
+    throw new Error(`WORK financial snapshot invalid: ${JSON.stringify(financialSnapshot.errors)}`);
+  }
+
+  const baseProjection=buildClubOperationalStateProjection({
     objects:state.objects,
     generatedAt,
     referenceDate:generatedAt.slice(0,10)
+  });
+  const projection=enrichOperationalProjectionWithFinancialEffects({
+    projection:baseProjection,
+    objects:state.objects,
+    financialSnapshot
   });
   sheetMutations.push({
     op:'replace',
     kind:'WORK_CONTROL',
     spreadsheetId:WORK_SHEET_ID,
-    range:`${WORK_CONTROL_SHEET}!A:M`,
+    range:`${WORK_CONTROL_SHEET}!A:O`,
     values:buildControlRows(projection)
   });
 
