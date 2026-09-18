@@ -33,7 +33,7 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['memberForm','actorForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','octagonalIncidentForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
 assert.ok(dashboard.includes('id="members"'));
 assert.ok(dashboard.includes('id="sanctions"'));
 assert.ok(admin.includes('id="sanctions"'));
@@ -93,7 +93,15 @@ assert.ok(engine.includes("NON_CASH_BOND_OFFSET"));
 assert.ok(engine.includes("REFUNDABLE_DEPOSIT"));
 assert.ok(engine.includes("tournament bond refund requires TOURNAMENT_BOND_REFUND action"));
 assert.ok(engine.includes("fine offset exceeds refundable bond balance"));
-assert.ok(engine.includes("sports_consequence_state:'DEFERRED_OUT_OF_FINANCIAL_CLUSTER'"));
+assert.ok(engine.includes("sports_consequence_state:decisionKind==='OCTAGONAL_INCIDENT'?'APPLIED_ATOMICALLY':'DEFERRED_OUT_OF_FINANCIAL_CLUSTER'"));
+assert.ok(engine.includes("OCTAGONAL_INCIDENT_APPLY"));
+assert.ok(engine.includes("octagonal incident requires stable club actor refs on both match sides"));
+assert.ok(engine.includes("active tournament bond not found for offending club actor"));
+assert.ok(engine.includes("local_club_actor_id"));
+assert.ok(engine.includes("visita_club_actor_id"));
+assert.ok(engine.includes("OCTAGONAL_SPORTS_CONSEQUENCE_APPLIED"));
+assert.ok(admin.includes('id="octagonalIncidentForm"'));
+assert.ok(admin.includes('data-select="linked-live-matches"'));
 assert.ok(admin.includes("data-bond-fine"));
 assert.ok(admin.includes("data-bond-refund"));
 assert.ok(engine.includes("event.sports={"));
@@ -215,6 +223,9 @@ console.log(JSON.stringify({
   tournament_bond_receipt_to_refundable_liability:true,
   tournament_bond_non_cash_fine_offset:true,
   tournament_bond_remaining_balance_refund:true,
+  stable_club_actor_refs_on_match_sides:true,
+  one_incident_to_sports_and_bond:true,
+  cross_plane_incident_uses_actor_identity_not_text:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
