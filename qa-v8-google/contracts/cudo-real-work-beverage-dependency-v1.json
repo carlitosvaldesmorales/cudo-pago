@@ -1,0 +1,231 @@
+{
+  "schema_version": "CUDO_REAL_WORK_DEPENDENCY_BEVERAGES_V1",
+  "cluster_id": "CUDO-WORK-DEPENDENCY-BEVERAGE-RETURN-SETTLEMENT-V1",
+  "production_write": false,
+  "real_source": {
+    "artifact": "Check-List tareas estadio y partidos.xlsx",
+    "sheet": "Check list",
+    "range": "B12:C12",
+    "direct_evidence": {
+      "task": "Realizar pedidos de bebestibles",
+      "order_process_owner": "Seba Tejo",
+      "supplier_display_name": "Carlos Quelempan",
+      "rule": "Al fin de semana siguiente de concluir el partido o campeonato, se devuelve lo restante y se cancela el pedido.",
+      "tracking": "Archivo Excel compartido"
+    },
+    "inference": {
+      "later_step_responsible": "Seba Tejo",
+      "basis": "INFERRED_SAME_PROCESS_OWNER",
+      "limitation": "La fuente identifica explícitamente a Seba como quien realiza el pedido, pero no vuelve a nombrar al ejecutor de devolución/liquidación."
+    }
+  },
+  "qa_trigger_note": "The completed match is synthetic QA. The return-before-settlement sequence is direct source evidence; responsibility for later steps is explicitly classified as process-owner inference.",
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-SEBA-TEJO-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Seba Tejo",
+        "role_kind": "BEVERAGE_ORDER_PROCESS_OWNER"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C12"
+          ]
+        },
+        "role_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T18:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RULE-BEVERAGE-RETURN-SETTLEMENT-001",
+      "object_type": "RULE_DECISION",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "work_rule_kind": "POST_EVENT_DEPENDENT_WORK_SEQUENCE",
+        "rule_id": "WORK_RULE_BEVERAGE_RETURN_BEFORE_SETTLEMENT_V1",
+        "trigger_activity_kind": "MATCH",
+        "trigger_lifecycle_state": "COMPLETED",
+        "process_owner_actor_id": "CUDO-ACTOR-SEBA-TEJO-001",
+        "process_owner_display_name": "Seba Tejo",
+        "responsibility_basis": "INFERRED_SAME_PROCESS_OWNER",
+        "external_party_display_name": "Carlos Quelempan",
+        "schedule_condition": "FOLLOWING_WEEKEND_AFTER_EVENT",
+        "steps": [
+          {
+            "step_id": "BEVERAGE_RETURN",
+            "work_kind": "BEVERAGE_RETURN",
+            "title": "Devolver sobrante de bebestibles",
+            "initial_state": "OPEN"
+          },
+          {
+            "step_id": "BEVERAGE_SETTLEMENT",
+            "work_kind": "BEVERAGE_SETTLEMENT",
+            "title": "Liquidar pedido de bebestibles",
+            "initial_state": "BLOCKED",
+            "depends_on_step_id": "BEVERAGE_RETURN",
+            "blocker_reason": "WAITING_FOR_REMAINDER_RETURN",
+            "financial_context_semantics": "AMOUNT_UNRESOLVED_UNTIL_RETURN_RECONCILIATION"
+          }
+        ]
+      },
+      "field_semantics": {
+        "work_rule_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "rule_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "trigger_activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "trigger_lifecycle_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "process_owner_actor_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "process_owner_display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "responsibility_basis": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "external_party_display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "schedule_condition": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        },
+        "steps": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-RULE-BEV-SEBA-001",
+          "relationship_type": "ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-SEBA-TEJO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T18:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": [
+          "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B12:C12"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-QA-BEVERAGE-MATCH-COMPLETED-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "COMPLETED",
+      "data": {
+        "activity_kind": "MATCH",
+        "display_name": "Partido QA con pedido de bebestibles",
+        "scheduled_date": "2026-09-27",
+        "qa_synthetic": true
+      },
+      "field_semantics": {
+        "activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://beverage-dependency/activity_kind"
+          ]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://beverage-dependency/display_name"
+          ]
+        },
+        "scheduled_date": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://beverage-dependency/scheduled_date"
+          ]
+        },
+        "qa_synthetic": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://beverage-dependency/flag"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T18:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA_TRIGGER",
+        "source_refs": [
+          "qa://beverage-dependency/match-completed"
+        ]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "expected": {
+    "return_work_id": "CUDO-WORK-BEVERAGE-RETURN-QA-BEVERAGE-MATCH-COMPLETED-001",
+    "settlement_work_id": "CUDO-WORK-BEVERAGE-SETTLEMENT-QA-BEVERAGE-MATCH-COMPLETED-001",
+    "return_state": "OPEN",
+    "settlement_state": "BLOCKED",
+    "blocker_reason": "WAITING_FOR_REMAINDER_RETURN",
+    "schedule_condition": "FOLLOWING_WEEKEND_AFTER_EVENT",
+    "financial_obligation_before_amount_resolution": false
+  }
+}
