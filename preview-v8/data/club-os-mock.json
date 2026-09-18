@@ -1,0 +1,723 @@
+{
+  "schema_version": "CUDO_CLUB_OS_GOLDEN_MOCK_V1",
+  "generated_at": "2026-09-18T18:30:00-03:00",
+  "environment": "qa-v8-mock",
+  "mock": true,
+  "production_write": false,
+  "disclaimer": "ALL records in this file are synthetic test data. They must never be interpreted as real people, real debts, real payments or real club decisions.",
+  "public_content_fixture": {
+    "source": "preview-v8/shared/seed-data.js",
+    "coverage": [
+      "EQUIPOS",
+      "PLANTEL",
+      "PARTIDOS",
+      "TABLA",
+      "NOTICIAS",
+      "GALERIA"
+    ]
+  },
+  "coverage": {
+    "semantic_root": "CLUB",
+    "planes": [
+      "GOVERNANCE_AND_ADMINISTRATION",
+      "OPERATION",
+      "FINANCIAL_STATE",
+      "EVIDENCE_AND_AUDIT"
+    ],
+    "object_types": [
+      "ACTOR",
+      "ACTIVITY_EVENT",
+      "RESOURCE_FACILITY",
+      "RULE_DECISION",
+      "WORK_ITEM",
+      "FINANCIAL_OBLIGATION",
+      "FINANCIAL_MOVEMENT",
+      "DOCUMENT_EVIDENCE"
+    ],
+    "work_states": [
+      "OPEN",
+      "IN_PROGRESS",
+      "BLOCKED",
+      "WAITING_EXTERNAL",
+      "DONE",
+      "CANCELLED"
+    ],
+    "financial_obligation_states": [
+      "OPEN",
+      "PARTIALLY_SETTLED",
+      "SETTLED"
+    ],
+    "financial_movement_states": [
+      "PENDING",
+      "CONFIRMED"
+    ],
+    "scenarios": [
+      "NORMAL_OPEN_WORK",
+      "WORK_IN_PROGRESS",
+      "OVERDUE_WORK",
+      "RESOURCE_BLOCKER",
+      "WORK_DEPENDENCY_BLOCKER",
+      "WAITING_EXTERNAL",
+      "DONE_WITH_EVIDENCE",
+      "CANCELLED_WORK",
+      "DONE_TO_PAYABLE",
+      "PARTIAL_SETTLEMENT",
+      "SETTLED_OBLIGATION",
+      "OPEN_RECEIVABLE",
+      "SCHEDULED_EVENT",
+      "LIVE_EVENT",
+      "COMPLETED_EVENT",
+      "CANCELLED_EVENT",
+      "PENDING_HUMAN_DECISION",
+      "APPROVED_RULE_DECISION",
+      "RESOURCE_MAINTENANCE",
+      "AUDITED_TRANSITION"
+    ]
+  },
+  "actors": [
+    {
+      "actor_id": "MOCK-ACTOR-PRESIDENCIA-01",
+      "display_name": "Dirigencia Mock 01",
+      "actor_kind": "PERSON",
+      "role": "PRESIDENCIA",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-TESORERIA-01",
+      "display_name": "Tesorería Mock 01",
+      "actor_kind": "PERSON",
+      "role": "TESORERIA",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "display_name": "Encargado Estadio Mock 01",
+      "actor_kind": "PERSON",
+      "role": "OPERACIONES_ESTADIO",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-MANTENCION-01",
+      "display_name": "Mantención Mock 01",
+      "actor_kind": "PERSON",
+      "role": "MANTENCION",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-DEPORTES-01",
+      "display_name": "Delegado Deportivo Mock 01",
+      "actor_kind": "PERSON",
+      "role": "DEPORTES",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-COMUNICACIONES-01",
+      "display_name": "Comunicaciones Mock 01",
+      "actor_kind": "PERSON",
+      "role": "COMUNICACIONES",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-SECRETARIA-01",
+      "display_name": "Secretaría Mock 01",
+      "actor_kind": "PERSON",
+      "role": "SECRETARIA",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-PROVEEDOR-01",
+      "display_name": "Proveedor Mock Bebestibles",
+      "actor_kind": "EXTERNAL_ORGANIZATION",
+      "role": "PROVEEDOR",
+      "mock": true
+    },
+    {
+      "actor_id": "MOCK-ACTOR-MUNICIPALIDAD-01",
+      "display_name": "Municipalidad Mock",
+      "actor_kind": "EXTERNAL_ORGANIZATION",
+      "role": "EXTERNAL_AUTHORITY",
+      "mock": true
+    }
+  ],
+  "events": [
+    {
+      "event_id": "MOCK-EVENT-MATCH-SCHEDULED-01",
+      "kind": "MATCH",
+      "display_name": "Partido Mock Programado",
+      "state": "SCHEDULED",
+      "starts_at": "2026-09-20T14:00:00-03:00",
+      "resource_refs": [
+        "MOCK-RESOURCE-STADIUM-01"
+      ],
+      "mock": true
+    },
+    {
+      "event_id": "MOCK-EVENT-MATCH-LIVE-01",
+      "kind": "MATCH",
+      "display_name": "Partido Mock En Juego",
+      "state": "LIVE",
+      "starts_at": "2026-09-18T18:00:00-03:00",
+      "resource_refs": [
+        "MOCK-RESOURCE-STADIUM-01"
+      ],
+      "mock": true
+    },
+    {
+      "event_id": "MOCK-EVENT-MATCH-DONE-01",
+      "kind": "MATCH",
+      "display_name": "Partido Mock Finalizado",
+      "state": "COMPLETED",
+      "starts_at": "2026-09-13T14:00:00-03:00",
+      "resource_refs": [
+        "MOCK-RESOURCE-STADIUM-01"
+      ],
+      "mock": true
+    },
+    {
+      "event_id": "MOCK-EVENT-AMISTOSO-CANCEL-01",
+      "kind": "MATCH",
+      "display_name": "Amistoso Mock Suspendido",
+      "state": "CANCELLED",
+      "starts_at": "2026-09-25T19:00:00-03:00",
+      "resource_refs": [
+        "MOCK-RESOURCE-STADIUM-01"
+      ],
+      "mock": true
+    },
+    {
+      "event_id": "MOCK-EVENT-BINGO-01",
+      "kind": "FUNDRAISING",
+      "display_name": "Bingo Mock del Club",
+      "state": "SCHEDULED",
+      "starts_at": "2026-10-10T20:00:00-03:00",
+      "resource_refs": [
+        "MOCK-RESOURCE-SALON-01"
+      ],
+      "mock": true
+    }
+  ],
+  "resources": [
+    {
+      "resource_id": "MOCK-RESOURCE-STADIUM-01",
+      "kind": "STADIUM",
+      "display_name": "Estadio CUDO Mock",
+      "state": "AVAILABLE",
+      "attention": "NORMAL",
+      "mock": true
+    },
+    {
+      "resource_id": "MOCK-RESOURCE-TRACTOR-01",
+      "kind": "EQUIPMENT",
+      "display_name": "Tractor Mock",
+      "state": "MAINTENANCE",
+      "attention": "BLOCKING",
+      "mock": true
+    },
+    {
+      "resource_id": "MOCK-RESOURCE-CAMARINES-01",
+      "kind": "FACILITY",
+      "display_name": "Camarines Mock",
+      "state": "NEEDS_SUPPLY",
+      "attention": "ACTION_REQUIRED",
+      "mock": true
+    },
+    {
+      "resource_id": "MOCK-RESOURCE-STREAM-01",
+      "kind": "EQUIPMENT",
+      "display_name": "Kit transmisión Mock",
+      "state": "AVAILABLE",
+      "attention": "NORMAL",
+      "mock": true
+    },
+    {
+      "resource_id": "MOCK-RESOURCE-BEVERAGE-STOCK-01",
+      "kind": "INVENTORY",
+      "display_name": "Stock bebestibles Mock",
+      "state": "LOW_STOCK",
+      "attention": "ACTION_REQUIRED",
+      "mock": true
+    },
+    {
+      "resource_id": "MOCK-RESOURCE-SALON-01",
+      "kind": "FACILITY",
+      "display_name": "Salón evento Mock",
+      "state": "AVAILABLE",
+      "attention": "NORMAL",
+      "mock": true
+    }
+  ],
+  "decisions": [
+    {
+      "decision_id": "MOCK-DECISION-EXPENSE-01",
+      "kind": "EXPENSE_APPROVAL",
+      "display_name": "Aprobar compra de insumos Mock",
+      "state": "PENDING_HUMAN",
+      "responsible_actor_id": "MOCK-ACTOR-PRESIDENCIA-01",
+      "mock": true
+    },
+    {
+      "decision_id": "MOCK-DECISION-SCHEDULE-01",
+      "kind": "SCHEDULE_CHANGE",
+      "display_name": "Adelantar mantención por partido Mock",
+      "state": "APPROVED",
+      "responsible_actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "decision_id": "MOCK-DECISION-EVENT-CANCEL-01",
+      "kind": "EVENT_DECISION",
+      "display_name": "Suspender amistoso Mock",
+      "state": "APPLIED",
+      "responsible_actor_id": "MOCK-ACTOR-DEPORTES-01",
+      "mock": true
+    }
+  ],
+  "work_items": [
+    {
+      "work_id": "MOCK-WORK-PREPARE-FIELD-01",
+      "title": "Preparar cancha para partido Mock",
+      "work_kind": "FIELD_PREPARATION",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "due_at": "2026-09-20T11:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-SCHEDULED-01",
+      "resource_ref": "MOCK-RESOURCE-STADIUM-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-IRRIGATION-01",
+      "title": "Regadío de cancha Mock",
+      "work_kind": "IRRIGATION",
+      "state": "IN_PROGRESS",
+      "attention": "IN_PROGRESS",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-MANTENCION-01",
+      "due_at": "2026-09-19T18:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-SCHEDULED-01",
+      "resource_ref": "MOCK-RESOURCE-STADIUM-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-GRASS-CUT-01",
+      "title": "Cortar pasto del estadio Mock",
+      "work_kind": "GRASS_CUT",
+      "state": "BLOCKED",
+      "attention": "BLOCKED",
+      "priority": "HIGH",
+      "responsible_actor_id": "MOCK-ACTOR-MANTENCION-01",
+      "due_at": "2026-09-19T16:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-SCHEDULED-01",
+      "resource_ref": "MOCK-RESOURCE-STADIUM-01",
+      "blocker_refs": [
+        "MOCK-RESOURCE-TRACTOR-01"
+      ],
+      "dependency_refs": [],
+      "blocker_reason": "TRACTOR_IN_MAINTENANCE",
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-MUNICIPAL-AUTH-01",
+      "title": "Obtener autorización municipal Mock",
+      "work_kind": "EXTERNAL_AUTHORIZATION",
+      "state": "WAITING_EXTERNAL",
+      "attention": "WAITING_EXTERNAL",
+      "priority": "HIGH",
+      "responsible_actor_id": "MOCK-ACTOR-SECRETARIA-01",
+      "due_at": "2026-10-03T12:00:00-03:00",
+      "source_ref": "MOCK-EVENT-BINGO-01",
+      "resource_ref": null,
+      "blocker_refs": [
+        "MOCK-ACTOR-MUNICIPALIDAD-01"
+      ],
+      "dependency_refs": [],
+      "blocker_reason": "WAITING_EXTERNAL_AUTHORITY",
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-CLEANING-01",
+      "title": "Aseo post-partido Mock",
+      "work_kind": "STADIUM_CLEANING",
+      "state": "DONE",
+      "attention": "DONE",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "due_at": "2026-09-14T12:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-DONE-01",
+      "resource_ref": "MOCK-RESOURCE-STADIUM-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [
+        "MOCK-EVIDENCE-CLEANING-PHOTO-01"
+      ],
+      "financial_obligation_refs": [
+        "MOCK-OBL-CLEANING-01"
+      ],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-CANCELLED-EVENT-01",
+      "title": "Preparar amistoso suspendido Mock",
+      "work_kind": "EVENT_PREPARATION",
+      "state": "CANCELLED",
+      "attention": "CANCELLED",
+      "priority": "LOW",
+      "responsible_actor_id": "MOCK-ACTOR-DEPORTES-01",
+      "due_at": "2026-09-25T16:00:00-03:00",
+      "source_ref": "MOCK-EVENT-AMISTOSO-CANCEL-01",
+      "resource_ref": "MOCK-RESOURCE-STADIUM-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [
+        "MOCK-EVIDENCE-CANCEL-DECISION-01"
+      ],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-CAMARIN-SUPPLY-01",
+      "title": "Reponer insumos de camarín Mock",
+      "work_kind": "FACILITY_SUPPLY",
+      "state": "OPEN",
+      "attention": "OVERDUE",
+      "priority": "HIGH",
+      "responsible_actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "due_at": "2026-09-15T18:00:00-03:00",
+      "source_ref": "MOCK-RESOURCE-CAMARINES-01",
+      "resource_ref": "MOCK-RESOURCE-CAMARINES-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-BEVERAGE-RETURN-01",
+      "title": "Devolver sobrante de bebestibles Mock",
+      "work_kind": "BEVERAGE_RETURN",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-TESORERIA-01",
+      "due_at": "2026-09-20T18:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-DONE-01",
+      "resource_ref": "MOCK-RESOURCE-BEVERAGE-STOCK-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-BEVERAGE-SETTLEMENT-01",
+      "title": "Liquidar pedido de bebestibles Mock",
+      "work_kind": "BEVERAGE_SETTLEMENT",
+      "state": "BLOCKED",
+      "attention": "BLOCKED",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-TESORERIA-01",
+      "due_at": null,
+      "source_ref": "MOCK-EVENT-MATCH-DONE-01",
+      "resource_ref": "MOCK-RESOURCE-BEVERAGE-STOCK-01",
+      "blocker_refs": [],
+      "dependency_refs": [
+        "MOCK-WORK-BEVERAGE-RETURN-01"
+      ],
+      "blocker_reason": "WAITING_FOR_REMAINDER_RETURN",
+      "evidence_refs": [],
+      "financial_obligation_refs": [
+        "MOCK-OBL-BEVERAGE-01"
+      ],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-KIT-WASH-01",
+      "title": "Lavado de camisetas Mock",
+      "work_kind": "KIT_WASHING",
+      "state": "DONE",
+      "attention": "DONE",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "due_at": "2026-09-14T20:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-DONE-01",
+      "resource_ref": null,
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [
+        "MOCK-EVIDENCE-LAUNDRY-01"
+      ],
+      "financial_obligation_refs": [
+        "MOCK-OBL-LAUNDRY-01"
+      ],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-SPONSOR-FOLLOWUP-01",
+      "title": "Confirmar transferencia de auspicio Mock",
+      "work_kind": "RECEIVABLE_FOLLOWUP",
+      "state": "WAITING_EXTERNAL",
+      "attention": "WAITING_EXTERNAL",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-TESORERIA-01",
+      "due_at": "2026-09-22T12:00:00-03:00",
+      "source_ref": "MOCK-OBL-SPONSOR-01",
+      "resource_ref": null,
+      "blocker_refs": [
+        "MOCK-ACTOR-PROVEEDOR-01"
+      ],
+      "dependency_refs": [],
+      "blocker_reason": "WAITING_EXTERNAL_PAYMENT",
+      "evidence_refs": [],
+      "financial_obligation_refs": [
+        "MOCK-OBL-SPONSOR-01"
+      ],
+      "mock": true
+    },
+    {
+      "work_id": "MOCK-WORK-BROADCAST-01",
+      "title": "Preparar transmisión Chépica Play Mock",
+      "work_kind": "BROADCAST_PREPARATION",
+      "state": "IN_PROGRESS",
+      "attention": "IN_PROGRESS",
+      "priority": "NORMAL",
+      "responsible_actor_id": "MOCK-ACTOR-COMUNICACIONES-01",
+      "due_at": "2026-09-20T13:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-SCHEDULED-01",
+      "resource_ref": "MOCK-RESOURCE-STREAM-01",
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    }
+  ],
+  "financial_obligations": [
+    {
+      "obligation_id": "MOCK-OBL-IRRIGATION-01",
+      "direction": "PAYABLE",
+      "kind": "IRRIGATION_SERVICE",
+      "amount_clp": 50000,
+      "settled_amount_clp": 0,
+      "outstanding_amount_clp": 50000,
+      "state": "OPEN",
+      "cause_ref": "MOCK-WORK-IRRIGATION-01",
+      "counterparty_ref": "MOCK-ACTOR-MANTENCION-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-CLEANING-01",
+      "direction": "PAYABLE",
+      "kind": "CLEANING_SERVICE",
+      "amount_clp": 30000,
+      "settled_amount_clp": 0,
+      "outstanding_amount_clp": 30000,
+      "state": "OPEN",
+      "cause_ref": "MOCK-WORK-CLEANING-01",
+      "counterparty_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-BEVERAGE-01",
+      "direction": "PAYABLE",
+      "kind": "SUPPLIER_SETTLEMENT",
+      "amount_clp": 120000,
+      "settled_amount_clp": 50000,
+      "outstanding_amount_clp": 70000,
+      "state": "PARTIALLY_SETTLED",
+      "cause_ref": "MOCK-WORK-BEVERAGE-SETTLEMENT-01",
+      "counterparty_ref": "MOCK-ACTOR-PROVEEDOR-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-LAUNDRY-01",
+      "direction": "PAYABLE",
+      "kind": "KIT_LAUNDRY",
+      "amount_clp": 30000,
+      "settled_amount_clp": 30000,
+      "outstanding_amount_clp": 0,
+      "state": "SETTLED",
+      "cause_ref": "MOCK-WORK-KIT-WASH-01",
+      "counterparty_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-SPONSOR-01",
+      "direction": "RECEIVABLE",
+      "kind": "SPONSOR_RECEIVABLE",
+      "amount_clp": 250000,
+      "settled_amount_clp": 0,
+      "outstanding_amount_clp": 250000,
+      "state": "OPEN",
+      "cause_ref": "MOCK-EVENT-BINGO-01",
+      "counterparty_ref": "MOCK-ACTOR-PROVEEDOR-01",
+      "mock": true
+    }
+  ],
+  "financial_movements": [
+    {
+      "movement_id": "MOCK-MOV-BEVERAGE-PARTIAL-01",
+      "direction": "OUT",
+      "amount_clp": 50000,
+      "channel": "BANK_TRANSFER",
+      "status": "CONFIRMED",
+      "reconciliation_state": "RECONCILED",
+      "occurred_at": "2026-09-16T11:00:00-03:00",
+      "settlement_refs": [
+        "MOCK-SET-BEVERAGE-01"
+      ],
+      "mock": true
+    },
+    {
+      "movement_id": "MOCK-MOV-LAUNDRY-01",
+      "direction": "OUT",
+      "amount_clp": 30000,
+      "channel": "CASH",
+      "status": "CONFIRMED",
+      "reconciliation_state": "RECONCILED",
+      "occurred_at": "2026-09-15T18:30:00-03:00",
+      "settlement_refs": [
+        "MOCK-SET-LAUNDRY-01"
+      ],
+      "mock": true
+    },
+    {
+      "movement_id": "MOCK-MOV-SPONSOR-PENDING-01",
+      "direction": "IN",
+      "amount_clp": 250000,
+      "channel": "BANK_TRANSFER",
+      "status": "PENDING",
+      "reconciliation_state": "UNRECONCILED",
+      "occurred_at": "2026-09-18T10:00:00-03:00",
+      "settlement_refs": [],
+      "mock": true
+    }
+  ],
+  "settlements": [
+    {
+      "settlement_id": "MOCK-SET-BEVERAGE-01",
+      "movement_id": "MOCK-MOV-BEVERAGE-PARTIAL-01",
+      "obligation_id": "MOCK-OBL-BEVERAGE-01",
+      "amount_clp": 50000,
+      "state": "ACTIVE",
+      "mock": true
+    },
+    {
+      "settlement_id": "MOCK-SET-LAUNDRY-01",
+      "movement_id": "MOCK-MOV-LAUNDRY-01",
+      "obligation_id": "MOCK-OBL-LAUNDRY-01",
+      "amount_clp": 30000,
+      "state": "ACTIVE",
+      "mock": true
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "MOCK-EVIDENCE-CLEANING-PHOTO-01",
+      "kind": "PHOTO",
+      "display_name": "Foto aseo terminado Mock",
+      "state": "AVAILABLE",
+      "related_refs": [
+        "MOCK-WORK-CLEANING-01"
+      ],
+      "mock": true
+    },
+    {
+      "evidence_id": "MOCK-EVIDENCE-LAUNDRY-01",
+      "kind": "RECEIPT_OR_CONFIRMATION",
+      "display_name": "Confirmación lavado Mock",
+      "state": "AVAILABLE",
+      "related_refs": [
+        "MOCK-WORK-KIT-WASH-01"
+      ],
+      "mock": true
+    },
+    {
+      "evidence_id": "MOCK-EVIDENCE-CANCEL-DECISION-01",
+      "kind": "DECISION_RECORD",
+      "display_name": "Decisión suspensión Mock",
+      "state": "AVAILABLE",
+      "related_refs": [
+        "MOCK-EVENT-AMISTOSO-CANCEL-01"
+      ],
+      "mock": true
+    },
+    {
+      "evidence_id": "MOCK-EVIDENCE-MUNICIPAL-PENDING-01",
+      "kind": "EXTERNAL_DOCUMENT",
+      "display_name": "Autorización municipal Mock pendiente",
+      "state": "MISSING",
+      "related_refs": [
+        "MOCK-WORK-MUNICIPAL-AUTH-01"
+      ],
+      "mock": true
+    }
+  ],
+  "audit": [
+    {
+      "audit_id": "MOCK-AUDIT-001",
+      "at": "2026-09-18T08:00:00-03:00",
+      "kind": "WORK_CREATED",
+      "object_ref": "MOCK-WORK-PREPARE-FIELD-01",
+      "actor_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "audit_id": "MOCK-AUDIT-002",
+      "at": "2026-09-18T09:10:00-03:00",
+      "kind": "WORK_TRANSITION",
+      "object_ref": "MOCK-WORK-IRRIGATION-01",
+      "from": "OPEN",
+      "to": "IN_PROGRESS",
+      "actor_ref": "MOCK-ACTOR-MANTENCION-01",
+      "mock": true
+    },
+    {
+      "audit_id": "MOCK-AUDIT-003",
+      "at": "2026-09-18T09:20:00-03:00",
+      "kind": "WORK_BLOCKED",
+      "object_ref": "MOCK-WORK-GRASS-CUT-01",
+      "reason": "TRACTOR_IN_MAINTENANCE",
+      "actor_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "audit_id": "MOCK-AUDIT-004",
+      "at": "2026-09-18T10:00:00-03:00",
+      "kind": "EXTERNAL_WAIT",
+      "object_ref": "MOCK-WORK-MUNICIPAL-AUTH-01",
+      "reason": "WAITING_EXTERNAL_AUTHORITY",
+      "actor_ref": "MOCK-ACTOR-SECRETARIA-01",
+      "mock": true
+    },
+    {
+      "audit_id": "MOCK-AUDIT-005",
+      "at": "2026-09-18T11:00:00-03:00",
+      "kind": "FINANCIAL_SETTLEMENT",
+      "object_ref": "MOCK-OBL-BEVERAGE-01",
+      "movement_ref": "MOCK-MOV-BEVERAGE-PARTIAL-01",
+      "amount_clp": 50000,
+      "mock": true
+    },
+    {
+      "audit_id": "MOCK-AUDIT-006",
+      "at": "2026-09-18T12:00:00-03:00",
+      "kind": "DECISION_APPLIED",
+      "object_ref": "MOCK-DECISION-SCHEDULE-01",
+      "actor_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    }
+  ]
+}
