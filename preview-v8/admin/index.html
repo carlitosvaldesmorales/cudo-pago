@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#03163d">
+  <title>C.U.D.O. · Admin Mock</title>
+  <link rel="stylesheet" href="../shared/site.css">
+  <style>
+    body{background:#f3f5f8;color:#03163d}.hero{background:#03163d;color:#fff;border-bottom:7px solid #e21b2d;padding:38px 0}
+    .hero h1{font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:clamp(46px,7vw,72px);line-height:.92;margin:8px 0;text-transform:uppercase}
+    .hero p{max-width:850px;color:#d8e1f0;line-height:1.55}.tag{display:inline-flex;background:#f3c53b;color:#03163d;padding:7px 10px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.08em}
+    .main{padding:28px 0 70px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.btnx{border:0;border-radius:10px;padding:10px 13px;font-weight:900;font-size:10px;cursor:pointer;background:#03163d;color:#fff}.btnx.alt{background:#fff;color:#03163d;border:1px solid #cfd6df}.btnx.warn{background:#a01120}
+    .notice{background:#fff8da;border-left:5px solid #f3c53b;padding:13px 15px;border-radius:0 12px 12px 0;margin-bottom:18px;font-size:12px;line-height:1.5}
+    .summary{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}.kpi{background:#fff;border:1px solid #dfe4eb;border-radius:14px;padding:14px}.kpi small{font-size:9px;font-weight:900;color:#66738a;letter-spacing:.06em}.kpi strong{display:block;font-size:26px;margin-top:3px}
+    .section{margin-top:24px}.section h2{font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:32px;margin:0 0 10px;text-transform:uppercase}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid #dfe4eb;border-radius:16px;padding:16px;box-shadow:0 7px 20px rgba(3,22,61,.05)}
+    .row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.state{display:inline-flex;padding:5px 8px;border-radius:999px;background:#eef2f7;font-size:9px;font-weight:900}.BLOCKED{background:#ffe5e8;color:#a01120}.WAITING_EXTERNAL{background:#fff3cf;color:#7a5d00}.DONE{background:#e4f5ea;color:#17643b}.CANCELLED{background:#e6e8ed;color:#596174}.IN_PROGRESS{background:#e6efff;color:#174c9b}
+    .meta{font-size:11px;color:#5f6b7d;line-height:1.55;margin:8px 0}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.actions button{border:0;border-radius:8px;padding:8px 10px;font-size:9px;font-weight:900;cursor:pointer;background:#e8eef7;color:#03163d}.actions button.primary{background:#03163d;color:#fff}.actions button.danger{background:#ffe5e8;color:#9b1320}
+    .tablewrap{overflow:auto;background:#fff;border:1px solid #dfe4eb;border-radius:14px}.table{border-collapse:collapse;width:100%;font-size:11px}.table th,.table td{padding:10px 12px;border-bottom:1px solid #edf0f4;text-align:left;white-space:nowrap}.table th{font-size:9px;letter-spacing:.07em;color:#66738a}
+    .toast{position:fixed;right:14px;bottom:14px;background:#03163d;color:#fff;padding:12px 14px;border-radius:10px;font-size:11px;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.2)}.toast.error{background:#9b1320}
+    @media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="club-stripe"></div>
+  <header class="hero"><div class="wrap">
+    <span class="tag">ADMIN GOLDEN MOCK · NO PRODUCCIÓN</span>
+    <h1>ADMINISTRAR CLUB OS</h1>
+    <p>Ejercita el funcionamiento completo del club con datos sintéticos. Las acciones modifican sólo el runtime local del navegador y propagan automáticamente dependencias, bloqueos y efectos financieros.</p>
+    <p><a href="../club-os-mock/" style="color:#fff;font-weight:900">← Estado del Club OS Mock</a> · <a href="../" style="color:#fff;font-weight:900">Portal mock</a></p>
+  </div></header>
+  <main class="main"><div class="wrap">
+    <div class="notice"><strong>Seguro por diseño:</strong> todo es MOCK. El botón “Restablecer” vuelve al golden fixture certificado. Ninguna acción escribe Google Sheets, GitHub productivo ni CUDO real.</div>
+    <div class="toolbar">
+      <button class="btnx alt" id="refresh">Actualizar vista</button>
+      <button class="btnx warn" id="reset">Restablecer golden mock</button>
+      <span id="revision" style="font-size:11px;font-weight:800;align-self:center"></span>
+    </div>
+    <section class="summary">
+      <div class="kpi"><small>TRABAJOS</small><strong id="sTotal">—</strong></div>
+      <div class="kpi"><small>ABIERTOS</small><strong id="sOpen">—</strong></div>
+      <div class="kpi"><small>EN CURSO</small><strong id="sProgress">—</strong></div>
+      <div class="kpi"><small>BLOQUEADOS</small><strong id="sBlocked">—</strong></div>
+      <div class="kpi"><small>ESPERA EXTERNA</small><strong id="sWaiting">—</strong></div>
+      <div class="kpi"><small>PENDIENTE $</small><strong id="sPayable">—</strong></div>
+    </section>
+
+    <section class="section"><h2>Trabajo</h2><div id="work" class="grid"></div></section>
+    <section class="section"><h2>Recursos</h2><div id="resources" class="grid"></div></section>
+    <section class="section"><h2>Decisiones</h2><div id="decisions" class="grid"></div></section>
+    <section class="section"><h2>Finanzas</h2><div class="tablewrap"><table class="table"><thead><tr><th>OBLIGACIÓN</th><th>TIPO</th><th>ESTADO</th><th>PENDIENTE</th><th>ACCIÓN</th></tr></thead><tbody id="finance"></tbody></table></div></section>
+    <section class="section"><h2>Evidencia / auditoría</h2><div class="tablewrap"><table class="table"><thead><tr><th>HORA</th><th>TIPO</th><th>OBJETO</th><th>DETALLE</th></tr></thead><tbody id="audit"></tbody></table></div></section>
+  </div></main>
+  <div id="toast" class="toast" hidden></div>
+
+<script type="module">
+import {createMockRuntime,applyMockAdminAction,deriveMockReadModels} from '../shared/mock-admin-engine.mjs';
+const KEY='CUDO_FULL_MOCK_ADMIN_RUNTIME_V1';
+let golden=null;
+let runtime=null;
+const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(n||0));
+const toast=(msg,error=false)=>{const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(error?' error':'');el.hidden=false;setTimeout(()=>el.hidden=true,3500)};
+function save(){localStorage.setItem(KEY,JSON.stringify(runtime))}
+function actorName(id){return runtime.state.actors.find(x=>x.actor_id===id)?.display_name||id}
+function loadRuntime(){
+  const raw=localStorage.getItem(KEY);
+  if(raw){
+    try{const parsed=JSON.parse(raw);if(parsed?.schema_version==='CUDO_MOCK_ADMIN_RUNTIME_V1') return parsed}catch{}
+  }
+  return createMockRuntime(golden,{createdAt:new Date().toISOString()});
+}
+function apply(action){
+  try{
+    const result=applyMockAdminAction(runtime,{...action,expected_revision:runtime.revision,at:new Date().toISOString()});
+    runtime=result.runtime;save();render();
+    toast(result.effects.map(x=>x.kind).join(' · ')||'Acción aplicada');
+  }catch(err){toast(err.message||String(err),true)}
+}
+function workButtons(w){
+  const buttons=[];
+  const add=(label,next,cls='')=>buttons.push(`<button class="${cls}" data-work="${esc(w.work_id)}" data-next="${next}">${label}</button>`);
+  if(w.state==='OPEN'){add('Iniciar','IN_PROGRESS','primary');add('Bloquear','BLOCKED');add('Espera externa','WAITING_EXTERNAL');add('Cancelar','CANCELLED','danger')}
+  if(w.state==='IN_PROGRESS'){add('Completar','DONE','primary');add('Bloquear','BLOCKED');add('Espera externa','WAITING_EXTERNAL');add('Cancelar','CANCELLED','danger')}
+  if(['BLOCKED','WAITING_EXTERNAL','CANCELLED'].includes(w.state)) add('Reabrir','OPEN','primary');
+  return buttons.join('');
+}
+function render(){
+  const v=deriveMockReadModels(runtime,{referenceDate:new Date().toISOString().slice(0,10)});
+  document.getElementById('revision').textContent='Runtime revision '+runtime.revision;
+  document.getElementById('sTotal').textContent=v.operation.summary.total;
+  document.getElementById('sOpen').textContent=v.operation.summary.open;
+  document.getElementById('sProgress').textContent=v.operation.summary.in_progress;
+  document.getElementById('sBlocked').textContent=v.operation.summary.blocked;
+  document.getElementById('sWaiting').textContent=v.operation.summary.waiting_external;
+  document.getElementById('sPayable').textContent=money(v.finance.summary.outstanding_payable);
+
+  document.getElementById('work').innerHTML=v.operation.items.map(w=>`
+    <article class="card"><div class="row"><div><small>${esc(w.work_kind)}</small><h3>${esc(w.title)}</h3></div><span class="state ${esc(w.state)}">${esc(w.state)}</span></div>
+    <div class="meta"><strong>Responsable:</strong> ${esc(w.responsible.display_name)}<br><strong>Atención:</strong> ${esc(w.attention)} · <strong>Fecha:</strong> ${esc(w.due_date||'sin fecha')}<br>
+    <strong>Bloqueo:</strong> ${esc(w.blockers?.reason||'—')}<br><strong>Dependencias pendientes:</strong> ${esc((w.dependencies?.unresolved||[]).join(', ')||'—')}<br>
+    <strong>Finanzas:</strong> ${w.financial_effect?esc(w.financial_effect.state)+' · '+money(w.financial_effect.outstanding_amount_clp):'—'}</div>
+    <div class="actions">${workButtons(w)}</div></article>`).join('');
+
+  document.querySelectorAll('[data-work]').forEach(b=>b.addEventListener('click',()=>{
+    const work=v.operation.items.find(x=>x.work_id===b.dataset.work); const next=b.dataset.next;
+    if(next==='DONE'){
+      const evidence='MOCK-EVIDENCE-RUNTIME-'+Date.now();
+      const add=applyMockAdminAction(runtime,{action_id:'EVID-'+Date.now(),type:'EVIDENCE_ADD',evidence_id:evidence,kind:'MOCK_CONFIRMATION',display_name:'Evidencia runtime '+work.title,related_refs:[work.work_id],expected_revision:runtime.revision,at:new Date().toISOString()});
+      runtime=add.runtime;save();
+      apply({action_id:'WORK-'+Date.now(),type:'WORK_TRANSITION',work_id:work.work_id,expected_state:work.state,next_state:'DONE',evidence_ref:evidence,reason:'Cierre desde Admin Mock'});
+      return;
+    }
+    const action={action_id:'WORK-'+Date.now(),type:'WORK_TRANSITION',work_id:work.work_id,expected_state:work.state,next_state:next,reason:'Acción desde Admin Mock'};
+    if(next==='BLOCKED'){action.blocker_reason='Bloqueo manual Mock'}
+    if(next==='WAITING_EXTERNAL'){action.blocker_reason='Espera externa Mock'}
+    apply(action);
+  }));
+
+  document.getElementById('resources').innerHTML=v.resources.items.map(r=>`
+    <article class="card"><div class="row"><div><small>${esc(r.kind)}</small><h3>${esc(r.display_name)}</h3></div><span class="state">${esc(r.state)}</span></div>
+    <div class="meta"><strong>Atención:</strong> ${esc(r.attention)}</div>
+    <div class="actions">${r.state==='MAINTENANCE'?'<button class="primary" data-resource="'+esc(r.resource_id)+'" data-resource-next="AVAILABLE">Marcar disponible</button>':r.state==='AVAILABLE'?'<button data-resource="'+esc(r.resource_id)+'" data-resource-next="MAINTENANCE">Enviar a mantención</button>':''}</div></article>`).join('');
+  document.querySelectorAll('[data-resource]').forEach(b=>b.addEventListener('click',()=>{
+    const r=v.resources.items.find(x=>x.resource_id===b.dataset.resource);
+    apply({action_id:'RES-'+Date.now(),type:'RESOURCE_STATE_SET',resource_id:r.resource_id,expected_state:r.state,next_state:b.dataset.resourceNext,attention:b.dataset.resourceNext==='AVAILABLE'?'NORMAL':'BLOCKING',reason:'Acción desde Admin Mock'});
+  }));
+
+  document.getElementById('decisions').innerHTML=v.governance.decisions.map(d=>`
+    <article class="card"><div class="row"><div><small>${esc(d.kind)}</small><h3>${esc(d.display_name)}</h3></div><span class="state">${esc(d.state)}</span></div>
+    <div class="meta"><strong>Responsable:</strong> ${esc(actorName(d.responsible_actor_id))}</div>
+    <div class="actions">${d.state==='PENDING_HUMAN'?'<button class="primary" data-decision="'+esc(d.decision_id)+'" data-decision-next="APPROVED">Aprobar</button>':d.state==='APPROVED'?'<button class="primary" data-decision="'+esc(d.decision_id)+'" data-decision-next="APPLIED">Aplicar</button>':''}</div></article>`).join('');
+  document.querySelectorAll('[data-decision]').forEach(b=>b.addEventListener('click',()=>{
+    const d=v.governance.decisions.find(x=>x.decision_id===b.dataset.decision);
+    apply({action_id:'DEC-'+Date.now(),type:'DECISION_TRANSITION',decision_id:d.decision_id,expected_state:d.state,next_state:b.dataset.decisionNext,reason:'Acción desde Admin Mock'});
+  }));
+
+  document.getElementById('finance').innerHTML=v.finance.obligations.map(o=>`<tr><td>${esc(o.obligation_id)}</td><td>${esc(o.direction+' · '+o.kind)}</td><td>${esc(o.state)}</td><td>${money(o.outstanding_amount_clp)}</td><td>${o.outstanding_amount_clp>0?'<button class="btnx" data-settle="'+esc(o.obligation_id)+'">Liquidar total</button>':'—'}</td></tr>`).join('');
+  document.querySelectorAll('[data-settle]').forEach(b=>b.addEventListener('click',()=>{
+    const o=v.finance.obligations.find(x=>x.obligation_id===b.dataset.settle);
+    apply({action_id:'FIN-'+Date.now(),type:'FINANCIAL_SETTLE',obligation_id:o.obligation_id,amount_clp:o.outstanding_amount_clp,channel:'BANK_TRANSFER',evidence_ref:'MOCK-EVIDENCE-PAYMENT-'+Date.now()});
+  }));
+
+  document.getElementById('audit').innerHTML=[...v.evidence.audit].reverse().slice(0,40).map(a=>`<tr><td>${esc(a.at||'')}</td><td>${esc(a.kind)}</td><td>${esc(a.object_ref||'')}</td><td>${esc(a.reason||a.amount_clp||a.to||'')}</td></tr>`).join('');
+}
+document.getElementById('reset').addEventListener('click',()=>{runtime=createMockRuntime(golden,{createdAt:new Date().toISOString()});save();render();toast('Golden mock restablecido')});
+document.getElementById('refresh').addEventListener('click',()=>{runtime=loadRuntime();render();toast('Vista actualizada')});
+
+golden=await (await fetch('../data/club-os-mock.json',{cache:'no-store'})).json();
+runtime=loadRuntime();save();render();
+</script>
+</body>
+</html>
