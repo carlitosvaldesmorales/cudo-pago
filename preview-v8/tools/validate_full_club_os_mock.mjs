@@ -33,7 +33,9 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['memberForm','actorForm','fundraisingForm','donatedPrizeForm','octagonalIncidentForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','grantForm','fundraisingForm','donatedPrizeForm','octagonalIncidentForm','bondForm','damageForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+assert.ok(admin.includes('id="grants"'));
+assert.ok(dashboard.includes('id="grants"'));
 assert.ok(dashboard.includes('id="members"'));
 assert.ok(dashboard.includes('id="sanctions"'));
 assert.ok(admin.includes('id="sanctions"'));
@@ -110,6 +112,15 @@ assert.ok(engine.includes("UNVALUED_NOT_FINANCIAL"));
 assert.ok(engine.includes("donated prize requires completed solicitation work"));
 assert.ok(engine.includes("donor actor must match solicitation external target"));
 assert.ok(engine.includes("external_target_actor_id"));
+assert.ok(engine.includes("EXTERNAL_FUNDING_REQUEST_PREPARE"));
+assert.ok(engine.includes("EXTERNAL_FUNDING_DECISION_RECORD"));
+assert.ok(engine.includes("EXTERNAL_FUNDING_APPLICATION"));
+assert.ok(engine.includes("PENDING_EXTERNAL"));
+assert.ok(engine.includes("EXTERNAL_GRANT"));
+assert.ok(engine.includes("external funding decision requires completed application work"));
+assert.ok(engine.includes("external funding decision requires response evidence"));
+assert.ok(engine.includes("external funding request requires EXTERNAL_FUNDING_DECISION_RECORD"));
+assert.ok(engine.includes("partial funding approval must be positive and below requested amount"));
 assert.ok(admin.includes('data-select="completed-prize-work"'));
 assert.ok(dashboard.includes("Contraparte externa:"));
 assert.ok(admin.includes("data-bond-fine"));
@@ -239,6 +250,10 @@ console.log(JSON.stringify({
   fundraising_event_to_external_work:true,
   completed_prize_solicitation_to_unvalued_donated_resource:true,
   in_kind_donation_has_no_invented_financial_effect:true,
+  external_funding_request_creates_no_receivable_before_decision:true,
+  evidence_backed_grant_approval_to_receivable:true,
+  rejected_grant_creates_no_receivable:true,
+  grant_cash_only_through_financial_settlement:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));
