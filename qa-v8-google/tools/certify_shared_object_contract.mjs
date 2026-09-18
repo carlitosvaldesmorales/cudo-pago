@@ -11,7 +11,8 @@ const allowedTypes=new Set([
   'RULE_DECISION',
   'FINANCIAL_OBLIGATION',
   'FINANCIAL_MOVEMENT',
-  'DOCUMENT_EVIDENCE'
+  'DOCUMENT_EVIDENCE',
+  'WORK_ITEM'
 ]);
 
 function stable(value){
