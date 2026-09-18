@@ -1,0 +1,51 @@
+{
+  "schema_version": "CUDO_CLUB_OPERATIONAL_STATE_V1",
+  "generated_at": "2026-09-18T15:20:00.000Z",
+  "reference_date": "2026-09-18",
+  "authority": "CANONICAL_GRAPH_READ_MODEL",
+  "summary": {
+    "total": 1,
+    "open": 1,
+    "in_progress": 0,
+    "blocked": 0,
+    "waiting_external": 0,
+    "done": 0,
+    "cancelled": 0,
+    "overdue": 0
+  },
+  "items": [
+    {
+      "work_id": "CUDO-WORK-GRASS-CUT-20260921",
+      "title": "Corte de pasto del estadio",
+      "work_kind": "GRASS_CUT",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "responsible": {
+        "actor_id": "CUDO-ACTOR-MAX-FIGUEROA-001",
+        "display_name": "Maximiliano Figueroa"
+      },
+      "due_date": "2026-09-25",
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "display_name": "Estadio CUDO"
+      },
+      "source": {
+        "object_id": "CUDO-EVENT-QA-SATURDAY-MATCH-001",
+        "display_name": "Partido QA sábado"
+      },
+      "trigger_reason": "MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY",
+      "financial_context": {
+        "amount_clp": 50000,
+        "cycle": "EVERY_TWO_MONTHS",
+        "semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "evidence_refs": [
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4",
+        "qa://synthetic-match/2026-09-26"
+      ],
+      "object_version": 1
+    }
+  ],
+  "production_write": false
+}
