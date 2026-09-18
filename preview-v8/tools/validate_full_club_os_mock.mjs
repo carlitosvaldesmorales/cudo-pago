@@ -32,8 +32,10 @@ assert.ok(partidosPage.includes("mock-sports-projection.mjs"),'Partidos must con
 assert.ok(admin.includes("applyMockAdminAction"),'admin must use shared action engine');
 assert.ok(admin.includes("deriveMockReadModels"),'admin must use shared read models');
 assert.ok(admin.includes("Restablecer golden mock"),'admin must provide safe reset');
-for(const id of ['memberForm','actorForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
+for(const id of ['memberForm','actorForm','sanctionForm','resourceForm','eventForm','decisionForm','workForm','obligationForm']) assert.ok(admin.includes(`id="${id}"`),`admin missing source form ${id}`);
 assert.ok(dashboard.includes('id="members"'));
+assert.ok(dashboard.includes('id="sanctions"'));
+assert.ok(admin.includes('id="sanctions"'));
 assert.ok(dashboard.includes('id="actors"'));
 assert.ok(dashboard.includes('id="events"'));
 assert.ok(admin.includes("data-event-next"));
@@ -56,6 +58,12 @@ assert.ok(engine.includes("MEMBER_ENROLL"));
 assert.ok(engine.includes("MEMBERSHIP_DUE"));
 assert.ok(engine.includes("MEMBER_FINANCIAL_STATUS_RECALCULATED"));
 assert.ok(engine.includes("membership monthly amount must be integer >= 2000 CLP"));
+assert.ok(engine.includes("SANCTION_APPLY"));
+assert.ok(engine.includes("SANCTION_FINE"));
+assert.ok(engine.includes("SUSPENDED_PENDING_FINE"));
+assert.ok(engine.includes("ELIGIBLE_NEXT_DATE"));
+assert.ok(engine.includes("EXPELLED_TOURNAMENT"));
+assert.ok(engine.includes("serious aggression is non-payable in bounded ruleset"));
 assert.ok(engine.includes("event.sports={"));
 assert.ok(sportsProjection.includes("deriveMockSportsProjection"));
 assert.ok(sportsProjection.includes("CUDO_WEB_PARTIDOS"));
@@ -163,6 +171,9 @@ console.log(JSON.stringify({
   home_and_partidos_share_club_sports_projection:true,
   membership_enrollment_to_due:true,
   membership_payment_to_financial_status:true,
+  sanction_incident_to_fine:true,
+  sanction_settlement_to_eligibility:true,
+  serious_aggression_non_payable_expulsion:true,
   sports_content_fixture:'preview-v8/shared/seed-data.js',
   production_write:false
 },null,2));

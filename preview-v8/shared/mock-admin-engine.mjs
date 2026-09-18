@@ -23,6 +23,25 @@ const EVENT_TRANSITIONS={
   CANCELLED:new Set([])
 };
 
+const CUDO_TOURNAMENT_RULESET_REF='CUDO_QUADRANGULAR_OTONO_BOUNDED_RULESET';
+const SANCTION_RULES={
+  DOUBLE_YELLOW:{
+    fine_clp:10000,
+    rule_id:'CUDO_QUADRANGULAR_OTONO_RULE_9_DOUBLE_YELLOW',
+    consequence:'MAY_PLAY_NEXT_DATE_IF_FINE_PAID'
+  },
+  DIRECT_RED:{
+    fine_clp:15000,
+    rule_id:'CUDO_QUADRANGULAR_OTONO_RULE_9_DIRECT_RED',
+    consequence:'MAY_PLAY_NEXT_DATE_IF_FINE_PAID'
+  },
+  SERIOUS_FOUL_OR_AGGRESSION:{
+    fine_clp:null,
+    rule_id:'CUDO_QUADRANGULAR_OTONO_RULE_9_SERIOUS_AGGRESSION',
+    consequence:'EXPELLED_FROM_TOURNAMENT'
+  }
+};
+
 function assertRuntime(runtime){
   if(!runtime||runtime.schema_version!=='CUDO_MOCK_ADMIN_RUNTIME_V1') throw new Error('invalid mock runtime');
   if(!runtime.state||runtime.state.schema_version!=='CUDO_CLUB_OS_GOLDEN_MOCK_V1') throw new Error('invalid golden mock state');
@@ -221,6 +240,31 @@ function reconcileMemberFinancialState(state,actorId,at){
   return {kind:'MEMBER_FINANCIAL_STATUS_RECALCULATED',actor_id:actorId,from,to:nextStatus,outstanding_amount_clp:outstanding};
 }
 
+function reconcileSanctionEligibility(state,actorId,tournamentRef,at){
+  const actor=findBy(state.actors,'actor_id',actorId,'sanctioned actor');
+  const current=actor.sports_eligibility||{};
+  if(current.status==='EXPELLED_TOURNAMENT'){
+    return {kind:'PLAYER_ELIGIBILITY_RECALCULATED',actor_id:actorId,from:'EXPELLED_TOURNAMENT',to:'EXPELLED_TOURNAMENT',outstanding_amount_clp:Number(current.outstanding_amount_clp||0),preserved_expulsion:true};
+  }
+  const fines=(state.financial_obligations||[]).filter(x=>x.kind==='SANCTION_FINE'&&x.counterparty_ref===actorId&&x.tournament_ref===tournamentRef);
+  const outstanding=fines.reduce((sum,x)=>sum+Number(x.outstanding_amount_clp||0),0);
+  const nextStatus=outstanding===0?'ELIGIBLE_NEXT_DATE':'SUSPENDED_PENDING_FINE';
+  const from=current.status||null;
+  const sanctionRefs=(state.decisions||[]).filter(x=>x.kind==='TOURNAMENT_SANCTION'&&x.subject_actor_id===actorId&&x.tournament_ref===tournamentRef).map(x=>x.decision_id);
+  actor.sports_eligibility={
+    tournament_ref:tournamentRef,
+    status:nextStatus,
+    outstanding_amount_clp:outstanding,
+    obligation_refs:fines.map(x=>x.obligation_id),
+    sanction_refs:sanctionRefs,
+    mock:true
+  };
+  if(from!==nextStatus||Number(current.outstanding_amount_clp||0)!==outstanding){
+    appendAudit(state,{kind:'PLAYER_ELIGIBILITY_RECALCULATED',object_ref:actorId,from,to:nextStatus,tournament_ref:tournamentRef,outstanding_amount_clp:outstanding},at);
+  }
+  return {kind:'PLAYER_ELIGIBILITY_RECALCULATED',actor_id:actorId,from,to:nextStatus,outstanding_amount_clp:outstanding};
+}
+
 function cancelDerivedPreparationForEvent(state,event,at){
   const changed=[];
   for(const work of state.work_items||[]){
@@ -266,7 +310,75 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='MEMBER_ENROLL'){
+  if(action.type==='SANCTION_APPLY'){
+    const sanctionId=requireMockId(action.sanction_id,'MOCK-DECISION-SANCTION-');
+    ensureUnique(state.decisions,'decision_id',sanctionId,'sanction decision');
+    const actor=findBy(state.actors,'actor_id',action.actor_id,'sanctioned actor');
+    if(actor.actor_kind!=='PERSON') throw new Error('sanctioned actor must be PERSON');
+    const sanctionKind=String(action.sanction_kind||'').trim().toUpperCase();
+    const rule=SANCTION_RULES[sanctionKind];
+    if(!rule) throw new Error('unsupported bounded tournament sanction');
+    const tournamentRef=String(action.tournament_ref||CUDO_TOURNAMENT_RULESET_REF);
+    if(tournamentRef!==CUDO_TOURNAMENT_RULESET_REF) throw new Error('sanction tournament scope not allowed');
+    if(actor.sports_eligibility?.status==='EXPELLED_TOURNAMENT') throw new Error('expelled actor cannot regain eligibility through payable sanction');
+    if(sanctionKind==='SERIOUS_FOUL_OR_AGGRESSION'&&action.fine_amount_clp!=null){
+      throw new Error('serious aggression is non-payable in bounded ruleset');
+    }
+    const decision={
+      decision_id:sanctionId,
+      kind:'TOURNAMENT_SANCTION',
+      display_name:`${sanctionKind} · ${actor.display_name}`,
+      state:'APPLIED',
+      responsible_actor_id:actor.actor_id,
+      subject_actor_id:actor.actor_id,
+      sanction_kind:sanctionKind,
+      tournament_ref:tournamentRef,
+      rule_id:rule.rule_id,
+      consequence:rule.consequence,
+      mock:true
+    };
+    state.decisions.push(decision);
+    appendAudit(state,{kind:'SANCTION_INCIDENT_RECORDED',object_ref:sanctionId,actor_ref:actor.actor_id,sanction_kind:sanctionKind,tournament_ref:tournamentRef},at);
+    appendAudit(state,{kind:'TOURNAMENT_RULE_APPLIED',object_ref:sanctionId,actor_ref:actor.actor_id,rule_id:rule.rule_id,consequence:rule.consequence},at);
+    effects.push({kind:'SANCTION_INCIDENT_RECORDED',sanction_id:sanctionId,actor_id:actor.actor_id,sanction_kind:sanctionKind});
+    effects.push({kind:'TOURNAMENT_RULE_APPLIED',sanction_id:sanctionId,rule_id:rule.rule_id});
+
+    if(sanctionKind==='SERIOUS_FOUL_OR_AGGRESSION'){
+      const from=actor.sports_eligibility?.status||null;
+      actor.sports_eligibility={
+        tournament_ref:tournamentRef,
+        status:'EXPELLED_TOURNAMENT',
+        outstanding_amount_clp:0,
+        obligation_refs:[],
+        sanction_refs:[...(actor.sports_eligibility?.sanction_refs||[]),sanctionId],
+        mock:true
+      };
+      appendAudit(state,{kind:'PLAYER_ELIGIBILITY_RECALCULATED',object_ref:actor.actor_id,from,to:'EXPELLED_TOURNAMENT',tournament_ref:tournamentRef,outstanding_amount_clp:0},at);
+      effects.push({kind:'PLAYER_ELIGIBILITY_RECALCULATED',actor_id:actor.actor_id,from,to:'EXPELLED_TOURNAMENT',outstanding_amount_clp:0});
+    } else {
+      const obligationId=`MOCK-OBL-SANCTION-${sanctionId.replace(/^MOCK-DECISION-SANCTION-/,'')}`;
+      ensureUnique(state.financial_obligations,'obligation_id',obligationId,'sanction fine');
+      const obligation={
+        obligation_id:obligationId,
+        direction:'RECEIVABLE',
+        kind:'SANCTION_FINE',
+        amount_clp:rule.fine_clp,
+        settled_amount_clp:0,
+        outstanding_amount_clp:rule.fine_clp,
+        state:'OPEN',
+        cause_ref:sanctionId,
+        counterparty_ref:actor.actor_id,
+        tournament_ref:tournamentRef,
+        sanction_kind:sanctionKind,
+        mock:true
+      };
+      state.financial_obligations.push(obligation);
+      appendAudit(state,{kind:'SANCTION_FINE_DERIVED',object_ref:obligationId,cause_ref:sanctionId,actor_ref:actor.actor_id,amount_clp:rule.fine_clp,tournament_ref:tournamentRef},at);
+      effects.push({kind:'SANCTION_FINE_DERIVED',obligation_id:obligationId,actor_id:actor.actor_id,amount_clp:rule.fine_clp});
+      const eligibilityEffect=reconcileSanctionEligibility(state,actor.actor_id,tournamentRef,at);
+      if(eligibilityEffect) effects.push(eligibilityEffect);
+    }
+  } else if(action.type==='MEMBER_ENROLL'){
     const actorId=requireMockId(action.actor_id,'MOCK-ACTOR-MEMBER-');
     ensureUnique(state.actors,'actor_id',actorId,'member actor');
     const amount=Number(action.amount_clp??2000);
@@ -556,6 +668,10 @@ export function applyMockAdminAction(runtime,action){
       const memberEffect=reconcileMemberFinancialState(state,obligation.cause_ref,at);
       if(memberEffect) effects.push(memberEffect);
     }
+    if(obligation.kind==='SANCTION_FINE'&&obligation.counterparty_ref&&obligation.tournament_ref){
+      const eligibilityEffect=reconcileSanctionEligibility(state,obligation.counterparty_ref,obligation.tournament_ref,at);
+      if(eligibilityEffect) effects.push(eligibilityEffect);
+    }
   } else {
     throw new Error(`unsupported action type ${action.type}`);
   }
@@ -629,16 +745,17 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
       generated_at:runtime.updated_at,
       authority:'GOLDEN_MOCK_RUNTIME',
       mock:true,
-      summary:{actors:state.actors.length,events:state.events.length,members:state.actors.filter(x=>x.membership).length},
+      summary:{actors:state.actors.length,events:state.events.length,members:state.actors.filter(x=>x.membership).length,sanctioned_actors:state.actors.filter(x=>x.sports_eligibility).length},
       actors:clone(state.actors),
       members:clone(state.actors.filter(x=>x.membership)),
+      sanctioned_actors:clone(state.actors.filter(x=>x.sports_eligibility)),
       events:clone(state.events),
       production_write:false
     },
     operation,
     finance,
     resources:{schema_version:'CUDO_RESOURCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.resources.length,blocking:state.resources.filter(x=>x.attention==='BLOCKING').length,action_required:state.resources.filter(x=>x.attention==='ACTION_REQUIRED').length},items:clone(state.resources),production_write:false},
-    governance:{schema_version:'CUDO_GOVERNANCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.decisions.length,pending_human:state.decisions.filter(x=>x.state==='PENDING_HUMAN').length,approved_or_applied:state.decisions.filter(x=>['APPROVED','APPLIED'].includes(x.state)).length},decisions:clone(state.decisions),production_write:false},
+    governance:{schema_version:'CUDO_GOVERNANCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.decisions.length,pending_human:state.decisions.filter(x=>x.state==='PENDING_HUMAN').length,approved_or_applied:state.decisions.filter(x=>['APPROVED','APPLIED'].includes(x.state)).length,sanctions:state.decisions.filter(x=>x.kind==='TOURNAMENT_SANCTION').length},decisions:clone(state.decisions),production_write:false},
     evidence:{schema_version:'CUDO_EVIDENCE_AUDIT_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{evidence_total:state.evidence.length,evidence_missing:state.evidence.filter(x=>x.state==='MISSING').length,audit_events:(state.audit||[]).length},evidence:clone(state.evidence),audit:clone(state.audit||[]),production_write:false}
   };
 }
