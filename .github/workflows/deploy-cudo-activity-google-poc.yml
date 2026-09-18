@@ -5,7 +5,7 @@ on:
     branches:
       - qa/club-os-activity-google-poc-20260917
     paths:
-      - 'qa-v8-google/apps-script/CudoActivityQaWeb.gs'
+      - 'qa-v8-google/apps-script/CudoActivityQaWeb.gs'\n      - 'qa-v8-google/apps-script/CudoActivityQaView.html'
       - '.github/workflows/deploy-cudo-activity-google-poc.yml'
   workflow_dispatch:
 
@@ -27,11 +27,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json,os,pathlib,re,time,urllib.parse,urllib.request
+          import json,os,pathlib,re,time,urllib.parse,urllib.request,urllib.error
 
           SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
           SHEET_ID='1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA'
-          SOURCE_PATH=pathlib.Path('qa-v8-google/apps-script/CudoActivityQaWeb.gs')
+          SOURCE_PATH=pathlib.Path('qa-v8-google/apps-script/CudoActivityQaWeb.gs')\n          HTML_PATH=pathlib.Path('qa-v8-google/apps-script/CudoActivityQaView.html')
 
           token_body=urllib.parse.urlencode({
             'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
@@ -60,7 +60,7 @@ jobs:
           if not original_files:
             raise SystemExit('Apps Script project content is empty')
 
-          source=SOURCE_PATH.read_text()
+          source=SOURCE_PATH.read_text()\n          html_source=HTML_PATH.read_text()
           public_files=[]
           manifest=None
           removed_handlers=[]
@@ -78,7 +78,7 @@ jobs:
           manifest['timeZone']='America/Santiago'
           manifest['webapp']={'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING'}
           public_files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
-          public_files.append({'name':'CudoActivityQaWeb','type':'SERVER_JS','source':source})
+          public_files.append({'name':'CudoActivityQaWeb','type':'SERVER_JS','source':source})\n          public_files.append({'name':'CudoActivityQaView','type':'HTML','source':html_source})
 
           def sheet_values(a1):
             enc=urllib.parse.quote(a1,safe='!:$')
