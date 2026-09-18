@@ -205,6 +205,22 @@ function derivePostEventWork(state,event,at){
   return created;
 }
 
+function reconcileMemberFinancialState(state,actorId,at){
+  const actor=(state.actors||[]).find(x=>x.actor_id===actorId);
+  if(!actor?.membership) return null;
+  const dues=(state.financial_obligations||[]).filter(x=>x.kind==='MEMBERSHIP_DUE'&&x.cause_ref===actorId);
+  const outstanding=dues.reduce((sum,x)=>sum+Number(x.outstanding_amount_clp||0),0);
+  const nextStatus=outstanding===0?'AL_DIA':'PENDIENTE';
+  const from=actor.membership.financial_status||null;
+  actor.membership.financial_status=nextStatus;
+  actor.membership.outstanding_amount_clp=outstanding;
+  actor.membership.obligation_refs=dues.map(x=>x.obligation_id);
+  if(from!==nextStatus){
+    appendAudit(state,{kind:'MEMBER_FINANCIAL_STATUS_RECALCULATED',object_ref:actorId,from,to:nextStatus,outstanding_amount_clp:outstanding},at);
+  }
+  return {kind:'MEMBER_FINANCIAL_STATUS_RECALCULATED',actor_id:actorId,from,to:nextStatus,outstanding_amount_clp:outstanding};
+}
+
 function cancelDerivedPreparationForEvent(state,event,at){
   const changed=[];
   for(const work of state.work_items||[]){
@@ -250,7 +266,53 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='ACTOR_CREATE'){
+  if(action.type==='MEMBER_ENROLL'){
+    const actorId=requireMockId(action.actor_id,'MOCK-ACTOR-MEMBER-');
+    ensureUnique(state.actors,'actor_id',actorId,'member actor');
+    const amount=Number(action.amount_clp??2000);
+    if(!Number.isInteger(amount)||amount<2000) throw new Error('membership monthly amount must be integer >= 2000 CLP');
+    const period=String(action.period||'').trim();
+    if(!/^\d{4}-\d{2}$/.test(period)) throw new Error('membership period must use YYYY-MM');
+    const actor={
+      actor_id:actorId,
+      display_name:syntheticName(action.display_name),
+      actor_kind:'PERSON',
+      role:'MEMBER',
+      membership:{
+        status:'ACTIVE',
+        plan:'MONTHLY',
+        period,
+        monthly_due_amount_clp:amount,
+        financial_status:'PENDIENTE',
+        outstanding_amount_clp:amount,
+        obligation_refs:[],
+        external_subscription_connected:false
+      },
+      mock:true
+    };
+    state.actors.push(actor);
+    const obligationId=`MOCK-OBL-DUE-${actorId.replace(/^MOCK-ACTOR-MEMBER-/,'')}-${period}`;
+    ensureUnique(state.financial_obligations,'obligation_id',obligationId,'membership due');
+    const obligation={
+      obligation_id:obligationId,
+      direction:'RECEIVABLE',
+      kind:'MEMBERSHIP_DUE',
+      amount_clp:amount,
+      settled_amount_clp:0,
+      outstanding_amount_clp:amount,
+      state:'OPEN',
+      cause_ref:actorId,
+      counterparty_ref:actorId,
+      period,
+      mock:true
+    };
+    state.financial_obligations.push(obligation);
+    actor.membership.obligation_refs=[obligationId];
+    appendAudit(state,{kind:'SOURCE_MEMBER_ENROLLED',object_ref:actorId,period,monthly_due_amount_clp:amount},at);
+    appendAudit(state,{kind:'MEMBERSHIP_DUE_DERIVED',object_ref:obligationId,cause_ref:actorId,period,amount_clp:amount},at);
+    effects.push({kind:'SOURCE_MEMBER_ENROLLED',actor_id:actorId});
+    effects.push({kind:'MEMBERSHIP_DUE_DERIVED',obligation_id:obligationId,actor_id:actorId,amount_clp:amount,period});
+  } else if(action.type==='ACTOR_CREATE'){
     const actorId=requireMockId(action.actor_id,'MOCK-ACTOR-');
     ensureUnique(state.actors,'actor_id',actorId,'actor');
     const actor={
@@ -563,8 +625,9 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
       generated_at:runtime.updated_at,
       authority:'GOLDEN_MOCK_RUNTIME',
       mock:true,
-      summary:{actors:state.actors.length,events:state.events.length},
+      summary:{actors:state.actors.length,events:state.events.length,members:state.actors.filter(x=>x.membership).length},
       actors:clone(state.actors),
+      members:clone(state.actors.filter(x=>x.membership)),
       events:clone(state.events),
       production_write:false
     },
