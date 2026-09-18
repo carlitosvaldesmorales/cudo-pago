@@ -1,0 +1,53 @@
+name: Certify CUDO Operational Work State
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-shared-object-contract-v1.json'
+      - 'qa-v8-google/contracts/cudo-shared-object-fixture-v1.json'
+      - 'qa-v8-google/tools/certify_shared_object_contract.mjs'
+      - 'qa-v8-google/contracts/cudo-work-item-contract-v1.json'
+      - 'qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json'
+      - 'qa-v8-google/tools/work_item_engine.mjs'
+      - 'qa-v8-google/tools/certify_work_item_engine.mjs'
+      - '.github/workflows/certify-cudo-operational-work-state.yml'
+      - 'qa-v8-google/operacion/**'
+      - 'qa-v8-google/data/operacion.json'
+  push:
+    branches:
+      - 'feat/cudo-operational-work-state-v1'
+    paths:
+      - 'qa-v8-google/contracts/cudo-shared-object-contract-v1.json'
+      - 'qa-v8-google/contracts/cudo-shared-object-fixture-v1.json'
+      - 'qa-v8-google/tools/certify_shared_object_contract.mjs'
+      - 'qa-v8-google/contracts/cudo-work-item-contract-v1.json'
+      - 'qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json'
+      - 'qa-v8-google/tools/work_item_engine.mjs'
+      - 'qa-v8-google/tools/certify_work_item_engine.mjs'
+      - '.github/workflows/certify-cudo-operational-work-state.yml'
+      - 'qa-v8-google/operacion/**'
+      - 'qa-v8-google/data/operacion.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate syntax
+        run: |
+          node --check qa-v8-google/tools/certify_shared_object_contract.mjs
+          node --check qa-v8-google/tools/work_item_engine.mjs
+          node --check qa-v8-google/tools/certify_work_item_engine.mjs
+      - name: Re-certify shared object contract
+        run: node qa-v8-google/tools/certify_shared_object_contract.mjs
+      - name: Certify responsibility work state cluster
+        run: node qa-v8-google/tools/certify_work_item_engine.mjs
