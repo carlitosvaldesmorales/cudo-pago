@@ -22,6 +22,7 @@ on:
       - 'preview-v8/tools/certify_mock_facility_damage_compensation.mjs'
       - 'preview-v8/tools/certify_mock_administrative_match_outcome.mjs'
       - 'preview-v8/tools/certify_mock_tournament_bond.mjs'
+      - 'preview-v8/tools/certify_mock_octagonal_incident_sports_bond.mjs'
       - 'preview-v8/shared/mock-sports-projection.mjs'
       - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/partidos/index.html'
@@ -58,6 +59,7 @@ jobs:
           node --check preview-v8/tools/certify_mock_facility_damage_compensation.mjs
           node --check preview-v8/tools/certify_mock_administrative_match_outcome.mjs
           node --check preview-v8/tools/certify_mock_tournament_bond.mjs
+          node --check preview-v8/tools/certify_mock_octagonal_incident_sports_bond.mjs
           node --check preview-v8/shared/page-ux.js
       - name: Certify full Club OS golden mock
         run: node preview-v8/tools/validate_full_club_os_mock.mjs
@@ -79,3 +81,5 @@ jobs:
         run: node preview-v8/tools/certify_mock_administrative_match_outcome.mjs
       - name: Certify tournament bond
         run: node preview-v8/tools/certify_mock_tournament_bond.mjs
+      - name: Certify octagonal incident sports and bond
+        run: node preview-v8/tools/certify_mock_octagonal_incident_sports_bond.mjs
