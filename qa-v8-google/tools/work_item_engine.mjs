@@ -51,11 +51,12 @@ function stableTransitionId(payload){
 export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:00:00.000Z'}){
   const state=clone(objects);
   const map=objectMap(state);
-  const rules=state.filter(x=>x.object_type==='RULE_DECISION'&&x.data?.work_rule_kind==='WEEKLY_RESOURCE_MAINTENANCE_WITH_EVENT_CONFLICT');
+  const weeklyRules=state.filter(x=>x.object_type==='RULE_DECISION'&&x.data?.work_rule_kind==='WEEKLY_RESOURCE_MAINTENANCE_WITH_EVENT_CONFLICT');
+  const postEventRules=state.filter(x=>x.object_type==='RULE_DECISION'&&x.data?.work_rule_kind==='POST_EVENT_RESOURCE_WORK');
   const created=[];
   const audited=[];
 
-  for(const rule of rules){
+  for(const rule of weeklyRules){
     const actor=relationTarget(rule,'ASSIGNED_TO',map,'ACTOR');
     const resource=relationTarget(rule,'APPLIES_TO_RESOURCE',map,'RESOURCE_FACILITY');
     const events=state.filter(x=>
@@ -135,6 +136,88 @@ export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:0
       });
     }
   }
+  for(const rule of postEventRules){
+    const actor=relationTarget(rule,'ASSIGNED_TO',map,'ACTOR');
+    const resource=relationTarget(rule,'APPLIES_TO_RESOURCE',map,'RESOURCE_FACILITY');
+    const events=state.filter(x=>
+      x.object_type==='ACTIVITY_EVENT' &&
+      x.data?.activity_kind===rule.data.trigger_activity_kind &&
+      x.lifecycle_state===rule.data.trigger_lifecycle_state &&
+      usesResource(x,resource.object_id)
+    );
+    for(const event of events){
+      const workKindId=String(rule.data.work_kind).replaceAll('_','-');
+      const eventId=String(event.object_id).replace(/^CUDO-EVENT-/,'').replaceAll('_','-');
+      const workId=`CUDO-WORK-${workKindId}-${eventId}`;
+      const existing=map.get(workId);
+      if(existing){
+        audited.push({kind:'NOOP_EXISTING_WORK',work_id:workId,event_id:event.object_id});
+        continue;
+      }
+      const work={
+        schema_version:'CUDO_SHARED_OBJECT_CONTRACT_V1',
+        object_id:workId,
+        object_type:'WORK_ITEM',
+        object_version:1,
+        lifecycle_state:'OPEN',
+        data:{
+          work_kind:rule.data.work_kind,
+          title:rule.data.title,
+          responsible_actor_id:actor.object_id,
+          responsible_display_name:actor.data.display_name,
+          resource_id:resource.object_id,
+          resource_display_name:resource.data.display_name,
+          source_object_id:event.object_id,
+          source_display_name:event.data.display_name,
+          due_date:null,
+          priority:rule.data.priority,
+          trigger_reason:'EVENT_COMPLETED_REQUIRES_WORK',
+          financial_context_amount_clp:rule.data.financial_context_amount_clp??null,
+          financial_context_min_amount_clp:rule.data.financial_context_min_amount_clp??null,
+          financial_context_max_amount_clp:rule.data.financial_context_max_amount_clp??null,
+          financial_context_unit_amount_clp:rule.data.financial_context_unit_amount_clp??null,
+          financial_context_unit_label:rule.data.financial_context_unit_label??null,
+          financial_context_cycle:rule.data.financial_context_cycle??null,
+          financial_context_condition:rule.data.financial_context_condition??null,
+          financial_context_semantics:rule.data.financial_context_semantics
+        },
+        field_semantics:Object.fromEntries([
+          'work_kind','title','responsible_actor_id','responsible_display_name','resource_id',
+          'resource_display_name','source_object_id','source_display_name','due_date','priority',
+          'trigger_reason','financial_context_amount_clp','financial_context_min_amount_clp',
+          'financial_context_max_amount_clp','financial_context_unit_amount_clp',
+          'financial_context_unit_label','financial_context_cycle','financial_context_condition',
+          'financial_context_semantics'
+        ].map(field=>[field,{state_kind:'DERIVED',rule_ids:[rule.data.rule_id||rule.object_id]}])),
+        relationships:[
+          {relationship_id:`REL-${workId}-ACTOR`,relationship_type:'ASSIGNED_TO',target_object_id:actor.object_id},
+          {relationship_id:`REL-${workId}-RESOURCE`,relationship_type:'APPLIES_TO_RESOURCE',target_object_id:resource.object_id},
+          {relationship_id:`REL-${workId}-EVENT`,relationship_type:'CAUSED_BY_EVENT',target_object_id:event.object_id},
+          {relationship_id:`REL-${workId}-RULE`,relationship_type:'DERIVED_FROM_RULE',target_object_id:rule.object_id}
+        ],
+        provenance:{
+          created_at:now,
+          updated_at:null,
+          source_system:'CUDO_WORK_ITEM_ENGINE',
+          source_refs:[...new Set([...(rule.provenance?.source_refs||[]),...(event.provenance?.source_refs||[])])],
+          transition_id:null
+        },
+        legacy_refs:[]
+      };
+      state.push(work);
+      map.set(workId,work);
+      created.push(work);
+      audited.push({
+        kind:'WORK_ITEM_CREATED',
+        work_id:workId,
+        responsible_actor_id:actor.object_id,
+        source_object_id:event.object_id,
+        due_date:null,
+        reason:work.data.trigger_reason
+      });
+    }
+  }
+
   return {ok:true,objects:state,created,audit:audited,production_write:false};
 }
 
@@ -192,7 +275,8 @@ export function buildClubOperationalStateProjection({
   const items=workItems.map(work=>{
     const key=work.lifecycle_state.toLowerCase();
     if(Object.hasOwn(summary,key)) summary[key]+=1;
-    const overdue=!['DONE','CANCELLED'].includes(work.lifecycle_state)&&String(work.data.due_date)<referenceDate;
+    const dueDate=work.data.due_date==null||work.data.due_date===''?null:String(work.data.due_date);
+    const overdue=Boolean(dueDate)&&!['DONE','CANCELLED'].includes(work.lifecycle_state)&&dueDate<referenceDate;
     if(overdue) summary.overdue+=1;
     const attention=work.lifecycle_state==='BLOCKED'?'BLOCKED':overdue?'OVERDUE':work.lifecycle_state==='OPEN'?'PENDING':work.lifecycle_state;
     return {
@@ -202,14 +286,19 @@ export function buildClubOperationalStateProjection({
       state:work.lifecycle_state,
       attention,
       responsible:{actor_id:work.data.responsible_actor_id,display_name:work.data.responsible_display_name},
-      due_date:work.data.due_date,
+      due_date:dueDate,
       priority:work.data.priority,
       resource:{resource_id:work.data.resource_id,display_name:work.data.resource_display_name},
       source:{object_id:work.data.source_object_id,display_name:work.data.source_display_name},
       trigger_reason:work.data.trigger_reason,
       financial_context:{
-        amount_clp:work.data.financial_context_amount_clp,
-        cycle:work.data.financial_context_cycle,
+        amount_clp:work.data.financial_context_amount_clp??null,
+        min_amount_clp:work.data.financial_context_min_amount_clp??null,
+        max_amount_clp:work.data.financial_context_max_amount_clp??null,
+        unit_amount_clp:work.data.financial_context_unit_amount_clp??null,
+        unit_label:work.data.financial_context_unit_label??null,
+        cycle:work.data.financial_context_cycle??null,
+        condition:work.data.financial_context_condition??null,
         semantics:work.data.financial_context_semantics
       },
       evidence_refs:[...(work.provenance?.source_refs||[])],
