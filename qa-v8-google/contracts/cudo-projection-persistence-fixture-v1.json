@@ -1,0 +1,40 @@
+{
+  "schema_version": "CUDO_PROJECTION_PERSISTENCE_FIXTURE_V1",
+  "legacy_public": [
+    {
+      "key": "partidos",
+      "source": "CUDO_WEB_PARTIDOS",
+      "object_type": "ACTIVITY_EVENT",
+      "fields": [
+        "competencia",
+        "fecha",
+        "hora",
+        "categoria",
+        "local",
+        "visita",
+        "recinto",
+        "estado_partido",
+        "goles_local",
+        "goles_visita"
+      ]
+    }
+  ],
+  "targets": [
+    {
+      "kind": "JSON_FILE",
+      "document": "partidos",
+      "path": "preview-v8/data/partidos.json"
+    },
+    {
+      "kind": "JSON_FILE",
+      "document": "ADMIN",
+      "path": "preview-v8/admin/data/finance.json"
+    },
+    {
+      "kind": "SHEETS_TABLE",
+      "table": "FINANCIAL_OBLIGATIONS",
+      "spreadsheet_id": "SYNTHETIC-CUDO-ADMIN",
+      "range": "FINANCIAL_OBLIGATIONS!A:I"
+    }
+  ]
+}
