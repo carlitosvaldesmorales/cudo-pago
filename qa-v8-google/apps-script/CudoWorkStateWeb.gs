@@ -70,7 +70,8 @@ function cudoWorkRender_(message){
       '<p><b>Estado:</b> '+cudoWorkEsc_(r.STATE)+' · <b>Atención:</b> '+cudoWorkEsc_(r.ATTENTION)+'</p>'+
       '<p><b>Causa:</b> '+cudoWorkEsc_(r.SOURCE)+'</p>'+
       (r.SCHEDULE_CONTEXT?'<p><b>Ventana:</b> '+cudoWorkEsc_(r.SCHEDULE_CONTEXT)+'</p>':'')+
-      (r.FINANCIAL_CONTEXT?'<p><b>Contexto financiero:</b> '+cudoWorkEsc_(r.FINANCIAL_CONTEXT)+'</p>':'')+
+      (r.FINANCIAL_CONTEXT?'<p><b>Contexto financiero de la regla:</b> '+cudoWorkEsc_(r.FINANCIAL_CONTEXT)+'</p>':'')+
+      (r.FINANCIAL_EFFECT?'<p><b>Efecto financiero real:</b> '+cudoWorkEsc_(r.FINANCIAL_EFFECT)+(r.OUTSTANDING_CLP?' · pendiente CLP '+cudoWorkEsc_(r.OUTSTANDING_CLP):'')+'</p>':'')+
       form+
       '</article>';
   }).join('');
