@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#03163d">
+  <meta name="robots" content="noindex,nofollow">
+  <title>C.U.D.O. — Estado operacional QA</title>
+  <link rel="stylesheet" href="../shared/site.css">
+  <style>
+    .opshead{background:linear-gradient(125deg,#03163d,#083e83);color:#fff;padding:62px 0 54px;border-bottom:7px solid #e21b2d}
+    .opshead h1{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:clamp(52px,7vw,82px);line-height:.9;margin:10px 0}
+    .opshead p{max-width:760px;color:#d8e1f0;line-height:1.6}
+    .opsnav{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}.opsnav a{color:#fff;font-weight:800;font-size:11px}
+    .opsmain{padding:38px 0 70px}.opskpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .opskpi{background:#fff;border-radius:16px;padding:20px;box-shadow:0 10px 28px rgba(3,22,61,.08);border:1px solid #e1e6ed}
+    .opskpi small{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:#66738a;text-transform:uppercase}
+    .opskpi strong{display:block;font-family:'Barlow Condensed';font-size:42px;color:#03163d;margin-top:5px}
+    .opsnotice{padding:14px 16px;background:#fff8da;border-left:4px solid #f3c53b;border-radius:0 12px 12px 0;font-size:12px;line-height:1.55;margin-bottom:22px}
+    .worklist{display:grid;gap:16px}.workcard{background:#fff;border-radius:18px;padding:22px;box-shadow:0 12px 30px rgba(3,22,61,.09);border:1px solid #dfe4eb}
+    .worktop{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.workcard h2{font-family:'Barlow Condensed';font-size:31px;text-transform:uppercase;line-height:1;margin:4px 0 8px}
+    .state{display:inline-flex;padding:7px 10px;border-radius:999px;background:#fff1c2;color:#6c5400;font-size:9px;font-weight:900;letter-spacing:.08em}
+    .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.metabox{background:#f5f7fa;border-radius:12px;padding:13px}
+    .metabox small{display:block;color:#66738a;font-size:8px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}.metabox strong{display:block;margin-top:5px;font-size:13px;color:#03163d}
+    .cause{margin-top:15px;padding-top:14px;border-top:1px solid #e6eaf0;color:#4f5d73;font-size:12px;line-height:1.55}
+    .finance{margin-top:12px;font-size:11px;color:#4f5d73}.finance strong{color:#03163d}.empty{padding:24px;background:#fff;border-radius:16px}
+    @media(max-width:800px){.opskpis{grid-template-columns:repeat(2,1fr)}.meta{grid-template-columns:1fr}.worktop{display:block}.state{margin-top:10px}}
+  </style>
+</head>
+<body>
+  <div class="club-stripe"></div>
+  <div class="qa">QA · OPERACIÓN</div>
+  <header class="opshead">
+    <div class="wrap">
+      <div class="eyebrow">C.U.D.O. · Control operacional QA</div>
+      <h1>Estado del club</h1>
+      <p>Primera proyección del estado operacional canónico: qué trabajo existe, quién responde, cuándo debe ocurrir, qué lo originó y qué contexto financiero tiene.</p>
+      <div class="opsnav"><a href="../">← Inicio QA</a><a href="../partidos/">Partidos</a><a href="../equipos/">Equipos</a></div>
+    </div>
+  </header>
+  <main class="opsmain">
+    <div class="wrap">
+      <div class="opsnotice"><strong>Prueba QA controlada.</strong> La regla de corte de pasto y el responsable provienen del checklist real CUDO. El partido mostrado como causa es un trigger sintético QA; no representa un partido real publicado. El monto mostrado es contexto de pago de la regla, no una deuda actual.</div>
+      <section class="opskpis" aria-label="Resumen operacional">
+        <div class="opskpi"><small>Trabajo total</small><strong id="kTotal">—</strong></div>
+        <div class="opskpi"><small>Pendiente</small><strong id="kOpen">—</strong></div>
+        <div class="opskpi"><small>Bloqueado</small><strong id="kBlocked">—</strong></div>
+        <div class="opskpi"><small>Atrasado</small><strong id="kOverdue">—</strong></div>
+      </section>
+      <section>
+        <div class="section-head"><div><div class="section-kicker">Trabajo derivado del estado del club</div><h2 class="section-title">QUÉ HAY QUE HACER</h2></div></div>
+        <div id="workList" class="worklist"><div class="empty">Cargando estado operacional…</div></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const money=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(n||0));
+    const reasonLabel=v=>v==='MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY'
+      ? 'Partido el sábado: el corte se adelanta al viernes.'
+      : 'Mantención semanal en su día normal.';
+    fetch('../data/operacion.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo cargar el estado');return r.json()}).then(data=>{
+      document.getElementById('kTotal').textContent=data.summary.total;
+      document.getElementById('kOpen').textContent=data.summary.open;
+      document.getElementById('kBlocked').textContent=data.summary.blocked;
+      document.getElementById('kOverdue').textContent=data.summary.overdue;
+      const target=document.getElementById('workList');
+      target.innerHTML='';
+      for(const item of data.items){
+        const card=document.createElement('article');card.className='workcard';
+        card.innerHTML=`
+          <div class="worktop"><div><div class="section-kicker">${item.resource.display_name}</div><h2>${item.title}</h2></div><span class="state">${item.state}</span></div>
+          <div class="meta">
+            <div class="metabox"><small>Responsable</small><strong>${item.responsible.display_name}</strong></div>
+            <div class="metabox"><small>Fecha objetivo</small><strong>${item.due_date}</strong></div>
+            <div class="metabox"><small>Atención</small><strong>${item.attention}</strong></div>
+          </div>
+          <div class="cause"><strong>Causa:</strong> ${item.source.display_name}<br><strong>Regla:</strong> ${reasonLabel(item.trigger_reason)}</div>
+          <div class="finance"><strong>Contexto financiero:</strong> ${money(item.financial_context.amount_clp)} · ${item.financial_context.cycle}. <strong>No constituye una obligación actual.</strong></div>
+        `;
+        target.appendChild(card);
+      }
+      if(!data.items.length) target.innerHTML='<div class="empty">No hay trabajo operacional abierto.</div>';
+    }).catch(err=>{document.getElementById('workList').innerHTML='<div class="empty">'+err.message+'</div>'});
+  </script>
+</body>
+</html>

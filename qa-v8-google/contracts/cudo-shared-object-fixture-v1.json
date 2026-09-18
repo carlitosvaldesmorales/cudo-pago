@@ -14,11 +14,15 @@
       "field_semantics": {
         "display_name": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://actor/display_name"]
+          "source_refs": [
+            "fixture://actor/display_name"
+          ]
         },
         "membership_state": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://actor/membership_state"]
+          "source_refs": [
+            "fixture://actor/membership_state"
+          ]
         }
       },
       "relationships": [],
@@ -26,7 +30,9 @@
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://actor"]
+        "source_refs": [
+          "fixture://actor"
+        ]
       },
       "legacy_refs": [
         {
@@ -50,19 +56,27 @@
       "field_semantics": {
         "activity_kind": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://event/activity_kind"]
+          "source_refs": [
+            "fixture://event/activity_kind"
+          ]
         },
         "entry_price": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://event/entry_price"]
+          "source_refs": [
+            "fixture://event/entry_price"
+          ]
         },
         "paid_entries": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://event/paid_entries"]
+          "source_refs": [
+            "fixture://event/paid_entries"
+          ]
         },
         "entry_revenue": {
           "state_kind": "DERIVED",
-          "rule_ids": ["RULE_ENTRY_REVENUE_V1"]
+          "rule_ids": [
+            "RULE_ENTRY_REVENUE_V1"
+          ]
         }
       },
       "relationships": [
@@ -76,7 +90,9 @@
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://event"]
+        "source_refs": [
+          "fixture://event"
+        ]
       },
       "legacy_refs": [
         {
@@ -99,15 +115,21 @@
       "field_semantics": {
         "obligation_kind": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://obligation/kind"]
+          "source_refs": [
+            "fixture://obligation/kind"
+          ]
         },
         "amount": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://obligation/amount"]
+          "source_refs": [
+            "fixture://obligation/amount"
+          ]
         },
         "settlement_state": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://obligation/settlement_state"]
+          "source_refs": [
+            "fixture://obligation/settlement_state"
+          ]
         }
       },
       "relationships": [
@@ -121,7 +143,9 @@
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://obligation"]
+        "source_refs": [
+          "fixture://obligation"
+        ]
       },
       "legacy_refs": []
     },
@@ -138,7 +162,9 @@
       "field_semantics": {
         "evidence_kind": {
           "state_kind": "SOURCE",
-          "source_refs": ["fixture://evidence/kind"]
+          "source_refs": [
+            "fixture://evidence/kind"
+          ]
         },
         "opaque_legacy_value": {
           "state_kind": "OPAQUE",
@@ -150,7 +176,76 @@
         "created_at": "2026-09-18T12:00:00.000Z",
         "updated_at": null,
         "source_system": "CUDO_SYNTHETIC_QA",
-        "source_refs": ["fixture://evidence"]
+        "source_refs": [
+          "fixture://evidence"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-WORK-SYNTH-001",
+      "object_type": "WORK_ITEM",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "work_kind": "SYNTHETIC_WORK",
+        "title": "Trabajo sintético CUDO",
+        "responsible_actor_id": "CUDO-ACTOR-SYNTH-001",
+        "due_date": "2026-09-25",
+        "priority": "NORMAL"
+      },
+      "field_semantics": {
+        "work_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://work/kind"
+          ]
+        },
+        "title": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://work/title"
+          ]
+        },
+        "responsible_actor_id": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://work/responsible"
+          ]
+        },
+        "due_date": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://work/due_date"
+          ]
+        },
+        "priority": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://work/priority"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-WORK-ACTOR-001",
+          "relationship_type": "ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-SYNTH-001"
+        },
+        {
+          "relationship_id": "REL-WORK-EVENT-001",
+          "relationship_type": "CAUSED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-SYNTH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T12:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": [
+          "fixture://work"
+        ]
       },
       "legacy_refs": []
     }

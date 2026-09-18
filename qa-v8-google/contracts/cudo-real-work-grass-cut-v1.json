@@ -1,0 +1,177 @@
+{
+  "schema_version": "CUDO_REAL_RESPONSIBILITY_WORK_STATE_GRASS_CUT_V1",
+  "cluster_id": "CUDO-WORK-CLUSTER-GRASS-CUT-MATCH-CONFLICT-V1",
+  "production_write": false,
+  "real_source": {
+    "artifact": "Check-List tareas estadio y partidos.xlsx",
+    "sheet": "Check list",
+    "range": "B4:C4",
+    "observed_task": "Cortes de pasto",
+    "observed_responsible": "Maximiliano Figueroa",
+    "observed_normal_day": "SATURDAY",
+    "observed_conflict_rule": "If a CUDO/Cudito match is on Saturday, notify in advance so grass cutting is done Friday.",
+    "observed_payment_amount_clp": 50000,
+    "observed_payment_cycle": "EVERY_TWO_MONTHS"
+  },
+  "qa_trigger_note": "The match occurrence below is synthetic QA. The work rule, responsible person, normal day, conflict shift and payment context come from the real CUDO checklist.",
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-ACTOR-MAX-FIGUEROA-001",
+      "object_type": "ACTOR",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "display_name": "Maximiliano Figueroa",
+        "role_kind": "STADIUM_MAINTENANCE_COLLABORATOR"
+      },
+      "field_semantics": {
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]
+        },
+        "role_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4"]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RESOURCE-ESTADIO-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "resource_kind": "STADIUM",
+        "display_name": "Estadio CUDO"
+      },
+      "field_semantics": {
+        "resource_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2"]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-RULE-GRASS-CUT-MATCH-CONFLICT-001",
+      "object_type": "RULE_DECISION",
+      "object_version": 1,
+      "lifecycle_state": "ACTIVE",
+      "data": {
+        "work_rule_kind": "WEEKLY_RESOURCE_MAINTENANCE_WITH_EVENT_CONFLICT",
+        "work_kind": "GRASS_CUT",
+        "title": "Corte de pasto del estadio",
+        "normal_weekday": "SATURDAY",
+        "conflict_activity_kind": "MATCH",
+        "conflict_weekday": "SATURDAY",
+        "conflict_shift_days": -1,
+        "responsible_actor_id": "CUDO-ACTOR-MAX-FIGUEROA-001",
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "priority": "NORMAL",
+        "financial_context_amount_clp": 50000,
+        "financial_context_cycle": "EVERY_TWO_MONTHS",
+        "financial_context_semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "field_semantics": {
+        "work_rule_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4"]},
+        "work_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4"]},
+        "title": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4"]},
+        "normal_weekday": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "conflict_activity_kind": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "conflict_weekday": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "conflict_shift_days": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "responsible_actor_id": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "resource_id": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B2:C15"]},
+        "priority": {"state_kind": "SOURCE", "source_refs": ["qa://bounded-default/priority"]},
+        "financial_context_amount_clp": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "financial_context_cycle": {"state_kind": "SOURCE", "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!C4"]},
+        "financial_context_semantics": {"state_kind": "SOURCE", "source_refs": ["qa://financial-context/not-current-obligation"]}
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-RULE-GRASS-ACTOR-001",
+          "relationship_type": "ASSIGNED_TO",
+          "target_object_id": "CUDO-ACTOR-MAX-FIGUEROA-001"
+        },
+        {
+          "relationship_id": "REL-RULE-GRASS-RESOURCE-001",
+          "relationship_type": "APPLIES_TO_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-ESTADIO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_REAL_WORK_EVIDENCE",
+        "source_refs": ["artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4"]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-QA-SATURDAY-MATCH-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "PLANNED",
+      "data": {
+        "activity_kind": "MATCH",
+        "display_name": "Partido QA sábado",
+        "scheduled_date": "2026-09-26",
+        "qa_synthetic": true
+      },
+      "field_semantics": {
+        "activity_kind": {"state_kind": "SOURCE", "source_refs": ["qa://synthetic-match/activity_kind"]},
+        "display_name": {"state_kind": "SOURCE", "source_refs": ["qa://synthetic-match/display_name"]},
+        "scheduled_date": {"state_kind": "SOURCE", "source_refs": ["qa://synthetic-match/scheduled_date"]},
+        "qa_synthetic": {"state_kind": "SOURCE", "source_refs": ["qa://synthetic-match/flag"]}
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-QA-MATCH-STADIUM-001",
+          "relationship_type": "USES_RESOURCE",
+          "target_object_id": "CUDO-RESOURCE-ESTADIO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-18T14:00:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA_TRIGGER",
+        "source_refs": ["qa://synthetic-match/2026-09-26"]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "expected": {
+    "work_id": "CUDO-WORK-GRASS-CUT-20260921",
+    "lifecycle_state": "OPEN",
+    "responsible_actor_id": "CUDO-ACTOR-MAX-FIGUEROA-001",
+    "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+    "source_object_id": "CUDO-EVENT-QA-SATURDAY-MATCH-001",
+    "due_date": "2026-09-25",
+    "trigger_reason": "MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY",
+    "financial_context_amount_clp": 50000,
+    "financial_context_cycle": "EVERY_TWO_MONTHS"
+  }
+}

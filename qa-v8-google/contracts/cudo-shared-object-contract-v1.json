@@ -31,7 +31,8 @@
         "RULE_DECISION",
         "FINANCIAL_OBLIGATION",
         "FINANCIAL_MOVEMENT",
-        "DOCUMENT_EVIDENCE"
+        "DOCUMENT_EVIDENCE",
+        "WORK_ITEM"
       ]
     },
     "object_version": {
@@ -73,20 +74,32 @@
     "fieldSemantic": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["state_kind"],
+      "required": [
+        "state_kind"
+      ],
       "properties": {
         "state_kind": {
-          "enum": ["SOURCE", "DERIVED", "OPAQUE"]
+          "enum": [
+            "SOURCE",
+            "DERIVED",
+            "OPAQUE"
+          ]
         },
         "source_refs": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1},
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "minItems": 1,
           "uniqueItems": true
         },
         "rule_ids": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1},
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "minItems": 1,
           "uniqueItems": true
         },
@@ -98,24 +111,54 @@
       "allOf": [
         {
           "if": {
-            "properties": {"state_kind": {"const": "SOURCE"}},
-            "required": ["state_kind"]
+            "properties": {
+              "state_kind": {
+                "const": "SOURCE"
+              }
+            },
+            "required": [
+              "state_kind"
+            ]
           },
-          "then": {"required": ["source_refs"]}
+          "then": {
+            "required": [
+              "source_refs"
+            ]
+          }
         },
         {
           "if": {
-            "properties": {"state_kind": {"const": "DERIVED"}},
-            "required": ["state_kind"]
+            "properties": {
+              "state_kind": {
+                "const": "DERIVED"
+              }
+            },
+            "required": [
+              "state_kind"
+            ]
           },
-          "then": {"required": ["rule_ids"]}
+          "then": {
+            "required": [
+              "rule_ids"
+            ]
+          }
         },
         {
           "if": {
-            "properties": {"state_kind": {"const": "OPAQUE"}},
-            "required": ["state_kind"]
+            "properties": {
+              "state_kind": {
+                "const": "OPAQUE"
+              }
+            },
+            "required": [
+              "state_kind"
+            ]
           },
-          "then": {"required": ["gap_id"]}
+          "then": {
+            "required": [
+              "gap_id"
+            ]
+          }
         }
       ]
     },
@@ -156,7 +199,10 @@
           "format": "date-time"
         },
         "updated_at": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "format": "date-time"
         },
         "source_system": {
@@ -165,19 +211,28 @@
         },
         "source_refs": {
           "type": "array",
-          "items": {"type": "string", "minLength": 1},
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "minItems": 1,
           "uniqueItems": true
         },
         "transition_id": {
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         }
       }
     },
     "legacyRef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source_system", "legacy_id"],
+      "required": [
+        "source_system",
+        "legacy_id"
+      ],
       "properties": {
         "source_system": {
           "type": "string",
