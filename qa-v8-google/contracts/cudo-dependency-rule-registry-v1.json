@@ -1,0 +1,182 @@
+{
+  "schema_version": "CUDO_DEPENDENCY_RULE_REGISTRY_V1",
+  "registry_version": 1,
+  "rules": [
+    {
+      "rule_id": "RULE_ENTRY_REVENUE_V1",
+      "version": 1,
+      "status": "EXPERIMENTAL",
+      "inputs": [
+        {"name": "paid_entries", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "paid_entries"}},
+        {"name": "entry_price", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "entry_price"}}
+      ],
+      "outputs": [
+        {"name": "entry_revenue", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "entry_revenue"}}
+      ],
+      "expression": {"operator": "MULTIPLY", "args": ["paid_entries", "entry_price"]},
+      "applicability": {"mode": "ALWAYS"},
+      "evidence": {
+        "evidence_level": "SYNTHETIC_CONTRACT_EXAMPLE",
+        "source_refs": ["qa-v8-google/contracts/cudo-shared-object-fixture-v1.json"],
+        "note": "Used only to close the semantic contract introduced by piece 1; not asserted as an operational CUDO accounting rule."
+      },
+      "test_cases": [
+        {"inputs": {"paid_entries": 70, "entry_price": 1500}, "expected": 105000}
+      ]
+    },
+    {
+      "rule_id": "RULE_PURCHASE_TOTAL_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {"name": "purchased_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "purchased_qty"}},
+        {"name": "unit_cost", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "unit_cost"}}
+      ],
+      "outputs": [
+        {"name": "purchase_total", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "purchase_total"}}
+      ],
+      "expression": {"operator": "MULTIPLY", "args": ["purchased_qty", "unit_cost"]},
+      "applicability": {"mode": "ALWAYS"},
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml#EQ_PURCHASE_TOTAL",
+          "artifact:PEDIDO CUDO.xlsx"
+        ]
+      },
+      "test_cases": [
+        {"inputs": {"purchased_qty": 24, "unit_cost": 1550}, "expected": 37200}
+      ]
+    },
+    {
+      "rule_id": "RULE_SALES_REVENUE_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {"name": "sold_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "sold_qty"}},
+        {"name": "sell_price", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "sell_price"}}
+      ],
+      "outputs": [
+        {"name": "sales_revenue", "selector": {"scope": "RELATED_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "sales_revenue", "relationship_type": "USED_BY_EVENT"}}
+      ],
+      "expression": {"operator": "MULTIPLY", "args": ["sold_qty", "sell_price"]},
+      "applicability": {"mode": "ALWAYS"},
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml#EQ_SALES_REVENUE",
+          "artifact:PEDIDO CUDO.xlsx"
+        ]
+      },
+      "test_cases": [
+        {"inputs": {"sold_qty": 70, "sell_price": 1500}, "expected": 105000}
+      ]
+    },
+    {
+      "rule_id": "RULE_STOCK_AFTER_SALES_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {"name": "stock_available_before_sales", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "stock_available_before_sales"}},
+        {"name": "sold_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "sold_qty"}}
+      ],
+      "outputs": [
+        {"name": "stock_after_sales", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "stock_after_sales"}}
+      ],
+      "expression": {"operator": "SUBTRACT", "args": ["stock_available_before_sales", "sold_qty"]},
+      "applicability": {"mode": "ALWAYS"},
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml#EQ_STOCK_AFTER_SALES",
+          "artifact:PEDIDO CUDO.xlsx"
+        ]
+      },
+      "test_cases": [
+        {"inputs": {"stock_available_before_sales": 100, "sold_qty": 70}, "expected": 30}
+      ]
+    },
+    {
+      "rule_id": "RULE_PAYABLE_QTY_AFTER_RETURN_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {"name": "received_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "received_qty"}},
+        {"name": "returned_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "returned_qty"}}
+      ],
+      "outputs": [
+        {"name": "payable_qty", "selector": {"scope": "RELATED_OBJECT", "object_type": "FINANCIAL_OBLIGATION", "field": "payable_qty", "relationship_type": "CREATES_OBLIGATION"}}
+      ],
+      "expression": {"operator": "SUBTRACT", "args": ["received_qty", "returned_qty"]},
+      "applicability": {
+        "mode": "CONDITIONAL",
+        "condition_id": "SUPPLIER_RETURN_MODEL_APPLIES",
+        "description": "Only where the supplier arrangement permits unsold stock to be returned before settlement."
+      },
+      "evidence": {
+        "evidence_level": "DIRECT_PATTERN",
+        "source_refs": [
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml#EQ_PAYABLE_QTY_AFTER_RETURN",
+          "artifact:Check-List tareas estadio y partidos.xlsx",
+          "artifact:PEDIDO CUDO.xlsx"
+        ]
+      },
+      "test_cases": [
+        {"inputs": {"received_qty": 100, "returned_qty": 20}, "expected": 80}
+      ]
+    },
+    {
+      "rule_id": "RULE_SUPPLIER_PAYABLE_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {"name": "payable_qty", "selector": {"scope": "SOURCE_OBJECT", "object_type": "FINANCIAL_OBLIGATION", "field": "payable_qty"}},
+        {"name": "unit_cost", "selector": {"scope": "RELATED_OBJECT", "object_type": "RESOURCE_FACILITY", "field": "unit_cost", "relationship_type": "CAUSED_BY_RESOURCE"}}
+      ],
+      "outputs": [
+        {"name": "supplier_payable", "selector": {"scope": "SOURCE_OBJECT", "object_type": "FINANCIAL_OBLIGATION", "field": "supplier_payable"}}
+      ],
+      "expression": {"operator": "MULTIPLY", "args": ["payable_qty", "unit_cost"]},
+      "applicability": {
+        "mode": "CONDITIONAL",
+        "condition_id": "UNIT_COST_MODEL_APPLIES",
+        "description": "Only where the payable is valued by payable quantity multiplied by unit cost."
+      },
+      "evidence": {
+        "evidence_level": "DIRECT",
+        "source_refs": [
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml#EQ_SUPPLIER_PAYABLE",
+          "artifact:PEDIDO CUDO.xlsx"
+        ]
+      },
+      "test_cases": [
+        {"inputs": {"payable_qty": 80, "unit_cost": 500}, "expected": 40000}
+      ]
+    },
+    {
+      "rule_id": "RULE_EVENT_OPERATING_RESULT_V1",
+      "version": 1,
+      "status": "ACTIVE",
+      "inputs": [
+        {"name": "actual_revenue_streams", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "actual_revenue_streams"}},
+        {"name": "actual_expense_streams", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "actual_expense_streams"}}
+      ],
+      "outputs": [
+        {"name": "event_operating_result", "selector": {"scope": "SOURCE_OBJECT", "object_type": "ACTIVITY_EVENT", "field": "event_operating_result"}}
+      ],
+      "expression": {"operator": "SUM_DIFFERENCE", "args": ["actual_revenue_streams", "actual_expense_streams"]},
+      "applicability": {"mode": "ALWAYS"},
+      "evidence": {
+        "evidence_level": "DIRECT_PATTERN",
+        "source_refs": [
+          "arke-root:05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml#EQ_EVENT_OPERATING_RESULT",
+          "artifact:PEDIDO CUDO.xlsx"
+        ],
+        "note": "Operational event result pattern only; not asserted as a statutory accounting definition."
+      },
+      "test_cases": [
+        {"inputs": {"actual_revenue_streams": [105000, 200000], "actual_expense_streams": [40000, 25000, 120000]}, "expected": 120000}
+      ]
+    }
+  ]
+}
