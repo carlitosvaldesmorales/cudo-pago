@@ -1,0 +1,22 @@
+{
+  "schema_version": "CUDO_REAL_FLOW_SAN_RAMON_ARTIFACT_MANIFEST_V1",
+  "flow_id": "CUDO-REAL-FLOW-SAN-RAMON-2025-CORONA",
+  "real_source": {
+    "artifact": "PEDIDO CUDO.xlsx",
+    "sheet": "Pedido vs San Ramon 04-05-2025",
+    "range": "B3:L3"
+  },
+  "generated_at": "2026-09-18T16:32:00.000Z",
+  "source_revision": "CUDO-REVISION-C3E389FDF7B36D61D27F645B",
+  "transaction_id": "CUDO-TXN-2421288AE3E062B20E37",
+  "source_changes": 2,
+  "derived_recalculations": 5,
+  "persistence_plan_id": "CUDO-PROJECTION-PLAN-DF47A97E16BCF86B5D17",
+  "persistence_mode": "VERSIONED_QA_ARTIFACTS_ONLY",
+  "production_write": false,
+  "files": [
+    "public.json",
+    "admin-finance.json",
+    "financial-obligations.json"
+  ]
+}
