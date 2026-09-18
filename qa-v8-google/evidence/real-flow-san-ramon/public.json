@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-09-18T16:32:00.000Z",
+  "source": "CUDO_QA_REAL_FLOW_SAN_RAMON",
+  "source_revision": "CUDO-REVISION-C3E389FDF7B36D61D27F645B",
+  "authority": "CANONICAL_GRAPH_READ_MODEL",
+  "items": [
+    {
+      "id": "SANRAMON-20250504-CORONA",
+      "event_name": "CUDO vs San Ramon 04-05-2025",
+      "product_name": "Cerveza Corona",
+      "sales_revenue": 104000
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": "CUDO_ADMIN_FINANCE_READ_MODEL_V1",
+  "generated_at": "2026-09-18T16:32:00.000Z",
+  "source_revision": "CUDO-REVISION-C3E389FDF7B36D61D27F645B",
+  "authority": "CANONICAL_GRAPH_READ_MODEL",
+  "summary": {
+    "obligations_total": 1,
+    "obligations_open": 1,
+    "outstanding_payable": 43680,
+    "outstanding_receivable": 0,
+    "confirmed_movements": 0,
+    "unreconciled_movements": 0,
+    "reconciliation_complete": true
+  },
+  "obligations": [
+    {
+      "object_id": "CUDO-OBL-SANRAMON-CORONA-001",
+      "direction": "PAYABLE",
+      "kind": "SUPPLIER_SETTLEMENT",
+      "amount": 43680,
+      "settled_amount": 0,
+      "outstanding_amount": 43680,
+      "derived_lifecycle": "OPEN",
+      "causal_object_ids": [
+        "CUDO-RESOURCE-SANRAMON-CORONA-001"
+      ]
+    }
+  ],
+  "movements": [],
+  "channel_positions": {},
+  "reconciliation": {
+    "confirmed_movements": 0,
+    "reconciled_movements": 0,
+    "complete": true
+  }
+}

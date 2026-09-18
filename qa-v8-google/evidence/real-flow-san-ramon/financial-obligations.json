@@ -1,0 +1,31 @@
+{
+  "schema_version": "CUDO_VERSIONED_SHEETS_READ_MODEL_ARTIFACT_V1",
+  "generated_at": "2026-09-18T16:32:00.000Z",
+  "source_revision": "CUDO-REVISION-C3E389FDF7B36D61D27F645B",
+  "authority": "CANONICAL_GRAPH_READ_MODEL",
+  "table": "FINANCIAL_OBLIGATIONS",
+  "values": [
+    [
+      "OBJECT_ID",
+      "DIRECTION",
+      "KIND",
+      "AMOUNT",
+      "SETTLED_AMOUNT",
+      "OUTSTANDING_AMOUNT",
+      "STATE",
+      "CAUSE_OBJECT_IDS",
+      "SOURCE_REVISION"
+    ],
+    [
+      "CUDO-OBL-SANRAMON-CORONA-001",
+      "PAYABLE",
+      "SUPPLIER_SETTLEMENT",
+      43680,
+      0,
+      43680,
+      "OPEN",
+      "CUDO-RESOURCE-SANRAMON-CORONA-001",
+      "CUDO-REVISION-C3E389FDF7B36D61D27F645B"
+    ]
+  ]
+}
