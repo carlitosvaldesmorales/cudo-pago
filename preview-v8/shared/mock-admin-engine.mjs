@@ -89,6 +89,57 @@ function dedupeAction(runtime,action){
   if(!action.action_id) return null;
   return (runtime.applied_actions||[]).find(x=>x.action_id===action.action_id)||null;
 }
+function syntheticName(value){
+  const text=String(value||'').trim();
+  if(!text) throw new Error('display_name required');
+  return /mock/i.test(text)?text:`${text} (Mock)`;
+}
+function requireMockId(value,prefix){
+  const id=String(value||'').trim();
+  if(!id.startsWith(prefix)) throw new Error(`id must start with ${prefix}`);
+  return id;
+}
+function ensureUnique(list,key,id,label){
+  if((list||[]).some(x=>x[key]===id)) throw new Error(`duplicate ${label||key}: ${id}`);
+}
+function knownSource(state,id){
+  return [
+    ...(state.events||[]).map(x=>x.event_id),
+    ...(state.resources||[]).map(x=>x.resource_id),
+    ...(state.decisions||[]).map(x=>x.decision_id),
+    ...(state.financial_obligations||[]).map(x=>x.obligation_id),
+    ...(state.work_items||[]).map(x=>x.work_id)
+  ].includes(id);
+}
+function deriveWorkFromCreatedEvent(state,event,at){
+  if(event.kind!=='MATCH'||event.state!=='SCHEDULED') return null;
+  const actor=(state.actors||[]).find(x=>x.role==='OPERACIONES_ESTADIO')||(state.actors||[])[0];
+  if(!actor) throw new Error('no mock actor available for derived event work');
+  const suffix=String(event.event_id).replace(/^MOCK-EVENT-/,'');
+  const workId=`MOCK-WORK-AUTO-PREP-${suffix}`;
+  if((state.work_items||[]).some(x=>x.work_id===workId)) return null;
+  const work={
+    work_id:workId,
+    title:`Preparar ${event.display_name}`,
+    work_kind:'EVENT_PREPARATION',
+    state:'OPEN',
+    attention:'PENDING',
+    priority:'NORMAL',
+    responsible_actor_id:actor.actor_id,
+    due_at:null,
+    source_ref:event.event_id,
+    resource_ref:(event.resource_refs||[])[0]||null,
+    blocker_refs:[],
+    dependency_refs:[],
+    evidence_refs:[],
+    financial_obligation_refs:[],
+    derived_by_rule:'MOCK_RULE_SCHEDULED_MATCH_TO_PREPARATION_WORK_V1',
+    mock:true
+  };
+  state.work_items.push(work);
+  appendAudit(state,{kind:'WORK_DERIVED_FROM_SOURCE_EVENT',object_ref:work.work_id,source_ref:event.event_id,rule_id:work.derived_by_rule},at);
+  return work;
+}
 
 export function createMockRuntime(golden,{createdAt='2026-09-18T18:30:00-03:00'}={}){
   if(!golden||golden.schema_version!=='CUDO_CLUB_OS_GOLDEN_MOCK_V1'||golden.mock!==true) throw new Error('golden mock required');
@@ -118,7 +169,120 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='WORK_TRANSITION'){
+  if(action.type==='ACTOR_CREATE'){
+    const actorId=requireMockId(action.actor_id,'MOCK-ACTOR-');
+    ensureUnique(state.actors,'actor_id',actorId,'actor');
+    const actor={
+      actor_id:actorId,
+      display_name:syntheticName(action.display_name),
+      actor_kind:action.actor_kind||'PERSON',
+      role:action.role||'COLLABORATOR',
+      mock:true
+    };
+    state.actors.push(actor);
+    appendAudit(state,{kind:'SOURCE_ACTOR_CREATED',object_ref:actor.actor_id},at);
+    effects.push({kind:'SOURCE_ACTOR_CREATED',actor_id:actor.actor_id});
+  } else if(action.type==='RESOURCE_CREATE'){
+    const resourceId=requireMockId(action.resource_id,'MOCK-RESOURCE-');
+    ensureUnique(state.resources,'resource_id',resourceId,'resource');
+    const resource={
+      resource_id:resourceId,
+      kind:action.kind||'RESOURCE',
+      display_name:syntheticName(action.display_name),
+      state:action.state||'AVAILABLE',
+      attention:action.attention||'NORMAL',
+      mock:true
+    };
+    state.resources.push(resource);
+    appendAudit(state,{kind:'SOURCE_RESOURCE_CREATED',object_ref:resource.resource_id},at);
+    effects.push({kind:'SOURCE_RESOURCE_CREATED',resource_id:resource.resource_id});
+  } else if(action.type==='EVENT_CREATE'){
+    const eventId=requireMockId(action.event_id,'MOCK-EVENT-');
+    ensureUnique(state.events,'event_id',eventId,'event');
+    for(const ref of action.resource_refs||[]){
+      findBy(state.resources,'resource_id',ref,'resource');
+    }
+    const event={
+      event_id:eventId,
+      kind:action.kind||'ACTIVITY',
+      display_name:syntheticName(action.display_name),
+      state:action.state||'SCHEDULED',
+      starts_at:action.starts_at||null,
+      resource_refs:[...(action.resource_refs||[])],
+      mock:true
+    };
+    state.events.push(event);
+    appendAudit(state,{kind:'SOURCE_EVENT_CREATED',object_ref:event.event_id,state:event.state},at);
+    effects.push({kind:'SOURCE_EVENT_CREATED',event_id:event.event_id});
+    const derived=deriveWorkFromCreatedEvent(state,event,at);
+    if(derived) effects.push({kind:'DERIVED_WORK_CREATED',work_id:derived.work_id,source_ref:event.event_id});
+  } else if(action.type==='DECISION_CREATE'){
+    const decisionId=requireMockId(action.decision_id,'MOCK-DECISION-');
+    ensureUnique(state.decisions,'decision_id',decisionId,'decision');
+    findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    const decision={
+      decision_id:decisionId,
+      kind:action.kind||'CLUB_DECISION',
+      display_name:syntheticName(action.display_name),
+      state:'PENDING_HUMAN',
+      responsible_actor_id:action.responsible_actor_id,
+      mock:true
+    };
+    state.decisions.push(decision);
+    appendAudit(state,{kind:'SOURCE_DECISION_CREATED',object_ref:decision.decision_id},at);
+    effects.push({kind:'SOURCE_DECISION_CREATED',decision_id:decision.decision_id});
+  } else if(action.type==='HUMAN_WORK_CREATE'){
+    const workId=requireMockId(action.work_id,'MOCK-WORK-');
+    ensureUnique(state.work_items,'work_id',workId,'work');
+    findBy(state.actors,'actor_id',action.responsible_actor_id,'responsible actor');
+    if(!knownSource(state,action.source_ref)) throw new Error(`unknown work source: ${action.source_ref}`);
+    if(action.resource_ref) findBy(state.resources,'resource_id',action.resource_ref,'resource');
+    const work={
+      work_id:workId,
+      title:String(action.title||'').trim()||'Trabajo humano Mock',
+      work_kind:action.work_kind||'HUMAN_CREATED_WORK',
+      state:'OPEN',
+      attention:'PENDING',
+      priority:action.priority||'NORMAL',
+      responsible_actor_id:action.responsible_actor_id,
+      due_at:action.due_at||null,
+      source_ref:action.source_ref,
+      resource_ref:action.resource_ref||null,
+      blocker_refs:[],
+      dependency_refs:[...(action.dependency_refs||[])],
+      evidence_refs:[],
+      financial_obligation_refs:[],
+      created_by_human:true,
+      mock:true
+    };
+    for(const dep of work.dependency_refs) findBy(state.work_items,'work_id',dep,'dependency work');
+    state.work_items.push(work);
+    appendAudit(state,{kind:'HUMAN_WORK_CREATED',object_ref:work.work_id,source_ref:work.source_ref},at);
+    effects.push({kind:'HUMAN_WORK_CREATED',work_id:work.work_id});
+  } else if(action.type==='OBLIGATION_CREATE'){
+    const obligationId=requireMockId(action.obligation_id,'MOCK-OBL-');
+    ensureUnique(state.financial_obligations,'obligation_id',obligationId,'obligation');
+    const amount=Number(action.amount_clp);
+    if(!Number.isInteger(amount)||amount<=0) throw new Error('positive integer amount_clp required');
+    if(!['PAYABLE','RECEIVABLE'].includes(action.direction)) throw new Error('direction must be PAYABLE or RECEIVABLE');
+    if(!knownSource(state,action.cause_ref)) throw new Error(`unknown obligation cause: ${action.cause_ref}`);
+    if(action.counterparty_ref) findBy(state.actors,'actor_id',action.counterparty_ref,'counterparty actor');
+    const obligation={
+      obligation_id:obligationId,
+      direction:action.direction,
+      kind:action.kind||'MANUAL_MOCK_OBLIGATION',
+      amount_clp:amount,
+      settled_amount_clp:0,
+      outstanding_amount_clp:amount,
+      state:'OPEN',
+      cause_ref:action.cause_ref,
+      counterparty_ref:action.counterparty_ref||null,
+      mock:true
+    };
+    state.financial_obligations.push(obligation);
+    appendAudit(state,{kind:'SOURCE_FINANCIAL_OBLIGATION_CREATED',object_ref:obligation.obligation_id,cause_ref:obligation.cause_ref,amount_clp:amount},at);
+    effects.push({kind:'SOURCE_FINANCIAL_OBLIGATION_CREATED',obligation_id:obligation.obligation_id,amount_clp:amount});
+  } else if(action.type==='WORK_TRANSITION'){
     const work=findBy(state.work_items,'work_id',action.work_id,'work');
     const expected=action.expected_state||work.state;
     if(work.state!==expected) throw new Error(`work state conflict: ${work.state} != ${expected}`);
@@ -274,6 +438,16 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
     },obligations:clone(state.financial_obligations),movements:clone(state.financial_movements),settlements:clone(state.settlements||[]),production_write:false
   };
   return {
+    club:{
+      schema_version:'CUDO_CLUB_SOURCE_STATE_MOCK_V1',
+      generated_at:runtime.updated_at,
+      authority:'GOLDEN_MOCK_RUNTIME',
+      mock:true,
+      summary:{actors:state.actors.length,events:state.events.length},
+      actors:clone(state.actors),
+      events:clone(state.events),
+      production_write:false
+    },
     operation,
     finance,
     resources:{schema_version:'CUDO_RESOURCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.resources.length,blocking:state.resources.filter(x=>x.attention==='BLOCKING').length,action_required:state.resources.filter(x=>x.attention==='ACTION_REQUIRED').length},items:clone(state.resources),production_write:false},

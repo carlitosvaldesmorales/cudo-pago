@@ -14,6 +14,7 @@ on:
       - 'preview-v8/shared/seed-data.js'
       - 'preview-v8/tools/validate_full_club_os_mock.mjs'
       - 'preview-v8/tools/certify_full_mock_admin_actions.mjs'
+      - 'preview-v8/tools/certify_mock_source_fact_creation.mjs'
       - 'preview-v8/shared/mock-admin-engine.mjs'
       - 'preview-v8/admin/index.html'
       - 'preview-v8/index.html'
@@ -38,7 +39,10 @@ jobs:
           node --check preview-v8/tools/validate_full_club_os_mock.mjs
           node --check preview-v8/shared/mock-admin-engine.mjs
           node --check preview-v8/tools/certify_full_mock_admin_actions.mjs
+          node --check preview-v8/tools/certify_mock_source_fact_creation.mjs
       - name: Certify full Club OS golden mock
         run: node preview-v8/tools/validate_full_club_os_mock.mjs
       - name: Certify mock admin actions
         run: node preview-v8/tools/certify_full_mock_admin_actions.mjs
+      - name: Certify mock source fact creation
+        run: node preview-v8/tools/certify_mock_source_fact_creation.mjs
