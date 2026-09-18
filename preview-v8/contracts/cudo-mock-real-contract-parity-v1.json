@@ -1,0 +1,84 @@
+{
+  "schema_version": "CUDO_MOCK_REAL_CONTRACT_PARITY_V1",
+  "purpose": "Continuously certify shared Club OS semantics between Real QA on main and the qa-v8-mock golden fixture without pretending environment-specific capabilities are already equal.",
+  "branches": {
+    "real_qa": "main",
+    "golden_mock": "qa-v8-mock"
+  },
+  "shared_required": {
+    "work_states": [
+      "OPEN",
+      "IN_PROGRESS",
+      "BLOCKED",
+      "WAITING_EXTERNAL",
+      "DONE",
+      "CANCELLED"
+    ],
+    "common_work_transitions": [
+      "OPEN->IN_PROGRESS",
+      "OPEN->BLOCKED",
+      "OPEN->WAITING_EXTERNAL",
+      "OPEN->CANCELLED",
+      "IN_PROGRESS->BLOCKED",
+      "IN_PROGRESS->WAITING_EXTERNAL",
+      "IN_PROGRESS->DONE",
+      "IN_PROGRESS->CANCELLED",
+      "BLOCKED->OPEN",
+      "BLOCKED->IN_PROGRESS",
+      "BLOCKED->CANCELLED",
+      "WAITING_EXTERNAL->OPEN",
+      "WAITING_EXTERNAL->IN_PROGRESS",
+      "WAITING_EXTERNAL->CANCELLED"
+    ],
+    "governance_invariants": [
+      "STABLE_IDENTITY",
+      "OPTIMISTIC_PRECONDITION",
+      "TRANSITION_AUDIT",
+      "DONE_REQUIRES_EVIDENCE",
+      "NO_PRODUCTION_WRITE"
+    ],
+    "operational_read_model": {
+      "schema_version": "CUDO_CLUB_OPERATIONAL_STATE_V1",
+      "common_item_fields": [
+        "work_id",
+        "title",
+        "work_kind",
+        "state",
+        "attention",
+        "responsible",
+        "due_date",
+        "priority",
+        "resource",
+        "source",
+        "trigger_reason"
+      ]
+    }
+  },
+  "governed_deltas": {
+    "mock_only_transitions": [
+      "CANCELLED->OPEN"
+    ],
+    "real_only_transitions": [
+      "BLOCKED->WAITING_EXTERNAL",
+      "WAITING_EXTERNAL->BLOCKED"
+    ],
+    "mock_ahead_capabilities": [
+      "RESOURCE_STATE_ADMIN_ACTION",
+      "AUTO_UNBLOCK_RESOURCE",
+      "AUTO_UNBLOCK_WORK_DEPENDENCY",
+      "GENERIC_DECISION_ADMIN_ACTION",
+      "DIRECT_MOCK_FINANCIAL_SETTLEMENT_ACTION"
+    ],
+    "real_ahead_capabilities": [
+      "EVIDENCE_BACKED_DONE_TO_FINANCIAL_OBLIGATION_RULE_ENGINE",
+      "GOOGLE_SHEETS_WORK_REQUEST_ADAPTER",
+      "REVIEW_ENGINE_GOVERNED_ACTION_PATH"
+    ]
+  },
+  "separation": {
+    "mock_must_be_explicit": true,
+    "mock_may_count_as_real_evidence": false,
+    "real_qa_must_not_claim_mock_authority": true
+  },
+  "production_write": false
+}
