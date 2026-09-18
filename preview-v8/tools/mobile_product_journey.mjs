@@ -13,6 +13,7 @@ const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signatur
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 const expectedAdminActions=[
+  {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL'},
   {label:'Completar mi ficha',host:'tally.so',provider:'TALLY'},
   {label:'Publicar una noticia',host:'tally.so',provider:'TALLY'},
   {label:'Administrar equipo o serie',host:'docs.google.com',provider:'GOOGLE_FORMS'},
@@ -111,8 +112,15 @@ async function validateAdminActions(page,result){
     if(actual.label!==expected.label) throw new Error(`admin: accion ${i+1} inesperada "${actual.label}" != "${expected.label}"`);
     if(actual.disabled) throw new Error(`admin: accion deshabilitada ${actual.label}`);
     const parsed=new URL(actual.href);
-    if(parsed.protocol!=='https:') throw new Error(`admin: destino no HTTPS ${actual.href}`);
-    if(parsed.hostname!==expected.host) throw new Error(`admin: host inesperado para ${actual.label}: ${parsed.hostname}`);
+    if(expected.provider==='CUDO_INTERNAL'){
+      const expectedUrl=new URL(expected.path,baseUrl);
+      if(parsed.origin!==expectedUrl.origin||parsed.pathname!==expectedUrl.pathname){
+        throw new Error(`admin: ruta interna inesperada para ${actual.label}: ${actual.href}`);
+      }
+    }else{
+      if(parsed.protocol!=='https:') throw new Error(`admin: destino no HTTPS ${actual.href}`);
+      if(parsed.hostname!==expected.host) throw new Error(`admin: host inesperado para ${actual.label}: ${parsed.hostname}`);
+    }
   }
 
   const tableCards=page.locator(canonicalTable.selector);
@@ -147,6 +155,27 @@ async function validateAdminActions(page,result){
   for(let i=0;i<expectedAdminActions.length;i++){
     const expected=expectedAdminActions[i];
     const card=cards.nth(i);
+
+    if(expected.provider==='CUDO_INTERNAL'){
+      const internal=await page.context().newPage();
+      try{
+        const target=await card.getAttribute('href');
+        const url=new URL(target||expected.path,page.url()).href;
+        const response=await internal.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
+        if(!response||!response.ok()) throw new Error(`admin: click ${expected.label} HTTP ${response?.status()}`);
+        const bodyText=(await internal.locator('body').innerText({timeout:10000}).catch(()=>''))?.trim()||'';
+        if(!bodyText||!/Actividades del club/i.test(bodyText)) throw new Error('admin: superficie interna Actividades no renderizó');
+        const frameSrc=await internal.locator('#cudoActivitiesFrame').getAttribute('src');
+        if(!frameSrc||new URL(frameSrc).hostname!=='script.google.com') throw new Error('admin: Actividades no conserva backend Apps Script');
+        result.admin_actions[i].entrypoint='LIVE_OPENED_INTERNAL';
+        result.admin_actions[i].resolved_url=internal.url();
+        result.admin_actions[i].provider_access_observation='CUDO_WEB_EMBEDS_GOOGLE_APPS_SCRIPT';
+      }finally{
+        await internal.close().catch(()=>{});
+      }
+      continue;
+    }
+
     const popupPromise=page.waitForEvent('popup',{timeout:15000});
     await card.click();
     const popup=await popupPromise;
