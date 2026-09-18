@@ -1,0 +1,38 @@
+{
+  "schema_version": "CUDO_GOVERNANCE_STATE_MOCK_V1",
+  "generated_at": "2026-09-18T18:30:00-03:00",
+  "authority": "GOLDEN_MOCK_READ_MODEL",
+  "mock": true,
+  "summary": {
+    "total": 3,
+    "pending_human": 1,
+    "approved_or_applied": 2
+  },
+  "decisions": [
+    {
+      "decision_id": "MOCK-DECISION-EXPENSE-01",
+      "kind": "EXPENSE_APPROVAL",
+      "display_name": "Aprobar compra de insumos Mock",
+      "state": "PENDING_HUMAN",
+      "responsible_actor_id": "MOCK-ACTOR-PRESIDENCIA-01",
+      "mock": true
+    },
+    {
+      "decision_id": "MOCK-DECISION-SCHEDULE-01",
+      "kind": "SCHEDULE_CHANGE",
+      "display_name": "Adelantar mantención por partido Mock",
+      "state": "APPROVED",
+      "responsible_actor_id": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "decision_id": "MOCK-DECISION-EVENT-CANCEL-01",
+      "kind": "EVENT_DECISION",
+      "display_name": "Suspender amistoso Mock",
+      "state": "APPLIED",
+      "responsible_actor_id": "MOCK-ACTOR-DEPORTES-01",
+      "mock": true
+    }
+  ],
+  "production_write": false
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": "CUDO_GOLDEN_MOCK_MANIFEST_V1",
+  "generated_at": "2026-09-18T18:30:00-03:00",
+  "environment": "qa-v8-mock",
+  "mock": true,
+  "golden_fixture": true,
+  "strategy": "FULL_CLUB_OS_SCENARIO_NOT_ONLY_SPORTS_CONTENT",
+  "files": {
+    "canonical": "data/club-os-mock.json",
+    "operations": "data/operacion.json",
+    "finance": "data/finanzas.json",
+    "resources": "data/recursos.json",
+    "governance": "data/gobernanza.json",
+    "evidence_audit": "data/evidencia.json",
+    "sports_content": "shared/seed-data.js"
+  },
+  "coverage": {
+    "semantic_root": "CLUB",
+    "planes": [
+      "GOVERNANCE_AND_ADMINISTRATION",
+      "OPERATION",
+      "FINANCIAL_STATE",
+      "EVIDENCE_AND_AUDIT"
+    ],
+    "object_types": [
+      "ACTOR",
+      "ACTIVITY_EVENT",
+      "RESOURCE_FACILITY",
+      "RULE_DECISION",
+      "WORK_ITEM",
+      "FINANCIAL_OBLIGATION",
+      "FINANCIAL_MOVEMENT",
+      "DOCUMENT_EVIDENCE"
+    ],
+    "work_states": [
+      "OPEN",
+      "IN_PROGRESS",
+      "BLOCKED",
+      "WAITING_EXTERNAL",
+      "DONE",
+      "CANCELLED"
+    ],
+    "financial_obligation_states": [
+      "OPEN",
+      "PARTIALLY_SETTLED",
+      "SETTLED"
+    ],
+    "financial_movement_states": [
+      "PENDING",
+      "CONFIRMED"
+    ],
+    "scenarios": [
+      "NORMAL_OPEN_WORK",
+      "WORK_IN_PROGRESS",
+      "OVERDUE_WORK",
+      "RESOURCE_BLOCKER",
+      "WORK_DEPENDENCY_BLOCKER",
+      "WAITING_EXTERNAL",
+      "DONE_WITH_EVIDENCE",
+      "CANCELLED_WORK",
+      "DONE_TO_PAYABLE",
+      "PARTIAL_SETTLEMENT",
+      "SETTLED_OBLIGATION",
+      "OPEN_RECEIVABLE",
+      "SCHEDULED_EVENT",
+      "LIVE_EVENT",
+      "COMPLETED_EVENT",
+      "CANCELLED_EVENT",
+      "PENDING_HUMAN_DECISION",
+      "APPROVED_RULE_DECISION",
+      "RESOURCE_MAINTENANCE",
+      "AUDITED_TRANSITION"
+    ]
+  },
+  "invariants": [
+    "Mock data is synthetic and cannot be promoted as real evidence.",
+    "All work lifecycle states are represented.",
+    "At least one resource blocker and one work dependency blocker are represented.",
+    "Finance includes open, partially settled and settled obligations plus pending and confirmed movements.",
+    "Evidence includes available and missing states plus audit history.",
+    "Sports/content mock remains provided by seed-data.js.",
+    "No production write is allowed."
+  ],
+  "production_write": false
+}

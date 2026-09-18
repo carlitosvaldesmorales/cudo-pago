@@ -1,0 +1,136 @@
+{
+  "schema_version": "CUDO_ADMIN_FINANCE_READ_MODEL_V1",
+  "generated_at": "2026-09-18T18:30:00-03:00",
+  "source_revision": "MOCK-REVISION-CLUB-OS-V1",
+  "authority": "GOLDEN_MOCK_READ_MODEL",
+  "mock": true,
+  "summary": {
+    "obligations_total": 5,
+    "obligations_open": 4,
+    "outstanding_payable": 150000,
+    "outstanding_receivable": 250000,
+    "confirmed_movements": 2,
+    "pending_movements": 1,
+    "reconciliation_complete": true
+  },
+  "obligations": [
+    {
+      "obligation_id": "MOCK-OBL-IRRIGATION-01",
+      "direction": "PAYABLE",
+      "kind": "IRRIGATION_SERVICE",
+      "amount_clp": 50000,
+      "settled_amount_clp": 0,
+      "outstanding_amount_clp": 50000,
+      "state": "OPEN",
+      "cause_ref": "MOCK-WORK-IRRIGATION-01",
+      "counterparty_ref": "MOCK-ACTOR-MANTENCION-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-CLEANING-01",
+      "direction": "PAYABLE",
+      "kind": "CLEANING_SERVICE",
+      "amount_clp": 30000,
+      "settled_amount_clp": 0,
+      "outstanding_amount_clp": 30000,
+      "state": "OPEN",
+      "cause_ref": "MOCK-WORK-CLEANING-01",
+      "counterparty_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-BEVERAGE-01",
+      "direction": "PAYABLE",
+      "kind": "SUPPLIER_SETTLEMENT",
+      "amount_clp": 120000,
+      "settled_amount_clp": 50000,
+      "outstanding_amount_clp": 70000,
+      "state": "PARTIALLY_SETTLED",
+      "cause_ref": "MOCK-WORK-BEVERAGE-SETTLEMENT-01",
+      "counterparty_ref": "MOCK-ACTOR-PROVEEDOR-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-LAUNDRY-01",
+      "direction": "PAYABLE",
+      "kind": "KIT_LAUNDRY",
+      "amount_clp": 30000,
+      "settled_amount_clp": 30000,
+      "outstanding_amount_clp": 0,
+      "state": "SETTLED",
+      "cause_ref": "MOCK-WORK-KIT-WASH-01",
+      "counterparty_ref": "MOCK-ACTOR-ESTADIO-01",
+      "mock": true
+    },
+    {
+      "obligation_id": "MOCK-OBL-SPONSOR-01",
+      "direction": "RECEIVABLE",
+      "kind": "SPONSOR_RECEIVABLE",
+      "amount_clp": 250000,
+      "settled_amount_clp": 0,
+      "outstanding_amount_clp": 250000,
+      "state": "OPEN",
+      "cause_ref": "MOCK-EVENT-BINGO-01",
+      "counterparty_ref": "MOCK-ACTOR-PROVEEDOR-01",
+      "mock": true
+    }
+  ],
+  "movements": [
+    {
+      "movement_id": "MOCK-MOV-BEVERAGE-PARTIAL-01",
+      "direction": "OUT",
+      "amount_clp": 50000,
+      "channel": "BANK_TRANSFER",
+      "status": "CONFIRMED",
+      "reconciliation_state": "RECONCILED",
+      "occurred_at": "2026-09-16T11:00:00-03:00",
+      "settlement_refs": [
+        "MOCK-SET-BEVERAGE-01"
+      ],
+      "mock": true
+    },
+    {
+      "movement_id": "MOCK-MOV-LAUNDRY-01",
+      "direction": "OUT",
+      "amount_clp": 30000,
+      "channel": "CASH",
+      "status": "CONFIRMED",
+      "reconciliation_state": "RECONCILED",
+      "occurred_at": "2026-09-15T18:30:00-03:00",
+      "settlement_refs": [
+        "MOCK-SET-LAUNDRY-01"
+      ],
+      "mock": true
+    },
+    {
+      "movement_id": "MOCK-MOV-SPONSOR-PENDING-01",
+      "direction": "IN",
+      "amount_clp": 250000,
+      "channel": "BANK_TRANSFER",
+      "status": "PENDING",
+      "reconciliation_state": "UNRECONCILED",
+      "occurred_at": "2026-09-18T10:00:00-03:00",
+      "settlement_refs": [],
+      "mock": true
+    }
+  ],
+  "settlements": [
+    {
+      "settlement_id": "MOCK-SET-BEVERAGE-01",
+      "movement_id": "MOCK-MOV-BEVERAGE-PARTIAL-01",
+      "obligation_id": "MOCK-OBL-BEVERAGE-01",
+      "amount_clp": 50000,
+      "state": "ACTIVE",
+      "mock": true
+    },
+    {
+      "settlement_id": "MOCK-SET-LAUNDRY-01",
+      "movement_id": "MOCK-MOV-LAUNDRY-01",
+      "obligation_id": "MOCK-OBL-LAUNDRY-01",
+      "amount_clp": 30000,
+      "state": "ACTIVE",
+      "mock": true
+    }
+  ],
+  "production_write": false
+}
