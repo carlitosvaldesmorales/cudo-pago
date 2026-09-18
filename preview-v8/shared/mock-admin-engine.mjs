@@ -414,7 +414,119 @@ export function applyMockAdminAction(runtime,action){
   const at=action.at||new Date().toISOString();
   const effects=[];
 
-  if(action.type==='FUNDRAISING_EVENT_PREPARE'){
+  if(action.type==='EXTERNAL_FUNDING_REQUEST_PREPARE'){
+    const decisionId=requireMockId(action.decision_id,'MOCK-DECISION-GRANT-');
+    ensureUnique(state.decisions,'decision_id',decisionId,'external funding request');
+    const responsible=findBy(state.actors,'actor_id',action.responsible_actor_id,'funding request responsible actor');
+    const authority=findBy(state.actors,'actor_id',action.external_target_actor_id,'funding external authority');
+    if(responsible.actor_kind!=='PERSON') throw new Error('funding request responsible actor must be PERSON');
+    if(authority.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('funding external target must be EXTERNAL_ORGANIZATION');
+    const requestedAmount=Number(action.requested_amount_clp);
+    if(!Number.isInteger(requestedAmount)||requestedAmount<=0) throw new Error('positive integer requested_amount_clp required');
+    const purpose=String(action.purpose_text||'').trim();
+    if(!purpose) throw new Error('funding request purpose_text required');
+    const suffix=decisionId.replace(/^MOCK-DECISION-GRANT-/,'');
+    const workId=`MOCK-WORK-GRANT-APPLICATION-${suffix}`;
+    ensureUnique(state.work_items,'work_id',workId,'funding application work');
+    const decision={
+      decision_id:decisionId,
+      kind:'EXTERNAL_FUNDING_REQUEST',
+      display_name:syntheticName(action.display_name),
+      state:'PENDING_EXTERNAL',
+      responsible_actor_id:responsible.actor_id,
+      external_target_actor_id:authority.actor_id,
+      requested_amount_clp:requestedAmount,
+      approved_amount_clp:null,
+      purpose_text:purpose,
+      application_work_ref:workId,
+      external_result:null,
+      response_evidence_ref:null,
+      mock:true
+    };
+    const work={
+      work_id:workId,
+      title:`Preparar y presentar solicitud · ${decision.display_name}`,
+      work_kind:'EXTERNAL_FUNDING_APPLICATION',
+      state:'OPEN',
+      attention:'PENDING',
+      priority:'HIGH',
+      responsible_actor_id:responsible.actor_id,
+      external_target_actor_id:authority.actor_id,
+      due_at:action.due_at||null,
+      source_ref:decisionId,
+      resource_ref:null,
+      blocker_refs:[],
+      dependency_refs:[],
+      evidence_refs:[],
+      financial_obligation_refs:[],
+      requested_amount_clp:requestedAmount,
+      derived_by_rule:'MOCK_RULE_EXTERNAL_FUNDING_REQUEST_TO_APPLICATION_WORK_V1',
+      mock:true
+    };
+    state.decisions.push(decision);
+    state.work_items.push(work);
+    appendAudit(state,{kind:'EXTERNAL_FUNDING_REQUEST_PREPARED',object_ref:decisionId,requested_amount_clp:requestedAmount,responsible_actor_ref:responsible.actor_id,external_target_actor_ref:authority.actor_id},at);
+    appendAudit(state,{kind:'EXTERNAL_FUNDING_APPLICATION_WORK_CREATED',object_ref:workId,source_ref:decisionId,responsible_actor_ref:responsible.actor_id,external_target_actor_ref:authority.actor_id},at);
+    effects.push({kind:'EXTERNAL_FUNDING_REQUEST_PREPARED',decision_id:decisionId,requested_amount_clp:requestedAmount});
+    effects.push({kind:'EXTERNAL_FUNDING_APPLICATION_WORK_CREATED',work_id:workId,decision_id:decisionId});
+  } else if(action.type==='EXTERNAL_FUNDING_DECISION_RECORD'){
+    const decision=findBy(state.decisions,'decision_id',action.decision_id,'external funding request');
+    if(decision.kind!=='EXTERNAL_FUNDING_REQUEST') throw new Error('decision is not external funding request');
+    if(decision.state!=='PENDING_EXTERNAL') throw new Error('external funding request already resolved');
+    const work=findBy(state.work_items,'work_id',decision.application_work_ref,'funding application work');
+    if(work.state!=='DONE') throw new Error('external funding decision requires completed application work');
+    const authorityActorId=String(action.authority_actor_id||'').trim();
+    if(authorityActorId!==decision.external_target_actor_id) throw new Error('funding decision authority must match request external target');
+    const authority=findBy(state.actors,'actor_id',authorityActorId,'funding authority actor');
+    if(authority.actor_kind!=='EXTERNAL_ORGANIZATION') throw new Error('funding decision authority must be EXTERNAL_ORGANIZATION');
+    const evidenceRef=String(action.evidence_ref||'').trim();
+    if(!evidenceRef) throw new Error('external funding decision requires response evidence');
+    const evidence=findBy(state.evidence,'evidence_id',evidenceRef,'funding response evidence');
+    if(evidence.state!=='AVAILABLE') throw new Error('funding response evidence must be AVAILABLE');
+    if(!(evidence.related_refs||[]).includes(decision.decision_id)&&!(evidence.related_refs||[]).includes(work.work_id)){
+      throw new Error('funding response evidence must reference request or application work');
+    }
+    const result=String(action.result||'').trim().toUpperCase();
+    if(!['APPROVED','PARTIAL','REJECTED'].includes(result)) throw new Error('unsupported external funding decision result');
+    const requested=Number(decision.requested_amount_clp);
+    const approved=Number(action.approved_amount_clp||0);
+    if(result==='REJECTED'&&approved!==0) throw new Error('rejected funding request must approve zero amount');
+    if(result==='APPROVED'&&approved!==requested) throw new Error('approved funding request must equal requested amount');
+    if(result==='PARTIAL'&&(!Number.isInteger(approved)||approved<=0||approved>=requested)) throw new Error('partial funding approval must be positive and below requested amount');
+    if(['APPROVED','PARTIAL'].includes(result)&&(!Number.isInteger(approved)||approved<=0||approved>requested)) throw new Error('approved funding amount exceeds request');
+
+    decision.state='APPLIED';
+    decision.external_result=result;
+    decision.approved_amount_clp=approved;
+    decision.response_evidence_ref=evidenceRef;
+    decision.resolved_at=at;
+    appendAudit(state,{kind:'EXTERNAL_FUNDING_DECISION_RECORDED',object_ref:decision.decision_id,result,requested_amount_clp:requested,approved_amount_clp:approved,external_target_actor_ref:authority.actor_id,evidence_ref:evidenceRef},at);
+    effects.push({kind:'EXTERNAL_FUNDING_DECISION_RECORDED',decision_id:decision.decision_id,result,approved_amount_clp:approved});
+
+    if(approved>0){
+      const suffix=decision.decision_id.replace(/^MOCK-DECISION-GRANT-/,'');
+      const obligationId=`MOCK-OBL-GRANT-${suffix}`;
+      ensureUnique(state.financial_obligations,'obligation_id',obligationId,'external grant receivable');
+      const obligation={
+        obligation_id:obligationId,
+        direction:'RECEIVABLE',
+        kind:'EXTERNAL_GRANT',
+        amount_clp:approved,
+        settled_amount_clp:0,
+        outstanding_amount_clp:approved,
+        state:'OPEN',
+        cause_ref:decision.decision_id,
+        counterparty_ref:authority.actor_id,
+        evidence_ref:evidenceRef,
+        mock:true
+      };
+      state.financial_obligations.push(obligation);
+      work.financial_obligation_refs=work.financial_obligation_refs||[];
+      work.financial_obligation_refs.push(obligationId);
+      appendAudit(state,{kind:'EXTERNAL_GRANT_RECEIVABLE_DERIVED',object_ref:obligationId,cause_ref:decision.decision_id,counterparty_ref:authority.actor_id,amount_clp:approved,evidence_ref:evidenceRef},at);
+      effects.push({kind:'EXTERNAL_GRANT_RECEIVABLE_DERIVED',obligation_id:obligationId,amount_clp:approved,counterparty_ref:authority.actor_id});
+    }
+  } else if(action.type==='FUNDRAISING_EVENT_PREPARE'){
     const eventId=requireMockId(action.event_id,'MOCK-EVENT-FUNDRAISING-');
     ensureUnique(state.events,'event_id',eventId,'fundraising event');
     const permissionResponsible=findBy(state.actors,'actor_id',action.permission_responsible_actor_id,'permission responsible actor');
@@ -1209,6 +1321,7 @@ export function applyMockAdminAction(runtime,action){
   } else if(action.type==='DECISION_TRANSITION'){
     const decision=findBy(state.decisions,'decision_id',action.decision_id,'decision');
     if(decision.kind==='FACILITY_DAMAGE_COMPENSATION') throw new Error('facility damage decision requires DAMAGE_AMOUNT_AGREE');
+    if(decision.kind==='EXTERNAL_FUNDING_REQUEST') throw new Error('external funding request requires EXTERNAL_FUNDING_DECISION_RECORD');
     const expected=action.expected_state||decision.state;
     if(decision.state!==expected) throw new Error(`decision state conflict: ${decision.state} != ${expected}`);
     const allowed=DECISION_TRANSITIONS[decision.state]||new Set();
@@ -1356,7 +1469,7 @@ export function deriveMockReadModels(runtime,{referenceDate=null}={}){
     operation,
     finance,
     resources:{schema_version:'CUDO_RESOURCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.resources.length,blocking:state.resources.filter(x=>x.attention==='BLOCKING').length,action_required:state.resources.filter(x=>x.attention==='ACTION_REQUIRED').length},items:clone(state.resources),production_write:false},
-    governance:{schema_version:'CUDO_GOVERNANCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.decisions.length,pending_human:state.decisions.filter(x=>x.state==='PENDING_HUMAN').length,approved_or_applied:state.decisions.filter(x=>['APPROVED','APPLIED'].includes(x.state)).length,sanctions:state.decisions.filter(x=>x.kind==='TOURNAMENT_SANCTION').length,damage_cases:state.decisions.filter(x=>x.kind==='FACILITY_DAMAGE_COMPENSATION').length},decisions:clone(state.decisions),damage_cases:clone(state.decisions.filter(x=>x.kind==='FACILITY_DAMAGE_COMPENSATION')),production_write:false},
+    governance:{schema_version:'CUDO_GOVERNANCE_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{total:state.decisions.length,pending_human:state.decisions.filter(x=>x.state==='PENDING_HUMAN').length,pending_external:state.decisions.filter(x=>x.state==='PENDING_EXTERNAL').length,approved_or_applied:state.decisions.filter(x=>['APPROVED','APPLIED'].includes(x.state)).length,sanctions:state.decisions.filter(x=>x.kind==='TOURNAMENT_SANCTION').length,damage_cases:state.decisions.filter(x=>x.kind==='FACILITY_DAMAGE_COMPENSATION').length,external_funding_requests:state.decisions.filter(x=>x.kind==='EXTERNAL_FUNDING_REQUEST').length},decisions:clone(state.decisions),damage_cases:clone(state.decisions.filter(x=>x.kind==='FACILITY_DAMAGE_COMPENSATION')),external_funding_requests:clone(state.decisions.filter(x=>x.kind==='EXTERNAL_FUNDING_REQUEST')),production_write:false},
     evidence:{schema_version:'CUDO_EVIDENCE_AUDIT_STATE_MOCK_V1',generated_at:runtime.updated_at,authority:'GOLDEN_MOCK_RUNTIME',mock:true,summary:{evidence_total:state.evidence.length,evidence_missing:state.evidence.filter(x=>x.state==='MISSING').length,audit_events:(state.audit||[]).length},evidence:clone(state.evidence),audit:clone(state.audit||[]),production_write:false}
   };
 }
