@@ -1,11 +1,11 @@
 {
   "schema_version": "CUDO_CLUB_OPERATIONAL_STATE_V1",
-  "generated_at": "2026-09-18T15:20:00.000Z",
+  "generated_at": "2026-09-18T16:21:00.000Z",
   "reference_date": "2026-09-18",
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "summary": {
-    "total": 1,
-    "open": 1,
+    "total": 3,
+    "open": 3,
     "in_progress": 0,
     "blocked": 0,
     "waiting_external": 0,
@@ -37,12 +37,91 @@
       "trigger_reason": "MATCH_ON_NORMAL_MAINTENANCE_DAY_SHIFT_TO_PREVIOUS_DAY",
       "financial_context": {
         "amount_clp": 50000,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": null,
+        "unit_label": null,
         "cycle": "EVERY_TWO_MONTHS",
+        "condition": null,
         "semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
       },
       "evidence_refs": [
         "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4",
         "qa://synthetic-match/2026-09-26"
+      ],
+      "object_version": 1
+    },
+    {
+      "work_id": "CUDO-WORK-KIT-WASHING-QA-MATCH-COMPLETED-001",
+      "title": "Lavado de camisetas del partido",
+      "work_kind": "KIT_WASHING",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "responsible": {
+        "actor_id": "CUDO-ACTOR-CECILIA-001",
+        "display_name": "Cecilia"
+      },
+      "due_date": null,
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "display_name": "Estadio CUDO"
+      },
+      "source": {
+        "object_id": "CUDO-EVENT-QA-MATCH-COMPLETED-001",
+        "display_name": "Partido QA finalizado"
+      },
+      "trigger_reason": "EVENT_COMPLETED_REQUIRES_WORK",
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": null,
+        "max_amount_clp": null,
+        "unit_amount_clp": 15000,
+        "unit_label": "TEAM_WASHED",
+        "cycle": "PER_TEAM_WASHED",
+        "condition": null,
+        "semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "evidence_refs": [
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6",
+        "qa://synthetic-completed-match/2026-09-27"
+      ],
+      "object_version": 1
+    },
+    {
+      "work_id": "CUDO-WORK-STADIUM-CLEANING-QA-MATCH-COMPLETED-001",
+      "title": "Aseo general del estadio",
+      "work_kind": "STADIUM_CLEANING",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "responsible": {
+        "actor_id": "CUDO-ACTOR-SANDRA-SALINAS-001",
+        "display_name": "Sandra Salinas"
+      },
+      "due_date": null,
+      "priority": "NORMAL",
+      "resource": {
+        "resource_id": "CUDO-RESOURCE-ESTADIO-001",
+        "display_name": "Estadio CUDO"
+      },
+      "source": {
+        "object_id": "CUDO-EVENT-QA-MATCH-COMPLETED-001",
+        "display_name": "Partido QA finalizado"
+      },
+      "trigger_reason": "EVENT_COMPLETED_REQUIRES_WORK",
+      "financial_context": {
+        "amount_clp": null,
+        "min_amount_clp": 25000,
+        "max_amount_clp": 30000,
+        "unit_amount_clp": null,
+        "unit_label": null,
+        "cycle": "PER_COMPLETED_CLEANING",
+        "condition": "DEPENDS_ON_DIRTINESS",
+        "semantics": "SOURCE_CONTEXT_NOT_CURRENT_OBLIGATION"
+      },
+      "evidence_refs": [
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5",
+        "qa://synthetic-completed-match/2026-09-27"
       ],
       "object_version": 1
     }
