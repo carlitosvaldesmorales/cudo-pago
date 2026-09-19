@@ -248,6 +248,61 @@
         ]
       },
       "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBS-SYNTH-001",
+      "object_type": "OBSERVATION",
+      "object_version": 1,
+      "lifecycle_state": "OBSERVED",
+      "data": {
+        "observation_state": "UNCLASSIFIED",
+        "summary": "Situación sintética detectada durante un evento; significado de dominio aún no clasificado.",
+        "occurred_at": "2026-09-19T22:30:00.000Z",
+        "raw_label": "NUEVA_SITUACION_NO_MODELADA"
+      },
+      "field_semantics": {
+        "observation_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://observation/state"
+          ]
+        },
+        "summary": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://observation/summary"
+          ]
+        },
+        "occurred_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://observation/occurred_at"
+          ]
+        },
+        "raw_label": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://observation/raw_label"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-OBS-EVENT-001",
+          "relationship_type": "OBSERVED_DURING",
+          "target_object_id": "CUDO-EVENT-SYNTH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-19T22:30:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": [
+          "fixture://observation"
+        ]
+      },
+      "legacy_refs": []
     }
   ]
 }

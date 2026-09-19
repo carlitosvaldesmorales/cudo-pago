@@ -12,7 +12,8 @@ const allowedTypes=new Set([
   'FINANCIAL_OBLIGATION',
   'FINANCIAL_MOVEMENT',
   'DOCUMENT_EVIDENCE',
-  'WORK_ITEM'
+  'WORK_ITEM',
+  'OBSERVATION'
 ]);
 
 function stable(value){
@@ -94,6 +95,13 @@ assert.equal(event.field_semantics.entry_revenue.state_kind,'DERIVED');
 
 const opaque=fixture.objects.find(x=>x.object_id==='CUDO-EVID-SYNTH-001');
 assert.equal(opaque.field_semantics.opaque_legacy_value.state_kind,'OPAQUE');
+
+const observation=fixture.objects.find(x=>x.object_id==='CUDO-OBS-SYNTH-001');
+assert.ok(observation,'open-world fixture requires an unclassified OBSERVATION');
+assert.equal(observation.object_type,'OBSERVATION');
+assert.equal(observation.data.observation_state,'UNCLASSIFIED');
+assert.ok(!('pattern_id' in observation.data),'unclassified observation must not require a known pattern');
+assert.ok(observation.relationships.some(x=>x.relationship_type==='OBSERVED_DURING'&&x.target_object_id==='CUDO-EVENT-SYNTH-001'));
 
 const replayFingerprints=new Map(fixture.objects.map(obj=>[obj.object_id,validateObject(JSON.parse(JSON.stringify(obj)))]));
 assert.deepEqual([...replayFingerprints],[...fingerprints],'deterministic replay changed object fingerprints');
