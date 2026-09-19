@@ -14,7 +14,9 @@ const allowedTypes=new Set([
   'DOCUMENT_EVIDENCE',
   'WORK_ITEM',
   'OBSERVATION',
-  'PATTERN_CANDIDATE'
+  'PATTERN_CANDIDATE',
+  'GOAL_COMMITMENT',
+  'GAP'
 ]);
 
 function stable(value){
