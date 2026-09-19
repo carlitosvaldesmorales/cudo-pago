@@ -32,7 +32,8 @@
         "FINANCIAL_OBLIGATION",
         "FINANCIAL_MOVEMENT",
         "DOCUMENT_EVIDENCE",
-        "WORK_ITEM"
+        "WORK_ITEM",
+        "OBSERVATION"
       ]
     },
     "object_version": {
@@ -244,5 +245,6 @@
         }
       }
     }
-  }
+  },
+  "description": "Contrato compartido CUDO. Los tipos de dominio conocidos coexisten con OBSERVATION para hechos reales aún no clasificados; OBSERVATION no implica una taxonomía cerrada."
 }
