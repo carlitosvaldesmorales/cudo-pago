@@ -16,7 +16,8 @@ const allowedTypes=new Set([
   'OBSERVATION',
   'PATTERN_CANDIDATE',
   'GOAL_COMMITMENT',
-  'GAP'
+  'GAP',
+  'ATTENTION_SIGNAL'
 ]);
 
 function stable(value){

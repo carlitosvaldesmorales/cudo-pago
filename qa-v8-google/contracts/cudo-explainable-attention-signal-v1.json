@@ -1,0 +1,28 @@
+{
+  "schema_version": "CUDO_EXPLAINABLE_ATTENTION_SIGNAL_V1",
+  "policy": {
+    "signal_code_is_open_string": true,
+    "signal_requires_subject": true,
+    "signal_requires_explanation": true,
+    "signal_requires_source_refs": true,
+    "multiple_signals_per_subject": true,
+    "global_priority_score_forbidden": true,
+    "hidden_weight_forbidden": true,
+    "fixed_universal_severity_enum": false,
+    "production_write": false
+  },
+  "semantics": {
+    "purpose": "Explain why a subject requires attention without deciding a universal total order.",
+    "ranking_boundary": "Signals may later feed a governed arbitration policy, but do not rank themselves."
+  },
+  "known_evidence_backed_examples_are_not_enum": [
+    "REQUIRED_WORK_UNASSIGNED",
+    "WORK_BLOCKED_OR_DEPENDENCY_PENDING",
+    "WAITING_EXTERNAL",
+    "EVENT_OR_COMMITMENT_DATE_GATING",
+    "EVIDENCE_REQUIRED_FOR_COMPLETION",
+    "RULE_CONSEQUENCE_PENDING",
+    "RESOURCE_NOT_READY",
+    "HUMAN_CAPACITY_CONCENTRATION"
+  ]
+}
