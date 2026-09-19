@@ -29,6 +29,9 @@ on:
       - 'preview-v8/shared/page-ux.js'
       - 'preview-v8/partidos/index.html'
       - 'preview-v8/shared/mock-admin-engine.mjs'
+      - 'preview-v8/shared/event-resource-projection.mjs'
+      - 'preview-v8/tools/certify_dynamic_event_resource_view.mjs'
+      - 'preview-v8/eventos/index.html'
       - 'preview-v8/admin/index.html'
       - 'preview-v8/index.html'
       - 'preview-v8/club-os-mock/index.html'
@@ -64,6 +67,8 @@ jobs:
           node --check preview-v8/tools/certify_mock_octagonal_incident_sports_bond.mjs
           node --check preview-v8/tools/certify_mock_fundraising_preparation.mjs
           node --check preview-v8/tools/certify_mock_external_grant_funding.mjs
+          node --check preview-v8/shared/event-resource-projection.mjs
+          node --check preview-v8/tools/certify_dynamic_event_resource_view.mjs
           node --check preview-v8/shared/page-ux.js
       - name: Certify full Club OS golden mock
         run: node preview-v8/tools/validate_full_club_os_mock.mjs
@@ -91,3 +96,5 @@ jobs:
         run: node preview-v8/tools/certify_mock_fundraising_preparation.mjs
       - name: Certify external grant funding
         run: node preview-v8/tools/certify_mock_external_grant_funding.mjs
+      - name: Certify generic event resource view
+        run: node preview-v8/tools/certify_dynamic_event_resource_view.mjs
