@@ -149,7 +149,13 @@
       "resource_refs": [
         "MOCK-RESOURCE-STADIUM-01"
       ],
-      "mock": true
+      "mock": true,
+      "capabilities": [
+        "SPORTS_COMPETITION",
+        "VENUE_REQUIRED",
+        "FACILITY_PREPARATION",
+        "BROADCAST_PREPARATION"
+      ]
     },
     {
       "event_id": "MOCK-EVENT-MATCH-LIVE-01",
@@ -171,7 +177,14 @@
       "resource_refs": [
         "MOCK-RESOURCE-STADIUM-01"
       ],
-      "mock": true
+      "mock": true,
+      "capabilities": [
+        "SPORTS_COMPETITION",
+        "VENUE_REQUIRED",
+        "INVENTORY_CONSUMPTION",
+        "POST_EVENT_CLEANUP",
+        "KIT_OR_EQUIPMENT_USE"
+      ]
     },
     {
       "event_id": "MOCK-EVENT-AMISTOSO-CANCEL-01",
@@ -193,7 +206,13 @@
       "resource_refs": [
         "MOCK-RESOURCE-SALON-01"
       ],
-      "mock": true
+      "mock": true,
+      "capabilities": [
+        "FUNDRAISING",
+        "VENUE_REQUIRED",
+        "EXTERNAL_PERMISSION",
+        "SPONSOR_OR_EXTERNAL_SUPPORT"
+      ]
     }
   ],
   "resources": [
