@@ -34,7 +34,9 @@
         "DOCUMENT_EVIDENCE",
         "WORK_ITEM",
         "OBSERVATION",
-        "PATTERN_CANDIDATE"
+        "PATTERN_CANDIDATE",
+        "GOAL_COMMITMENT",
+        "GAP"
       ]
     },
     "object_version": {
@@ -247,5 +249,5 @@
       }
     }
   },
-  "description": "Contrato compartido CUDO. OBSERVATION conserva hechos antes de clasificarlos; PATTERN_CANDIDATE representa agrupaciones propuestas sin promoverlas automáticamente a regla."
+  "description": "Contrato compartido CUDO para un dominio abierto. OBSERVATION conserva hechos no clasificados, PATTERN_CANDIDATE representa hipótesis, GOAL_COMMITMENT conserva objetivos/compromisos evidenciados y GAP representa brechas derivadas."
 }
