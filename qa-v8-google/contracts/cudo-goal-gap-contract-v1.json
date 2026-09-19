@@ -1,0 +1,28 @@
+{
+  "schema_version": "CUDO_GOAL_GAP_CONTRACT_V1",
+  "scope": "GENERIC_NUMERIC_GOAL_GAP",
+  "policy": {
+    "goal_source_required": true,
+    "goal_may_be_invented_by_system": false,
+    "supported_comparators": [
+      "AT_LEAST",
+      "AT_MOST",
+      "EQUAL"
+    ],
+    "numeric_values_required": true,
+    "gap_floor": 0,
+    "closed_when_gap_equals": 0,
+    "production_write": false
+  },
+  "object_mapping": {
+    "goal_object_type": "GOAL_COMMITMENT",
+    "gap_object_type": "GAP",
+    "observation_object_type": "OBSERVATION"
+  },
+  "semantics": {
+    "AT_LEAST": "gap=max(0,target-observed)",
+    "AT_MOST": "gap=max(0,observed-target)",
+    "EQUAL": "gap=abs(target-observed)"
+  },
+  "boundary": "This contract proves a generic numeric gap mechanism only. It does not claim every club goal is numeric and does not define priorities."
+}
