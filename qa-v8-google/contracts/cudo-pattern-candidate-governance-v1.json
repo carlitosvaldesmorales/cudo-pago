@@ -1,0 +1,35 @@
+{
+  "schema_version": "CUDO_PATTERN_CANDIDATE_GOVERNANCE_V1",
+  "policy": {
+    "candidate_required_type": "PATTERN_CANDIDATE",
+    "reviewable_candidate_state": "PROPOSED",
+    "reviewable_semantic_status": "UNVALIDATED",
+    "requires_human_requester": true,
+    "requires_human_approver": true,
+    "requires_reason": true,
+    "requires_evidence": true,
+    "decisions": [
+      "VALIDATE",
+      "REJECT"
+    ],
+    "validation_result": {
+      "lifecycle_state": "VALIDATED",
+      "semantic_status": "VALIDATED",
+      "promotion_state": "APPROVED_AS_PATTERN"
+    },
+    "rejection_result": {
+      "lifecycle_state": "REJECTED",
+      "semantic_status": "REJECTED",
+      "promotion_state": "NOT_PROMOTED"
+    },
+    "raw_observations_mutated": false,
+    "executable_rule_created_automatically": false,
+    "rule_decision_created_automatically": false,
+    "production_write": false
+  },
+  "reuse_basis": [
+    "CUDO_TRANSACTION_OVERRIDE_CONTRACT_V1 human requester/approver/reason/evidence semantics",
+    "CUDO_SHARED_OBJECT_CONTRACT_V1 PATTERN_CANDIDATE and OBSERVATION"
+  ],
+  "boundary": "VALIDATED pattern is reusable semantic knowledge, not an executable business rule. Executable rule materialization remains a separate governed step."
+}
