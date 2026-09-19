@@ -13,7 +13,8 @@ const allowedTypes=new Set([
   'FINANCIAL_MOVEMENT',
   'DOCUMENT_EVIDENCE',
   'WORK_ITEM',
-  'OBSERVATION'
+  'OBSERVATION',
+  'PATTERN_CANDIDATE'
 ]);
 
 function stable(value){
@@ -102,6 +103,20 @@ assert.equal(observation.object_type,'OBSERVATION');
 assert.equal(observation.data.observation_state,'UNCLASSIFIED');
 assert.ok(!('pattern_id' in observation.data),'unclassified observation must not require a known pattern');
 assert.ok(observation.relationships.some(x=>x.relationship_type==='OBSERVED_DURING'&&x.target_object_id==='CUDO-EVENT-SYNTH-001'));
+
+const candidate=fixture.objects.find(x=>x.object_id==='CUDO-PATTERN-CANDIDATE-SYNTH-001');
+assert.ok(candidate,'fixture requires a PATTERN_CANDIDATE');
+assert.equal(candidate.lifecycle_state,'PROPOSED');
+assert.equal(candidate.data.semantic_status,'UNVALIDATED');
+assert.equal(candidate.data.promotion_state,'NOT_PROMOTED');
+const supportRefs=candidate.relationships.filter(x=>x.relationship_type==='SUPPORTED_BY').map(x=>x.target_object_id);
+assert.equal(supportRefs.length,3);
+for(const ref of supportRefs){
+  const support=fixture.objects.find(x=>x.object_id===ref);
+  assert.ok(support&&support.object_type==='OBSERVATION',`${ref}: pattern support must remain an OBSERVATION`);
+  assert.equal(support.data.observation_state,'UNCLASSIFIED',`${ref}: candidate must not silently classify raw observation`);
+}
+assert.ok(!fixture.objects.some(x=>x.object_type==='RULE_DECISION'&&x.relationships?.some(r=>r.target_object_id===candidate.object_id)),'candidate must not auto-promote to RULE_DECISION');
 
 const replayFingerprints=new Map(fixture.objects.map(obj=>[obj.object_id,validateObject(JSON.parse(JSON.stringify(obj)))]));
 assert.deepEqual([...replayFingerprints],[...fingerprints],'deterministic replay changed object fingerprints');
