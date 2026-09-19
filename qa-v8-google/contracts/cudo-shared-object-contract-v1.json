@@ -33,7 +33,8 @@
         "FINANCIAL_MOVEMENT",
         "DOCUMENT_EVIDENCE",
         "WORK_ITEM",
-        "OBSERVATION"
+        "OBSERVATION",
+        "PATTERN_CANDIDATE"
       ]
     },
     "object_version": {
@@ -246,5 +247,5 @@
       }
     }
   },
-  "description": "Contrato compartido CUDO. Los tipos de dominio conocidos coexisten con OBSERVATION para hechos reales aún no clasificados; OBSERVATION no implica una taxonomía cerrada."
+  "description": "Contrato compartido CUDO. OBSERVATION conserva hechos antes de clasificarlos; PATTERN_CANDIDATE representa agrupaciones propuestas sin promoverlas automáticamente a regla."
 }
