@@ -303,6 +303,188 @@
         ]
       },
       "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBS-SYNTH-002",
+      "object_type": "OBSERVATION",
+      "object_version": 1,
+      "lifecycle_state": "OBSERVED",
+      "data": {
+        "observation_state": "UNCLASSIFIED",
+        "summary": "Observación sintética compatible con una estructura recurrente aún no promovida a regla.",
+        "occurred_at": "2026-09-19T22:31:00.000Z",
+        "raw_label": "SITUACION_RECURRENTE_B"
+      },
+      "field_semantics": {
+        "observation_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-002/state"
+          ]
+        },
+        "summary": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-002/summary"
+          ]
+        },
+        "occurred_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-002/occurred_at"
+          ]
+        },
+        "raw_label": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-002/raw_label"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-OBS-EVENT-002",
+          "relationship_type": "OBSERVED_DURING",
+          "target_object_id": "CUDO-EVENT-SYNTH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-19T22:31:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": [
+          "fixture://CUDO-OBS-SYNTH-002"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBS-SYNTH-003",
+      "object_type": "OBSERVATION",
+      "object_version": 1,
+      "lifecycle_state": "OBSERVED",
+      "data": {
+        "observation_state": "UNCLASSIFIED",
+        "summary": "Observación sintética compatible con una estructura recurrente aún no promovida a regla.",
+        "occurred_at": "2026-09-19T22:32:00.000Z",
+        "raw_label": "SITUACION_RECURRENTE_C"
+      },
+      "field_semantics": {
+        "observation_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-003/state"
+          ]
+        },
+        "summary": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-003/summary"
+          ]
+        },
+        "occurred_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-003/occurred_at"
+          ]
+        },
+        "raw_label": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://CUDO-OBS-SYNTH-003/raw_label"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-OBS-EVENT-003",
+          "relationship_type": "OBSERVED_DURING",
+          "target_object_id": "CUDO-EVENT-SYNTH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-19T22:32:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": [
+          "fixture://CUDO-OBS-SYNTH-003"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-PATTERN-CANDIDATE-SYNTH-001",
+      "object_type": "PATTERN_CANDIDATE",
+      "object_version": 1,
+      "lifecycle_state": "PROPOSED",
+      "data": {
+        "candidate_state": "PROPOSED",
+        "semantic_status": "UNVALIDATED",
+        "proposed_label": "PATRON_OPERACIONAL_SIN_CLASIFICACION_FINAL",
+        "promotion_state": "NOT_PROMOTED",
+        "support_count": 3
+      },
+      "field_semantics": {
+        "candidate_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://pattern-candidate/state"
+          ]
+        },
+        "semantic_status": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://pattern-candidate/semantic_status"
+          ]
+        },
+        "proposed_label": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://pattern-candidate/label"
+          ]
+        },
+        "promotion_state": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://pattern-candidate/promotion_state"
+          ]
+        },
+        "support_count": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "fixture://pattern-candidate/support_count"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-PATTERN-OBS-001",
+          "relationship_type": "SUPPORTED_BY",
+          "target_object_id": "CUDO-OBS-SYNTH-001"
+        },
+        {
+          "relationship_id": "REL-PATTERN-OBS-002",
+          "relationship_type": "SUPPORTED_BY",
+          "target_object_id": "CUDO-OBS-SYNTH-002"
+        },
+        {
+          "relationship_id": "REL-PATTERN-OBS-003",
+          "relationship_type": "SUPPORTED_BY",
+          "target_object_id": "CUDO-OBS-SYNTH-003"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-19T22:33:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_SYNTHETIC_QA",
+        "source_refs": [
+          "fixture://pattern-candidate"
+        ]
+      },
+      "legacy_refs": []
     }
   ]
 }
