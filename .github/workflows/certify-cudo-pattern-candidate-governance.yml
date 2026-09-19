@@ -1,0 +1,31 @@
+name: Certify CUDO Pattern Candidate Governance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-pattern-candidate-governance-v1.json'
+      - 'qa-v8-google/tools/pattern_candidate_governance.mjs'
+      - 'qa-v8-google/tools/certify_pattern_candidate_governance.mjs'
+      - 'qa-v8-google/contracts/cudo-shared-object-fixture-v1.json'
+      - '.github/workflows/certify-cudo-pattern-candidate-governance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate governance syntax
+        run: node --check qa-v8-google/tools/pattern_candidate_governance.mjs
+      - name: Validate certification syntax
+        run: node --check qa-v8-google/tools/certify_pattern_candidate_governance.mjs
+      - name: Certify pattern candidate governance
+        run: node qa-v8-google/tools/certify_pattern_candidate_governance.mjs
