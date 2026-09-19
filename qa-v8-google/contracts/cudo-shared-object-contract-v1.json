@@ -36,7 +36,8 @@
         "OBSERVATION",
         "PATTERN_CANDIDATE",
         "GOAL_COMMITMENT",
-        "GAP"
+        "GAP",
+        "ATTENTION_SIGNAL"
       ]
     },
     "object_version": {
@@ -249,5 +250,5 @@
       }
     }
   },
-  "description": "Contrato compartido CUDO para un dominio abierto. OBSERVATION conserva hechos no clasificados, PATTERN_CANDIDATE representa hipótesis, GOAL_COMMITMENT conserva objetivos/compromisos evidenciados y GAP representa brechas derivadas."
+  "description": "Contrato compartido CUDO para dominio abierto: observaciones, patrones candidatos, objetivos, brechas y señales de atención explicables pueden coexistir sin cerrar taxonomías de negocio."
 }
