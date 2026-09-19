@@ -1,0 +1,34 @@
+name: Certify CUDO Explainable Attention Signal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-shared-object-contract-v1.json'
+      - 'qa-v8-google/tools/certify_shared_object_contract.mjs'
+      - 'qa-v8-google/contracts/cudo-explainable-attention-signal-v1.json'
+      - 'qa-v8-google/tools/attention_signal_contract.mjs'
+      - 'qa-v8-google/tools/certify_attention_signal_contract.mjs'
+      - '.github/workflows/certify-cudo-explainable-attention-signal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Re-certify shared object contract
+        run: node qa-v8-google/tools/certify_shared_object_contract.mjs
+      - name: Validate attention contract syntax
+        run: node --check qa-v8-google/tools/attention_signal_contract.mjs
+      - name: Validate attention certification syntax
+        run: node --check qa-v8-google/tools/certify_attention_signal_contract.mjs
+      - name: Certify explainable attention signal
+        run: node qa-v8-google/tools/certify_attention_signal_contract.mjs
