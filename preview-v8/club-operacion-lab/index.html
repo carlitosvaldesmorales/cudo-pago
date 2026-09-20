@@ -173,8 +173,13 @@ const TRACE_LINKS={
 const CANONICAL_READ_MODEL_URL='/qa-v8-google/data/operacion.json';
 const CANONICAL_STATE_URL='/qa-v8-google/state/operational-work-state.json';
 const CANONICAL_SOURCE_CONTRACT_URL='/qa-v8-google/contracts/cudo-real-work-irrigation-v1.json';
+const CANONICAL_SOURCE_CONTRACT_URLS=[
+ '/qa-v8-google/contracts/cudo-real-work-irrigation-v1.json',
+ '/qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json',
+ '/qa-v8-google/contracts/cudo-real-work-post-match-v1.json'
+];
 const CANONICAL_WORK_ID='CUDO-WORK-IRRIGATION-20261005';
-let canonicalLive={status:'LOADING',projection:null,stateStore:null,contract:null,work:null,workObject:null,rule:null,resource:null,actor:null,error:null};
+let canonicalLive={status:'LOADING',projection:null,stateStore:null,contract:null,contracts:[],objectIndex:new Map(),objectConflicts:[],work:null,workObject:null,rule:null,resource:null,actor:null,error:null};
 const traceCatalog={
  'ui:qa-boundary':{title:'Límite de esta pantalla',classification:'EVIDENCIA',state_kind:'SOURCE',object_id:'CUDO-CLUB-OPERATION-VISUAL-QA',source_refs:['ARKE checkpoint vigente','preview-v8/club-operacion-lab/index.html'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint],['Abrir código',TRACE_LINKS.visual]],note:'Esta superficie es QA sintética y persiste sólo en el navegador. No representa escritura operacional real.'},
  'source:need':{title:'Necesidad observada',classification:'EVIDENCIA_QA',state_kind:'SOURCE',object_id:'CUDO-OBS-RECINTO-VISUAL-QA',source_refs:['seed local del visual','ARKE checkpoint: visual_root.observed_situation'],relationships:[['Genera trabajo','work:W1'],['Genera trabajo','work:W2'],['Genera trabajo','work:W3'],['Se compara con','goal:expected']],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint],['Abrir código fuente',TRACE_LINKS.visual]],note:'La necesidad mostrada es sintética. Su trazabilidad no se presenta como dato real del club.'},
@@ -211,7 +216,25 @@ function sourceClassification(refs){
  if(qa) return 'QA SINTÉTICA';
  return r.length?'EVIDENCIA CANÓNICA':'GAP';
 }
-function canonicalObjectById(id){return canonicalLive.stateStore?.objects?.find(x=>x.object_id===id)||null}
+function stableObjectData(value){
+ if(Array.isArray(value)) return value.map(stableObjectData);
+ if(value&&typeof value==='object') return Object.fromEntries(Object.keys(value).sort().map(k=>[k,stableObjectData(value[k])]));
+ return value;
+}
+function objectMaterialSignature(object){return JSON.stringify({object_type:object?.object_type,data:stableObjectData(object?.data||{})})}
+function buildCanonicalObjectIndex(stateStore,contracts){
+ const index=new Map(),conflicts=[];
+ const sources=[...(stateStore?.objects||[]),...contracts.flatMap(x=>x?.objects||[])];
+ for(const object of sources){
+  const existing=index.get(object.object_id);
+  if(!existing){index.set(object.object_id,object);continue}
+  if(objectMaterialSignature(existing)!==objectMaterialSignature(object)){
+   conflicts.push({object_id:object.object_id,left:objectMaterialSignature(existing),right:objectMaterialSignature(object)});
+  }
+ }
+ return {index,conflicts};
+}
+function canonicalObjectById(id){return canonicalLive.objectIndex?.get(id)||null}
 function workRefs(work,object){return unique([...(work?.evidence_refs||[]),...(object?.provenance?.source_refs||[])])}
 function canonicalTrace(key){
  if(!key.startsWith('canonical:')) return null;
@@ -395,24 +418,28 @@ function renderCanonicalCase(){
 }
 async function loadCanonicalCase(){
  try{
-  const [projectionResponse,stateResponse,contractResponse]=await Promise.all([
+  const [projectionResponse,stateResponse,...contractResponses]=await Promise.all([
    fetch(CANONICAL_READ_MODEL_URL,{cache:'no-store'}),
    fetch(CANONICAL_STATE_URL,{cache:'no-store'}),
-   fetch(CANONICAL_SOURCE_CONTRACT_URL,{cache:'no-store'})
+   ...CANONICAL_SOURCE_CONTRACT_URLS.map(url=>fetch(url,{cache:'no-store'}))
   ]);
-  if(!projectionResponse.ok||!stateResponse.ok||!contractResponse.ok) throw new Error('HTTP canónico '+[projectionResponse.status,stateResponse.status,contractResponse.status].join('/'));
-  const [projection,stateStore,contract]=await Promise.all([projectionResponse.json(),stateResponse.json(),contractResponse.json()]);
+  const allResponses=[projectionResponse,stateResponse,...contractResponses];
+  if(allResponses.some(r=>!r.ok)) throw new Error('HTTP canónico '+allResponses.map(r=>r.status).join('/'));
+  const [projection,stateStore,...contracts]=await Promise.all(allResponses.map(r=>r.json()));
   if(projection.authority!=='CANONICAL_GRAPH_READ_MODEL') throw new Error('authority inesperada: '+projection.authority);
-  if(projection.production_write!==false||contract.production_write!==false||stateStore.production_write!==false) throw new Error('boundary production_write inválido');
+  if(projection.production_write!==false||stateStore.production_write!==false||contracts.some(x=>x.production_write!==false)) throw new Error('boundary production_write inválido');
+  const {index:objectIndex,conflicts:objectConflicts}=buildCanonicalObjectIndex(stateStore,contracts);
+  if(objectConflicts.length) throw new Error('conflicto de identidad canónica: '+objectConflicts.map(x=>x.object_id).join(','));
+  const contract=contracts.find(x=>x.schema_version==='CUDO_REAL_RESPONSIBILITY_WORK_STATE_IRRIGATION_V1')||contracts[0];
   const work=projection.items?.find(x=>x.work_id===CANONICAL_WORK_ID);
-  const workObject=stateStore.objects?.find(x=>x.object_id===CANONICAL_WORK_ID);
-  const rule=contract.objects?.find(x=>x.object_id===work?.source?.object_id);
-  const resource=contract.objects?.find(x=>x.object_id===work?.resource?.resource_id);
-  const actor=contract.objects?.find(x=>x.object_id===work?.responsible?.actor_id);
+  const workObject=objectIndex.get(CANONICAL_WORK_ID);
+  const rule=objectIndex.get(work?.source?.object_id);
+  const resource=objectIndex.get(work?.resource?.resource_id);
+  const actor=objectIndex.get(work?.responsible?.actor_id);
   if(!work||!workObject||!rule||!resource||!actor) throw new Error('cadena canónica incompleta');
-  canonicalLive={status:'READY',projection,stateStore,contract,work,workObject,rule,resource,actor,error:null};
+  canonicalLive={status:'READY',projection,stateStore,contract,contracts,objectIndex,objectConflicts,work,workObject,rule,resource,actor,error:null};
  }catch(error){
-  canonicalLive={status:'ERROR',projection:null,stateStore:null,contract:null,work:null,workObject:null,rule:null,resource:null,actor:null,error:error.message};
+  canonicalLive={status:'ERROR',projection:null,stateStore:null,contract:null,contracts:[],objectIndex:new Map(),objectConflicts:[],work:null,workObject:null,rule:null,resource:null,actor:null,error:error.message};
  }
  renderCanonicalCase();
  renderCanonicalFullSurface();
