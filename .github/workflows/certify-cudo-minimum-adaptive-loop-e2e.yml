@@ -1,0 +1,33 @@
+name: Certify CUDO Minimum Adaptive Loop E2E
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-minimum-adaptive-loop-e2e-v1.json'
+      - 'qa-v8-google/tools/certify_minimum_adaptive_loop_e2e.mjs'
+      - 'qa-v8-google/tools/goal_gap_contract.mjs'
+      - 'qa-v8-google/tools/attention_signal_contract.mjs'
+      - 'qa-v8-google/tools/causal_partial_order_arbitration.mjs'
+      - 'qa-v8-google/tools/contextual_human_arbitration_decision.mjs'
+      - 'qa-v8-google/tools/arbitration_decision_feedback.mjs'
+      - 'qa-v8-google/tools/decision_outcome_recalibration.mjs'
+      - '.github/workflows/certify-cudo-minimum-adaptive-loop-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate adaptive loop certification syntax
+        run: node --check qa-v8-google/tools/certify_minimum_adaptive_loop_e2e.mjs
+      - name: Certify minimum adaptive loop E2E
+        run: node qa-v8-google/tools/certify_minimum_adaptive_loop_e2e.mjs
