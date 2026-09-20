@@ -1,0 +1,20 @@
+{
+  "schema_version": "CUDO_CONTEXTUAL_HUMAN_ARBITRATION_DECISION_V1",
+  "policy": {
+    "shared_object_type": "RULE_DECISION",
+    "decision_kind": "CONTEXTUAL_ARBITRATION",
+    "candidate_count_minimum": 2,
+    "chosen_count_minimum": 1,
+    "chosen_must_be_subset_of_candidates": true,
+    "requires_human_decider": true,
+    "requires_reason": true,
+    "requires_source_refs": true,
+    "scope_default": "ONE_DECISION_INSTANCE",
+    "creates_global_priority_policy": false,
+    "creates_numeric_weights": false,
+    "creates_universal_severity": false,
+    "may_choose_multiple_candidates": true,
+    "production_write": false
+  },
+  "meaning": "Records an explicit contextual human choice when causal precedence does not fully resolve competing candidates. The decision is evidence for this context, not a universal policy."
+}
