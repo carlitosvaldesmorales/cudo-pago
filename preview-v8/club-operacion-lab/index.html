@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#03163d">
+<title>C.U.D.O. · Operación del club · Contrato visual v2</title>
+<link rel="stylesheet" href="../shared/site.css">
+<style>
+:root{--navy:#03163d;--red:#e21b2d;--bg:#f4f2ed;--line:#d7dde6;--muted:#66758a;--green:#1c7a4d;--amber:#8b6600}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#172033;font-family:Arial,sans-serif}
+.wrap{width:min(1220px,calc(100% - 24px));margin:auto}.hero{background:var(--navy);color:#fff;border-bottom:6px solid var(--red);padding:24px 0}.hero h1{margin:6px 0;font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:clamp(36px,7vw,62px);line-height:.94}.hero p{max-width:900px;margin:0;color:#e5ebf6;font-size:13px;line-height:1.45}.back{color:#fff;font-weight:900;font-size:12px}
+main{padding:16px 0 50px}.qa{background:#fff7d8;border-left:4px solid #c99b00;border-radius:0 12px 12px 0;padding:11px 13px;font-size:12px;line-height:1.45;margin-bottom:14px}
+.source{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(3,22,61,.06);margin-bottom:14px}.ey{font-size:10px;text-transform:uppercase;font-weight:900;color:#7a8799}.source h2{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;color:var(--navy);font-size:31px;margin:4px 0}.source p{margin:0;color:#4f5c6f;line-height:1.45;font-size:12px}
+.source-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;align-items:start}.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.chip{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:900;background:#eef2f7;color:#30425f}.chip.warn{background:#fff1c7;color:#745400}.chip.good{background:#e8f6ee;color:#17663d}.chip.bad{background:#fdebed;color:#8d1425}
+.goalbox{background:#f7f8fb;border-radius:13px;padding:12px}.goalbox strong{display:block;color:var(--navy);font-size:13px}.goalbox span{font-size:11px;color:var(--muted);line-height:1.4}
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0 14px}.node{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px;min-height:94px}.node strong{display:block;font-size:11px;color:var(--navy);margin-bottom:4px}.node span{font-size:10px;color:var(--muted);line-height:1.35}.node.active{outline:2px solid #03163d}.node.warn{background:#fff9e7}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 8px 24px rgba(3,22,61,.05)}.card h3{margin:0 0 4px;color:var(--navy);font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:25px}.help{font-size:11px;color:var(--muted);line-height:1.45;margin-bottom:9px}.row{padding:10px 0;border-top:1px solid #edf0f4}.row:first-of-type{border-top:0}.row strong{font-size:12px}.meta{font-size:10px;color:var(--muted);line-height:1.4;margin-top:3px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.btn{border:0;border-radius:9px;padding:8px 9px;background:var(--navy);color:#fff;font-size:10px;font-weight:900;cursor:pointer}.btn.secondary{background:#eef2f7;color:var(--navy)}.btn.danger{background:#8d1725}.btn:disabled{opacity:.4;cursor:not-allowed}
+.timeline{position:relative;padding-left:18px}.event{position:relative;padding-bottom:12px}.event:before{content:"";position:absolute;left:-15px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--navy)}.event:after{content:"";position:absolute;left:-11px;top:14px;bottom:-2px;width:1px;background:#d7dde6}.event:last-child:after{display:none}.event strong{font-size:11px}.event p{font-size:10px;color:var(--muted);line-height:1.4;margin:3px 0 0}
+.derived{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.derived>div{background:#f7f8fa;border-radius:10px;padding:10px}.derived strong{display:block;color:var(--navy);font-size:11px}.derived span{font-size:10px;color:var(--muted);line-height:1.4}
+.footer-note{margin-top:14px;font-size:10px;color:#6b7889;line-height:1.45}
+.modal{position:fixed;inset:0;background:rgba(1,10,25,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}.modal.open{display:flex}.dialog{width:min(500px,100%);background:#fff;border-radius:16px;padding:16px}.field{display:grid;gap:5px;margin:9px 0}.field label{font-size:10px;text-transform:uppercase;font-weight:900;color:#56647a}.field input,.field select,.field textarea{width:100%;border:1px solid #b7c0ce;border-radius:9px;padding:9px;font:inherit}.dialog-actions{display:flex;gap:7px;justify-content:flex-end}
+@media(max-width:980px){.flow{grid-template-columns:repeat(3,1fr)}.source-grid{grid-template-columns:1fr}.board{grid-template-columns:1fr}}
+@media(max-width:620px){.flow{grid-template-columns:repeat(2,1fr)}.derived{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+<div class="eyebrow">C.U.D.O. · Contrato visual v2 · CLUB como raíz</div>
+<h1>De una situación real a todo lo que provoca</h1>
+<p>El centro no es la tarea. El centro es una situación, necesidad, evento, regla o cambio real del club. CUDO muestra y conduce sus consecuencias en trabajo, personas, recursos, dinero, decisiones y evidencia.</p>
+<a class="back" href="../actividades-lab/">← Comparar con visual anterior</a>
+</div></header>
+<main class="wrap">
+<div class="qa"><strong>QA sintética:</strong> este visual todavía no escribe Google. Sirve para validar el significado correcto antes de cablear la lógica algebraica real.</div>
+
+<section class="source">
+<div class="source-grid">
+<div>
+<div class="ey">Hecho / necesidad observada</div>
+<h2>El club necesita dejar el recinto operativo para una jornada</h2>
+<p>No se obliga a elegir “Partido”, “Bingo”, “Mantención” u otra categoría fija. Primero existe la necesidad real; después el sistema relaciona lo que sabe y deja como GAP lo que todavía no sabe.</p>
+<div class="chips">
+<span class="chip">OBSERVATION</span>
+<span class="chip good">Fuente registrada</span>
+<span class="chip warn" id="sourceState">Estado: requiere acción</span>
+</div>
+</div>
+<div class="goalbox"><strong>Resultado esperado</strong><span>Recinto operativo antes de la jornada, sin trabajo crítico pendiente ni bloqueo abierto.</span><br><br><strong>Quién decidió este objetivo</strong><span>Directiva Mock · evidencia QA</span></div>
+</div>
+</section>
+
+<section class="flow">
+<div class="node active"><strong>1. REALIDAD</strong><span>Aparece una necesidad real del club.</span></div>
+<div class="node"><strong>2. REGLAS / CONTEXTO</strong><span>CUDO determina qué consecuencias aplican.</span></div>
+<div class="node"><strong>3. TRABAJO</strong><span>Se deriva o registra lo que alguien debe hacer.</span></div>
+<div class="node"><strong>4. RECURSOS / DINERO</strong><span>Se exponen recursos y obligaciones cuando corresponden.</span></div>
+<div class="node"><strong>5. DECISIÓN / EJECUCIÓN</strong><span>Humanos actúan donde corresponde.</span></div>
+<div class="node warn"><strong>6. RESULTADO / APRENDIZAJE</strong><span>El resultado vuelve como evidencia y cambia el estado.</span></div>
+</section>
+
+<div class="board">
+<section class="card">
+<h3>Trabajo derivado</h3>
+<div class="help">No es una lista manual separada: cada trabajo conserva de qué necesidad nació.</div>
+<div id="workList"></div>
+<button class="btn secondary" id="discoverWorkBtn">+ Registrar nueva necesidad descubierta</button>
+</section>
+
+<section class="card">
+<h3>Personas y cobertura</h3>
+<div class="help">Aquí vemos quién está cubriendo trabajo y qué sigue sin responsable. No inferimos sobrecarga sin evidencia suficiente.</div>
+<div id="peoplePanel"></div>
+</section>
+
+<section class="card">
+<h3>Recursos y dinero</h3>
+<div class="help">Sólo aparecen efectos que la situación realmente activa. No todo trabajo genera dinero.</div>
+<div id="resourcePanel"></div>
+<div class="derived">
+<div><strong>Obligación</strong><span id="obligationText">Sin obligación monetaria confirmada.</span></div>
+<div><strong>Movimiento</strong><span id="movementText">Sin movimiento de caja.</span></div>
+<div><strong>Recurso</strong><span id="resourceText">Recinto todavía no confirmado como operativo.</span></div>
+</div>
+</section>
+
+<section class="card">
+<h3>Decisiones y bloqueos</h3>
+<div class="help">CUDO no inventa una prioridad global. Expone precedencias y deja explícita la decisión humana cuando hace falta.</div>
+<div id="decisionPanel"></div>
+</section>
+
+<section class="card">
+<h3>Evidencia e historial</h3>
+<div class="help">Cada cambio importante deja huella; cerrar no borra lo ocurrido.</div>
+<div class="timeline" id="timeline"></div>
+<button class="btn secondary" id="evidenceBtn">Agregar evidencia</button>
+</section>
+
+<section class="card">
+<h3>Estado global de esta situación</h3>
+<div class="help">Este estado se deriva de todo lo anterior; no se edita manualmente como un campo aislado.</div>
+<div id="globalPanel"></div>
+<div class="actions">
+<button class="btn" id="recalcBtn">Recalcular estado</button>
+<button class="btn danger" id="resetBtn">Restablecer demo</button>
+</div>
+</section>
+</div>
+<div class="footer-note">Contrato visual: la lógica real deberá producir esta misma relación causal desde CUDO Web → Apps Script → Google Sheets → núcleo algebraico → proyecciones.</div>
+</main>
+
+<div class="modal" id="modal"><div class="dialog"><h3 id="modalTitle">Acción</h3><div id="modalBody"></div><div class="dialog-actions"><button class="btn secondary" id="cancelModal">Cancelar</button><button class="btn" id="confirmModal">Aplicar en demo</button></div></div></div>
+
+<script>
+const seed={
+ works:[
+  {id:'W1',title:'Preparar superficie del recinto',state:'OPEN',responsible:'Persona Mock A',source:'NECESIDAD-RECINTO'},
+  {id:'W2',title:'Confirmar insumos necesarios',state:'OPEN',responsible:null,source:'NECESIDAD-RECINTO'},
+  {id:'W3',title:'Confirmar apoyo externo',state:'WAITING_EXTERNAL',responsible:'Persona Mock B',source:'NECESIDAD-RECINTO'}
+ ],
+ blockers:[{id:'B1',work_id:'W3',text:'Esperando confirmación externa'}],
+ evidence:[],
+ resource:{state:'NOT_READY'},
+ obligation:null,
+ events:[{type:'OBSERVED',text:'Se registró la necesidad: dejar el recinto operativo.',by:'Sistema QA'}]
+};
+let s=JSON.parse(localStorage.getItem('cudoClubStateVisualV2')||'null')||structuredClone(seed);
+let pending=null;
+const people=['Persona Mock A','Persona Mock B','Persona Mock C','Persona Mock D'];
+const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function save(){localStorage.setItem('cudoClubStateVisualV2',JSON.stringify(s))}
+function event(type,text,by='Usuario QA'){s.events.unshift({type,text,by,at:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})});save()}
+function activeWorks(){return s.works.filter(w=>!['DONE','CANCELLED'].includes(w.state))}
+function unresolvedBlockers(){return s.blockers.filter(b=>activeWorks().some(w=>w.id===b.work_id))}
+function recalc(){
+ const active=activeWorks(),unassigned=active.filter(w=>!w.responsible),blocks=unresolvedBlockers();
+ s.resource.state=active.length===0&&blocks.length===0?'READY':'NOT_READY';
+ save();render();
+}
+function render(){
+ document.getElementById('workList').innerHTML=s.works.map(w=>'<div class="row"><strong>'+esc(w.title)+'</strong><div class="meta">Estado: '+esc(w.state)+' · Responsable: '+esc(w.responsible||'SIN ASIGNAR')+' · Causa: '+esc(w.source)+'</div><div class="actions">'+
+ (!w.responsible?'<button class="btn" onclick="assignWork(\''+w.id+'\')">Asignar</button>':'<button class="btn secondary" onclick="assignWork(\''+w.id+'\')">Reasignar</button>')+
+ (!['DONE','CANCELLED'].includes(w.state)?'<button class="btn secondary" onclick="advanceWork(\''+w.id+'\')">Cambiar estado</button>':'')+
+ '</div></div>').join('');
+ const counts={};s.works.filter(w=>w.responsible).forEach(w=>counts[w.responsible]=(counts[w.responsible]||0)+(!['DONE','CANCELLED'].includes(w.state)?1:0));
+ const peopleRows=Object.entries(counts).map(([p,n])=>'<div class="row"><strong>'+esc(p)+'</strong><div class="meta">'+n+' trabajo(s) activo(s). Concentración observada; no implica sobrecarga.</div></div>').join('');
+ const unassigned=activeWorks().filter(w=>!w.responsible);
+ document.getElementById('peoplePanel').innerHTML=(peopleRows||'<div class="row">Sin asignaciones.</div>')+(unassigned.length?'<div class="row"><span class="chip bad">'+unassigned.length+' sin responsable</span><div class="meta">Cobertura faltante visible.</div></div>':'<div class="row"><span class="chip good">Cobertura completa</span></div>');
+ document.getElementById('resourcePanel').innerHTML='<div class="row"><strong>Recinto</strong><div class="meta">Estado derivado: '+esc(s.resource.state)+'</div></div>';
+ document.getElementById('resourceText').textContent=s.resource.state==='READY'?'Recinto derivado como operativo.':'Recinto todavía no operativo.';
+ document.getElementById('obligationText').textContent=s.obligation?'Obligación registrada: '+s.obligation:'Sin obligación monetaria confirmada.';
+ document.getElementById('movementText').textContent='Sin movimiento de caja en este escenario.';
+ const blocks=unresolvedBlockers();
+ document.getElementById('decisionPanel').innerHTML=(blocks.length?blocks.map(b=>'<div class="row"><strong>Bloqueo activo</strong><div class="meta">'+esc(b.text)+'</div><button class="btn secondary" onclick="resolveBlock(\''+b.id+'\')">Resolver</button></div>').join(''):'<div class="row"><span class="chip good">Sin bloqueos abiertos</span></div>')+
+ '<div class="row"><strong>Precedencia causal</strong><div class="meta">No se puede declarar el recinto READY mientras exista trabajo activo o bloqueo abierto.</div></div>';
+ document.getElementById('timeline').innerHTML=s.events.map(e=>'<div class="event"><strong>'+esc(e.type)+'</strong><p>'+esc(e.text)+'<br>'+esc(e.by)+(e.at?' · '+esc(e.at):'')+'</p></div>').join('');
+ const a=activeWorks(),u=a.filter(w=>!w.responsible),b=unresolvedBlockers();
+ let state='REQUIERE_ACCION',reason=[];
+ if(u.length)reason.push(u.length+' trabajo(s) sin responsable');
+ if(b.length)reason.push(b.length+' bloqueo(s) abierto(s)');
+ if(a.length)reason.push(a.length+' trabajo(s) activo(s)');
+ if(!a.length&&!b.length&&s.evidence.length){state='RESUELTO';reason=['Todos los trabajos cerrados y existe evidencia']}
+ document.getElementById('globalPanel').innerHTML='<div class="row"><span class="chip '+(state==='RESUELTO'?'good':'warn')+'">'+state+'</span><div class="meta">'+esc(reason.join(' · ')||'Sin detalle')+'</div></div>'+
+ '<div class="row"><strong>Resultado esperado</strong><div class="meta">Recinto operativo antes de la jornada.</div></div>'+
+ '<div class="row"><strong>Evidencia</strong><div class="meta">'+s.evidence.length+' referencia(s) registrada(s).</div></div>';
+ document.getElementById('sourceState').textContent='Estado: '+state.toLowerCase().replace('_',' ');
+}
+function openModal(title,body,fn){pending=fn;document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open');pending=null}
+document.getElementById('cancelModal').onclick=closeModal;document.getElementById('confirmModal').onclick=()=>{if(pending)pending();closeModal();recalc()};
+window.assignWork=id=>{const w=s.works.find(x=>x.id===id);openModal(w.responsible?'Reasignar trabajo':'Asignar trabajo','<div class="field"><label>Persona</label><select id="person">'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div><div class="field"><label>Motivo</label><textarea id="reason">Asignación operacional</textarea></div>',()=>{const old=w.responsible||'SIN ASIGNAR',p=document.getElementById('person').value;w.responsible=p;event(w.responsible&&old!=='SIN ASIGNAR'?'REASSIGNED':'ASSIGNED',w.title+': '+old+' → '+p+'. '+document.getElementById('reason').value)})};
+window.advanceWork=id=>{const w=s.works.find(x=>x.id===id);const opts=['OPEN','IN_PROGRESS','BLOCKED','WAITING_EXTERNAL','DONE','CANCELLED'];openModal('Cambiar estado','<div class="field"><label>Nuevo estado</label><select id="newState">'+opts.map(x=>'<option '+(x===w.state?'selected':'')+'>'+x+'</option>').join('')+'</select></div><div class="field"><label>Evidencia / comentario</label><textarea id="note">Actualización QA</textarea></div>',()=>{const old=w.state,n=document.getElementById('newState').value;if(n==='DONE'&&!s.evidence.length)throw new Error('Para cerrar trabajo debe existir evidencia');w.state=n;event('WORK_STATE_CHANGED',w.title+': '+old+' → '+n+'. '+document.getElementById('note').value)})};
+window.resolveBlock=id=>{const b=s.blockers.find(x=>x.id===id);const w=s.works.find(x=>x.id===b.work_id);s.blockers=s.blockers.filter(x=>x.id!==id);if(w&&w.state==='WAITING_EXTERNAL')w.state='IN_PROGRESS';event('BLOCKER_RESOLVED',b.text)};
+document.getElementById('discoverWorkBtn').onclick=()=>openModal('Registrar necesidad nueva','<div class="field"><label>Qué apareció</label><input id="newWork" value="Nueva necesidad no prevista"></div><div class="field"><label>Responsable opcional</label><select id="newResp"><option value="">Sin responsable</option>'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div>',()=>{const title=document.getElementById('newWork').value.trim();if(title){s.works.push({id:'W'+(s.works.length+1),title,state:'OPEN',responsible:document.getElementById('newResp').value||null,source:'OBSERVATION-EMERGENTE'});event('NEW_WORK_DISCOVERED',title)}});
+document.getElementById('evidenceBtn').onclick=()=>openModal('Agregar evidencia','<div class="field"><label>Referencia</label><input id="evi" value="Foto / comprobante / documento QA"></div>',()=>{const v=document.getElementById('evi').value.trim();if(v){s.evidence.push(v);event('EVIDENCE_ADDED',v)}});
+document.getElementById('recalcBtn').onclick=()=>{event('RECALCULATED','Se recalculó el estado global desde trabajo, bloqueos y evidencia.','Motor QA');recalc()};
+document.getElementById('resetBtn').onclick=()=>{s=structuredClone(seed);localStorage.removeItem('cudoClubStateVisualV2');render()};
+render();
+</script>
+</body>
+</html>
