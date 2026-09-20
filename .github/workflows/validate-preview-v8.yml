@@ -50,6 +50,11 @@ jobs:
           node --check preview-v8/tools/certify_club_operation_real_source_trace.mjs
           node preview-v8/tools/certify_club_operation_real_source_trace.mjs
 
+      - name: Certificar superficie canónica completa existente
+        run: |
+          node --check preview-v8/tools/certify_club_operation_canonical_full_surface.mjs
+          node preview-v8/tools/certify_club_operation_canonical_full_surface.mjs
+
       - name: Validar modo de datos real sin fallback mock
         run: |
           python3 - <<'PY'
