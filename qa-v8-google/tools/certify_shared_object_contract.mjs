@@ -17,7 +17,8 @@ const allowedTypes=new Set([
   'PATTERN_CANDIDATE',
   'GOAL_COMMITMENT',
   'GAP',
-  'ATTENTION_SIGNAL'
+  'ATTENTION_SIGNAL',
+  'ARBITRATION_CONSTRAINT'
 ]);
 
 function stable(value){
