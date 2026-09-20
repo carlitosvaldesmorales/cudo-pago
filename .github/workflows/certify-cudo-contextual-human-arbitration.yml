@@ -1,0 +1,30 @@
+name: Certify CUDO Contextual Human Arbitration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-contextual-human-arbitration-decision-v1.json'
+      - 'qa-v8-google/tools/contextual_human_arbitration_decision.mjs'
+      - 'qa-v8-google/tools/certify_contextual_human_arbitration_decision.mjs'
+      - '.github/workflows/certify-cudo-contextual-human-arbitration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate contextual arbitration syntax
+        run: node --check qa-v8-google/tools/contextual_human_arbitration_decision.mjs
+      - name: Validate certification syntax
+        run: node --check qa-v8-google/tools/certify_contextual_human_arbitration_decision.mjs
+      - name: Certify contextual human arbitration
+        run: node qa-v8-google/tools/certify_contextual_human_arbitration_decision.mjs
