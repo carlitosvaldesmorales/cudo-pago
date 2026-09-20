@@ -40,6 +40,11 @@ jobs:
           node --check preview-v8/shared/seed-data.js
           node --check preview-v8/shared/data-source.js
 
+      - name: Certificar trazabilidad de operación del club
+        run: |
+          node --check preview-v8/tools/certify_club_operation_traceability.mjs
+          node preview-v8/tools/certify_club_operation_traceability.mjs
+
       - name: Validar modo de datos real sin fallback mock
         run: |
           python3 - <<'PY'
