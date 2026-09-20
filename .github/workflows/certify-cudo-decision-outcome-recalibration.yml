@@ -1,0 +1,32 @@
+name: Certify CUDO Decision Outcome Recalibration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-decision-outcome-feedback-recalibration-v1.json'
+      - 'qa-v8-google/tools/contextual_human_arbitration_decision.mjs'
+      - 'qa-v8-google/tools/goal_gap_contract.mjs'
+      - 'qa-v8-google/tools/decision_outcome_recalibration.mjs'
+      - 'qa-v8-google/tools/certify_decision_outcome_recalibration.mjs'
+      - '.github/workflows/certify-cudo-decision-outcome-recalibration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate outcome syntax
+        run: node --check qa-v8-google/tools/decision_outcome_recalibration.mjs
+      - name: Validate certification syntax
+        run: node --check qa-v8-google/tools/certify_decision_outcome_recalibration.mjs
+      - name: Certify decision outcome feedback recalibration
+        run: node qa-v8-google/tools/certify_decision_outcome_recalibration.mjs

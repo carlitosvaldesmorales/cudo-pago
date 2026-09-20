@@ -1,0 +1,20 @@
+{
+  "schema_version": "CUDO_DECISION_OUTCOME_FEEDBACK_RECALIBRATION_V1",
+  "policy": {
+    "source_decision_type": "RULE_DECISION",
+    "source_decision_kind": "CONTEXTUAL_ARBITRATION",
+    "outcome_object_type": "OBSERVATION",
+    "outcome_code_is_open_string": true,
+    "outcome_requires_selected_subject": true,
+    "outcome_requires_evidence": true,
+    "numeric_metric_support": "BOUNDED_V1",
+    "recalibration_reuses": "CUDO_GOAL_GAP_CONTRACT_V1",
+    "execution_does_not_imply_success": true,
+    "gap_may_improve_worsen_or_close": true,
+    "automatic_goal_change": false,
+    "automatic_priority_change": false,
+    "automatic_rule_promotion": false,
+    "production_write": false
+  },
+  "meaning": "Observe the actual measurable result after a contextual decision and recalculate the existing goal gap from evidence, without changing the goal or declaring the decision successful by virtue of execution."
+}
