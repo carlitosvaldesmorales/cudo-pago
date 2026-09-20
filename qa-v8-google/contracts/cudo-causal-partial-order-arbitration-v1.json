@@ -1,0 +1,28 @@
+{
+  "schema_version": "CUDO_CAUSAL_PARTIAL_ORDER_ARBITRATION_V1",
+  "policy": {
+    "model": "DIRECTED_ACYCLIC_PRECEDENCE_GRAPH",
+    "constraint_code_is_open_string": true,
+    "constraint_requires_explanation": true,
+    "constraint_requires_source_refs": true,
+    "cycle_policy": "FAIL_CLOSED",
+    "transitive_precedence": true,
+    "total_order_claimed": false,
+    "global_priority_score": false,
+    "unrelated_candidates_may_execute_in_parallel": true,
+    "incomparable_candidates_are_not_silently_ranked": true,
+    "production_write": false
+  },
+  "stable_relation": {
+    "predecessor_relation": "PREDECESSOR",
+    "successor_relation": "SUCCESSOR",
+    "meaning": "predecessor must be satisfied before successor becomes executable"
+  },
+  "evidence_examples_not_enum": [
+    "EXTERNAL_DECISION_REQUIRES_APPLICATION_DONE",
+    "APPROVAL_BEFORE_RECEIVABLE",
+    "SETTLEMENT_BEFORE_ELIGIBILITY_RECALCULATION",
+    "REQUIRED_AUTHORIZATION_BEFORE_APPROVED_STATE",
+    "REQUIRED_EVIDENCE_BEFORE_DONE"
+  ]
+}
