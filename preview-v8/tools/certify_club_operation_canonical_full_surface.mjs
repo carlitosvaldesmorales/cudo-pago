@@ -4,13 +4,44 @@ import fs from 'node:fs';
 const html=fs.readFileSync('preview-v8/club-operacion-lab/index.html','utf8');
 const projection=JSON.parse(fs.readFileSync('qa-v8-google/data/operacion.json','utf8'));
 const state=JSON.parse(fs.readFileSync('qa-v8-google/state/operational-work-state.json','utf8'));
+const contracts=[
+  JSON.parse(fs.readFileSync('qa-v8-google/contracts/cudo-real-work-irrigation-v1.json','utf8')),
+  JSON.parse(fs.readFileSync('qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json','utf8')),
+  JSON.parse(fs.readFileSync('qa-v8-google/contracts/cudo-real-work-post-match-v1.json','utf8'))
+];
 
 assert.equal(projection.authority,'CANONICAL_GRAPH_READ_MODEL');
 assert.equal(projection.production_write,false);
 assert.equal(state.production_write,false);
+for(const contract of contracts) assert.equal(contract.production_write,false);
 assert.ok(Array.isArray(projection.items)&&projection.items.length>=4,'expected existing canonical work items');
 
-const byId=new Map(state.objects.map(x=>[x.object_id,x]));
+function stable(value){
+  if(Array.isArray(value)) return value.map(stable);
+  if(value&&typeof value==='object') return Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])]));
+  return value;
+}
+function materialSignature(object){
+  return JSON.stringify({object_type:object.object_type,data:stable(object.data||{})});
+}
+function buildIndex(){
+  const index=new Map();
+  const duplicates=[];
+  for(const object of [...state.objects,...contracts.flatMap(x=>x.objects||[])]){
+    const prior=index.get(object.object_id);
+    if(!prior){index.set(object.object_id,object);continue;}
+    assert.equal(
+      materialSignature(prior),
+      materialSignature(object),
+      'conflicting canonical identity '+object.object_id
+    );
+    duplicates.push(object.object_id);
+  }
+  return {index,duplicates:[...new Set(duplicates)]};
+}
+const {index:byId,duplicates}=buildIndex();
+assert.ok(duplicates.includes('CUDO-RESOURCE-ESTADIO-001'),'expected shared stadium resource to prove compatible duplicate resolution');
+
 const results=[];
 for(const item of projection.items){
   const work=byId.get(item.work_id);
@@ -31,6 +62,13 @@ for(const item of projection.items){
   });
 }
 
+const grassEvent=byId.get('CUDO-EVENT-QA-SATURDAY-MATCH-001');
+assert.equal(grassEvent?.data?.qa_synthetic,true,'grass trigger must remain explicitly synthetic QA');
+assert.ok(grassEvent?.provenance?.source_refs?.every(x=>x.startsWith('qa://')),'grass trigger must not masquerade as real artifact evidence');
+
+const grassActor=byId.get('CUDO-ACTOR-MAX-FIGUEROA-001');
+assert.ok(grassActor?.provenance?.source_refs?.some(x=>x.includes("Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4")),'grass responsible must resolve to real source contract');
+
 for(const token of [
   'id="canonicalFullSurface"',
   'Lo que CUDO ya puede demostrar',
@@ -46,7 +84,12 @@ for(const token of [
   "function sourceClassification(refs)",
   "MIXTA · EVIDENCIA REAL + DISPARADOR QA",
   "QA SINTÉTICA",
-  "NO CREA RAÍZ COMÚN"
+  "NO CREA RAÍZ COMÚN",
+  "function buildCanonicalObjectIndex(stateStore,contracts)",
+  "conflicto de identidad canónica",
+  "/qa-v8-google/contracts/cudo-real-work-irrigation-v1.json",
+  "/qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json",
+  "/qa-v8-google/contracts/cudo-real-work-post-match-v1.json"
 ]){
   assert.ok(html.includes(token),'missing full-surface trace contract: '+token);
 }
@@ -59,9 +102,13 @@ console.log(JSON.stringify({
   ok:true,
   authority:projection.authority,
   projected_work_items:projection.items.length,
+  resolved_object_universe:byId.size,
+  compatible_duplicate_ids:duplicates,
   all_work_items_resolved:true,
   all_relations_resolved:true,
   each_work_has_source_refs:true,
+  synthetic_trigger_stays_explicit:true,
+  real_source_actors_resolve_from_existing_contracts:true,
   no_common_root_invented:true,
   production_write:false,
   items:results
