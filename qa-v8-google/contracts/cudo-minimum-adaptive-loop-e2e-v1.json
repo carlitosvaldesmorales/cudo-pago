@@ -1,0 +1,24 @@
+{
+  "schema_version": "CUDO_MINIMUM_ADAPTIVE_LOOP_E2E_V1",
+  "chain": [
+    "OBSERVED_STATE",
+    "HUMAN_DECLARED_GOAL",
+    "DERIVED_GAP",
+    "EXPLAINABLE_ATTENTION",
+    "CAUSAL_PARTIAL_ORDER",
+    "CONTEXTUAL_HUMAN_DECISION",
+    "DECISION_FEEDBACK_OBSERVATION",
+    "MEASURED_OUTCOME",
+    "RECALIBRATED_GAP"
+  ],
+  "invariants": {
+    "goal_not_invented": true,
+    "no_global_priority_score": true,
+    "causal_precedence_before_human_choice": true,
+    "human_choice_contextual_not_universal": true,
+    "execution_not_equal_success": true,
+    "old_evidence_not_mutated": true,
+    "automatic_rule_promotion": false,
+    "production_write": false
+  }
+}
