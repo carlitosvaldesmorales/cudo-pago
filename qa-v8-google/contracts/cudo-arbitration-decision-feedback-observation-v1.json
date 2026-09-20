@@ -1,0 +1,15 @@
+{
+  "schema_version": "CUDO_ARBITRATION_DECISION_FEEDBACK_OBSERVATION_V1",
+  "policy": {
+    "source_decision_type": "RULE_DECISION",
+    "source_decision_kind": "CONTEXTUAL_ARBITRATION",
+    "output_type": "OBSERVATION",
+    "preserves_decision_identity": true,
+    "copies_no_global_policy": true,
+    "requires_source_provenance": true,
+    "pattern_id_required": false,
+    "automatic_rule_promotion": false,
+    "production_write": false
+  },
+  "meaning": "A contextual human arbitration decision becomes observable evidence for future pattern discovery without turning the choice into a universal policy."
+}

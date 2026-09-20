@@ -1,0 +1,31 @@
+name: Certify CUDO Arbitration Feedback Observation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'qa-v8-google/contracts/cudo-arbitration-decision-feedback-observation-v1.json'
+      - 'qa-v8-google/tools/contextual_human_arbitration_decision.mjs'
+      - 'qa-v8-google/tools/arbitration_decision_feedback.mjs'
+      - 'qa-v8-google/tools/certify_arbitration_decision_feedback.mjs'
+      - '.github/workflows/certify-cudo-arbitration-feedback-observation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate feedback syntax
+        run: node --check qa-v8-google/tools/arbitration_decision_feedback.mjs
+      - name: Validate certification syntax
+        run: node --check qa-v8-google/tools/certify_arbitration_decision_feedback.mjs
+      - name: Certify arbitration feedback observation
+        run: node qa-v8-google/tools/certify_arbitration_decision_feedback.mjs
