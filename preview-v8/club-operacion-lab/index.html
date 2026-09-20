@@ -50,6 +50,20 @@ main{padding:16px 0 50px}.qa{background:#fff7d8;border-left:4px solid #c99b00;bo
 </div>
 </section>
 
+<section class="source" id="canonicalFullSurface">
+<div class="ey">Estado operacional canónico conectado · sin inventar una raíz común</div>
+<h2>Lo que CUDO ya puede demostrar</h2>
+<p>Esta vista agrupa sólo objetos que ya existen en el read model canónico. Cada trabajo conserva su propia causa y evidencia; si un disparador es sintético QA, se declara como tal.</p>
+<div class="chips" id="canonicalSummaryChips"><span class="chip">LOADING</span></div>
+<div class="trace-inline" id="canonicalSummaryActions"></div>
+<div class="board" style="margin-top:12px">
+<section class="card"><h3>Trabajo canónico</h3><div class="help">No se crea una lista paralela: estas filas vienen de CANONICAL_GRAPH_READ_MODEL.</div><div id="canonicalAllWork"></div></section>
+<section class="card"><h3>Personas y cobertura canónica</h3><div class="help">Se agregan únicamente asignaciones ya existentes. No se infiere sobrecarga.</div><div id="canonicalPeople"></div></section>
+<section class="card"><h3>Recursos relacionados</h3><div class="help">Sólo recursos enlazados por los trabajos existentes.</div><div id="canonicalResources"></div></section>
+<section class="card"><h3>Causas / disparadores</h3><div class="help">Cada causa mantiene su clasificación real, derivada o QA sintética.</div><div id="canonicalSources"></div></section>
+</div>
+</section>
+
 <section class="source">
 <div class="source-grid">
 <div>
@@ -188,12 +202,68 @@ function recalc(){
 }
 function traceButton(key,label='Rastrear'){return '<button class="trace-btn" onclick="openTrace(\''+key.replace(/'/g,'')+'\')">'+label+'</button>'}
 function unique(v){return [...new Set((v||[]).filter(Boolean))]}
+function sourceClassification(refs){
+ const r=unique(refs);
+ const real=r.some(x=>String(x).startsWith('artifact:'));
+ const qa=r.some(x=>String(x).startsWith('qa://'));
+ if(real&&qa) return 'MIXTA · EVIDENCIA REAL + DISPARADOR QA';
+ if(real) return 'EVIDENCIA REAL';
+ if(qa) return 'QA SINTÉTICA';
+ return r.length?'EVIDENCIA CANÓNICA':'GAP';
+}
+function canonicalObjectById(id){return canonicalLive.stateStore?.objects?.find(x=>x.object_id===id)||null}
+function workRefs(work,object){return unique([...(work?.evidence_refs||[]),...(object?.provenance?.source_refs||[])])}
 function canonicalTrace(key){
  if(!key.startsWith('canonical:')) return null;
  if(canonicalLive.status!=='READY'){
   return {title:'Fuente canónica no disponible',classification:'GAP',state_kind:'OPAQUE',gap_id:'CANONICAL_REAL_SOURCE_RUNTIME_NOT_READY',source_refs:[canonicalLive.error||'read model pendiente'],links:[['Abrir read model versionado',TRACE_LINKS.operationalProjection]],note:'No se reemplaza la fuente canónica por datos mock cuando falla la lectura.'};
  }
  const w=canonicalLive.work,wo=canonicalLive.workObject,rule=canonicalLive.rule,res=canonicalLive.resource,actor=canonicalLive.actor;
+ if(key==='canonical:summary'){
+  const items=canonicalLive.projection.items||[];
+  const actorIds=unique(items.map(x=>x.responsible?.actor_id));
+  const resourceIds=unique(items.map(x=>x.resource?.resource_id));
+  const sourceIds=unique(items.map(x=>x.source?.object_id));
+  return {title:'Resumen operacional canónico',classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-CLUB-OPERATIONAL-STATE-SUMMARY',rule_ids:['AGGREGATE_EXISTING_CANONICAL_RELATIONSHIPS_ONLY'],source_refs:items.map(x=>x.work_id),relationships:[...actorIds.map(id=>['Persona relacionada','canonical:object:'+id]),...resourceIds.map(id=>['Recurso relacionado','canonical:object:'+id]),...sourceIds.map(id=>['Causa existente','canonical:object:'+id])],links:[['Abrir read model',TRACE_LINKS.operationalProjection],['Abrir estado canónico',TRACE_LINKS.operationalState]],note:items.length+' trabajo(s) existentes. El resumen no crea una situación raíz común ni una prioridad nueva.'};
+ }
+ if(key.startsWith('canonical:item:')){
+  const id=key.slice('canonical:item:'.length);
+  const item=canonicalLive.projection.items?.find(x=>x.work_id===id);
+  const object=canonicalObjectById(id);
+  if(!item||!object) return {title:id,classification:'GAP',state_kind:'OPAQUE',object_id:id,gap_id:'CANONICAL_WORK_NOT_RESOLVED',source_refs:[]};
+  const refs=workRefs(item,object);
+  const ruleIds=unique(Object.values(object.field_semantics||{}).flatMap(x=>x.rule_ids||[]));
+  const rel=(object.relationships||[]).map(r=>[r.relationship_type,'canonical:object:'+r.target_object_id]);
+  return {title:item.title,classification:sourceClassification(refs),state_kind:'DERIVED',object_id:item.work_id,rule_ids:ruleIds,source_refs:refs,relationships:[...rel,['Persistencia QA','canonical:persistence-item:'+id],['Contexto financiero','canonical:financial-item:'+id],['Historial','canonical:history-item:'+id]],links:[['Abrir objeto canónico',TRACE_LINKS.operationalState],['Abrir read model',TRACE_LINKS.operationalProjection]],note:'Estado '+item.state+' · causa visible '+String(item.source?.display_name||'sin causa')+'. El trabajo conserva su propia causalidad; no se fusiona con otros trabajos por conveniencia visual.'};
+ }
+ if(key.startsWith('canonical:object:')){
+  const id=key.slice('canonical:object:'.length);
+  const object=canonicalObjectById(id);
+  if(!object) return {title:id,classification:'GAP_CONTROLADO',state_kind:'OPAQUE',object_id:id,gap_id:'CANONICAL_RELATION_TARGET_NOT_IN_STATE_STORE',source_refs:[],links:[['Abrir estado canónico',TRACE_LINKS.operationalState]],note:'La relación fue observada, pero el objeto objetivo no está resoluble en el state store actual.'};
+  const refs=unique([...(object.provenance?.source_refs||[]),...Object.values(object.field_semantics||{}).flatMap(x=>x.source_refs||[])]);
+  const ruleIds=unique(Object.values(object.field_semantics||{}).flatMap(x=>x.rule_ids||[]));
+  const kinds=unique(Object.values(object.field_semantics||{}).map(x=>x.state_kind));
+  const stateKind=kinds.includes('OPAQUE')?'OPAQUE':kinds.includes('DERIVED')?'DERIVED':'SOURCE';
+  const title=object.data?.title||object.data?.display_name||id;
+  return {title,classification:sourceClassification(refs),state_kind:stateKind,object_id:id,rule_ids:ruleIds,source_refs:refs,relationships:(object.relationships||[]).map(r=>[r.relationship_type,'canonical:object:'+r.target_object_id]),links:[['Abrir estado canónico',TRACE_LINKS.operationalState]],note:'Tipo canónico: '+object.object_type+' · lifecycle: '+object.lifecycle_state+'.'};
+ }
+ if(key.startsWith('canonical:persistence-item:')){
+  const id=key.slice('canonical:persistence-item:'.length);
+  const item=canonicalLive.projection.items?.find(x=>x.work_id===id);
+  return {title:'Persistencia QA · '+(item?.title||id),classification:'EVIDENCIA_RUNTIME',state_kind:'SOURCE',object_id:'CUDO-QA-OPERATIONAL-WORK-STATE-SHEET',source_refs:['Google Sheet CUDO_QA_OPERATIONAL_WORK_STATE / WORK_CONTROL','work_id: '+id,'authority: '+canonicalLive.projection.authority,'generated_at: '+canonicalLive.projection.generated_at],relationships:[['Trabajo persistido','canonical:item:'+id]],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir read model JSON',TRACE_LINKS.operationalProjection]],note:'La Sheet es una proyección QA, no una autoridad independiente.'};
+ }
+ if(key.startsWith('canonical:financial-item:')){
+  const id=key.slice('canonical:financial-item:'.length);
+  const item=canonicalLive.projection.items?.find(x=>x.work_id===id),object=canonicalObjectById(id);
+  if(!item) return null;
+  const ctx=item.financial_context||{};
+  return {title:'Contexto financiero · '+item.title,classification:sourceClassification(workRefs(item,object)),state_kind:'DERIVED',object_id:id+'-FINANCIAL-CONTEXT',rule_ids:unique(Object.entries(object?.field_semantics||{}).filter(([k])=>k.startsWith('financial_context')).flatMap(([,v])=>v.rule_ids||[])),source_refs:workRefs(item,object),relationships:[['Trabajo','canonical:item:'+id]],links:[['Abrir read model',TRACE_LINKS.operationalProjection]],note:'Semántica: '+String(ctx.semantics||'sin semántica')+'. No se convierte en obligación actual salvo que el motor canónico derive explícitamente un efecto financiero.'};
+ }
+ if(key.startsWith('canonical:history-item:')){
+  const id=key.slice('canonical:history-item:'.length);
+  const audit=(canonicalLive.stateStore?.audit||[]).filter(x=>x.work_id===id);
+  return {title:'Historial · '+id,classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:id+'-HISTORY',rule_ids:['APPEND_ONLY_WORK_AUDIT'],source_refs:audit.length?audit.map(x=>x.transition_id||JSON.stringify(x)):['WORK_AUDIT sin transiciones para este trabajo al momento de la lectura'],relationships:[['Trabajo','canonical:item:'+id]],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir estado canónico',TRACE_LINKS.operationalState]],note:audit.length+' transición(es) auditada(s). No se inventa historial cuando aún no existe.'};
+ }
  if(key==='canonical:work'){
   const ruleIds=unique(Object.values(wo?.field_semantics||{}).flatMap(x=>x.rule_ids||[]));
   return {title:w.title,classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:w.work_id,rule_ids:ruleIds,source_refs:unique([...(w.evidence_refs||[]),...(wo?.provenance?.source_refs||[])]),relationships:[['Causa / regla','canonical:rule'],['Recurso','canonical:resource'],['Responsable','canonical:actor'],['Contexto financiero','canonical:financial'],['Persistencia QA','canonical:persistence'],['Historial','canonical:history']],links:[['Abrir objeto canónico',TRACE_LINKS.operationalState],['Abrir read model',TRACE_LINKS.operationalProjection]],note:'Este trabajo no está digitado en esta pantalla: se lee del read model CANONICAL_GRAPH_READ_MODEL.'};
@@ -220,10 +290,6 @@ function canonicalTrace(key){
  if(key==='canonical:history'){
   const audit=(canonicalLive.stateStore?.audit||[]).filter(x=>x.work_id===w.work_id);
   return {title:'Historial auditable',classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:w.work_id+'-HISTORY',rule_ids:['APPEND_ONLY_WORK_AUDIT'],source_refs:audit.length?audit.map(x=>x.transition_id||JSON.stringify(x)):['WORK_AUDIT sin transiciones para este trabajo al momento de la lectura'],relationships:[['Trabajo','canonical:work'],['Persistencia QA','canonical:persistence']],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir estado canónico',TRACE_LINKS.operationalState]],note:audit.length+' transición(es) auditada(s) para este trabajo. La ausencia de transiciones no borra su proveniencia de creación.'};
- }
- if(key.startsWith('canonical:object:')){
-  const id=key.slice('canonical:object:'.length);
-  return {title:id,classification:'GAP_CONTROLADO',state_kind:'OPAQUE',object_id:id,gap_id:'CANONICAL_RELATION_NOT_PROJECTED_IN_THIS_MINIMUM_VIEW',source_refs:['relación existente en contrato canónico'],links:[['Abrir contrato de fuente',TRACE_LINKS.irrigationContract]],note:'La relación existe, pero este incremento mínimo todavía no proyecta un detalle humano específico para ese objeto.'};
  }
  return null;
 }
@@ -280,6 +346,35 @@ function openTrace(key){
   (links?'<div class="trace-links">'+links+'</div>':'');
  document.getElementById('traceModal').classList.add('open');
 }
+function renderCanonicalFullSurface(){
+ const work=document.getElementById('canonicalAllWork'),people=document.getElementById('canonicalPeople'),resources=document.getElementById('canonicalResources'),sources=document.getElementById('canonicalSources'),chips=document.getElementById('canonicalSummaryChips'),actions=document.getElementById('canonicalSummaryActions');
+ if(!work||!people||!resources||!sources) return;
+ if(canonicalLive.status==='ERROR'){
+  work.innerHTML='<div class="row"><span class="chip bad">GAP</span><div class="meta">'+esc(canonicalLive.error||'Fuente no disponible')+'</div></div>';
+  people.innerHTML=resources.innerHTML=sources.innerHTML='<div class="row"><span class="chip">Sin proyección</span></div>';
+  chips.innerHTML='<span class="chip bad">FAIL CLOSED</span>';
+  actions.innerHTML=traceButton('canonical:summary','Rastrear GAP');
+  return;
+ }
+ if(canonicalLive.status!=='READY') return;
+ const items=canonicalLive.projection.items||[];
+ const classify=item=>{
+  const obj=canonicalObjectById(item.work_id);
+  return sourceClassification(workRefs(item,obj));
+ };
+ work.innerHTML=items.map(item=>'<div class="row"><strong>'+esc(item.title)+'</strong><div class="meta">Estado: '+esc(item.state)+' · Responsable: '+esc(item.responsible?.display_name||'SIN ASIGNAR')+' · Recurso: '+esc(item.resource?.display_name||'SIN RECURSO')+' · Causa: '+esc(item.source?.display_name||'SIN CAUSA')+(item.due_date?' · Vence: '+esc(item.due_date):'')+'</div><div class="trace-inline"><span class="chip '+(classify(item).startsWith('MIXTA')?'warn':'good')+'">'+esc(classify(item))+'</span>'+traceButton('canonical:item:'+item.work_id)+'</div></div>').join('');
+ const actorMap=new Map();
+ for(const item of items){const id=item.responsible?.actor_id;if(!id)continue;const prev=actorMap.get(id)||{name:item.responsible.display_name,count:0};prev.count++;actorMap.set(id,prev)}
+ people.innerHTML=[...actorMap.entries()].map(([id,x])=>'<div class="row"><strong>'+esc(x.name)+'</strong><div class="meta">'+x.count+' trabajo(s) relacionado(s). No implica sobrecarga.</div><div class="actions">'+traceButton('canonical:object:'+id)+'</div></div>').join('')||'<div class="row">Sin responsables proyectados.</div>';
+ const resourceMap=new Map();
+ for(const item of items){const id=item.resource?.resource_id;if(!id)continue;const prev=resourceMap.get(id)||{name:item.resource.display_name,count:0};prev.count++;resourceMap.set(id,prev)}
+ resources.innerHTML=[...resourceMap.entries()].map(([id,x])=>'<div class="row"><strong>'+esc(x.name)+'</strong><div class="meta">'+x.count+' trabajo(s) aplican a este recurso.</div><div class="actions">'+traceButton('canonical:object:'+id)+'</div></div>').join('')||'<div class="row">Sin recursos relacionados.</div>';
+ const sourceMap=new Map();
+ for(const item of items){const id=item.source?.object_id;if(!id)continue;const prev=sourceMap.get(id)||{name:item.source.display_name,count:0};prev.count++;sourceMap.set(id,prev)}
+ sources.innerHTML=[...sourceMap.entries()].map(([id,x])=>{const obj=canonicalObjectById(id);const refs=unique([...(obj?.provenance?.source_refs||[]),...Object.values(obj?.field_semantics||{}).flatMap(v=>v.source_refs||[])]);return '<div class="row"><strong>'+esc(x.name)+'</strong><div class="meta">'+x.count+' trabajo(s) · '+esc(sourceClassification(refs))+'</div><div class="actions">'+traceButton('canonical:object:'+id)+'</div></div>'}).join('')||'<div class="row">Sin causas proyectadas.</div>';
+ chips.innerHTML='<span class="chip good">'+items.length+' trabajos canónicos</span><span class="chip">'+actorMap.size+' personas relacionadas</span><span class="chip">'+resourceMap.size+' recurso(s)</span><span class="chip warn">NO CREA RAÍZ COMÚN</span>';
+ actions.innerHTML=traceButton('canonical:summary','Rastrear resumen');
+}
 function renderCanonicalCase(){
  const title=document.getElementById('canonicalWorkTitle'),summary=document.getElementById('canonicalWorkSummary'),chips=document.getElementById('canonicalWorkChips'),actions=document.getElementById('canonicalWorkActions'),details=document.getElementById('canonicalSourceDetails');
  if(canonicalLive.status==='ERROR'){
@@ -320,6 +415,7 @@ async function loadCanonicalCase(){
   canonicalLive={status:'ERROR',projection:null,stateStore:null,contract:null,work:null,workObject:null,rule:null,resource:null,actor:null,error:error.message};
  }
  renderCanonicalCase();
+ renderCanonicalFullSurface();
 }
 function render(){
  document.getElementById('workList').innerHTML=s.works.map(w=>'<div class="row"><strong>'+esc(w.title)+'</strong><div class="meta">Estado: '+esc(w.state)+' · Responsable: '+esc(w.responsible||'SIN ASIGNAR')+' · Causa: '+esc(w.source)+'</div><div class="actions">'+
