@@ -65,7 +65,7 @@ const constraint=createArbitrationConstraint({
 });
 const order=resolvePartialOrder({candidateIds:[APPLY,DECIDE,BINGO],constraints:[constraint]});
 assert.equal(order.ok,true);
-assert.deepEqual(order.executable_now,[APPLY,BINGO]);
+assert.deepEqual([...order.executable_now].sort(),[APPLY,BINGO].sort());
 assert.ok(order.incomparable_pairs.some(([a,b])=>a===APPLY&&b===BINGO)||order.incomparable_pairs.some(([a,b])=>a===BINGO&&b===APPLY));
 assert.equal(order.total_order_claimed,false);
 
