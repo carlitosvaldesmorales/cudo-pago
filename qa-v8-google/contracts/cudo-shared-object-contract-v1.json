@@ -37,7 +37,8 @@
         "PATTERN_CANDIDATE",
         "GOAL_COMMITMENT",
         "GAP",
-        "ATTENTION_SIGNAL"
+        "ATTENTION_SIGNAL",
+        "ARBITRATION_CONSTRAINT"
       ]
     },
     "object_version": {
@@ -250,5 +251,5 @@
       }
     }
   },
-  "description": "Contrato compartido CUDO para dominio abierto: observaciones, patrones candidatos, objetivos, brechas y señales de atención explicables pueden coexistir sin cerrar taxonomías de negocio."
+  "description": "Contrato compartido CUDO para dominio abierto, incluyendo restricciones de precedencia causal auditables sin ranking global."
 }
