@@ -1,0 +1,89 @@
+{
+  "schema_version": "CUDO_ADAPTIVE_CONTROL_WEB_MOCK_V1",
+  "generated_at": "2026-09-20T02:30:00-03:00",
+  "environment": "qa-v8-mock",
+  "mock": true,
+  "production_write": false,
+  "as_of": "2026-09-20T10:00:00-03:00",
+  "disclaimer": "Fixture sintético para validar la proyección adaptativa. No representa personas, metas ni decisiones reales del CUDO.",
+  "goal": {
+    "goal_id": "MOCK-GOAL-AVAILABLE-RESOURCE-01",
+    "subject_ref": "MOCK-CLUB-RESOURCE-GENERATION",
+    "metric_key": "available_resource",
+    "comparator": "AT_LEAST",
+    "target_value": 1500000,
+    "unit": "CLP",
+    "declared_by": "Directiva Mock",
+    "source_ref": "fixture://adaptive-control/goal"
+  },
+  "observations": {
+    "initial": {
+      "observation_id": "MOCK-OBS-RESOURCE-INITIAL-01",
+      "current_value": 500000,
+      "source_ref": "fixture://adaptive-control/initial"
+    },
+    "current": {
+      "observation_id": "MOCK-OBS-RESOURCE-CURRENT-01",
+      "current_value": 900000,
+      "source_ref": "fixture://adaptive-control/current"
+    }
+  },
+  "arbitration": {
+    "candidates": [
+      {
+        "action_id": "MOCK-ACTION-PREPARE-GRANT-01",
+        "label": "Preparar solicitud de financiamiento Mock"
+      },
+      {
+        "action_id": "MOCK-ACTION-EXTERNAL-GRANT-DECISION-01",
+        "label": "Registrar decisión externa Mock"
+      },
+      {
+        "action_id": "MOCK-ACTION-PREPARE-BINGO-01",
+        "label": "Preparar Bingo Mock"
+      }
+    ],
+    "constraints": [
+      {
+        "constraint_id": "MOCK-CONSTRAINT-GRANT-01",
+        "predecessor_id": "MOCK-ACTION-PREPARE-GRANT-01",
+        "successor_id": "MOCK-ACTION-EXTERNAL-GRANT-DECISION-01",
+        "constraint_code": "EXTERNAL_DECISION_REQUIRES_APPLICATION_DONE",
+        "explanation": "La decisión externa depende de que la solicitud esté completada."
+      }
+    ],
+    "completed_action_ids": [],
+    "decision": {
+      "decision_id": "MOCK-DECISION-ARBITRATION-01",
+      "considered_action_ids": [
+        "MOCK-ACTION-PREPARE-GRANT-01",
+        "MOCK-ACTION-PREPARE-BINGO-01"
+      ],
+      "selected_action_ids": [
+        "MOCK-ACTION-PREPARE-GRANT-01"
+      ],
+      "decided_by": "Directiva Mock",
+      "reason": "Decisión QA contextual: atender primero la solicitud de financiamiento.",
+      "creates_global_priority_policy": false
+    }
+  },
+  "additional_work": [
+    {
+      "work_id": "MOCK-WORK-ACCESS-COORDINATION-UNASSIGNED-01",
+      "title": "Coordinar acceso y estacionamiento Mock",
+      "work_kind": "ACCESS_COORDINATION",
+      "state": "OPEN",
+      "attention": "PENDING",
+      "priority": "NORMAL",
+      "responsible_actor_id": null,
+      "due_at": "2026-09-20T12:00:00-03:00",
+      "source_ref": "MOCK-EVENT-MATCH-SCHEDULED-01",
+      "resource_ref": null,
+      "blocker_refs": [],
+      "dependency_refs": [],
+      "evidence_refs": [],
+      "financial_obligation_refs": [],
+      "mock": true
+    }
+  ]
+}
