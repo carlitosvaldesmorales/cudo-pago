@@ -13,7 +13,9 @@ const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signatur
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 const expectedAdminActions=[
-  {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL'},
+  {label:'Control del club · QA',path:'control/',provider:'CUDO_INTERNAL',readyToken:'brecha actual'},
+  {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL',readyToken:'Actividades del club',backend:'GOOGLE_APPS_SCRIPT_EMBED'},
+  {label:'Eventos del club · QA',path:'eventos/',provider:'CUDO_INTERNAL',readyToken:'Partido Mock Programado'},
   {label:'Completar mi ficha',host:'tally.so',provider:'TALLY'},
   {label:'Publicar una noticia',host:'tally.so',provider:'TALLY'},
   {label:'Administrar equipo o serie',host:'docs.google.com',provider:'GOOGLE_FORMS'},
@@ -163,13 +165,29 @@ async function validateAdminActions(page,result){
         const url=new URL(target||expected.path,page.url()).href;
         const response=await internal.goto(url,{waitUntil:'domcontentloaded',timeout:20000});
         if(!response||!response.ok()) throw new Error(`admin: click ${expected.label} HTTP ${response?.status()}`);
+        if(expected.readyToken){
+          await internal.waitForFunction(
+            token=>(document.body?.innerText||'').toLowerCase().includes(String(token).toLowerCase()),
+            expected.readyToken,
+            {timeout:15000}
+          ).catch(()=>{});
+        }
         const bodyText=(await internal.locator('body').innerText({timeout:10000}).catch(()=>''))?.trim()||'';
-        if(!bodyText||!/Actividades del club/i.test(bodyText)) throw new Error('admin: superficie interna Actividades no renderizó');
-        const frameSrc=await internal.locator('#cudoActivitiesFrame').getAttribute('src');
-        if(!frameSrc||new URL(frameSrc).hostname!=='script.google.com') throw new Error('admin: Actividades no conserva backend Apps Script');
+        if(!bodyText) throw new Error(`admin: superficie interna ${expected.label} no renderizó`);
+        if(expected.readyToken&&!bodyText.toLowerCase().includes(expected.readyToken.toLowerCase())){
+          throw new Error(`admin: superficie interna ${expected.label} no alcanzó estado listo "${expected.readyToken}"`);
+        }
+        const visibleError=await internal.locator('.error:not([hidden])').innerText({timeout:500}).catch(()=>'');
+        if(visibleError?.trim()) throw new Error(`admin: superficie interna ${expected.label} muestra error: ${visibleError.trim()}`);
+        if(expected.backend==='GOOGLE_APPS_SCRIPT_EMBED'){
+          const frameSrc=await internal.locator('#cudoActivitiesFrame').getAttribute('src');
+          if(!frameSrc||new URL(frameSrc).hostname!=='script.google.com') throw new Error('admin: Actividades no conserva backend Apps Script');
+          result.admin_actions[i].provider_access_observation='CUDO_WEB_EMBEDS_GOOGLE_APPS_SCRIPT';
+        }else{
+          result.admin_actions[i].provider_access_observation='CUDO_WEB_INTERNAL_RENDERED';
+        }
         result.admin_actions[i].entrypoint='LIVE_OPENED_INTERNAL';
         result.admin_actions[i].resolved_url=internal.url();
-        result.admin_actions[i].provider_access_observation='CUDO_WEB_EMBEDS_GOOGLE_APPS_SCRIPT';
       }finally{
         await internal.close().catch(()=>{});
       }
