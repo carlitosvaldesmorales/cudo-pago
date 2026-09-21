@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V1",
-  "generated_at": "2026-09-21T19:40:00.000Z",
-  "store_revision": 1,
+  "generated_at": "2026-09-21T19:58:12.262Z",
+  "store_revision": 2,
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "MATCH": {
     "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
@@ -16,20 +16,20 @@
     "resource": {
       "object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001",
       "opening_stock": 12,
-      "purchased_qty": 0,
-      "purchase_total": 0,
+      "purchased_qty": 3,
+      "purchase_total": 2100,
       "sold_qty": 0,
-      "stock_after_sales": 12,
+      "stock_after_sales": 15,
       "sales_revenue": 0,
-      "unit_cost": 0,
+      "unit_cost": 700,
       "sell_price": 1500
     },
     "supplier_payable": {
       "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
-      "payable_qty": 0,
-      "amount": 0
+      "payable_qty": 3,
+      "amount": 2100
     },
-    "operational_resource_result_clp": 0
+    "operational_resource_result_clp": -2100
   },
   "BINGO": {
     "event_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
@@ -59,6 +59,6 @@
     },
     "operational_resource_result_clp": 0
   },
-  "audit_count": 0,
+  "audit_count": 1,
   "production_write": false
 }

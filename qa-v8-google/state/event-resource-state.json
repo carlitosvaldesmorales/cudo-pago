@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_STATE_STORE_V1",
-  "store_revision": 1,
-  "generated_at": "2026-09-21T19:40:00.000Z",
+  "store_revision": 2,
+  "generated_at": "2026-09-21T19:58:12.262Z",
   "active_conditions": [
     "SINGLE_RESOURCE_DIRECT_SALES_MODEL",
     "SUPPLIER_RETURN_MODEL_APPLIES",
@@ -97,20 +97,20 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001",
       "object_type": "RESOURCE_FACILITY",
-      "object_version": 1,
+      "object_version": 7,
       "lifecycle_state": "AVAILABLE",
       "data": {
         "resource_kind": "BEVERAGE_STOCK",
         "opening_stock": 12,
-        "received_qty": 0,
+        "received_qty": 3,
         "returned_qty": 0,
-        "purchased_qty": 0,
-        "unit_cost": 0,
-        "purchase_total": 0,
-        "stock_available_before_sales": 12,
+        "purchased_qty": 3,
+        "unit_cost": 700,
+        "purchase_total": 2100,
+        "stock_available_before_sales": 15,
         "sold_qty": 0,
         "sell_price": 1500,
-        "stock_after_sales": 12
+        "stock_after_sales": 15
       },
       "field_semantics": {
         "resource_kind": {
@@ -194,11 +194,12 @@
       ],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": null,
+        "updated_at": "2026-09-21T19:58:12.262Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
           "qa://event-resource-governed-persistence"
-        ]
+        ],
+        "transition_id": "CUDO-TRANS-89F1290E8345A083D43F"
       },
       "legacy_refs": []
     },
@@ -206,15 +207,15 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
       "object_type": "FINANCIAL_OBLIGATION",
-      "object_version": 1,
+      "object_version": 4,
       "lifecycle_state": "OPEN",
       "data": {
         "obligation_direction": "PAYABLE",
         "obligation_kind": "SUPPLIER_SETTLEMENT",
         "currency": "CLP",
-        "payable_qty": 0,
-        "supplier_payable": 0,
-        "amount": 0
+        "payable_qty": 3,
+        "supplier_payable": 2100,
+        "amount": 2100
       },
       "field_semantics": {
         "obligation_direction": {
@@ -263,11 +264,12 @@
       ],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": null,
+        "updated_at": "2026-09-21T19:58:12.262Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
           "qa://event-resource-governed-persistence"
-        ]
+        ],
+        "transition_id": "CUDO-TRANS-A3B55C4425B7AA65F3FD"
       },
       "legacy_refs": []
     },
@@ -534,6 +536,39 @@
       "legacy_refs": []
     }
   ],
-  "audit": [],
+  "audit": [
+    {
+      "request_id": "CUDO-QA-EVENT-LIVE-35648094640",
+      "requested_at": "2026-09-21T20:00:00.000Z",
+      "applied_at": "2026-09-21T19:58:12.262Z",
+      "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+      "action": "MATCH_PURCHASE",
+      "expected_revision": 1,
+      "requested_by": "sistemas@cudo.cl",
+      "reason": "Synthetic external Google QA event persistence probe",
+      "evidence_ref": "qa://google-live/CUDO-QA-EVENT-LIVE-35648094640",
+      "status": "APPLIED",
+      "new_revision": 2,
+      "command_ids": [
+        "CUDO-CMD-56DF95671D3DD29932B6",
+        "CUDO-CMD-4786D85FA2023AD145EE",
+        "CUDO-CMD-7171E3B8B9CB1CF62175",
+        "CUDO-CMD-AD828ED41D0FFF3A8B74"
+      ],
+      "transaction_id": "CUDO-TXN-B64F7F278247FA61AA27",
+      "transition_ids": [
+        "CUDO-TRANS-C2D44E945D319359627C",
+        "CUDO-TRANS-D2DAF4326390FA31696B",
+        "CUDO-TRANS-44DBBED8E337201FDD65",
+        "CUDO-TRANS-5AB8A7A4A42368700B99",
+        "CUDO-TRANS-934533F3882A8DB78CAA",
+        "CUDO-TRANS-D70A2F520B215D876829",
+        "CUDO-TRANS-89F1290E8345A083D43F",
+        "CUDO-TRANS-F50F9797E925CB0D6ABB",
+        "CUDO-TRANS-A3B55C4425B7AA65F3FD"
+      ],
+      "transaction_fingerprint": "d6f596238d58dd0c17e94ef5ce6f8a889f8cb5ff3c78d47eb22457ebdf136e9f"
+    }
+  ],
   "production_write": false
 }
