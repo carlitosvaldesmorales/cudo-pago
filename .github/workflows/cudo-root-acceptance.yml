@@ -19,13 +19,6 @@ jobs:
       - name: Checkout CUDO
         uses: actions/checkout@v4
 
-      - name: Checkout ARKĒ control plane
-        uses: actions/checkout@v4
-        with:
-          repository: carlitosvaldesmorales/arke-root
-          ref: main
-          path: arke-control
-          fetch-depth: 1
 
       - uses: actions/setup-node@v4
         with:
@@ -43,7 +36,6 @@ jobs:
         shell: bash
         env:
           CUDO_BASE_URL: http://127.0.0.1:4173/preview-v8/
-          ARKE_ACCEPTANCE_PATH: arke-control/05_CASOS/CASO_CUDO_001/CUDO_ACTIVE_SLICE_ACCEPTANCE.yaml
         run: |
           set -euo pipefail
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-root-acceptance-http.log 2>&1 &
