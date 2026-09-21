@@ -1,0 +1,122 @@
+name: CUDO Self-Hosted Browser Agent POC
+
+on:
+  push:
+    branches:
+      - 'fix/cudo-root-acceptance-gate-20260921'
+    paths:
+      - '.github/workflows/cudo-self-hosted-browser-agent-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-agent-poc:
+    runs-on: self-hosted
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify existing local Ollama and browser CDP
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/version | tee /tmp/cudo-ollama-version.json
+          curl -fsS --max-time 5 http://127.0.0.1:19223/json/version | tee /tmp/cudo-browser-cdp.json
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags | jq -e '.models[] | select(.name=="llama3.2:3b")' >/dev/null
+
+      - name: Serve current PR surface locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup python3 -m http.server 4174 --bind 0.0.0.0 >/tmp/cudo-self-hosted-agent-http.log 2>&1 &
+          echo $! >/tmp/cudo-self-hosted-agent-http.pid
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:4174/preview-v8/control/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cudo-self-hosted-agent-http.log
+          exit 1
+
+      - name: Run Browser Use with local Ollama only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p qa-self-hosted-agent
+          cat > qa-self-hosted-agent/poc.py <<'PY'
+          import asyncio, json, time
+          from browser_use import Agent, ChatOllama, Tools
+          from browser_use.browser import BrowserProfile, BrowserSession
+
+          async def main():
+              started=time.time()
+              llm=ChatOllama(
+                  model='llama3.2:3b',
+                  host='http://127.0.0.1:11434',
+                  timeout=180,
+                  ollama_options={'temperature':0}
+              )
+              browser_session=BrowserSession(
+                  browser_profile=BrowserProfile(
+                      cdp_url='http://127.0.0.1:19223',
+                      is_local=True
+                  )
+              )
+              tools=Tools()
+              task=(
+                  'Open http://127.0.0.1:4174/preview-v8/control/. '
+                  'Do not modify any data and do not click actions that change state. '
+                  'Identify the first visible club work item and report exactly: '
+                  'title, current state, who is doing it, and what needs attention next. '
+                  'Then stop.'
+              )
+              agent=Agent(
+                  task=task,
+                  llm=llm,
+                  tools=tools,
+                  browser_session=browser_session,
+                  use_vision=False,
+                  max_actions_per_step=1,
+              )
+              history=await agent.run(max_steps=10)
+              report={
+                  'ok': bool(history.is_done()),
+                  'successful': history.is_successful(),
+                  'final_result': history.final_result(),
+                  'errors': history.errors(),
+                  'model': 'llama3.2:3b',
+                  'model_runtime': 'OLLAMA_LOCAL',
+                  'browser_runtime': 'EXISTING_CUDO_CHROMIUM_CDP',
+                  'external_model_api_used': False,
+                  'paid_browser_api_used': False,
+                  'production_write': False,
+                  'elapsed_seconds': round(time.time()-started,2),
+              }
+              with open('qa-self-hosted-agent/browser-use-poc.json','w',encoding='utf-8') as fh:
+                  json.dump(report,fh,ensure_ascii=False,indent=2)
+              print(json.dumps(report,ensure_ascii=False,indent=2))
+              if not report['ok'] or report['successful'] is False or not report['final_result']:
+                  raise SystemExit(2)
+
+          asyncio.run(main())
+          PY
+
+          podman run --rm             --network=host             --security-opt label=disable             -v "$PWD:/work"             -w /work             docker.io/library/python:3.12-slim             bash -lc 'pip install --no-cache-dir browser-use && python qa-self-hosted-agent/poc.py'
+
+      - name: Upload zero-credit agent evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-self-hosted-browser-agent-poc-${{ github.run_id }}
+          path: qa-self-hosted-agent/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop local static server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/cudo-self-hosted-agent-http.pid ]; then
+            kill "$(cat /tmp/cudo-self-hosted-agent-http.pid)" 2>/dev/null || true
+          fi
