@@ -12,7 +12,7 @@ import {
 } from './process_event_resource_requests.mjs';
 import {buildSourceChangeCommand} from './projection_persistence_adapters.mjs';
 
-const base=loadEventResourceState();
+const base=JSON.parse(fs.readFileSync(new URL('../contracts/cudo-event-resource-governed-fixture-v1.json',import.meta.url),'utf8'));
 const registry=loadDependencyRegistry();
 let state=JSON.parse(JSON.stringify(base));
 let tick=0;
