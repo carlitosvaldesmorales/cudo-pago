@@ -9,6 +9,12 @@ export const DEFAULT_STATE_PATH=path.resolve(__dirname,'../state/event-resource-
 export const DEFAULT_READ_MODEL_PATH=path.resolve(__dirname,'../data/event-resource-qa.json');
 export const REGISTRY_PATH=path.resolve(__dirname,'../contracts/cudo-dependency-rule-registry-v1.json');
 export const ALLOWED_REQUESTER='sistemas@cudo.cl';
+export const EVENT_RESOURCE_SHEET_ID='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw';
+export const EVENT_REQUESTS_SHEET='EVENT_RESOURCE_REQUESTS';
+export const EVENT_CONTROL_SHEET='EVENT_RESOURCE_CONTROL';
+export const EVENT_AUDIT_SHEET='EVENT_RESOURCE_AUDIT';
+export const EVENT_REQUEST_HEADERS=['REQUEST_ID','REQUESTED_AT','EVENT_ID','EXPECTED_REVISION','ACTION','PAYLOAD_JSON','REASON','EVIDENCE_REF','REQUESTED_BY','PROCESS_STATUS','RESULT','APPLIED_AT'];
+export const EVENT_AUDIT_HEADERS=['REQUEST_ID','EVENT_ID','ACTION','STATUS','EXPECTED_REVISION','NEW_REVISION','REQUESTED_BY','REASON','EVIDENCE_REF','TRANSACTION_ID','TRANSITION_IDS','APPLIED_AT'];
 
 export const EVENT_IDS={MATCH:'CUDO-EVENT-QA-MATCH-FULLDAY-001',BINGO:'CUDO-EVENT-QA-BINGO-FULLDAY-001'};
 export const RESOURCE_IDS={MATCH:'CUDO-RESOURCE-QA-MATCH-BEV-001',BINGO:'CUDO-RESOURCE-QA-BINGO-BEV-001'};
@@ -264,11 +270,134 @@ export function saveEventResourceState({stateStore,projection,statePath=DEFAULT_
   return {statePath,projectionPath};
 }
 
+
+function rowsToObjects(values){
+  if(!values.length) return [];
+  const headers=values[0].map(clean);
+  return values.slice(1).map((row,i)=>({__row:i+2,...Object.fromEntries(headers.map((h,j)=>[h,clean(row[j])]))}))
+    .filter(row=>headers.some(h=>row[h]));
+}
+function assertHeaders(values,expected,label){
+  if(!values.length) throw new Error(label+': missing headers');
+  const actual=values[0].slice(0,expected.length).map(clean);
+  if(JSON.stringify(actual)!==JSON.stringify(expected)) throw new Error(label+': unexpected contract '+actual.join('|'));
+}
+function requestStatusMutation(row,status,result,at){
+  return {op:'update',kind:'REQUEST_STATUS',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_REQUESTS_SHEET+'!J'+row+':L'+row,values:[[status,result,at]]};
+}
+function externalAuditRow(summary){
+  return [
+    summary.request_id,summary.event_id,summary.action,summary.status,summary.expected_revision,
+    summary.new_revision??summary.current_revision??'',summary.requested_by,summary.reason,summary.evidence_ref,
+    summary.transaction_id||'',Array.isArray(summary.transition_ids)?summary.transition_ids.join('|'):'',summary.applied_at
+  ];
+}
+function controlRows(projection){
+  const h=['EVENT_ID','KIND','DISPLAY_NAME','STORE_REVISION','CLOSED','STOCK','PURCHASE_TOTAL','SOLD_QTY','SALES_REVENUE','SUPPLIER_PAYABLE','RESOURCE_RESULT','PERMIT_CONFIRMED','PRIZES_COUNT','SPORT_RESULTS_JSON','AUTHORITY'];
+  return [h,...['MATCH','BINGO'].map(key=>{
+    const e=projection[key];
+    return [e.event_id,e.kind,e.display_name,projection.store_revision,e.closed?'TRUE':'FALSE',e.resource.stock_after_sales,e.resource.purchase_total,e.resource.sold_qty,e.resource.sales_revenue,e.supplier_payable.amount,e.operational_resource_result_clp,e.permit_confirmed?'TRUE':'FALSE',e.donated_prizes.length,JSON.stringify(e.sport_results),projection.authority];
+  })];
+}
+
+export function planEventResourceSheetRequests({requestValues,stateStore,registry=loadDependencyRegistry(),now=()=>new Date().toISOString(),expectedPending=null}){
+  assertHeaders(requestValues,EVENT_REQUEST_HEADERS,EVENT_REQUESTS_SHEET);
+  const rows=rowsToObjects(requestValues).filter(x=>x.PROCESS_STATUS==='PENDING');
+  if(expectedPending!==null&&rows.length!==expectedPending) throw new Error('EVENT_RESOURCE safety gate: pending '+rows.length+', expected '+expectedPending);
+  let state=clone(stateStore);
+  const summary=[],sheetMutations=[];
+  for(const row of rows){
+    let payload={};
+    try{payload=row.PAYLOAD_JSON?JSON.parse(row.PAYLOAD_JSON):{};}
+    catch(error){
+      const at=now();
+      const blocked={request_id:row.REQUEST_ID,event_id:row.EVENT_ID,action:row.ACTION,status:'BLOCKED_PAYLOAD_JSON',expected_revision:Number(row.EXPECTED_REVISION),requested_by:row.REQUESTED_BY,reason:row.REASON,evidence_ref:row.EVIDENCE_REF,applied_at:at,error:error.message};
+      summary.push(blocked);
+      sheetMutations.push(requestStatusMutation(row.__row,'BLOCKED','BLOCKED_PAYLOAD_JSON',at));
+      sheetMutations.push({op:'append',kind:'EVENT_AUDIT',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_AUDIT_SHEET+'!A:L',values:[externalAuditRow(blocked)]});
+      continue;
+    }
+    const request={request_id:row.REQUEST_ID,requested_at:row.REQUESTED_AT,event_id:row.EVENT_ID,expected_revision:Number(row.EXPECTED_REVISION),action:row.ACTION,payload,requested_by:row.REQUESTED_BY,reason:row.REASON,evidence_ref:row.EVIDENCE_REF};
+    const result=processEventResourceRequests({requests:[request],stateStore:state,registry,now});
+    state=result.state_store;
+    const item=result.summary[0];
+    summary.push(item);
+    const status=item.status==='APPLIED'?'APPLIED':item.status==='DUPLICATE_ALREADY_APPLIED'?'APPLIED':'BLOCKED';
+    const resultText=item.status+(item.new_revision?' · revision '+item.new_revision:item.current_revision?' · current '+item.current_revision:'');
+    sheetMutations.push(requestStatusMutation(row.__row,status,resultText,item.applied_at));
+    sheetMutations.push({op:'append',kind:'EVENT_AUDIT',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_AUDIT_SHEET+'!A:L',values:[externalAuditRow(item)]});
+  }
+  const projection=buildEventResourceProjection(state);
+  sheetMutations.push({op:'replace',kind:'EVENT_CONTROL',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_CONTROL_SHEET+'!A:O',values:controlRows(projection)});
+  return {ok:true,pending_count:rows.length,summary,state_store:state,projection,sheet_mutations:sheetMutations,production_write:false};
+}
+
+async function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function googleAccessToken(){
+  const client_id=process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID;
+  const client_secret=process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET;
+  const refresh_token=process.env.CUDO_GOOGLE_REFRESH_TOKEN;
+  if(!client_id||!client_secret||!refresh_token) throw new Error('EVENT_RESOURCE: Google OAuth incomplete');
+  const response=await fetch('https://oauth2.googleapis.com/token',{
+    method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({client_id,client_secret,refresh_token,grant_type:'refresh_token'})
+  });
+  const data=await response.json();
+  if(!response.ok||!data.access_token) throw new Error('EVENT_RESOURCE OAuth HTTP '+response.status);
+  return data.access_token;
+}
+async function googleSheetAdapter(){
+  const token=await googleAccessToken();
+  const request=async(method,url,body)=>{
+    let last;
+    for(let i=0;i<5;i++){
+      const response=await fetch(url,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+      const text=await response.text();const data=text?JSON.parse(text):{};
+      if(response.ok) return data;
+      last={status:response.status,data};
+      if(![429,500,502,503,504].includes(response.status)||i===4) break;
+      await sleep(700*(2**i));
+    }
+    throw new Error('EVENT_RESOURCE Sheets HTTP '+(last?.status||'unknown')+': '+(last?.data?.error?.message||'unknown'));
+  };
+  return {
+    readValues:async(id,range)=>(await request('GET','https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/'+encodeURIComponent(range)+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE')).values||[],
+    updateValues:async(id,range,values)=>request('PUT','https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/'+encodeURIComponent(range)+'?valueInputOption=USER_ENTERED',{range,majorDimension:'ROWS',values}),
+    appendValues:async(id,range,values)=>request('POST','https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/'+encodeURIComponent(range)+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS',{range,majorDimension:'ROWS',values}),
+    clearValues:async(id,range)=>request('POST','https://sheets.googleapis.com/v4/spreadsheets/'+id+'/values/'+encodeURIComponent(range)+':clear',{})
+  };
+}
+
+export async function applyEventResourceSheetRequests({statePath=DEFAULT_STATE_PATH,projectionPath=DEFAULT_READ_MODEL_PATH,expectedPending=null}={}){
+  const adapter=await googleSheetAdapter();
+  const requestValues=await adapter.readValues(EVENT_RESOURCE_SHEET_ID,EVENT_REQUESTS_SHEET+'!A:L');
+  const plan=planEventResourceSheetRequests({requestValues,stateStore:loadEventResourceState(statePath),expectedPending});
+  for(const mutation of plan.sheet_mutations){
+    if(mutation.op==='update') await adapter.updateValues(mutation.spreadsheetId,mutation.range,mutation.values);
+    else if(mutation.op==='append') await adapter.appendValues(mutation.spreadsheetId,mutation.range,mutation.values);
+    else if(mutation.op==='replace'){
+      await adapter.clearValues(mutation.spreadsheetId,mutation.range);
+      await adapter.updateValues(mutation.spreadsheetId,mutation.range,mutation.values);
+    }
+  }
+  saveEventResourceState({stateStore:plan.state_store,projection:plan.projection,statePath,projectionPath});
+  return {...plan,writes_applied:plan.sheet_mutations.length};
+}
+
 if(import.meta.url==='file://'+process.argv[1]){
-  const requestFile=process.argv[2];
-  if(!requestFile) throw new Error('usage: node process_event_resource_requests.mjs requests.json');
-  const requests=JSON.parse(fs.readFileSync(requestFile,'utf8'));
-  const result=processEventResourceRequests({requests,stateStore:loadEventResourceState()});
-  saveEventResourceState({stateStore:result.state_store,projection:result.projection});
-  console.log(JSON.stringify({ok:result.ok,summary:result.summary,store_revision:result.state_store.store_revision,production_write:false},null,2));
+  if(process.env.CUDO_EVENT_RESOURCE_APPLY_GOOGLE==='true'){
+    const raw=process.env.CUDO_EVENT_RESOURCE_EXPECT_PENDING;
+    const expectedPending=raw===undefined||raw===''?null:Number(raw);
+    if(expectedPending!==null&&!Number.isInteger(expectedPending)) throw new Error('CUDO_EVENT_RESOURCE_EXPECT_PENDING must be integer');
+    applyEventResourceSheetRequests({expectedPending}).then(result=>{
+      console.log(JSON.stringify({ok:result.ok,pending_count:result.pending_count,summary:result.summary,writes_applied:result.writes_applied,store_revision:result.state_store.store_revision,production_write:false},null,2));
+    }).catch(error=>{console.error(error.stack||error);process.exit(1);});
+  }else{
+    const requestFile=process.argv[2];
+    if(!requestFile) throw new Error('usage: node process_event_resource_requests.mjs requests.json');
+    const requests=JSON.parse(fs.readFileSync(requestFile,'utf8'));
+    const result=processEventResourceRequests({requests,stateStore:loadEventResourceState()});
+    saveEventResourceState({stateStore:result.state_store,projection:result.projection});
+    console.log(JSON.stringify({ok:result.ok,summary:result.summary,store_revision:result.state_store.store_revision,production_write:false},null,2));
+  }
 }
