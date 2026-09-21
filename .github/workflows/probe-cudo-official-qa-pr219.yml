@@ -1,0 +1,49 @@
+name: Probe CUDO Official QA PR219
+
+on:
+  push:
+    branches:
+      - qa/probe-official-cudo-cl-pr219
+    paths:
+      - '.github/workflows/probe-cudo-official-qa-pr219.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Esperar publicación QA en cudo.cl
+        shell: bash
+        run: |
+          set -euo pipefail
+          QA_SOURCE='https://cudo.cl/qa-pr219/QA_SOURCE.json'
+          QA_ADMIN='https://cudo.cl/qa-pr219/admin/'
+          PROD='https://cudo.cl/preview-v8/'
+          expected='fea67dd7d4ec0f28b680ba0c9dce2a1f0285c8b1'
+
+          ok=0
+          for i in $(seq 1 60); do
+            code="$(curl -L -sS -o /tmp/qa-source.json -w '%{http_code}' --max-time 15 "$QA_SOURCE" || true)"
+            if [ "$code" = '200' ] && grep -q "$expected" /tmp/qa-source.json; then
+              ok=1
+              break
+            fi
+            echo "attempt=$i qa_source_http=$code"
+            sleep 5
+          done
+          test "$ok" = '1'
+
+          curl -LfsS --max-time 20 "$QA_ADMIN" -o /tmp/qa-admin.html
+          grep -q 'Partido y Bingo · QA gobernada' /tmp/qa-admin.html
+
+          prod_code="$(curl -L -sS -o /tmp/prod.html -w '%{http_code}' --max-time 20 "$PROD")"
+          test "$prod_code" = '200'
+
+          echo 'PASS_CUDO_OFFICIAL_QA_PR219'
+          echo "qa_source=$QA_SOURCE"
+          echo "qa_admin=$QA_ADMIN"
+          echo "production=$PROD"
+          cat /tmp/qa-source.json
