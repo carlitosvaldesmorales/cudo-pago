@@ -1,0 +1,9 @@
+{
+  "schema_version": "CUDO_EVENT_RESOURCE_BACKEND_QA_V1",
+  "provider": "GOOGLE_APPS_SCRIPT",
+  "url": "https://script.google.com/a/macros/cudo.cl/s/AKfycbxae8ZOaPJElvF9cTa0EdDzb-KBm4nItqHSnUdZngQ2nRnEEy3nX3AJMQHsySt5lE99Sw/exec?view=event",
+  "deployment_id": "AKfycbxae8ZOaPJElvF9cTa0EdDzb-KBm4nItqHSnUdZngQ2nRnEEy3nX3AJMQHsySt5lE99Sw",
+  "access": "MYSELF",
+  "target_ref": "agent/match-full-club-day-roundtrip-20260921",
+  "production_write": false
+}
