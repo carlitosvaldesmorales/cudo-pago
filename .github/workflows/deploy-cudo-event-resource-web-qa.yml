@@ -224,20 +224,36 @@ jobs:
           )) as r:
             token=json.load(r)['access_token']
 
-          request=urllib.request.Request(
-            'https://script.googleapis.com/v1/scripts/'+urllib.parse.quote(deployment_id,safe='')+':run',
-            data=json.dumps({'function':'cudoEventRuntimeStatus'}).encode(),
-            headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-            method='POST'
-          )
-          try:
-            with urllib.request.urlopen(request,timeout=120) as r:
-              response=json.load(r)
-          except urllib.error.HTTPError as e:
-            raise SystemExit('Apps Script runtime HTTP '+str(e.code)+' '+e.read().decode(errors='replace')[:1500])
+          import time
+          response=None
+          last_error=None
+          for attempt in range(15):
+            request=urllib.request.Request(
+              'https://script.googleapis.com/v1/scripts/'+urllib.parse.quote(deployment_id,safe='')+':run',
+              data=json.dumps({'function':'cudoEventRuntimeStatus'}).encode(),
+              headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+              method='POST'
+            )
+            try:
+              with urllib.request.urlopen(request,timeout=120) as r:
+                candidate=json.load(r)
+            except urllib.error.HTTPError as e:
+              last_error='HTTP '+str(e.code)+' '+e.read().decode(errors='replace')[:1500]
+              time.sleep(2)
+              continue
+            if candidate.get('error'):
+              last_error=json.dumps(candidate['error'])[:2000]
+              time.sleep(2)
+              continue
+            candidate_result=(candidate.get('response') or {}).get('result')
+            if isinstance(candidate_result,dict) and candidate_result.get('allowed_reviewer')=='sistemas@cudo.cl':
+              response=candidate
+              break
+            last_error='stale runtime contract: '+json.dumps(candidate_result)[:1200]
+            time.sleep(2)
 
-          if response.get('error'):
-            raise SystemExit('Apps Script runtime error: '+json.dumps(response['error'])[:2000])
+          if response is None:
+            raise SystemExit('Apps Script runtime did not converge: '+str(last_error))
           result=(response.get('response') or {}).get('result')
           if not isinstance(result,dict):
             raise SystemExit('Apps Script runtime result missing: '+json.dumps(response)[:2000])
