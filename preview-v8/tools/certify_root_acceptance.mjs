@@ -81,6 +81,11 @@ const primarySource=fs.readFileSync(sourcePath,'utf8');
 
 const results=[];
 const add=(id,pass,evidence,detail='')=>results.push({id,pass:Boolean(pass),evidence,detail});
+const runtimeProof=id=>{
+  const step=manifest.acceptance_steps.find(x=>x.id===id);
+  const proof=step?.runtime_certification;
+  return {pass:proof?.state==='PASS'&&Boolean(proof?.evidence_ref),proof:proof||null};
+};
 
 let browser;
 try{
@@ -137,19 +142,33 @@ try{
     const loc=page.locator('[data-acceptance-action="assign"],[data-acceptance-action="reassign"],[data-acceptance-action="transition"]').nth(i);
     if(await loc.isVisible().catch(()=>false)) visibleActions.push(await loc.getAttribute('data-acceptance-action'));
   }
-  add('CUDO-AS-05-ACTION-PATH',visibleActions.length>0,
-    {visibleActions},visibleActions.length?'Operational action path visible':'No canonical operational action path marker');
+  const actionProof=runtimeProof('CUDO-AS-05-ACTION-PATH');
+  const hasTransition=visibleActions.includes('transition');
+  const hasAssignment=visibleActions.includes('assign')||visibleActions.includes('reassign');
+  add('CUDO-AS-05-ACTION-PATH',hasTransition&&hasAssignment&&actionProof.pass,
+    {visibleActions,runtime_certification:actionProof.proof},
+    hasTransition&&hasAssignment&&actionProof.pass
+      ? 'Assignment/reassignment and state action path executed with persistent QA proof'
+      : 'Action path is not complete and runtime-certified');
 
   const blockers=await markerText('[data-acceptance="blockers"]');
   const evidence=await markerText('[data-acceptance="evidence"]');
   const history=await markerText('[data-acceptance="history"]');
-  add('CUDO-AS-06-BLOCKERS-EVIDENCE-HISTORY',Boolean(blockers&&evidence&&history),
-    {blockers,evidence,history},blockers&&evidence&&history?'Operational support context visible':'Blocker/evidence/history coverage incomplete');
+  const supportProof=runtimeProof('CUDO-AS-06-BLOCKERS-EVIDENCE-HISTORY');
+  add('CUDO-AS-06-BLOCKERS-EVIDENCE-HISTORY',Boolean(blockers&&evidence&&history)&&supportProof.pass,
+    {blockers,evidence,history,runtime_certification:supportProof.proof},
+    blockers&&evidence&&history&&supportProof.pass
+      ? 'Blocker/dependency/evidence/history roundtrip certified'
+      : 'Visibility alone is insufficient; executed blocker/dependency/evidence/history proof pending');
 
   const closeVisible=await page.locator('[data-acceptance-action="close"]').first().isVisible().catch(()=>false);
   const resultText=await markerText('[data-acceptance="result"]');
-  add('CUDO-AS-07-CLOSURE-RESULT',Boolean(closeVisible&&resultText),
-    {closeVisible,resultText},closeVisible&&resultText?'Closure/result visible':'Closure/result path missing');
+  const closeProof=runtimeProof('CUDO-AS-07-CLOSURE-RESULT');
+  add('CUDO-AS-07-CLOSURE-RESULT',Boolean(closeVisible&&resultText)&&closeProof.pass,
+    {closeVisible,resultText,runtime_certification:closeProof.proof},
+    closeVisible&&resultText&&closeProof.pass
+      ? 'Closure/result roundtrip certified'
+      : 'Closure/result requires an executed persistent roundtrip');
 
   const progressiveEntryCount=await page.getByRole('button',{name:/Ver origen|Por qué aparece|Ver historial/i}).count()
     + await page.getByRole('link',{name:/Ver origen|Por qué aparece|Ver historial/i}).count();
@@ -165,8 +184,14 @@ try{
 
   const localAuthorityTokens=['localStorage.setItem(','localStorage.getItem(','localStorage.removeItem('];
   const localAuthority=localAuthorityTokens.filter(token=>primarySource.includes(token));
-  add('CUDO-AS-10-PERSISTENCE-AUTHORITY',localAuthority.length===0,
-    {localAuthority},localAuthority.length?'Browser-local authority still present in primary source':'No browser-local operational authority');
+  const persistenceProof=runtimeProof('CUDO-AS-10-PERSISTENCE-AUTHORITY');
+  add('CUDO-AS-10-PERSISTENCE-AUTHORITY',localAuthority.length===0&&persistenceProof.pass,
+    {localAuthority,runtime_certification:persistenceProof.proof},
+    localAuthority.length
+      ? 'Browser-local authority still present in primary source'
+      : persistenceProof.pass
+        ? 'Persistent authority/audit roundtrip certified'
+        : 'No browser-local authority, but persistent roundtrip proof is still pending');
 
   const independent=manifest.acceptance_steps.find(x=>x.id==='CUDO-AS-11-INDEPENDENT-HUMAN-FIRST')?.external_review;
   const independentPass=independent?.state==='PASS'&&Boolean(independent?.evidence_ref);
