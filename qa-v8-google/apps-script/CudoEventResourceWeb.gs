@@ -155,11 +155,10 @@ function cudoEventHandlePost_(e){
 }
 
 function cudoEventRuntimeStatus(){
-  const reviewer=cudoEventReviewer_();
   const rows=cudoEventRows_();
   return {
     ok:true,
-    reviewer:reviewer,
+    allowed_reviewer:CUDO_EVENT_RESOURCE_ALLOWED_REVIEWER_,
     row_count:rows.length,
     events:rows.map(function(row){
       return {
