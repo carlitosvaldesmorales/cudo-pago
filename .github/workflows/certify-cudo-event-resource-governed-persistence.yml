@@ -8,6 +8,7 @@ on:
       - 'qa-v8-google/data/event-resource-qa.json'
       - 'qa-v8-google/tools/process_event_resource_requests.mjs'
       - 'qa-v8-google/tools/event_resource_requests_fixture_harness.mjs'
+      - 'qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs'
       - '.github/workflows/certify-cudo-event-resource-governed-persistence.yml'
   push:
     branches:
@@ -35,6 +36,7 @@ jobs:
         run: |
           node --check qa-v8-google/tools/process_event_resource_requests.mjs
           node --check qa-v8-google/tools/event_resource_requests_fixture_harness.mjs
+          node --check qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs
       - name: Re-certify canonical dependencies used by the event processor
         run: |
           node qa-v8-google/tools/certify_dependency_rule_registry.mjs
@@ -43,3 +45,5 @@ jobs:
           node qa-v8-google/tools/certify_projection_persistence_adapters.mjs
       - name: Certify Match and Bingo governed persistence roundtrip
         run: node qa-v8-google/tools/event_resource_requests_fixture_harness.mjs
+      - name: Certify Google QA request adapter plan
+        run: node qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs
