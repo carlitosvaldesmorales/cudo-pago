@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'preview-v8/**'
+      - 'qa-pr219/**'
       - '.github/workflows/cudo-root-acceptance.yml'
   workflow_dispatch:
 
@@ -18,6 +19,42 @@ jobs:
     steps:
       - name: Checkout CUDO
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validar aislamiento del slot QA oficial
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE_SHA:-}" ] && [ -n "${HEAD_SHA:-}" ]; then
+            git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- preview-v8 || {
+              echo 'El PR del slot QA no puede modificar preview-v8.' >&2
+              git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- preview-v8
+              exit 1
+            }
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('qa-pr219')
+          assert root.is_dir(), 'Falta qa-pr219/'
+          src=json.loads((root/'QA_SOURCE.json').read_text(encoding='utf-8'))
+          assert src['environment']=='QA_OFFICIAL_CUDO_CL'
+          assert src['source_pr']==219
+          assert src['production_write'] is False
+          assert src['qa_path']=='/qa-pr219/'
+          for rel in ['manifest.webmanifest','sw.js','shared/pwa.js','offline.html']:
+              text=(root/rel).read_text(encoding='utf-8')
+              assert '/preview-v8/' not in text, f'{rel}: referencia runtime a producción'
+              assert '/qa-pr219/' in text, f'{rel}: falta scope QA'
+          sw=(root/'sw.js').read_text(encoding='utf-8')
+          assert "cudo-qa-pr219-mobile-shell-" in sw
+          assert "key.startsWith('cudo-mobile-shell-')" not in sw
+          print('PASS_QA_SLOT_ISOLATED_FROM_PRODUCTION')
+          PY
 
 
       - uses: actions/setup-node@v4
