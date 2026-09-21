@@ -1,0 +1,233 @@
+name: CUDO Match Full-Day Builder Agent
+
+on:
+  push:
+    branches:
+      - agent/match-full-club-day-roundtrip-20260921
+    paths:
+      - 'ops/CUDO-MATCH-FULL-DAY-AGENT-TASK.yaml'
+      - 'tools/cudo_match_full_day_builder_agent.py'
+      - '.github/workflows/cudo-match-full-day-builder-agent.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cudo-match-full-day-builder-agent
+  cancel-in-progress: false
+
+jobs:
+  build-candidate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: self-hosted
+    timeout-minutes: 30
+    env:
+      OLLAMA_MODEL: llama3.2:3b
+      TASK_FILE: ops/CUDO-MATCH-FULL-DAY-AGENT-TASK.yaml
+      EVIDENCE_DIR: evidence/cudo-match-full-day-builder
+    steps:
+      - name: Checkout bounded agent branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Verify local agent runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE_DIR"
+          curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags \
+            | tee /tmp/cudo-builder-ollama-tags.json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); names={m.get("name") for m in d.get("models",[])}; assert "llama3.2:3b" in names, names'
+          podman --version
+
+      - name: Ask local builder agent for bounded plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+
+          task = Path(os.environ["TASK_FILE"]).read_text(encoding="utf-8")
+          prompt = """You are the local CUDO builder agent. Read the bounded task below.
+          Do not expand scope. Do not propose a new backend, second engine, paid service, or direct main write.
+          Return ONLY JSON with keys: objective, reuse, implementation_steps, risks, stop_conditions, self_review_questions.
+          The candidate must make MATCH the human context and keep all actions in one CUDO Web experience.
+
+          TASK:
+          """ + task
+          body = {
+              "model": os.environ["OLLAMA_MODEL"],
+              "stream": False,
+              "format": "json",
+              "messages": [{"role":"user","content":prompt}],
+              "options": {"temperature": 0},
+          }
+          req = urllib.request.Request(
+              "http://127.0.0.1:11434/api/chat",
+              data=json.dumps(body).encode("utf-8"),
+              headers={"Content-Type":"application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=240) as response:
+              payload = json.loads(response.read().decode("utf-8"))
+          raw = (payload.get("message") or {}).get("content") or "{}"
+          try:
+              plan = json.loads(raw)
+          except Exception:
+              plan = {"parse_error": True, "raw": raw}
+          out = Path(os.environ["EVIDENCE_DIR"]) / "builder-plan.json"
+          out.write_text(json.dumps(plan, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(plan, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Materialize bounded candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/cudo_match_full_day_builder_agent.py
+          python3 tools/cudo_match_full_day_builder_agent.py --validate
+
+      - name: Run browser roundtrip certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          nohup python3 -m http.server 4178 --bind 127.0.0.1 >/tmp/cudo-match-builder-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4178/preview-v8/eventos/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          podman run --rm \
+            --network=host \
+            --security-opt label=disable \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            mcr.microsoft.com/playwright/python:v1.44.0-jammy \
+            bash -lc "pip install --no-cache-dir 'playwright==1.44.0' >/tmp/pw-install.log && python preview-v8/tools/certify_match_full_day_roundtrip.py"
+
+      - name: Local agent self-review
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+          task = Path(os.environ["TASK_FILE"]).read_text(encoding="utf-8")
+          cert = json.loads((Path(os.environ["EVIDENCE_DIR"]) / "roundtrip.json").read_text(encoding="utf-8"))
+          prompt = """You are the builder's NON-AUTHORITATIVE self-review.
+          Compare the bounded task to the deterministic browser certificate.
+          Do not claim human acceptance. Return ONLY JSON with:
+          deterministic_roundtrip_ok, likely_remaining_gaps, scope_drift_detected, recommendation.
+          The independent ARKE human certifier remains authoritative for human acceptance.
+
+          TASK:
+          """ + task + "\nCERTIFICATE:\n" + json.dumps(cert, ensure_ascii=False, indent=2)
+          body = {
+              "model": os.environ["OLLAMA_MODEL"],
+              "stream": False,
+              "format": "json",
+              "messages": [{"role":"user","content":prompt}],
+              "options": {"temperature": 0},
+          }
+          req = urllib.request.Request(
+              "http://127.0.0.1:11434/api/chat",
+              data=json.dumps(body).encode("utf-8"),
+              headers={"Content-Type":"application/json"},
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=240) as response:
+              payload = json.loads(response.read().decode("utf-8"))
+          raw = (payload.get("message") or {}).get("content") or "{}"
+          try:
+              review = json.loads(raw)
+          except Exception:
+              review = {"parse_error": True, "raw": raw}
+          out = Path(os.environ["EVIDENCE_DIR"]) / "builder-self-review.json"
+          out.write_text(json.dumps(review, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(review, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Persist candidate on agent branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'cudo-builder-agent[bot]'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            preview-v8/eventos/index.html \
+            preview-v8/data/match-full-day-qa.json \
+            preview-v8/tools/certify_match_full_day_roundtrip.py \
+            evidence/cudo-match-full-day-builder/builder-plan.json \
+            evidence/cudo-match-full-day-builder/roundtrip.json \
+            evidence/cudo-match-full-day-builder/builder-self-review.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'agent(cudo): materialize match full-day roundtrip candidate'
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
+
+      - name: Open or keep draft pull request
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          owner = repo.split("/",1)[0]
+          branch = os.environ["GITHUB_REF_NAME"]
+          token = os.environ["GITHUB_TOKEN"]
+          api = os.environ["GITHUB_API_URL"]
+          headers = {
+              "Accept":"application/vnd.github+json",
+              "Authorization":"Bearer " + token,
+              "X-GitHub-Api-Version":"2022-11-28",
+              "Content-Type":"application/json",
+          }
+
+          query = urllib.parse.urlencode({"state":"open","head":owner+":"+branch,"base":"main"})
+          req = urllib.request.Request(f"{api}/repos/{repo}/pulls?{query}", headers=headers)
+          with urllib.request.urlopen(req, timeout=30) as response:
+              existing = json.loads(response.read().decode("utf-8"))
+          if existing:
+              print("draft_pr_exists", existing[0]["number"])
+              raise SystemExit(0)
+
+          body = {
+              "title":"CUDO: jornada integral del partido · candidato agente",
+              "head":branch,
+              "base":"main",
+              "draft":True,
+              "body":"""Candidato materializado por el builder self-hosted de CUDO.
+
+Alcance:
+- Partido como contexto humano principal.
+- Configuración de jornada y ramas condicionales.
+- Compra → stock/costo/obligación.
+- Venta → stock/ingreso/caja.
+- Resultado deportivo.
+- Trabajo post-partido.
+- Cierre y recurso neto.
+- Persistencia QA localStorage; production_write=false.
+
+Este PR NO está autoaprobado. Requiere root checks y el certificador humano-first independiente de ARKĒ antes de cualquier promoción."""
+          }
+          req = urllib.request.Request(
+              f"{api}/repos/{repo}/pulls",
+              data=json.dumps(body).encode("utf-8"),
+              headers=headers,
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=30) as response:
+              pr = json.loads(response.read().decode("utf-8"))
+          print("draft_pr_created", pr["number"])
+          PY
