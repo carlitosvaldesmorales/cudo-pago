@@ -153,3 +153,23 @@ function cudoEventHandlePost_(e){
   cudoReviewDispatch_('apps_script_event_resource',CUDO_EVENT_RESOURCE_QA_REF_);
   return cudoEventRender_('Solicitud enviada al motor CUDO. La pantalla reflejará el cambio sólo después de validarse y persistirse.');
 }
+
+function cudoEventRuntimeStatus(){
+  const reviewer=cudoEventReviewer_();
+  const rows=cudoEventRows_();
+  return {
+    ok:true,
+    reviewer:reviewer,
+    row_count:rows.length,
+    events:rows.map(function(row){
+      return {
+        event_id:row.EVENT_ID,
+        kind:row.KIND,
+        store_revision:Number(row.STORE_REVISION),
+        authority:row.AUTHORITY,
+        closed:row.CLOSED==='TRUE'
+      };
+    }),
+    production_write:false
+  };
+}
