@@ -39,7 +39,8 @@ jobs:
           import json,os,pathlib,urllib.parse,urllib.request,urllib.error
 
           sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
-          expected_description='CUDO Event Resource private QA'
+          event_description='CUDO Event Resource private QA'
+          shared_private_description='CUDO Work State private QA'
           event_source=pathlib.Path('qa-v8-google/apps-script/CudoEventResourceWeb.gs').read_text()
           router_source=pathlib.Path('qa-v8-google/apps-script/CudoPersonaReviewWeb.gs').read_text()
 
@@ -112,20 +113,20 @@ jobs:
           vn=version['versionNumber']
 
           deployments=req(base+'/deployments').get('deployments',[])
-          existing=next((d for d in deployments if (d.get('deploymentConfig') or {}).get('description')==expected_description),None)
+          existing_event=next((d for d in deployments if (d.get('deploymentConfig') or {}).get('description')==event_description),None)
+          existing_shared=next((d for d in deployments if (d.get('deploymentConfig') or {}).get('description')==shared_private_description),None)
+          existing=existing_event or existing_shared
+          if not existing:
+            raise SystemExit('Fail closed: no existing private CUDO deployment available for reuse')
+          did=existing['deploymentId']
+          preserved_description=(existing.get('deploymentConfig') or {}).get('description') or shared_private_description
           config={
             'versionNumber':vn,
             'manifestFileName':'appsscript',
-            'description':expected_description
+            'description':preserved_description
           }
-          if existing:
-            did=existing['deploymentId']
-            dep=req(base+'/deployments/'+urllib.parse.quote(did,safe=''),'PUT',{'deploymentConfig':config})
-            mode='UPDATED'
-          else:
-            dep=req(base+'/deployments','POST',config)
-            did=dep['deploymentId']
-            mode='CREATED'
+          dep=req(base+'/deployments/'+urllib.parse.quote(did,safe=''),'PUT',{'deploymentConfig':config})
+          mode='UPDATED_EXISTING_PRIVATE_DEPLOYMENT'
 
           # Verify deployment is now bound to the created version.
           refreshed=req(base+'/deployments').get('deployments',[])
@@ -136,7 +137,13 @@ jobs:
           if int(bound_cfg.get('versionNumber',-1))!=int(vn):
             raise SystemExit('Fail closed: deployment version mismatch')
 
-          url='https://script.google.com/macros/s/'+did+'/exec?view=event'
+          web_entry=next((x.get('webApp') for x in (bound.get('entryPoints') or []) if x.get('entryPointType')=='WEB_APP' and x.get('webApp')),None)
+          if not web_entry or not web_entry.get('url'):
+            raise SystemExit('Fail closed: updated private deployment has no web app URL')
+          acl=(web_entry.get('entryPointConfig') or {}).get('access')
+          if acl!='MYSELF':
+            raise SystemExit('Fail closed: event backend must remain MYSELF, got '+str(acl))
+          url=web_entry['url']+'?view=event'
           out={
             'schema_version':'CUDO_EVENT_RESOURCE_APPS_SCRIPT_DEPLOYMENT_V1',
             'ok':True,
@@ -145,7 +152,8 @@ jobs:
             'deploymentId':did,
             'eventWebUrl':url,
             'mode':mode,
-            'access':'MYSELF',
+            'reusedDeploymentDescription':preserved_description,
+            'access':acl,
             'executeAs':'USER_DEPLOYING',
             'eventSourceVerified':True,
             'routerSourceVerified':True,
