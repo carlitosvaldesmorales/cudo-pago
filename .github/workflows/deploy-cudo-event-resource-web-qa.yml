@@ -243,8 +243,8 @@ jobs:
             raise SystemExit('Apps Script runtime result missing: '+json.dumps(response)[:2000])
           if result.get('ok') is not True:
             raise SystemExit('Apps Script runtime not ok: '+json.dumps(result))
-          if result.get('reviewer')!='sistemas@cudo.cl':
-            raise SystemExit('Apps Script reviewer mismatch: '+repr(result.get('reviewer')))
+          if result.get('allowed_reviewer')!='sistemas@cudo.cl':
+            raise SystemExit('Apps Script reviewer policy mismatch: '+repr(result.get('allowed_reviewer')))
           events=result.get('events') or []
           if len(events)!=2 or {x.get('kind') for x in events}!={'MATCH','BINGO'}:
             raise SystemExit('Apps Script runtime events mismatch: '+json.dumps(events))
@@ -256,7 +256,7 @@ jobs:
           proof={
             'schema_version':'CUDO_EVENT_RESOURCE_APPS_SCRIPT_RUNTIME_CERT_V1',
             'deployment_id':deployment_id,
-            'reviewer':result['reviewer'],
+            'allowed_reviewer':result['allowed_reviewer'],
             'row_count':result['row_count'],
             'events':events,
             'production_write':False,
