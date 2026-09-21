@@ -1,0 +1,71 @@
+schema_version: CUDO_EVENT_GOVERNED_PERSISTENCE_AGENT_TASK_V1
+as_of: 2026-09-21
+project: CUDO
+status: AUTHORIZED_BOUNDED_QA_IMPLEMENTATION
+production_write: false
+
+authority:
+  arke_checkpoint: 05_CASOS/CASO_CUDO_001/CUDO_EVENT_RESOURCE_GENERALIZATION_PR219_PASS_20260921.yaml
+  pull_request: 219
+  branch: agent/match-full-club-day-roundtrip-20260921
+
+intent: >-
+  Sustituir localStorage como autoridad de las acciones Match/Bingo por el mecanismo canónico QA ya
+  existente. La Web debe emitir hechos fuente gobernados; la transacción, propagación y read model
+  determinan efectos derivados. No crear un segundo backend ni escribir producción.
+
+reuse_required:
+  source_command: qa-v8-google/tools/projection_persistence_adapters.mjs#buildSourceChangeCommand
+  transaction: qa-v8-google/tools/transaction_override_contract.mjs
+  propagation: qa-v8-google/tools/generic_propagation_executor.mjs
+  registry: qa-v8-google/contracts/cudo-dependency-rule-registry-v1.json
+  future_google_pattern:
+    - qa-v8-google/apps-script/CudoWorkStateWeb.gs
+    - qa-v8-google/tools/process_work_state_requests.mjs
+    - .github/workflows/cudo-review-engine.yml
+
+first_bounded_materialization:
+  canonical_state: qa-v8-google/state/event-resource-state.json
+  processor: qa-v8-google/tools/process_event_resource_requests.mjs
+  fixture_harness: qa-v8-google/tools/event_resource_requests_fixture_harness.mjs
+  read_model: qa-v8-google/data/event-resource-qa.json
+  certification_workflow: .github/workflows/certify-cudo-event-resource-governed-persistence.yml
+
+required_actions:
+  - MATCH_PURCHASE
+  - MATCH_SALE
+  - MATCH_RESULT
+  - MATCH_CLOSE
+  - BINGO_CONFIRM_PERMIT
+  - BINGO_DONATE_PRIZE
+  - BINGO_PURCHASE
+  - BINGO_SALE
+  - BINGO_CLOSE
+
+acceptance:
+  - every accepted mutation enters through CUDO_SOURCE_CHANGE_COMMAND_V1
+  - transaction layer required
+  - propagation executor recalculates purchase_total_stock_sales_revenue_supplier_payable
+  - one processor handles MATCH_and_BINGO
+  - persisted canonical state survives process reload
+  - audit_is_append_only
+  - duplicate_request_is_idempotent
+  - stale_store_revision_fails_closed_without_mutation
+  - donated_prize_does_not_create_supplier_payable
+  - no_direct_DERIVED_write
+  - production_write_false
+  - no_google_write_in_this_first_builder_step
+
+anti_drift:
+  - no_second_event_engine
+  - no_new_database
+  - no_production_write
+  - no_direct_sheet_authority
+  - no_localStorage_as_authority
+  - no_manual_duplicate_entry
+  - no_paid_api
+
+continuation_after_pass: >-
+  Reuse the existing private Apps Script QA project and CUDO Review Engine dispatch pattern to materialize
+  EVENT_RESOURCE_REQUESTS and EVENT_RESOURCE_AUDIT on an isolated QA sheet, then connect CUDO Web to that
+  governed request path and certify a real external QA readback.
