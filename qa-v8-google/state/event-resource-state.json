@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_STATE_STORE_V1",
-  "store_revision": 3,
-  "generated_at": "2026-09-21T20:03:40.477Z",
+  "store_revision": 4,
+  "generated_at": "2026-09-21T20:07:30.925Z",
   "active_conditions": [
     "SINGLE_RESOURCE_DIRECT_SALES_MODEL",
     "SUPPLIER_RETURN_MODEL_APPLIES",
@@ -97,20 +97,20 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001",
       "object_type": "RESOURCE_FACILITY",
-      "object_version": 12,
+      "object_version": 17,
       "lifecycle_state": "AVAILABLE",
       "data": {
         "resource_kind": "BEVERAGE_STOCK",
         "opening_stock": 12,
-        "received_qty": 6,
+        "received_qty": 9,
         "returned_qty": 0,
-        "purchased_qty": 6,
+        "purchased_qty": 9,
         "unit_cost": 700,
-        "purchase_total": 4200,
-        "stock_available_before_sales": 18,
+        "purchase_total": 6300,
+        "stock_available_before_sales": 21,
         "sold_qty": 0,
         "sell_price": 1500,
-        "stock_after_sales": 18
+        "stock_after_sales": 21
       },
       "field_semantics": {
         "resource_kind": {
@@ -194,12 +194,12 @@
       ],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": "2026-09-21T20:03:40.477Z",
+        "updated_at": "2026-09-21T20:07:30.925Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
           "qa://event-resource-governed-persistence"
         ],
-        "transition_id": "CUDO-TRANS-3D218188C249818A68A3"
+        "transition_id": "CUDO-TRANS-BD69E0697025BE4D644F"
       },
       "legacy_refs": []
     },
@@ -207,15 +207,15 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
       "object_type": "FINANCIAL_OBLIGATION",
-      "object_version": 7,
+      "object_version": 10,
       "lifecycle_state": "OPEN",
       "data": {
         "obligation_direction": "PAYABLE",
         "obligation_kind": "SUPPLIER_SETTLEMENT",
         "currency": "CLP",
-        "payable_qty": 6,
-        "supplier_payable": 4200,
-        "amount": 4200
+        "payable_qty": 9,
+        "supplier_payable": 6300,
+        "amount": 6300
       },
       "field_semantics": {
         "obligation_direction": {
@@ -264,12 +264,12 @@
       ],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": "2026-09-21T20:03:40.477Z",
+        "updated_at": "2026-09-21T20:07:30.925Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
           "qa://event-resource-governed-persistence"
         ],
-        "transition_id": "CUDO-TRANS-E5EA65DFF80637F94E59"
+        "transition_id": "CUDO-TRANS-FAFF797750AA0B94C4B7"
       },
       "legacy_refs": []
     },
@@ -599,6 +599,37 @@
         "CUDO-TRANS-E5EA65DFF80637F94E59"
       ],
       "transaction_fingerprint": "629193dd95843d271615f0a9213ea63a8bfdff3c6ef6212b2e7e6d1cf151ffe6"
+    },
+    {
+      "request_id": "CUDO-QA-EVENT-LIVE-35649082432",
+      "requested_at": "2026-09-21T20:00:00.000Z",
+      "applied_at": "2026-09-21T20:07:30.925Z",
+      "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+      "action": "MATCH_PURCHASE",
+      "expected_revision": 3,
+      "requested_by": "sistemas@cudo.cl",
+      "reason": "Synthetic external Google QA event persistence probe",
+      "evidence_ref": "qa://google-live/CUDO-QA-EVENT-LIVE-35649082432",
+      "status": "APPLIED",
+      "new_revision": 4,
+      "command_ids": [
+        "CUDO-CMD-983EDD4BFC6C3A0184A8",
+        "CUDO-CMD-EED80128579DEAC2AA96",
+        "CUDO-CMD-4FF483BA68AC88261C7E",
+        "CUDO-CMD-C30E57E2C4574B500A18"
+      ],
+      "transaction_id": "CUDO-TXN-6E546C352E0A52690C7F",
+      "transition_ids": [
+        "CUDO-TRANS-D0B45CB3BB60D469B791",
+        "CUDO-TRANS-19C3D5E464F3838C620F",
+        "CUDO-TRANS-A7E6572AC58B08EF1BDF",
+        "CUDO-TRANS-9E434607D6518A87B38A",
+        "CUDO-TRANS-011AE031F466C85DE991",
+        "CUDO-TRANS-BD69E0697025BE4D644F",
+        "CUDO-TRANS-E523CADD8D74DD76AE88",
+        "CUDO-TRANS-FAFF797750AA0B94C4B7"
+      ],
+      "transaction_fingerprint": "79413d64611868054cc09ceaaf043a604d23e5aa62fa2eee01788e2f98016256"
     }
   ],
   "production_write": false
