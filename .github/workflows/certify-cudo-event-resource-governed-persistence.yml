@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'qa-v8-google/state/event-resource-state.json'
+      - 'qa-v8-google/contracts/cudo-event-resource-governed-fixture-v1.json'
       - 'qa-v8-google/data/event-resource-qa.json'
       - 'qa-v8-google/tools/process_event_resource_requests.mjs'
       - 'qa-v8-google/tools/event_resource_requests_fixture_harness.mjs'
