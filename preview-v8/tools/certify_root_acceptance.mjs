@@ -98,7 +98,7 @@ try{
     await page.waitForLoadState('networkidle').catch(()=>{});
   }
   const finalUrl=page.url();
-  const entryPass=controlLinkVisible && /\/preview-v8\/(control|club-operacion-lab)\//.test(new URL(finalUrl).pathname);
+  const entryPass=controlLinkVisible && /\/preview-v8\/control\//.test(new URL(finalUrl).pathname);
   add('CUDO-AS-01-ENTRYPOINT',entryPass,{controlLinkVisible,finalUrl},
     entryPass?'Admin reaches Control through the normal path':'Admin entrypoint did not reach Control');
 
