@@ -1,0 +1,96 @@
+name: Diagnose CUDO Apps Script Deployments
+
+on:
+  push:
+    branches:
+      - 'agent/match-full-club-day-roundtrip-20260921'
+    paths:
+      - '.github/workflows/diagnose-cudo-apps-script-deployments.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inventory Apps Script deployments and source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request,urllib.error
+
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            token=json.load(r)['access_token']
+
+          def req(url):
+            q=urllib.request.Request(url,headers={'Authorization':'Bearer '+token})
+            try:
+              with urllib.request.urlopen(q) as r:
+                raw=r.read()
+                return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+              raise RuntimeError('HTTP '+str(e.code)+' '+e.read().decode(errors='replace')[:1000])
+
+          base='https://script.googleapis.com/v1/projects/'+sid
+          deployments=req(base+'/deployments').get('deployments',[])
+          content=req(base+'/content')
+          versions=req(base+'/versions').get('versions',[])
+
+          inventory=[]
+          for d in deployments:
+            cfg=d.get('deploymentConfig') or {}
+            inventory.append({
+              'deploymentId':d.get('deploymentId'),
+              'versionNumber':cfg.get('versionNumber'),
+              'manifestFileName':cfg.get('manifestFileName'),
+              'description':cfg.get('description') or '',
+              'updateTime':d.get('updateTime'),
+              'entryPoints':d.get('entryPoints') or []
+            })
+          inventory=sorted(inventory,key=lambda x:(x.get('description') or '',int(x.get('versionNumber') or 0),x.get('deploymentId') or ''))
+
+          source_names=sorted([f.get('name') for f in content.get('files',[]) if f.get('name')])
+          out={
+            'schema_version':'CUDO_APPS_SCRIPT_DEPLOYMENT_INVENTORY_V1',
+            'script_id':sid,
+            'deployment_count':len(inventory),
+            'version_count_returned':len(versions),
+            'deployments':inventory,
+            'source_files':source_names,
+            'event_source_present':'CudoEventResourceWeb' in source_names,
+            'router_source_present':'CudoPersonaReviewWeb' in source_names,
+            'work_source_present':'CudoWorkStateWeb' in source_names,
+            'review_bridge_present':'CudoReviewEventBridge' in source_names,
+            'production_write':False
+          }
+          pathlib.Path('apps-script-deployment-inventory.json').write_text(json.dumps(out,indent=2)+'\n')
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Upload deployment inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-apps-script-deployment-inventory-${{ github.run_id }}
+          path: apps-script-deployment-inventory.json
+          if-no-files-found: error
+          retention-days: 30
