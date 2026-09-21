@@ -28,6 +28,48 @@ function cudoEventRows_(){
     return obj;
   }).filter(function(row){return row.EVENT_ID;});
 }
+function cudoEventRequestStatus_(requestId){
+  if(!requestId) return null;
+  const sh=SpreadsheetApp.openById(CUDO_EVENT_RESOURCE_SHEET_ID_).getSheetByName(CUDO_EVENT_RESOURCE_REQUESTS_);
+  if(!sh) throw new Error('EVENT_RESOURCE_REQUESTS no existe');
+  const values=sh.getDataRange().getDisplayValues();
+  if(values.length<2) return null;
+  const headers=values[0].map(function(v){return String(v||'').trim();});
+  const idCol=headers.indexOf('REQUEST_ID');
+  if(idCol<0) throw new Error('Contrato EVENT_RESOURCE_REQUESTS incompleto');
+  for(let i=1;i<values.length;i++){
+    if(String(values[i][idCol]||'').trim()!==requestId) continue;
+    const row={};
+    headers.forEach(function(h,j){row[h]=String(values[i][j]||'').trim();});
+    return row;
+  }
+  return null;
+}
+function cudoEventWaitContext_(e){
+  const p=(e&&e.parameter)||{};
+  const requestId=String(p.pending_request||'').trim();
+  if(!requestId) return {message:'',refresh_url:''};
+  const eventId=String(p.pending_event||'').trim();
+  const expectedRevision=Number(p.pending_revision);
+  const request=cudoEventRequestStatus_(requestId);
+  const current=cudoEventRows_().find(function(row){return row.EVENT_ID===eventId;});
+  const baseUrl=ScriptApp.getService().getUrl();
+  const refreshUrl=baseUrl+'?view=event&pending_request='+encodeURIComponent(requestId)+
+    '&pending_event='+encodeURIComponent(eventId)+'&pending_revision='+encodeURIComponent(String(expectedRevision));
+  if(!request||request.PROCESS_STATUS==='PENDING'){
+    return {message:'Solicitud recibida. El motor CUDO la está validando y persistiendo…',refresh_url:refreshUrl};
+  }
+  if(request.PROCESS_STATUS==='APPLIED'){
+    if(current&&Number(current.STORE_REVISION)>expectedRevision){
+      return {message:'Cambio confirmado por el motor CUDO. Estado canónico actualizado a revisión '+current.STORE_REVISION+'.',refresh_url:''};
+    }
+    return {message:'Solicitud aplicada. Sincronizando la lectura canónica…',refresh_url:refreshUrl};
+  }
+  if(request.PROCESS_STATUS==='BLOCKED'){
+    return {message:'La solicitud fue bloqueada sin mutar el estado: '+String(request.RESULT||'revisión requerida')+'.',refresh_url:''};
+  }
+  return {message:'Esperando confirmación del motor CUDO…',refresh_url:refreshUrl};
+}
 function cudoEventStableRequestId_(payload){
   const bytes=Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
@@ -96,17 +138,20 @@ function cudoEventCard_(row){
     (row.CLOSED==='TRUE'?'<div class="closed">Jornada cerrada</div>':forms)+
     '</article>';
 }
-function cudoEventRender_(message){
+function cudoEventRender_(message,e){
   const reviewer=cudoEventReviewer_();
   const rows=cudoEventRows_();
+  const wait=cudoEventWaitContext_(e);
+  const visibleMessage=wait.message||message||'';
   const cards=rows.map(cudoEventCard_).join('');
   const html='<!doctype html><html><head><base target="_top">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    (wait.refresh_url?'<meta http-equiv="refresh" content="3;url='+cudoEventEsc_(wait.refresh_url)+'">':'')+
     '<title>CUDO · Hechos del club QA</title><style>'+
-    'body{margin:0;background:#f4f2ed;color:#03163d;font-family:Arial,sans-serif}.head{background:#03163d;color:#fff;border-bottom:6px solid #e21b2d;padding:25px 18px}.wrap{max-width:920px;margin:auto}.content{padding:18px}.note{background:#fff8da;border-left:4px solid #c79b00;padding:11px 13px;margin-bottom:14px}.msg{background:#e7f6ee;border-left:4px solid #0a7b48;padding:11px 13px;margin-bottom:14px}.card{background:#fff;border:1px solid #ccd4df;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 8px 24px rgba(3,22,61,.08)}h1,h2{margin:4px 0 10px}h2{font-size:27px}.meta{font-size:12px;color:#657188}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stats span{background:#f4f7fb;border-radius:10px;padding:10px;font-size:12px}.stats b{display:block;margin-bottom:4px}details{border-top:1px solid #e6e9ee;padding:11px 0}summary{font-weight:800;cursor:pointer}label{display:block;font-size:12px;font-weight:800;margin:9px 0 5px}input,select{width:100%;box-sizing:border-box;border:1px solid #abb6c5;border-radius:9px;padding:10px}button{border:0;border-radius:9px;padding:11px 13px;background:#03163d;color:#fff;font-weight:800;margin-top:10px}.closed{background:#e7f6ee;padding:12px;border-radius:10px;font-weight:800}@media(max-width:650px){.stats{grid-template-columns:1fr 1fr}}'+
-    '</style></head><body><header class="head"><div class="wrap"><small>C.U.D.O. · Administración privada · QA</small><h1>Partido y Bingo</h1><p>Acciones gobernadas sobre el mismo núcleo canónico.</p></div></header>'+
+    'body{margin:0;background:#f4f2ed;color:#03163d;font-family:Arial,sans-serif}.head{background:#03163d;color:#fff;border-bottom:6px solid #e21b2d;padding:25px 18px}.head a{color:#fff;font-weight:800}.wrap{max-width:920px;margin:auto}.content{padding:18px}.note{background:#fff8da;border-left:4px solid #c79b00;padding:11px 13px;margin-bottom:14px}.msg{background:#e7f6ee;border-left:4px solid #0a7b48;padding:11px 13px;margin-bottom:14px}.card{background:#fff;border:1px solid #ccd4df;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 8px 24px rgba(3,22,61,.08)}h1,h2{margin:4px 0 10px}h2{font-size:27px}.meta{font-size:12px;color:#657188}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stats span{background:#f4f7fb;border-radius:10px;padding:10px;font-size:12px}.stats b{display:block;margin-bottom:4px}details{border-top:1px solid #e6e9ee;padding:11px 0}summary{font-weight:800;cursor:pointer}label{display:block;font-size:12px;font-weight:800;margin:9px 0 5px}input,select{width:100%;box-sizing:border-box;border:1px solid #abb6c5;border-radius:9px;padding:10px}button{border:0;border-radius:9px;padding:11px 13px;background:#03163d;color:#fff;font-weight:800;margin-top:10px}.closed{background:#e7f6ee;padding:12px;border-radius:10px;font-weight:800}@media(max-width:650px){.stats{grid-template-columns:1fr 1fr}}'+
+    '</style></head><body><header class="head"><div class="wrap"><a href="https://cudo.cl/preview-v8/admin/">← Administración CUDO</a><small style="display:block;margin-top:10px">C.U.D.O. · Administración privada · QA</small><h1>Partido y Bingo</h1><p>Acciones gobernadas sobre el mismo núcleo canónico.</p></div></header>'+
     '<main class="wrap content">'+
-    (message?'<div class="msg">'+cudoEventEsc_(message)+'</div>':'')+
+    (visibleMessage?'<div class="msg">'+cudoEventEsc_(visibleMessage)+'</div>':'')+
     '<div class="note"><b>QA gobernada:</b> Google sólo recibe solicitudes y proyecciones. La autoridad es el estado canónico versionado. Acceso: '+cudoEventEsc_(reviewer)+'</div>'+
     (cards||'<div class="card">No hay eventos QA disponibles.</div>')+
     '</main></body></html>';
@@ -151,7 +196,7 @@ function cudoEventHandlePost_(e){
     'CUDO Web QA '+action,evidenceRef,reviewer,'PENDING','',''
   ]);
   cudoReviewDispatch_('apps_script_event_resource',CUDO_EVENT_RESOURCE_QA_REF_);
-  return cudoEventRender_('Solicitud enviada al motor CUDO. La pantalla reflejará el cambio sólo después de validarse y persistirse.');
+  return cudoEventRender_('',{parameter:{pending_request:requestId,pending_event:eventId,pending_revision:String(expectedRevision)}});
 }
 
 function cudoEventRuntimeStatus(){
