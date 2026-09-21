@@ -72,10 +72,12 @@ function cudoPersonaHandlePost_(e){
 function doGet(e){
   const view=String((e&&e.parameter&&e.parameter.view)||'persona').trim().toLowerCase();
   if(view==='work') return cudoWorkRender_('');
+  if(view==='event') return cudoEventRender_('');
   return cudoPersonaRender_('');
 }
 function doPost(e){
   const kind=String((e&&e.parameter&&e.parameter.kind)||'PERSONA').trim().toUpperCase();
   if(kind==='WORK_ITEM') return cudoWorkHandlePost_(e);
+  if(kind==='EVENT_RESOURCE') return cudoEventHandlePost_(e);
   return cudoPersonaHandlePost_(e);
 }
