@@ -1,0 +1,171 @@
+{
+  "schema_version": "CUDO_ACTIVE_SLICE_ACCEPTANCE_V1",
+  "as_of": "2026-09-21",
+  "project": "CUDO",
+  "status": "ACTIVE",
+  "wip_limit": 1,
+  "slice_id": "ACTIVITY_CREATION_REASSIGNMENT_AND_FOLLOWUP",
+  "declared_human_intent": "Una persona autorizada del club puede comprender una situación operativa, saber para qué existe, distinguir quién responde de quién ejecuta, asignar o reasignar trabajo, avanzar su estado, registrar bloqueos/dependencias/evidencia, consultar historial y cerrarla viendo el resultado, sin conocer la arquitectura interna de CUDO.",
+  "primary_surface": "https://cudo.cl/preview-v8/control/",
+  "club_situation_or_fixture": {
+    "kind": "EXPLICIT_QA_FIXTURE_UNTIL_REAL_INGESTION_IS_ENABLED",
+    "statement": "Una situación/actividad del club necesita ser conducida desde visible/sin ejecutor hasta cierre, conservando propósito, accountability, asignación, estado, bloqueos, evidencia e historial.",
+    "synthetic_never_counts_as_real_evidence": true
+  },
+  "closure_rule": "ALL_REQUIRED_ACCEPTANCE_STEPS_PASS_AND_INDEPENDENT_HUMAN_FIRST_PASS",
+  "component_pass_never_closes_slice": true,
+  "production_write": false,
+  "forbidden_primary_language": [
+    "CANONICAL_GRAPH_READ_MODEL",
+    "read model canónico",
+    "Estado operacional canónico conectado",
+    "MIXTA · EVIDENCIA REAL + DISPARADOR QA",
+    "QA SINTÉTICA",
+    "NO CREA RAÍZ COMÚN"
+  ],
+  "acceptance_steps": [
+    {
+      "id": "CUDO-AS-01-ENTRYPOINT",
+      "required": true,
+      "human_statement": "Desde Administración puedo abrir Control del club por el recorrido normal.",
+      "automated_check": "ADMIN_TO_CONTROL_ENTRYPOINT",
+      "baseline": "PASS",
+      "baseline_evidence": [
+        "PR216",
+        "TinyFish:f9c78921-5e0e-4ce0-b2eb-839539a5cb81"
+      ]
+    },
+    {
+      "id": "CUDO-AS-02-HUMAN-CONTEXT",
+      "required": true,
+      "human_statement": "Al entrar entiendo qué está pasando y para qué, en lenguaje de club y no de arquitectura.",
+      "automated_check": "HUMAN_CONTEXT_VISIBLE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "CUDO_HUMAN_FIRST_ACTIVE_FLOW_GAP_20260921.yaml"
+      ]
+    },
+    {
+      "id": "CUDO-AS-03-ACCOUNTABLE-ASSIGNEE",
+      "required": true,
+      "human_statement": "Puedo distinguir quién responde por el resultado de quién está ejecutando el trabajo, o ver explícitamente que falta asignación.",
+      "automated_check": "ACCOUNTABLE_AND_ASSIGNEE_VISIBLE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "CUDO_AMATEUR_CLUB_OPERATING_REFERENCE_MODEL_20260921.yaml"
+      ]
+    },
+    {
+      "id": "CUDO-AS-04-NEXT-ACTION",
+      "required": true,
+      "human_statement": "Veo qué necesita atención ahora y cuál es el siguiente paso.",
+      "automated_check": "NEXT_ACTION_VISIBLE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "CUDO_HUMAN_FIRST_ACTIVE_FLOW_GAP_20260921.yaml"
+      ]
+    },
+    {
+      "id": "CUDO-AS-05-ACTION-PATH",
+      "required": true,
+      "human_statement": "Puedo conducir el trabajo desde la superficie primaria: asignar/reasignar y cambiar estado cuando estoy autorizado.",
+      "automated_check": "CANONICAL_ACTION_PATH_VISIBLE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "current canonical cards are read-only; legacy actions are browser-local synthetic"
+      ]
+    },
+    {
+      "id": "CUDO-AS-06-BLOCKERS-EVIDENCE-HISTORY",
+      "required": true,
+      "human_statement": "Puedo ver y registrar bloqueos o dependencias cuando aplican, agregar evidencia y consultar el historial.",
+      "automated_check": "BLOCKER_EVIDENCE_HISTORY_VISIBLE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "legacy synthetic flow only"
+      ]
+    },
+    {
+      "id": "CUDO-AS-07-CLOSURE-RESULT",
+      "required": true,
+      "human_statement": "Puedo cerrar el trabajo cuando corresponde y ver qué resultado o efecto cambió.",
+      "automated_check": "CLOSURE_AND_RESULT_VISIBLE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "legacy synthetic flow only"
+      ]
+    },
+    {
+      "id": "CUDO-AS-08-TRACE-PROGRESSIVE",
+      "required": true,
+      "human_statement": "La trazabilidad está disponible detrás de Ver origen/Por qué aparece/Ver historial, pero no domina el lenguaje principal.",
+      "automated_check": "TRACE_IS_PROGRESSIVE_DISCLOSURE",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "technical architecture language visible in primary surface"
+      ]
+    },
+    {
+      "id": "CUDO-AS-09-NO-SYNTHETIC-CONFUSION",
+      "required": true,
+      "human_statement": "La experiencia principal no mezcla datos canónicos con Persona Mock, contrato visual u otros escenarios sintéticos sin separación explícita.",
+      "automated_check": "NO_SYNTHETIC_CONFUSION",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "TinyFish:f9c78921-5e0e-4ce0-b2eb-839539a5cb81"
+      ]
+    },
+    {
+      "id": "CUDO-AS-10-PERSISTENCE-AUTHORITY",
+      "required": true,
+      "human_statement": "Las acciones operativas no dependen de localStorage/browser como autoridad; usan el mecanismo CUDO existente y dejan persistencia/auditoría.",
+      "automated_check": "NO_BROWSER_LOCAL_OPERATIONAL_AUTHORITY",
+      "baseline": "FAIL",
+      "baseline_evidence": [
+        "club-operacion-lab uses localStorage for interactive flow"
+      ]
+    },
+    {
+      "id": "CUDO-AS-11-INDEPENDENT-HUMAN-FIRST",
+      "required": true,
+      "human_statement": "Una validación independiente confirma que una persona que administra un club amateur puede entender y conducir el caso sin conocer la arquitectura de CUDO.",
+      "automated_check": "EXTERNAL_REVIEW_STATE",
+      "external_review": {
+        "provider": "UXIA_OR_EQUIVALENT_INDEPENDENT_USABILITY_RUN",
+        "state": "PENDING",
+        "evidence_ref": null
+      },
+      "baseline": "FAIL"
+    }
+  ],
+  "progress_policy": {
+    "primary_metric": "ROOT_ACCEPTANCE_STEPS_MOVED_FAIL_TO_PASS",
+    "valid_progress": [
+      "FAIL_TO_PASS",
+      "ROOT_GAP_REDUCED_WITH_EVIDENCE",
+      "REAL_BLOCKER_DISCOVERED",
+      "IMPORTANT_ASSUMPTION_FALSIFIED"
+    ],
+    "not_progress_by_itself": [
+      "COMMITS",
+      "PRS",
+      "CI_PASSES",
+      "YAMLS",
+      "MOCKS",
+      "LINES_OF_CODE"
+    ],
+    "stop_the_line_when": "A proposed increment moves zero required root acceptance steps and does not discover a real blocker or falsify an important assumption."
+  },
+  "authority_refs": [
+    "05_CASOS/CASO_CUDO_001/contrato_trabajo_v0.md",
+    "05_CASOS/CASO_CUDO_001/CUDO_AMATEUR_CLUB_OPERATING_REFERENCE_MODEL_20260921.yaml",
+    "05_CASOS/CASO_CUDO_001/CUDO_ROOT_CAUSE_RECOVERY_PLAN_20260921.yaml"
+  ],
+  "projection_metadata": {
+    "role": "EXECUTABLE_PROJECTION_NOT_AUTHORITY",
+    "authority_repository": "carlitosvaldesmorales/arke-root",
+    "authority_path": "05_CASOS/CASO_CUDO_001/CUDO_ACTIVE_SLICE_ACCEPTANCE.yaml",
+    "authority_commit": "41deb9ed625d026d20c2160bc1bc78d1efe54fd3",
+    "rule": "Update this projection only when the canonical ARKE acceptance contract changes."
+  }
+}
