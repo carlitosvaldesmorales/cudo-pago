@@ -1,0 +1,76 @@
+{
+  "schema_version": "CUDO_BINGO_FULL_DAY_QA_V1",
+  "mock": true,
+  "production_write": false,
+  "event": {
+    "event_id": "QA-BINGO-001",
+    "kind": "BINGO",
+    "display_name": "Bingo CUDO · Jornada QA",
+    "date": "2026-10-10",
+    "venue": "Sede / recinto CUDO",
+    "status": "SCHEDULED",
+    "conditions": {
+      "permit_required": true,
+      "kitchen_enabled": true,
+      "sales_enabled": true
+    }
+  },
+  "permit": {
+    "required": true,
+    "confirmed": false,
+    "reference": ""
+  },
+  "responsibilities": [
+    {
+      "role": "Coordinación general",
+      "person": "Dirigencia QA"
+    },
+    {
+      "role": "Cocina",
+      "person": "Equipo cocina QA"
+    },
+    {
+      "role": "Caja",
+      "person": "Tesorería QA"
+    },
+    {
+      "role": "Ventas",
+      "person": "Colaboradores QA"
+    }
+  ],
+  "products": [
+    {
+      "product_id": "BEBIDA",
+      "name": "Bebidas",
+      "stock": 16,
+      "unit_cost": 730,
+      "sell_price": 1500
+    },
+    {
+      "product_id": "COMPLETO",
+      "name": "Insumos completos",
+      "stock": 20,
+      "unit_cost": 900,
+      "sell_price": 2500
+    }
+  ],
+  "purchases": [],
+  "sales": [],
+  "tickets": [],
+  "other_income": [],
+  "prizes": [],
+  "opening_cash": 15000,
+  "post_event_work": [
+    {
+      "work_id": "ASEO",
+      "title": "Aseo del recinto",
+      "state": "PENDING"
+    },
+    {
+      "work_id": "CAJA",
+      "title": "Revisión final de caja",
+      "state": "PENDING"
+    }
+  ],
+  "closed_at": null
+}
