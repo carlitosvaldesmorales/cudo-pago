@@ -4,7 +4,7 @@ import { chromium } from 'playwright';
 
 const root=process.cwd();
 const manifestPath=process.env.ARKE_ACCEPTANCE_PATH ||
-  path.join(root,'arke-control','05_CASOS','CASO_CUDO_001','CUDO_ACTIVE_SLICE_ACCEPTANCE.yaml');
+  path.join(root,'preview-v8','certification','root-acceptance.json');
 const baseUrl=(process.env.CUDO_BASE_URL || 'http://127.0.0.1:4173/preview-v8/').replace(/\/+$/,'')+'/';
 const reportDir=path.join(root,'qa-root-acceptance');
 const reportPath=path.join(reportDir,'report.json');
@@ -30,6 +30,14 @@ try{
   process.exit();
 }
 
+if(manifest.projection_metadata?.role!=='EXECUTABLE_PROJECTION_NOT_AUTHORITY'){
+  failReport('root acceptance must be an executable projection of ARKE, not a parallel authority');
+  process.exit();
+}
+if(!manifest.projection_metadata?.authority_commit||!manifest.projection_metadata?.authority_path){
+  failReport('projection metadata missing ARKE authority reference');
+  process.exit();
+}
 if(manifest.schema_version!=='CUDO_ACTIVE_SLICE_ACCEPTANCE_V1'){
   failReport('unexpected manifest schema',{schema_version:manifest.schema_version});
   process.exit();
