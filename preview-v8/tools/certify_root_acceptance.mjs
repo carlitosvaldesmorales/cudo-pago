@@ -142,14 +142,20 @@ try{
     const loc=page.locator('[data-acceptance-action="assign"],[data-acceptance-action="reassign"],[data-acceptance-action="transition"]').nth(i);
     if(await loc.isVisible().catch(()=>false)) visibleActions.push(await loc.getAttribute('data-acceptance-action'));
   }
+  const activityFrame=page.locator('#cudoActivityActionFrame').first();
+  const activityFrameVisible=await activityFrame.isVisible().catch(()=>false);
+  const activityFrameSrc=await activityFrame.getAttribute('src').catch(()=>null);
+  const stableActivitySurface=activityFrameVisible &&
+    /script\.google\.com\/macros\/s\/AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ\/exec/.test(activityFrameSrc||'');
+
   const actionProof=runtimeProof('CUDO-AS-05-ACTION-PATH');
   const hasTransition=visibleActions.includes('transition');
   const hasAssignment=visibleActions.includes('assign')||visibleActions.includes('reassign');
-  add('CUDO-AS-05-ACTION-PATH',hasTransition&&hasAssignment&&actionProof.pass,
-    {visibleActions,runtime_certification:actionProof.proof},
-    hasTransition&&hasAssignment&&actionProof.pass
-      ? 'Assignment/reassignment and state action path executed with persistent QA proof'
-      : 'Action path is not complete and runtime-certified');
+  add('CUDO-AS-05-ACTION-PATH',stableActivitySurface&&hasTransition&&hasAssignment&&actionProof.pass,
+    {visibleActions,activityFrameVisible,activityFrameSrc,runtime_certification:actionProof.proof},
+    stableActivitySurface&&hasTransition&&hasAssignment&&actionProof.pass
+      ? 'Primary Control embeds the governed activity action surface and its persistent QA roundtrip is certified'
+      : 'Action path is not bound to the primary Control surface and runtime-certified');
 
   const blockers=await markerText('[data-acceptance="blockers"]');
   const evidence=await markerText('[data-acceptance="evidence"]');
@@ -164,11 +170,11 @@ try{
   const closeVisible=await page.locator('[data-acceptance-action="close"]').first().isVisible().catch(()=>false);
   const resultText=await markerText('[data-acceptance="result"]');
   const closeProof=runtimeProof('CUDO-AS-07-CLOSURE-RESULT');
-  add('CUDO-AS-07-CLOSURE-RESULT',Boolean(closeVisible&&resultText)&&closeProof.pass,
-    {closeVisible,resultText,runtime_certification:closeProof.proof},
-    closeVisible&&resultText&&closeProof.pass
-      ? 'Closure/result roundtrip certified'
-      : 'Closure/result requires an executed persistent roundtrip');
+  add('CUDO-AS-07-CLOSURE-RESULT',Boolean(stableActivitySurface&&closeVisible&&resultText)&&closeProof.pass,
+    {activityFrameVisible,activityFrameSrc,closeVisible,resultText,runtime_certification:closeProof.proof},
+    stableActivitySurface&&closeVisible&&resultText&&closeProof.pass
+      ? 'Closure/result is available from primary Control through the governed action surface with persistent QA proof'
+      : 'Closure/result requires a primary-surface binding plus executed persistent roundtrip');
 
   const progressiveEntryCount=await page.getByRole('button',{name:/Ver origen|Por qué aparece|Ver historial/i}).count()
     + await page.getByRole('link',{name:/Ver origen|Por qué aparece|Ver historial/i}).count();
