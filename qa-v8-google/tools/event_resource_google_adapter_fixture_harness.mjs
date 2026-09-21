@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   EVENT_IDS,
   EVENT_REQUEST_HEADERS,
@@ -7,7 +8,7 @@ import {
   planEventResourceSheetRequests
 } from './process_event_resource_requests.mjs';
 
-const state=loadEventResourceState();
+const state=JSON.parse(fs.readFileSync(new URL('../contracts/cudo-event-resource-governed-fixture-v1.json',import.meta.url),'utf8'));
 const registry=loadDependencyRegistry();
 const rows=[
   EVENT_REQUEST_HEADERS,
