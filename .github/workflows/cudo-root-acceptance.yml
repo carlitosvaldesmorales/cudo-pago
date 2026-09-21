@@ -1,0 +1,64 @@
+name: CUDO Root Acceptance Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview-v8/**'
+      - '.github/workflows/cudo-root-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  root-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout CUDO
+        uses: actions/checkout@v4
+
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validar sintaxis del gate
+        run: node --check preview-v8/tools/certify_root_acceptance.mjs
+
+      - name: Instalar Chromium para aceptación raíz
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Ejecutar aceptación raíz CUDO
+        shell: bash
+        env:
+          CUDO_BASE_URL: http://127.0.0.1:4173/preview-v8/
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-root-acceptance-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          ready=0
+          for i in $(seq 1 20); do
+            if curl -fsS "$CUDO_BASE_URL" >/dev/null; then ready=1; break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/cudo-root-acceptance-http.log
+            exit 1
+          fi
+
+          node preview-v8/tools/certify_root_acceptance.mjs
+
+      - name: Guardar evidencia del gate raíz
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-root-acceptance-${{ github.run_id }}
+          path: qa-root-acceptance/
+          if-no-files-found: warn
+          retention-days: 30

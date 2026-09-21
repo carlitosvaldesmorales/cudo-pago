@@ -13,7 +13,7 @@ const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signatur
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
 const expectedAdminActions=[
-  {label:'Control del club · QA',path:'control/',provider:'CUDO_INTERNAL',readyToken:'Lo que CUDO ya puede demostrar'},
+  {label:'Control del club · QA',path:'control/',provider:'CUDO_INTERNAL',readyToken:'Qué necesita atención'},
   {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL',readyToken:'Actividades del club',backend:'GOOGLE_APPS_SCRIPT_EMBED'},
   {label:'Eventos del club · QA',path:'eventos/',provider:'CUDO_INTERNAL',readyToken:'Partido Mock Programado'},
   {label:'Completar mi ficha',host:'tally.so',provider:'TALLY'},

@@ -1,0 +1,117 @@
+name: Deploy CUDO Work State Web QA
+
+on:
+  push:
+    branches:
+      - 'fix/cudo-root-acceptance-gate-20260921'
+    paths:
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - '.github/workflows/deploy-cudo-work-state-web-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy work-state source into existing private CUDO Apps Script project
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request
+
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          source=pathlib.Path('qa-v8-google/apps-script/CudoWorkStateWeb.gs').read_text()
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            access=json.load(r)['access_token']
+
+          def req(url,method='GET',payload=None):
+            q=urllib.request.Request(
+              url,
+              data=None if payload is None else json.dumps(payload).encode(),
+              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
+              method=method
+            )
+            with urllib.request.urlopen(q) as r:
+              raw=r.read()
+              return json.loads(raw) if raw else {}
+
+          base=f'https://script.googleapis.com/v1/projects/{sid}'
+          current=req(base+'/content')
+          files=[]
+          manifest=None
+          for f in current.get('files',[]):
+            if f.get('name')=='CudoWorkStateWeb':
+              continue
+            if f.get('name')=='appsscript' and f.get('type')=='JSON':
+              manifest=json.loads(f.get('source') or '{}')
+              continue
+            files.append({'name':f['name'],'type':f['type'],'source':f.get('source','')})
+
+          if manifest is None:
+            raise SystemExit('Fail closed: Apps Script manifest missing')
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          files.append({'name':'CudoWorkStateWeb','type':'SERVER_JS','source':source})
+
+          req(base+'/content','PUT',{'files':files})
+          verify=req(base+'/content')
+          found=[f for f in verify.get('files',[]) if f.get('name')=='CudoWorkStateWeb']
+          if len(found)!=1 or found[0].get('source')!=source:
+            raise SystemExit('Fail closed: CudoWorkStateWeb source verification failed')
+
+          version=req(base+'/versions','POST',{
+            'description':'CUDO Work State QA '+os.environ.get('GITHUB_SHA','')[:12]
+          })
+          vn=version['versionNumber']
+          dep=req(base+'/deployments','POST',{
+            'versionNumber':vn,
+            'manifestFileName':'appsscript',
+            'description':'CUDO Work State private QA'
+          })
+          did=dep['deploymentId']
+          url='https://script.google.com/macros/s/'+did+'/exec?view=work'
+          out={
+            'ok':True,
+            'scriptId':sid,
+            'versionNumber':vn,
+            'deploymentId':did,
+            'workWebUrl':url,
+            'access':'MYSELF',
+            'executeAs':'USER_DEPLOYING',
+            'sourceVerified':True,
+            'production_write':False,
+            'live_transition_executed':False
+          }
+          pathlib.Path('work-state-web-deployment.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Guardar evidencia de despliegue
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-work-state-web-qa-${{ github.run_id }}
+          path: work-state-web-deployment.json
+          retention-days: 30
