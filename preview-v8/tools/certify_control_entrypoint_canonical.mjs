@@ -17,7 +17,9 @@ for (const token of [
   'data-acceptance="assignee"',
   'data-acceptance="next-action"',
   'Ver origen',
-  'Ver historial'
+  'Ver historial',
+  'data-acceptance-action="transition"',
+  'script.google.com/macros/s/AKfycbxae8ZOaPJElvF9cTa0EdDzb-KBm4nItqHSnUdZngQ2nRnEEy3nX3AJMQHsySt5lE99Sw/exec?view=work'
 ]) assert.ok(control.includes(token),'human-first Control missing: '+token);
 
 assert.ok(!control.includes("location.replace('../club-operacion-lab/')"),'Control must not redirect to the lab');
