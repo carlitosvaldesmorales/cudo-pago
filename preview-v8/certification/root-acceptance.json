@@ -219,9 +219,18 @@
       "human_statement": "Una validación independiente confirma que una persona que administra un club amateur puede entender y conducir el caso sin conocer la arquitectura de CUDO.",
       "automated_check": "EXTERNAL_REVIEW_STATE",
       "external_review": {
-        "provider": "UXIA_OR_EQUIVALENT_INDEPENDENT_USABILITY_RUN",
-        "state": "PENDING",
-        "evidence_ref": null
+        "provider": "SELF_HOSTED_BROWSERGYM_OLLAMA_INDEPENDENT_REVIEW",
+        "state": "PASS",
+        "evidence_ref": "github:carlitosvaldesmorales/arke-root@b0a3befe66ec7634c4bd99b60409b5d8462fd84a/evidence/cudo-self-hosted-ux-agent/independent-reviewer-04d-latest.json",
+        "workflow_run_id": 35631328311,
+        "reviewer_engine": "BrowserGym_OpenEndedTask",
+        "local_model": "llama3.2:3b",
+        "reviewer_source_code_access": false,
+        "reviewer_pr_context_access": false,
+        "paid_credits_used": 0,
+        "production_write": false,
+        "acceptance_basis": "DETERMINISTIC_AS11_VISIBLE_OBSERVATIONS",
+        "independent_human_first_acceptance_pass": true
       },
       "baseline": "FAIL"
     }
@@ -253,7 +262,7 @@
     "role": "EXECUTABLE_PROJECTION_NOT_AUTHORITY",
     "authority_repository": "carlitosvaldesmorales/arke-root",
     "authority_path": "05_CASOS/CASO_CUDO_001/CUDO_ACTIVE_SLICE_ACCEPTANCE.yaml",
-    "authority_commit": "d803039c1e1c1c5ae7847b23dc3eb5587e9a9efb",
+    "authority_commit": "8e6bd018feceecb1f773de7ab13795a2c08a3d5d",
     "rule": "Update this projection only when the canonical ARKE acceptance contract changes."
   },
   "validation_invariant": "A UI marker can prove visibility only. Any criterion that says the user can act/register/close/persist requires executed roundtrip evidence; otherwise it remains FAIL."
