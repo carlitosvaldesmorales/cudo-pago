@@ -73,7 +73,12 @@
       "baseline": "FAIL",
       "baseline_evidence": [
         "current canonical cards are read-only; legacy actions are browser-local synthetic"
-      ]
+      ],
+      "runtime_certification": {
+        "state": "PENDING",
+        "evidence_ref": null,
+        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+      }
     },
     {
       "id": "CUDO-AS-06-BLOCKERS-EVIDENCE-HISTORY",
@@ -83,7 +88,12 @@
       "baseline": "FAIL",
       "baseline_evidence": [
         "legacy synthetic flow only"
-      ]
+      ],
+      "runtime_certification": {
+        "state": "PENDING",
+        "evidence_ref": null,
+        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+      }
     },
     {
       "id": "CUDO-AS-07-CLOSURE-RESULT",
@@ -93,7 +103,12 @@
       "baseline": "FAIL",
       "baseline_evidence": [
         "legacy synthetic flow only"
-      ]
+      ],
+      "runtime_certification": {
+        "state": "PENDING",
+        "evidence_ref": null,
+        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+      }
     },
     {
       "id": "CUDO-AS-08-TRACE-PROGRESSIVE",
@@ -123,7 +138,12 @@
       "baseline": "FAIL",
       "baseline_evidence": [
         "club-operacion-lab uses localStorage for interactive flow"
-      ]
+      ],
+      "runtime_certification": {
+        "state": "PENDING",
+        "evidence_ref": null,
+        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+      }
     },
     {
       "id": "CUDO-AS-11-INDEPENDENT-HUMAN-FIRST",
@@ -165,7 +185,8 @@
     "role": "EXECUTABLE_PROJECTION_NOT_AUTHORITY",
     "authority_repository": "carlitosvaldesmorales/arke-root",
     "authority_path": "05_CASOS/CASO_CUDO_001/CUDO_ACTIVE_SLICE_ACCEPTANCE.yaml",
-    "authority_commit": "41deb9ed625d026d20c2160bc1bc78d1efe54fd3",
+    "authority_commit": "8c12d998a27dc70532b589f807c2d82e94bc9caf",
     "rule": "Update this projection only when the canonical ARKE acceptance contract changes."
-  }
+  },
+  "validation_invariant": "A UI marker can prove visibility only. Any criterion that says the user can act/register/close/persist requires executed roundtrip evidence; otherwise it remains FAIL."
 }
