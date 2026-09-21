@@ -1,5 +1,9 @@
 const CUDO_ACTIVITY_QA_SHEET_ID = '1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA';
 const CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID = 'QA-ACTIVITY-BINGO-002';
+const CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID = 'QA-ACTIVITY-ACCEPTANCE-001';
+const CUDO_ACTIVITY_QA_ACCEPTANCE_WORKSTREAM_ID = 'QA-WS-901';
+const CUDO_ACTIVITY_QA_ACCEPTANCE_ASSIGNMENT_ID = 'QA-ASG-901';
+const CUDO_ACTIVITY_QA_ACCEPTANCE_TASK_ID = 'QA-TASK-901';
 
 function cudoQaSs_() {
   return SpreadsheetApp.openById(CUDO_ACTIVITY_QA_SHEET_ID);
@@ -24,6 +28,32 @@ function cudoQaSheet_(name) {
   const sh = cudoQaSs_().getSheetByName(name);
   if (!sh) throw new Error('Missing sheet: ' + name);
   return sh;
+}
+
+function cudoQaAppendByHeaders_(sheetName, valuesByHeader) {
+  const sh = cudoQaSheet_(sheetName);
+  const values = sh.getDataRange().getDisplayValues();
+  if (!values.length) throw new Error('Missing headers: ' + sheetName);
+  const headers = values[0];
+  const row = headers.map(h => Object.prototype.hasOwnProperty.call(valuesByHeader, h) ? valuesByHeader[h] : '');
+  sh.appendRow(row);
+}
+
+function cudoQaDeleteExact_(sheetName, idColumn, idValue) {
+  const sh = cudoQaSheet_(sheetName);
+  const values = sh.getDataRange().getDisplayValues();
+  if (!values.length) return 0;
+  const headers = values[0];
+  const idx = headers.indexOf(idColumn);
+  if (idx < 0) throw new Error('Missing id column ' + idColumn + ' in ' + sheetName);
+  let removed = 0;
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][idx]) === String(idValue)) {
+      sh.deleteRow(i + 1);
+      removed++;
+    }
+  }
+  return removed;
 }
 
 function cudoQaUpdateById_(sheetName, idColumn, idValue, changes) {
@@ -166,8 +196,67 @@ function getRegistry() {
   };
 }
 
+function cudoQaCreateAcceptanceCase_() {
+  const exists = cudoQaRows_('ACTIVIDADES').some(r => r.activity_id === CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID);
+  if (exists) throw new Error('Acceptance QA case already exists; reset fixture first');
+
+  const now = Utilities.formatDate(new Date(), 'America/Santiago', "yyyy-MM-dd'T'HH:mm:ssXXX");
+  cudoQaAppendByHeaders_('ACTIVIDADES', {
+    activity_id: CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID,
+    activity_type: 'QA_ACCEPTANCE',
+    title: 'Preparar actividad QA · flujo completo',
+    status: 'IN_PREPARATION',
+    starts_at: now
+  });
+  cudoQaAppendByHeaders_('FRENTES', {
+    workstream_id: CUDO_ACTIVITY_QA_ACCEPTANCE_WORKSTREAM_ID,
+    activity_id: CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID,
+    label: 'Preparación general',
+    purpose: 'Dejar la actividad lista y demostrar asignación, seguimiento y cierre',
+    activation_reason: 'QA_ACCEPTANCE',
+    state: 'REQUIRED_UNASSIGNED',
+    progress_pct: 0
+  });
+  cudoQaAppendByHeaders_('RESPONSABLES', {
+    assignment_id: CUDO_ACTIVITY_QA_ACCEPTANCE_ASSIGNMENT_ID,
+    workstream_id: CUDO_ACTIVITY_QA_ACCEPTANCE_WORKSTREAM_ID,
+    person_ref: '',
+    person_display: '',
+    assignment_state: 'UNASSIGNED',
+    assigned_at: '',
+    confirmed_at: ''
+  });
+  cudoQaAppendByHeaders_('TAREAS', {
+    task_id: CUDO_ACTIVITY_QA_ACCEPTANCE_TASK_ID,
+    workstream_id: CUDO_ACTIVITY_QA_ACCEPTANCE_WORKSTREAM_ID,
+    title: 'Completar preparación QA',
+    state: 'TODO',
+    due_at: '',
+    updated_at: now
+  });
+  cudoQaAppendEvent_(
+    CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID,
+    'ACTIVITY_CREATED',
+    CUDO_ACTIVITY_QA_ACCEPTANCE_WORKSTREAM_ID,
+    '',
+    'SYSTEM',
+    'CUDO_QA_ACCEPTANCE',
+    '',
+    'IN_PREPARATION',
+    'Caso sintético de aceptación creado desde CUDO Web QA'
+  );
+  SpreadsheetApp.flush();
+  return getState(CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID);
+}
+
 function cudoQaReset_() {
   const now = Utilities.formatDate(new Date(), 'America/Santiago', "yyyy-MM-dd'T'HH:mm:ssXXX");
+
+  cudoQaDeleteExact_('TAREAS','task_id',CUDO_ACTIVITY_QA_ACCEPTANCE_TASK_ID);
+  cudoQaDeleteExact_('RESPONSABLES','assignment_id',CUDO_ACTIVITY_QA_ACCEPTANCE_ASSIGNMENT_ID);
+  cudoQaDeleteExact_('FRENTES','workstream_id',CUDO_ACTIVITY_QA_ACCEPTANCE_WORKSTREAM_ID);
+  cudoQaDeleteExact_('ACTIVIDADES','activity_id',CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID);
+  cudoQaUpdateById_('ACTIVIDADES','activity_id',CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID,{status:'IN_PREPARATION'});
 
   const frontBaseline = {
     'QA-WS-101': {state:'IN_PROGRESS',progress_pct:65},
@@ -225,13 +314,16 @@ function applyAction(payload) {
   const workstreamId = String(payload.workstreamId || '');
   const taskId = String(payload.taskId || '');
 
-  if (action === 'RESET_FIXTURE') {
+  if (action === 'RESET_FIXTURE' || action === 'CREATE_ACCEPTANCE_CASE') {
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
     try {
-      cudoQaReset_();
-      SpreadsheetApp.flush();
-      return getState(CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID);
+      if (action === 'RESET_FIXTURE') {
+        cudoQaReset_();
+        SpreadsheetApp.flush();
+        return getState(CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID);
+      }
+      return cudoQaCreateAcceptanceCase_();
     } finally {
       lock.releaseLock();
     }
@@ -254,7 +346,7 @@ function applyAction(payload) {
       if (!a) throw new Error('Assignment not found');
       cudoQaUpdateById_('RESPONSABLES','assignment_id',a.assignment_id,{
         person_ref:'QA-VISITOR',
-        person_display:'Tú (demo)',
+        person_display:'Persona QA 1',
         assignment_state:'ASSIGNED',
         assigned_at:now,
         confirmed_at:''
@@ -262,7 +354,22 @@ function applyAction(payload) {
       cudoQaUpdateById_('FRENTES','workstream_id',workstreamId,{state:'READY'});
       const f = cudoQaFindFront_(workstreamId);
       if (!f) throw new Error('Workstream not found');
-      cudoQaAppendEvent_(f.activity_id,'ROLE_ASSIGNED',workstreamId,'','PERSON','QA-VISITOR',a.assignment_state,'ASSIGNED','Responsabilidad tomada desde la web QA');
+      cudoQaAppendEvent_(f.activity_id,'ROLE_ASSIGNED',workstreamId,'','PERSON','QA-VISITOR',a.assignment_state,'ASSIGNED','Responsabilidad asignada desde la web QA');
+
+    } else if (action === 'REASSIGN_DEMO') {
+      const a = cudoQaFindAssignment_(workstreamId);
+      if (!a || !a.person_ref) throw new Error('Reassignment requires an existing assigned person');
+      const previous = a.person_display || a.person_ref;
+      cudoQaUpdateById_('RESPONSABLES','assignment_id',a.assignment_id,{
+        person_ref:'QA-VISITOR-ALT',
+        person_display:'Persona QA 2',
+        assignment_state:'ASSIGNED',
+        assigned_at:now,
+        confirmed_at:''
+      });
+      const f = cudoQaFindFront_(workstreamId);
+      if (!f) throw new Error('Workstream not found');
+      cudoQaAppendEvent_(f.activity_id,'ROLE_REASSIGNED',workstreamId,'','PERSON','QA-VISITOR-ALT',previous,'Persona QA 2','Responsabilidad reasignada explícitamente desde la web QA');
 
     } else if (action === 'CONFIRM') {
       const a = cudoQaFindAssignment_(workstreamId);
@@ -294,6 +401,34 @@ function applyAction(payload) {
       const f = cudoQaFindFront_(t.workstream_id);
       if (!f) throw new Error('Workstream not found');
       cudoQaAppendEvent_(f.activity_id,'TASK_COMPLETED',t.workstream_id,taskId,'PERSON','QA-VISITOR',t.state,'DONE','Tarea sintética completada desde la web QA');
+
+    } else if (action === 'ADD_DEPENDENCY_DEMO') {
+      const f = cudoQaFindFront_(workstreamId);
+      if (!f) throw new Error('Workstream not found');
+      cudoQaAppendEvent_(f.activity_id,'DEPENDENCY_RECORDED',workstreamId,'','PERSON','QA-VISITOR','','','Dependencia QA registrada: confirmar disponibilidad del recinto');
+
+    } else if (action === 'ADD_EVIDENCE_DEMO') {
+      const f = cudoQaFindFront_(workstreamId);
+      if (!f) throw new Error('Workstream not found');
+      cudoQaAppendEvent_(f.activity_id,'EVIDENCE_ADDED',workstreamId,'','PERSON','QA-VISITOR','','','Evidencia QA: qa://acceptance/evidence/preparacion');
+
+    } else if (action === 'COMPLETE_WORKSTREAM_DEMO') {
+      const f = cudoQaFindFront_(workstreamId);
+      if (!f) throw new Error('Workstream not found');
+      const pending = cudoQaRows_('TAREAS').filter(t => t.workstream_id === workstreamId && t.state !== 'DONE');
+      if (pending.length) throw new Error('Cannot complete workstream while tasks remain pending');
+      cudoQaUpdateById_('FRENTES','workstream_id',workstreamId,{state:'DONE',progress_pct:100});
+      cudoQaAppendEvent_(f.activity_id,'WORKSTREAM_COMPLETED',workstreamId,'','PERSON','QA-VISITOR',f.state,'DONE','Responsabilidad completada con todas sus tareas listas');
+
+    } else if (action === 'CLOSE_ACTIVITY_DEMO') {
+      const activityId = String(payload.activityId || '');
+      if (activityId !== CUDO_ACTIVITY_QA_ACCEPTANCE_ACTIVITY_ID) throw new Error('Only the synthetic acceptance case can be closed by this action');
+      const fronts = cudoQaRows_('FRENTES').filter(f => f.activity_id === activityId);
+      if (!fronts.length || fronts.some(f => f.state !== 'DONE')) throw new Error('Cannot close activity while workstreams remain open');
+      const activity = cudoQaRows_('ACTIVIDADES').find(a => a.activity_id === activityId);
+      if (!activity) throw new Error('Activity not found');
+      cudoQaUpdateById_('ACTIVIDADES','activity_id',activityId,{status:'DONE'});
+      cudoQaAppendEvent_(activityId,'ACTIVITY_COMPLETED','','','PERSON','QA-VISITOR',activity.status,'DONE','Actividad QA cerrada después de completar el trabajo requerido');
 
     } else {
       throw new Error('Unsupported action');
