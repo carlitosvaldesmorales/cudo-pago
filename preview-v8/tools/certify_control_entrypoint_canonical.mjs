@@ -5,7 +5,7 @@ const admin=fs.readFileSync('preview-v8/admin/index.html','utf8');
 const control=fs.readFileSync('preview-v8/control/index.html','utf8');
 const canonical=fs.readFileSync('preview-v8/club-operacion-lab/index.html','utf8');
 
-assert.ok(admin.includes('Estado operativo del club · QA'),'admin must expose the canonical club state');
+assert.ok(admin.includes('Control del club · QA'),'admin must preserve the certified action label');
 assert.ok(admin.includes('href="../control/"'),'admin must keep the stable control entrypoint');
 assert.ok(admin.includes('Cada dato permite seguir de dónde salió'),'admin must communicate traceability');
 
