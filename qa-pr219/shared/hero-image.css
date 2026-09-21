@@ -1,0 +1,8 @@
+/* CUDO V8 · Foto real restaurada sin regeneración IA.
+   Rostros, escudo, lienzos, camisetas y textos reales preservados. */
+.view-home .hero-v8{
+  background-image:url('../../assets/estadio-cudo-hero.avif?v=faithful-hero-59506');
+  background-size:cover;
+  background-repeat:no-repeat;
+  background-position:center 50%;
+}

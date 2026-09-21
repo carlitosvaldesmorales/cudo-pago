@@ -1,0 +1,8 @@
+@import url('https://cdn.jsdelivr.net/gh/carlitosvaldesmorales/cudo-pago@qa-v8-google-data/preview-v8/shared/site.css');
+:root{--muted:#4f5d73}
+.status,.news p,.photo p,.matchmeta,.versus,.playerfilters label{color:#4f5d73!important}
+.dark .status,.category-card span{color:#cbd5e5!important}
+.team p{color:#d6deea!important}
+/* WCAG 2.2 target size without changing the visual language. */
+a,.filterbtn,.mobilemenu,.photoopen,.albumcard,button,select{min-height:24px;min-width:24px}
+.navlinks a,.section-link,.match-center-head a{display:inline-flex;align-items:center;min-height:24px;padding-left:4px;padding-right:4px}

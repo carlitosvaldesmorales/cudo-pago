@@ -1,0 +1,87 @@
+{
+  "schema_version": "CUDO_MATCH_FULL_DAY_QA_V1",
+  "mock": true,
+  "production_write": false,
+  "event": {
+    "event_id": "QA-MATCH-FULL-DAY-001",
+    "kind": "MATCH",
+    "display_name": "CUDO vs San Juan · Jornada QA",
+    "opponent": "San Juan",
+    "date": "2026-09-27",
+    "location": "LOCAL",
+    "venue": "Estadio CUDO",
+    "status": "SCHEDULED",
+    "conditions": {
+      "venue_required": true,
+      "kitchen_enabled": true,
+      "beverage_sales_enabled": true,
+      "ticketing_enabled": true,
+      "broadcast_enabled": false
+    }
+  },
+  "responsibilities": [
+    {
+      "role": "Cancha y recinto",
+      "person": "Encargado estadio QA"
+    },
+    {
+      "role": "Cocina",
+      "person": "Equipo cocina QA"
+    },
+    {
+      "role": "Caja",
+      "person": "Tesorería QA"
+    },
+    {
+      "role": "Ventas",
+      "person": "Colaboradores QA"
+    }
+  ],
+  "products": [
+    {
+      "product_id": "BEBIDA",
+      "name": "Bebidas",
+      "stock": 12,
+      "unit_cost": 730,
+      "sell_price": 1500
+    },
+    {
+      "product_id": "PAN",
+      "name": "Pan",
+      "stock": 10,
+      "unit_cost": 400,
+      "sell_price": 1000
+    },
+    {
+      "product_id": "VIENESA",
+      "name": "Vienesas",
+      "stock": 20,
+      "unit_cost": 450,
+      "sell_price": 1200
+    }
+  ],
+  "purchases": [],
+  "sales": [],
+  "tickets": [],
+  "sport_results": [],
+  "opening_cash": 20000,
+  "post_event_work": [
+    {
+      "work_id": "ASEO",
+      "title": "Aseo de camarines y entorno",
+      "state": "PENDING"
+    },
+    {
+      "work_id": "LAVADO",
+      "title": "Lavado de indumentaria",
+      "state": "PENDING"
+    },
+    {
+      "work_id": "CANCHA",
+      "title": "Revisión final de cancha",
+      "state": "PENDING"
+    }
+  ],
+  "evidence": [],
+  "closed_at": null
+}

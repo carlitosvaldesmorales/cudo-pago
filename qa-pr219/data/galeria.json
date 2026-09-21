@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-09-14T16:10:18.086Z",
+  "source": "CUDO_WEB_GALERIA",
+  "items": [
+    {
+      "id": "QA-GAL-20260906030052-001-01",
+      "album_id": "santa-elena-vs-cudo",
+      "album": "Santa Elena vs CUDO",
+      "fecha": "2026-08-23",
+      "categoria": "CLUB",
+      "titulo": "Tarde deportiva",
+      "descripcion": "Fotos varias de la tarde deportiva ",
+      "imagen_ref": "media/galeria/tally-486384486377d4f60cb3.jpg",
+      "alt": "Jugadores "
+    },
+    {
+      "id": "QA-GAL-20260906030052-001-02",
+      "album_id": "santa-elena-vs-cudo",
+      "album": "Santa Elena vs CUDO",
+      "fecha": "2026-08-23",
+      "categoria": "CLUB",
+      "titulo": "Tarde deportiva",
+      "descripcion": "Fotos varias de la tarde deportiva ",
+      "imagen_ref": "media/galeria/tally-89663dae4a65a82a7255.jpg",
+      "alt": "Jugadores "
+    },
+    {
+      "id": "QA-GAL-20260906030052-001-03",
+      "album_id": "santa-elena-vs-cudo",
+      "album": "Santa Elena vs CUDO",
+      "fecha": "2026-08-23",
+      "categoria": "CLUB",
+      "titulo": "Tarde deportiva",
+      "descripcion": "Fotos varias de la tarde deportiva ",
+      "imagen_ref": "media/galeria/tally-511cb5034bc70c7e52ab.jpg",
+      "alt": "Jugadores "
+    },
+    {
+      "id": "QA-GAL-20260906030052-001-04",
+      "album_id": "santa-elena-vs-cudo",
+      "album": "Santa Elena vs CUDO",
+      "fecha": "2026-08-23",
+      "categoria": "CLUB",
+      "titulo": "Tarde deportiva",
+      "descripcion": "Fotos varias de la tarde deportiva ",
+      "imagen_ref": "media/galeria/tally-2d3e8e3aa85f92262bca.jpg",
+      "alt": "Jugadores "
+    }
+  ]
+}

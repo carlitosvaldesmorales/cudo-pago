@@ -1,0 +1,1 @@
+(()=>{const img=new Image();img.onload=()=>document.documentElement.classList.add('clubs-crests-ready');img.onerror=()=>document.documentElement.classList.add('clubs-crests-failed');img.src='../media/crests-hd.webp?v=20260908-2100';})();
