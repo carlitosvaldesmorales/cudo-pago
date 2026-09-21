@@ -128,14 +128,22 @@ jobs:
           dep=req(base+'/deployments/'+urllib.parse.quote(did,safe=''),'PUT',{'deploymentConfig':config})
           mode='UPDATED_EXISTING_PRIVATE_DEPLOYMENT'
 
-          # Verify deployment is now bound to the created version.
-          refreshed=req(base+'/deployments').get('deployments',[])
-          bound=next((d for d in refreshed if d.get('deploymentId')==did),None)
+          # Verify the specific deployment, allowing bounded API propagation time.
+          import time
+          bound=None
+          observed_version=None
+          for attempt in range(10):
+            bound=req(base+'/deployments/'+urllib.parse.quote(did,safe=''))
+            bound_cfg=bound.get('deploymentConfig') or {}
+            observed_version=bound_cfg.get('versionNumber')
+            if int(observed_version or -1)==int(vn):
+              break
+            time.sleep(1)
           if not bound:
             raise SystemExit('Fail closed: deployment missing after apply')
           bound_cfg=bound.get('deploymentConfig') or {}
           if int(bound_cfg.get('versionNumber',-1))!=int(vn):
-            raise SystemExit('Fail closed: deployment version mismatch')
+            raise SystemExit('Fail closed: deployment version mismatch expected '+str(vn)+' observed '+str(observed_version))
 
           web_entry=next((x.get('webApp') for x in (bound.get('entryPoints') or []) if x.get('entryPointType')=='WEB_APP' and x.get('webApp')),None)
           if not web_entry or not web_entry.get('url'):
