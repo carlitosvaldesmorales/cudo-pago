@@ -1,0 +1,9 @@
+{
+  "environment": "QA_OFFICIAL_CUDO_CL",
+  "source_pr": 219,
+  "source_commit": "fea67dd7d4ec0f28b680ba0c9dce2a1f0285c8b1",
+  "qa_path": "/qa-pr219/",
+  "production_path": "/preview-v8/",
+  "production_write": false,
+  "note": "QA snapshot on official cudo.cl; production path remains unchanged."
+}

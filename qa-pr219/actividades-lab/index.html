@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#03163d">
+<title>C.U.D.O. · Contrato visual de seguimiento</title>
+<link rel="stylesheet" href="../shared/site.css">
+<style>
+:root{--navy:#03163d;--red:#e21b2d;--bg:#f4f2ed;--card:#fff;--line:#d7dde6;--muted:#66758a;--green:#1d7b4f;--amber:#8a6500}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#162033;font-family:Arial,sans-serif}
+.wrap{width:min(1180px,calc(100% - 24px));margin:auto}.hero{background:var(--navy);color:#fff;border-bottom:6px solid var(--red);padding:24px 0}
+.hero h1{margin:6px 0;font-size:clamp(34px,7vw,58px);font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;line-height:.94}
+.hero p{max-width:900px;margin:0;color:#e5ebf6;line-height:1.45;font-size:13px}.back{color:#fff;font-weight:800;font-size:12px}
+main{padding:16px 0 50px}.qa{background:#fff7d7;border-left:4px solid #c89b00;padding:11px 13px;border-radius:0 12px 12px 0;font-size:12px;line-height:1.45;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.8fr);gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 24px rgba(3,22,61,.05)}
+.card h2{margin:0 0 4px;color:var(--navy);font-size:27px;font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase}.help{font-size:11px;color:var(--muted);line-height:1.45;margin-bottom:12px}
+.topline{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.chip{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;background:#eef2f7;color:#30425f}
+.chip.warn{background:#fff2c8;color:#6d5000}.chip.good{background:#e8f6ee;color:#17683e}.chip.bad{background:#fdebed;color:#8d1425}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.metric{background:#f7f8fa;border-radius:10px;padding:10px}.metric strong{display:block;font-size:15px;color:var(--navy)}.metric span{font-size:9px;color:var(--muted);text-transform:uppercase;font-weight:900}
+.section{border-top:1px solid #edf0f4;padding-top:13px;margin-top:13px}.section h3{margin:0 0 8px;font-size:14px;color:var(--navy)}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.btn{border:0;border-radius:10px;padding:11px 10px;font-weight:900;cursor:pointer;background:var(--navy);color:#fff}.btn.secondary{background:#eef2f7;color:var(--navy)}.btn.danger{background:#8f1726}.btn:disabled{opacity:.38;cursor:not-allowed}
+.field{display:grid;gap:5px;margin-bottom:9px}.field label{font-size:10px;font-weight:900;color:#536176;text-transform:uppercase}.field input,.field textarea{width:100%;border:1px solid #b9c2d0;border-radius:10px;padding:10px;font:inherit;background:#fff}
+.work{padding:11px 0;border-top:1px solid #edf0f4}.work:first-child{border-top:0}.work-title{font-weight:900}.work-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.4}
+.timeline{position:relative;padding-left:20px}.event{position:relative;padding:0 0 14px}.event:before{content:"";position:absolute;left:-17px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--navy)}.event:after{content:"";position:absolute;left:-13px;top:14px;bottom:-3px;width:1px;background:#d7dde6}.event:last-child:after{display:none}.event strong{font-size:12px}.event p{margin:3px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
+.derived{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.derived>div{background:#f7f8fa;border-radius:10px;padding:10px;font-size:11px;line-height:1.4}.derived strong{display:block;color:var(--navy);margin-bottom:3px}
+.modal{position:fixed;inset:0;background:rgba(2,11,28,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:30}.modal.open{display:flex}.dialog{width:min(520px,100%);background:#fff;border-radius:16px;padding:16px;max-height:90vh;overflow:auto}.dialog h3{margin:0 0 10px;color:var(--navy)}.dialog-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.note{font-size:11px;color:var(--muted);line-height:1.45}.empty{padding:10px;border:1px dashed #bec7d3;border-radius:10px;color:var(--muted);font-size:11px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}.derived{grid-template-columns:1fr}.actions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+<div class="eyebrow">C.U.D.O. · Contrato visual QA</div>
+<h1>Seguir el trabajo hasta cerrarlo</h1>
+<p>Esta pantalla no demuestra todavía la lógica real: demuestra exactamente el flujo que debe quedar operativo. Si el flujo visual es correcto, la siguiente etapa conecta estos mismos actos al motor CUDO, Apps Script y Google Sheets.</p>
+<a class="back" href="../actividades/">← Volver a Actividades</a>
+</div></header>
+<main class="wrap">
+<div class="qa"><strong>Prueba visual solamente:</strong> todos los datos son sintéticos y los cambios viven sólo en este navegador. No escribe Google, no crea datos reales y no se considera capacidad terminada.</div>
+<div class="grid">
+<section class="card">
+<h2 id="activityTitle">Actividad QA · Preparar jornada del club</h2>
+<div class="help">La actividad no necesita pertenecer a una categoría fija. Existe porque el club necesita hacer algo y desde aquí se sigue hasta terminarlo.</div>
+<div class="topline">
+<span class="chip" id="stateChip">OPEN</span>
+<span class="chip warn" id="assignmentChip">Sin responsable principal</span>
+<span class="chip" id="dateChip">Vence: domingo 12:00</span>
+</div>
+<div class="summary">
+<div class="metric"><strong id="openCount">3</strong><span>trabajos activos</span></div>
+<div class="metric"><strong id="unassignedCount">1</strong><span>sin responsable</span></div>
+<div class="metric"><strong id="blockedCount">0</strong><span>bloqueados</span></div>
+<div class="metric"><strong id="evidenceCount">0</strong><span>evidencias</span></div>
+</div>
+
+<div class="section">
+<h3>Qué hay que hacer</h3>
+<div id="workList"></div>
+<button class="btn secondary" id="addWorkBtn">+ Agregar trabajo</button>
+</div>
+
+<div class="section">
+<h3>Acciones sobre la actividad</h3>
+<div class="actions">
+<button class="btn" id="assignBtn">Asignar responsable</button>
+<button class="btn secondary" id="reassignBtn">Reasignar responsable</button>
+<button class="btn" id="startBtn">Iniciar actividad</button>
+<button class="btn secondary" id="blockBtn">Registrar bloqueo</button>
+<button class="btn secondary" id="dependencyBtn">Agregar dependencia</button>
+<button class="btn secondary" id="evidenceBtn">Agregar evidencia</button>
+<button class="btn danger" id="closeBtn">Cerrar actividad</button>
+<button class="btn secondary" id="resetBtn">Restablecer demo</button>
+</div>
+</div>
+
+<div class="section">
+<h3>Efectos derivados</h3>
+<div class="derived">
+<div><strong>Personas</strong><span id="peopleEffect">Hay trabajo sin asignar. No se puede inferir sobrecarga.</span></div>
+<div><strong>Recursos</strong><span id="resourceEffect">Sin efecto confirmado todavía.</span></div>
+<div><strong>Finanzas</strong><span id="financeEffect">Sin obligación monetaria derivada.</span></div>
+</div>
+</div>
+</section>
+
+<aside class="card">
+<h2>Seguimiento</h2>
+<div class="help">El historial es parte de la función, no un detalle posterior. Cada cambio debe dejar huella.</div>
+<div class="timeline" id="timeline"></div>
+<div class="section">
+<h3>Lo que aún falta para cerrar</h3>
+<div id="closureChecklist"></div>
+</div>
+</aside>
+</div>
+</main>
+
+<div class="modal" id="modal"><div class="dialog">
+<h3 id="modalTitle">Acción</h3>
+<div id="modalBody"></div>
+<div class="dialog-actions"><button class="btn secondary" id="cancelModal">Cancelar</button><button class="btn" id="confirmModal">Aplicar en demo</button></div>
+</div></div>
+
+<script>
+const initial={
+ title:'Actividad QA · Preparar jornada del club',
+ state:'OPEN',
+ responsible:null,
+ due:'domingo 12:00',
+ dependencies:[],
+ evidence:[],
+ blocker:null,
+ work:[
+  {id:'W1',title:'Dejar recinto listo',state:'OPEN',responsible:'Persona Mock A'},
+  {id:'W2',title:'Coordinar insumos',state:'OPEN',responsible:null},
+  {id:'W3',title:'Confirmar apoyo externo',state:'OPEN',responsible:'Persona Mock B'}
+ ],
+ events:[{type:'CREATED',text:'Actividad creada sin clasificación obligatoria.',by:'Sistema QA'}]
+};
+let state=JSON.parse(localStorage.getItem('cudoVisualAcceptanceV1')||'null')||structuredClone(initial);
+let pendingAction=null;
+const people=['Persona Mock A','Persona Mock B','Persona Mock C','Persona Mock D'];
+function save(){localStorage.setItem('cudoVisualAcceptanceV1',JSON.stringify(state))}
+function ev(type,text,by='Usuario QA'){state.events.unshift({type,text,by,at:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})});save()}
+function esc(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function render(){
+ document.getElementById('activityTitle').textContent=state.title;
+ document.getElementById('stateChip').textContent=state.state;
+ document.getElementById('stateChip').className='chip '+(state.state==='DONE'?'good':state.state==='BLOCKED'?'bad':'');
+ document.getElementById('assignmentChip').textContent=state.responsible?'Responsable: '+state.responsible:'Sin responsable principal';
+ document.getElementById('assignmentChip').className='chip '+(state.responsible?'good':'warn');
+ document.getElementById('dateChip').textContent='Vence: '+state.due;
+ const active=state.work.filter(w=>!['DONE','CANCELLED'].includes(w.state));
+ const unassigned=active.filter(w=>!w.responsible).length;
+ const blocked=active.filter(w=>w.state==='BLOCKED').length+(state.blocker?1:0);
+ document.getElementById('openCount').textContent=active.length;
+ document.getElementById('unassignedCount').textContent=unassigned;
+ document.getElementById('blockedCount').textContent=blocked;
+ document.getElementById('evidenceCount').textContent=state.evidence.length;
+ document.getElementById('workList').innerHTML=state.work.map(w=>'<div class="work"><div class="work-title">'+esc(w.title)+'</div><div class="work-meta">Estado: '+esc(w.state)+' · Responsable: '+esc(w.responsible||'SIN ASIGNAR')+'</div></div>').join('')||'<div class="empty">Sin trabajos todavía.</div>';
+ document.getElementById('timeline').innerHTML=state.events.map(e=>'<div class="event"><strong>'+esc(e.type)+'</strong><p>'+esc(e.text)+'<br>'+esc(e.by)+(e.at?' · '+esc(e.at):'')+'</p></div>').join('');
+ document.getElementById('peopleEffect').textContent=unassigned?unassigned+' trabajo(s) sin responsable. Se observa cobertura faltante; no se afirma sobrecarga.':'Todo el trabajo activo tiene responsable. La carga real requiere disponibilidad/esfuerzo para interpretarse.';
+ document.getElementById('resourceEffect').textContent=state.dependencies.length?state.dependencies.length+' dependencia(s) registradas: '+state.dependencies.join(', '):'Sin dependencia de recurso confirmada.';
+ document.getElementById('financeEffect').textContent='Sin obligación monetaria derivada en este ejemplo visual.';
+ const checklist=[
+  ['Responsable principal',!!state.responsible],
+  ['Sin trabajo pendiente sin responsable',unassigned===0],
+  ['Sin bloqueo abierto',!state.blocker],
+  ['Evidencia registrada',state.evidence.length>0],
+  ['Actividad cerrada',state.state==='DONE']
+ ];
+ document.getElementById('closureChecklist').innerHTML=checklist.map(([t,ok])=>'<div class="work"><span class="chip '+(ok?'good':'warn')+'">'+(ok?'OK':'PENDIENTE')+'</span> <strong>'+esc(t)+'</strong></div>').join('');
+ document.getElementById('closeBtn').disabled=state.state==='DONE';
+ document.getElementById('startBtn').disabled=state.state==='DONE';
+}
+function openModal(title,html,handler){pendingAction=handler;document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=html;document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open');pendingAction=null}
+document.getElementById('cancelModal').onclick=closeModal;
+document.getElementById('confirmModal').onclick=()=>{if(pendingAction)pendingAction();closeModal();render()};
+document.getElementById('assignBtn').onclick=()=>openModal('Asignar responsable','<div class="field"><label>Persona</label><select id="person">'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div>',()=>{const p=document.getElementById('person').value;state.responsible=p;ev('ASSIGNED','Responsable principal asignado a '+p)});
+document.getElementById('reassignBtn').onclick=()=>openModal('Reasignar responsable','<div class="field"><label>Nueva persona</label><select id="person">'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div><div class="field"><label>Motivo</label><textarea id="reason">Redistribución de trabajo</textarea></div>',()=>{const p=document.getElementById('person').value;const old=state.responsible||'SIN ASIGNAR';state.responsible=p;ev('REASSIGNED',old+' → '+p+'. Motivo: '+document.getElementById('reason').value)});
+document.getElementById('startBtn').onclick=()=>{state.state='IN_PROGRESS';ev('STATE_CHANGED','Actividad iniciada: OPEN → IN_PROGRESS');render()};
+document.getElementById('blockBtn').onclick=()=>openModal('Registrar bloqueo','<div class="field"><label>Qué impide avanzar</label><textarea id="blocker">Esperando respuesta externa</textarea></div>',()=>{state.blocker=document.getElementById('blocker').value;state.state='BLOCKED';ev('BLOCKED',state.blocker)});
+document.getElementById('dependencyBtn').onclick=()=>openModal('Agregar dependencia','<div class="field"><label>Dependencia</label><input id="dep" value="Confirmación externa"></div>',()=>{const d=document.getElementById('dep').value.trim();if(d){state.dependencies.push(d);ev('DEPENDENCY_ADDED',d)}});
+document.getElementById('evidenceBtn').onclick=()=>openModal('Agregar evidencia','<div class="field"><label>Referencia o descripción</label><input id="evi" value="Foto / comprobante / documento QA"></div>',()=>{const d=document.getElementById('evi').value.trim();if(d){state.evidence.push(d);ev('EVIDENCE_ADDED',d)}});
+document.getElementById('addWorkBtn').onclick=()=>openModal('Agregar trabajo','<div class="field"><label>Trabajo</label><input id="workTitle" value="Nueva necesidad descubierta"></div><div class="field"><label>Responsable opcional</label><select id="workPerson"><option value="">Sin responsable</option>'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div>',()=>{const title=document.getElementById('workTitle').value.trim();if(title){state.work.push({id:'W'+(state.work.length+1),title,state:'OPEN',responsible:document.getElementById('workPerson').value||null});ev('WORK_ADDED','Se agregó: '+title)}});
+document.getElementById('closeBtn').onclick=()=>{const active=state.work.filter(w=>!['DONE','CANCELLED'].includes(w.state));const unassigned=active.filter(w=>!w.responsible);if(!state.evidence.length){openModal('No se puede cerrar','<p class="note">El cierre exige al menos una evidencia. Esto es parte del contrato visual.</p>',()=>{});return}if(state.blocker){openModal('No se puede cerrar','<p class="note">Existe un bloqueo abierto. Primero debe resolverse.</p>',()=>{});return}if(unassigned.length){openModal('No se puede cerrar','<p class="note">Hay trabajo activo sin responsable. Debe asignarse, cancelarse o resolverse.</p>',()=>{});return}state.work.forEach(w=>{if(!['DONE','CANCELLED'].includes(w.state))w.state='DONE'});state.state='DONE';ev('CLOSED','Actividad cerrada con evidencia e historial');render()};
+document.getElementById('resetBtn').onclick=()=>{state=structuredClone(initial);localStorage.removeItem('cudoVisualAcceptanceV1');render()};
+render();
+</script>
+</body>
+</html>

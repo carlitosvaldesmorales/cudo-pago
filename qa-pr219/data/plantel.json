@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-09-13T18:16:40.996Z",
+  "source": "CUDO_WEB_PLANTEL",
+  "items": [
+    {
+      "id": "QA-PLA-20260906022200-001",
+      "nombre_deportivo": "Renato Padilla",
+      "numero": 11,
+      "posicion": "DELANTERO",
+      "categoria": "PRIMERA",
+      "foto_ref": "media/plantel/tally-eab8b33642e082920788.png",
+      "capitan": false
+    }
+  ]
+}

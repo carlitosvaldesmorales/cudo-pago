@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#03163d">
+<title>C.U.D.O. · Operación del club · Contrato visual v2</title>
+<link rel="stylesheet" href="../shared/site.css">
+<style>
+:root{--navy:#03163d;--red:#e21b2d;--bg:#f4f2ed;--line:#d7dde6;--muted:#66758a;--green:#1c7a4d;--amber:#8b6600}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#172033;font-family:Arial,sans-serif}
+.wrap{width:min(1220px,calc(100% - 24px));margin:auto}.hero{background:var(--navy);color:#fff;border-bottom:6px solid var(--red);padding:24px 0}.hero h1{margin:6px 0;font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:clamp(36px,7vw,62px);line-height:.94}.hero p{max-width:900px;margin:0;color:#e5ebf6;font-size:13px;line-height:1.45}.back{color:#fff;font-weight:900;font-size:12px}
+main{padding:16px 0 50px}.qa{background:#fff7d8;border-left:4px solid #c99b00;border-radius:0 12px 12px 0;padding:11px 13px;font-size:12px;line-height:1.45;margin-bottom:14px}
+.source{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(3,22,61,.06);margin-bottom:14px}.ey{font-size:10px;text-transform:uppercase;font-weight:900;color:#7a8799}.source h2{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;color:var(--navy);font-size:31px;margin:4px 0}.source p{margin:0;color:#4f5c6f;line-height:1.45;font-size:12px}
+.source-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:14px;align-items:start}.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.chip{display:inline-flex;border-radius:999px;padding:5px 8px;font-size:9px;font-weight:900;background:#eef2f7;color:#30425f}.chip.warn{background:#fff1c7;color:#745400}.chip.good{background:#e8f6ee;color:#17663d}.chip.bad{background:#fdebed;color:#8d1425}
+.goalbox{background:#f7f8fb;border-radius:13px;padding:12px}.goalbox strong{display:block;color:var(--navy);font-size:13px}.goalbox span{font-size:11px;color:var(--muted);line-height:1.4}
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:12px 0 14px}.node{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px;min-height:94px}.node strong{display:block;font-size:11px;color:var(--navy);margin-bottom:4px}.node span{font-size:10px;color:var(--muted);line-height:1.35}.node.active{outline:2px solid #03163d}.node.warn{background:#fff9e7}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 8px 24px rgba(3,22,61,.05)}.card h3{margin:0 0 4px;color:var(--navy);font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:25px}.help{font-size:11px;color:var(--muted);line-height:1.45;margin-bottom:9px}.row{padding:10px 0;border-top:1px solid #edf0f4}.row:first-of-type{border-top:0}.row strong{font-size:12px}.meta{font-size:10px;color:var(--muted);line-height:1.4;margin-top:3px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.btn{border:0;border-radius:9px;padding:8px 9px;background:var(--navy);color:#fff;font-size:10px;font-weight:900;cursor:pointer}.btn.secondary{background:#eef2f7;color:var(--navy)}.btn.danger{background:#8d1725}.btn:disabled{opacity:.4;cursor:not-allowed}
+.timeline{position:relative;padding-left:18px}.event{position:relative;padding-bottom:12px}.event:before{content:"";position:absolute;left:-15px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--navy)}.event:after{content:"";position:absolute;left:-11px;top:14px;bottom:-2px;width:1px;background:#d7dde6}.event:last-child:after{display:none}.event strong{font-size:11px}.event p{font-size:10px;color:var(--muted);line-height:1.4;margin:3px 0 0}
+.derived{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.derived>div{background:#f7f8fa;border-radius:10px;padding:10px}.derived strong{display:block;color:var(--navy);font-size:11px}.derived span{font-size:10px;color:var(--muted);line-height:1.4}
+.footer-note{margin-top:14px;font-size:10px;color:#6b7889;line-height:1.45}
+.trace-btn{border:1px solid #c9d1dd;border-radius:999px;background:#fff;color:var(--navy);padding:6px 9px;font-size:9px;font-weight:900;cursor:pointer;white-space:nowrap}.trace-btn:hover{background:#eef2f7}.trace-btn.inline{margin-left:6px;vertical-align:middle}.trace-inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}.trace-card{background:#f7f8fb;border:1px solid #e3e7ed;border-radius:12px;padding:10px;margin:8px 0}.trace-card strong{display:block;color:var(--navy);font-size:11px;margin-bottom:3px}.trace-card span,.trace-card div{font-size:10px;color:var(--muted);line-height:1.4}.trace-links{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.trace-link{display:inline-flex;border-radius:8px;padding:7px 8px;background:#eef2f7;color:var(--navy);font-size:10px;font-weight:900;text-decoration:none}.trace-gap{background:#fff1c7;color:#745400;border-radius:8px;padding:7px 8px;font-size:10px;font-weight:800;margin-top:8px}.trace-rel{border-top:1px solid #edf0f4;padding-top:7px;margin-top:7px}.trace-rel button{margin:3px 4px 0 0}
+.modal{position:fixed;inset:0;background:rgba(1,10,25,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}.modal.open{display:flex}.dialog{width:min(500px,100%);background:#fff;border-radius:16px;padding:16px}.field{display:grid;gap:5px;margin:9px 0}.field label{font-size:10px;text-transform:uppercase;font-weight:900;color:#56647a}.field input,.field select,.field textarea{width:100%;border:1px solid #b7c0ce;border-radius:9px;padding:9px;font:inherit}.dialog-actions{display:flex;gap:7px;justify-content:flex-end}
+@media(max-width:980px){.flow{grid-template-columns:repeat(3,1fr)}.source-grid{grid-template-columns:1fr}.board{grid-template-columns:1fr}}
+@media(max-width:620px){.flow{grid-template-columns:repeat(2,1fr)}.derived{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="hero"><div class="wrap">
+<div class="eyebrow">C.U.D.O. · Contrato visual v2 · CLUB como raíz</div>
+<h1>De una situación real a todo lo que provoca</h1>
+<p>El centro no es la tarea. El centro es una situación, necesidad, evento, regla o cambio real del club. CUDO muestra y conduce sus consecuencias en trabajo, personas, recursos, dinero, decisiones y evidencia.</p>
+<a class="back" href="../actividades-lab/">← Comparar con visual anterior</a>
+</div></header>
+<main class="wrap">
+<div class="qa"><strong>QA sintética:</strong> este visual todavía no escribe Google. Sirve para validar el significado correcto antes de cablear la lógica algebraica real. <button class="trace-btn inline" onclick="openTrace('ui:qa-boundary')">Rastrear</button></div>
+
+<section class="source" id="canonicalSourceProof">
+<div class="source-grid">
+<div>
+<div class="ey">Cadena canónica conectada · evidencia real · sólo lectura QA</div>
+<h2 id="canonicalWorkTitle">Cargando fuente canónica…</h2>
+<p id="canonicalWorkSummary">Leyendo el mismo read model que persiste el estado operacional QA de CUDO. Si la fuente no converge, esta sección falla cerrada y muestra GAP.</p>
+<div class="chips" id="canonicalWorkChips"><span class="chip">LOADING</span></div>
+<div class="trace-inline" id="canonicalWorkActions"></div>
+</div>
+<div class="goalbox" id="canonicalSourceDetails"><strong>Persistencia QA</strong><span>Cargando Google Sheet / read model…</span><br><br><strong>Fuente original</strong><span>Cargando referencia exacta…</span></div>
+</div>
+</section>
+
+<section class="source" id="canonicalFullSurface">
+<div class="ey">Estado operacional canónico conectado · sin inventar una raíz común</div>
+<h2>Lo que CUDO ya puede demostrar</h2>
+<p>Esta vista agrupa sólo objetos que ya existen en el read model canónico. Cada trabajo conserva su propia causa y evidencia; si un disparador es sintético QA, se declara como tal.</p>
+<div class="chips" id="canonicalSummaryChips"><span class="chip">LOADING</span></div>
+<div class="trace-inline" id="canonicalSummaryActions"></div>
+<div class="board" style="margin-top:12px">
+<section class="card"><h3>Trabajo canónico</h3><div class="help">No se crea una lista paralela: estas filas vienen de CANONICAL_GRAPH_READ_MODEL.</div><div id="canonicalAllWork"></div></section>
+<section class="card"><h3>Personas y cobertura canónica</h3><div class="help">Se agregan únicamente asignaciones ya existentes. No se infiere sobrecarga.</div><div id="canonicalPeople"></div></section>
+<section class="card"><h3>Recursos relacionados</h3><div class="help">Sólo recursos enlazados por los trabajos existentes.</div><div id="canonicalResources"></div></section>
+<section class="card"><h3>Causas / disparadores</h3><div class="help">Cada causa mantiene su clasificación real, derivada o QA sintética.</div><div id="canonicalSources"></div></section>
+</div>
+</section>
+
+<section class="source">
+<div class="source-grid">
+<div>
+<div class="ey">Hecho / necesidad observada</div>
+<h2>El club necesita dejar el recinto operativo para una jornada</h2>
+<p>No se obliga a elegir “Partido”, “Bingo”, “Mantención” u otra categoría fija. Primero existe la necesidad real; después el sistema relaciona lo que sabe y deja como GAP lo que todavía no sabe.</p>
+<div class="chips">
+<span class="chip">OBSERVATION</span>
+<span class="chip good">Fuente registrada</span>
+<span class="chip warn" id="sourceState">Estado: requiere acción</span>
+</div>
+<div class="trace-inline"><button class="trace-btn" onclick="openTrace('source:need')">Rastrear necesidad</button><button class="trace-btn" onclick="openTrace('global:state')">Rastrear estado</button></div>
+</div>
+<div class="goalbox"><strong>Resultado esperado</strong><span>Recinto operativo antes de la jornada, sin trabajo crítico pendiente ni bloqueo abierto.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('goal:expected')">Rastrear resultado</button></div><br><strong>Quién decidió este objetivo</strong><span>Directiva Mock · evidencia QA</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('goal:authority')">Rastrear autoridad</button></div></div>
+</div>
+</section>
+
+<section class="flow">
+<div class="node active"><strong>1. REALIDAD</strong><span>Aparece una necesidad real del club.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('flow:reality')">Rastrear</button></div></div>
+<div class="node"><strong>2. REGLAS / CONTEXTO</strong><span>CUDO determina qué consecuencias aplican.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('flow:rules')">Rastrear</button></div></div>
+<div class="node"><strong>3. TRABAJO</strong><span>Se deriva o registra lo que alguien debe hacer.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('flow:work')">Rastrear</button></div></div>
+<div class="node"><strong>4. RECURSOS / DINERO</strong><span>Se exponen recursos y obligaciones cuando corresponden.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('flow:resources')">Rastrear</button></div></div>
+<div class="node"><strong>5. DECISIÓN / EJECUCIÓN</strong><span>Humanos actúan donde corresponde.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('flow:decision')">Rastrear</button></div></div>
+<div class="node warn"><strong>6. RESULTADO / APRENDIZAJE</strong><span>El resultado vuelve como evidencia y cambia el estado.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('flow:outcome')">Rastrear</button></div></div>
+</section>
+
+<div class="board">
+<section class="card">
+<h3>Trabajo derivado</h3>
+<div class="help">No es una lista manual separada: cada trabajo conserva de qué necesidad nació.</div>
+<div id="workList"></div>
+<button class="btn secondary" id="discoverWorkBtn">+ Registrar nueva necesidad descubierta</button>
+</section>
+
+<section class="card">
+<h3>Personas y cobertura</h3>
+<div class="help">Aquí vemos quién está cubriendo trabajo y qué sigue sin responsable. No inferimos sobrecarga sin evidencia suficiente.</div>
+<div id="peoplePanel"></div>
+</section>
+
+<section class="card">
+<h3>Recursos y dinero</h3>
+<div class="help">Sólo aparecen efectos que la situación realmente activa. No todo trabajo genera dinero.</div>
+<div id="resourcePanel"></div>
+<div class="derived">
+<div><strong>Obligación</strong><span id="obligationText">Sin obligación monetaria confirmada.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('resource:obligation')">Rastrear</button></div></div>
+<div><strong>Movimiento</strong><span id="movementText">Sin movimiento de caja.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('resource:movement')">Rastrear</button></div></div>
+<div><strong>Recurso</strong><span id="resourceText">Recinto todavía no confirmado como operativo.</span><div class="trace-inline"><button class="trace-btn" onclick="openTrace('resource:recinto')">Rastrear</button></div></div>
+</div>
+</section>
+
+<section class="card">
+<h3>Decisiones y bloqueos</h3>
+<div class="help">CUDO no inventa una prioridad global. Expone precedencias y deja explícita la decisión humana cuando hace falta.</div>
+<div id="decisionPanel"></div>
+</section>
+
+<section class="card">
+<h3>Evidencia e historial</h3>
+<div class="help">Cada cambio importante deja huella; cerrar no borra lo ocurrido.</div>
+<div class="timeline" id="timeline"></div>
+<button class="btn secondary" id="evidenceBtn">Agregar evidencia</button>
+</section>
+
+<section class="card">
+<h3>Estado global de esta situación</h3>
+<div class="help">Este estado se deriva de todo lo anterior; no se edita manualmente como un campo aislado.</div>
+<div id="globalPanel"></div>
+<div class="actions">
+<button class="btn" id="recalcBtn">Recalcular estado</button>
+<button class="btn danger" id="resetBtn">Restablecer demo</button>
+</div>
+</section>
+</div>
+<div class="footer-note">Contrato visual: la lógica real deberá producir esta misma relación causal desde CUDO Web → Apps Script → Google Sheets → núcleo algebraico → proyecciones.</div>
+</main>
+
+<div class="modal" id="modal"><div class="dialog"><h3 id="modalTitle">Acción</h3><div id="modalBody"></div><div class="dialog-actions"><button class="btn secondary" id="cancelModal">Cancelar</button><button class="btn" id="confirmModal">Aplicar en demo</button></div></div></div>
+<div class="modal" id="traceModal"><div class="dialog"><h3 id="traceTitle">Trazabilidad</h3><div id="traceBody"></div><div class="dialog-actions"><button class="btn" id="closeTrace">Cerrar</button></div></div></div>
+
+<script>
+const seed={
+ works:[
+  {id:'W1',title:'Preparar superficie del recinto',state:'OPEN',responsible:'Persona Mock A',source:'NECESIDAD-RECINTO'},
+  {id:'W2',title:'Confirmar insumos necesarios',state:'OPEN',responsible:null,source:'NECESIDAD-RECINTO'},
+  {id:'W3',title:'Confirmar apoyo externo',state:'WAITING_EXTERNAL',responsible:'Persona Mock B',source:'NECESIDAD-RECINTO'}
+ ],
+ blockers:[{id:'B1',work_id:'W3',text:'Esperando confirmación externa'}],
+ evidence:[],
+ resource:{state:'NOT_READY'},
+ obligation:null,
+ events:[{type:'OBSERVED',text:'Se registró la necesidad: dejar el recinto operativo.',by:'Sistema QA'}]
+};
+let s=JSON.parse(localStorage.getItem('cudoClubStateVisualV2')||'null')||structuredClone(seed);
+let pending=null;
+const people=['Persona Mock A','Persona Mock B','Persona Mock C','Persona Mock D'];
+const TRACE_LINKS={
+ checkpoint:'https://github.com/carlitosvaldesmorales/arke-root/blob/main/05_CASOS/CASO_CUDO_001/CUDO_CLUB_STATE_TRACEABILITY_NAVIGATION_CHECKPOINT_20260920.yaml',
+ visual:'https://github.com/carlitosvaldesmorales/cudo-pago/blob/main/preview-v8/club-operacion-lab/index.html',
+ contract:'https://github.com/carlitosvaldesmorales/cudo-pago/blob/main/qa-v8-google/contracts/cudo-shared-object-contract-v1.json',
+ fixture:'https://github.com/carlitosvaldesmorales/cudo-pago/blob/main/qa-v8-google/contracts/cudo-shared-object-fixture-v1.json',
+ irrigationContract:'https://github.com/carlitosvaldesmorales/cudo-pago/blob/main/qa-v8-google/contracts/cudo-real-work-irrigation-v1.json',
+ operationalState:'https://github.com/carlitosvaldesmorales/cudo-pago/blob/main/qa-v8-google/state/operational-work-state.json',
+ operationalProjection:'https://github.com/carlitosvaldesmorales/cudo-pago/blob/main/qa-v8-google/data/operacion.json',
+ workSheet:'https://docs.google.com/spreadsheets/d/1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw/edit#gid=1449372923&range=A1:O12'
+};
+const CANONICAL_READ_MODEL_URL='/qa-v8-google/data/operacion.json';
+const CANONICAL_STATE_URL='/qa-v8-google/state/operational-work-state.json';
+const CANONICAL_SOURCE_CONTRACT_URL='/qa-v8-google/contracts/cudo-real-work-irrigation-v1.json';
+const CANONICAL_SOURCE_CONTRACT_URLS=[
+ '/qa-v8-google/contracts/cudo-real-work-irrigation-v1.json',
+ '/qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json',
+ '/qa-v8-google/contracts/cudo-real-work-post-match-v1.json'
+];
+const CANONICAL_WORK_ID='CUDO-WORK-IRRIGATION-20261005';
+let canonicalLive={status:'LOADING',projection:null,stateStore:null,contract:null,contracts:[],objectIndex:new Map(),objectConflicts:[],work:null,workObject:null,rule:null,resource:null,actor:null,error:null};
+const traceCatalog={
+ 'ui:qa-boundary':{title:'Límite de esta pantalla',classification:'EVIDENCIA',state_kind:'SOURCE',object_id:'CUDO-CLUB-OPERATION-VISUAL-QA',source_refs:['ARKE checkpoint vigente','preview-v8/club-operacion-lab/index.html'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint],['Abrir código',TRACE_LINKS.visual]],note:'Esta superficie es QA sintética y persiste sólo en el navegador. No representa escritura operacional real.'},
+ 'source:need':{title:'Necesidad observada',classification:'EVIDENCIA_QA',state_kind:'SOURCE',object_id:'CUDO-OBS-RECINTO-VISUAL-QA',source_refs:['seed local del visual','ARKE checkpoint: visual_root.observed_situation'],relationships:[['Genera trabajo','work:W1'],['Genera trabajo','work:W2'],['Genera trabajo','work:W3'],['Se compara con','goal:expected']],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint],['Abrir código fuente',TRACE_LINKS.visual]],note:'La necesidad mostrada es sintética. Su trazabilidad no se presenta como dato real del club.'},
+ 'goal:expected':{title:'Resultado esperado',classification:'EVIDENCIA_QA',state_kind:'SOURCE',object_id:'CUDO-GOAL-RECINTO-VISUAL-QA',source_refs:['visual QA aceptado por el usuario','ARKE checkpoint vigente'],relationships:[['Gobierna','global:state'],['Decidido por','goal:authority']],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]],note:'El resultado esperado pertenece al contrato visual QA; aún no está conectado a una fuente real del club.'},
+ 'goal:authority':{title:'Autoridad del objetivo',classification:'GAP_CONTROLADO',state_kind:'OPAQUE',object_id:'CUDO-GAP-GOAL-AUTHORITY-VISUAL-QA',gap_id:'REAL_GOAL_AUTHORITY_NOT_CONNECTED',source_refs:['Directiva Mock · evidencia QA'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]],note:'“Directiva Mock” no representa una identidad real. La interfaz lo declara y permite rastrear el GAP en vez de aparentar una fuente inexistente.'},
+ 'flow:reality':{title:'Etapa 1 · Realidad',classification:'MODELO',state_kind:'DERIVED',rule_ids:['CUDO_OPEN_WORLD_REALITY_FIRST'],source_refs:['CUDO_CLUB_STATE_FIRST_VISUAL_ACCEPTANCE_CHECKPOINT'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]]},
+ 'flow:rules':{title:'Etapa 2 · Reglas / contexto',classification:'MODELO',state_kind:'DERIVED',rule_ids:['RULE_APPLICABILITY'],source_refs:['required_chain del checkpoint'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint],['Contrato compartido',TRACE_LINKS.contract]]},
+ 'flow:work':{title:'Etapa 3 · Trabajo',classification:'MODELO',state_kind:'DERIVED',rule_ids:['WORK_PRESERVES_SOURCE_CAUSE'],source_refs:['important_invariants del checkpoint'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]]},
+ 'flow:resources':{title:'Etapa 4 · Recursos / dinero',classification:'MODELO',state_kind:'DERIVED',rule_ids:['FINANCIAL_EFFECT_ONLY_WHEN_APPLICABLE'],source_refs:['important_invariants del checkpoint'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]]},
+ 'flow:decision':{title:'Etapa 5 · Decisión / ejecución',classification:'MODELO',state_kind:'DERIVED',rule_ids:['GOVERNED_HUMAN_DECISION'],source_refs:['causal_flow del checkpoint'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]]},
+ 'flow:outcome':{title:'Etapa 6 · Resultado / aprendizaje',classification:'MODELO',state_kind:'DERIVED',rule_ids:['OUTCOME_TO_EVIDENCE_FEEDBACK'],source_refs:['causal_flow del checkpoint'],links:[['Abrir checkpoint',TRACE_LINKS.checkpoint]]},
+ 'resource:obligation':{title:'Obligación monetaria',classification:'EVIDENCIA_QA',state_kind:'DERIVED',rule_ids:['VISUAL_SCENARIO_OBLIGATION_STATE'],source_refs:['s.obligation del estado local'],links:[['Abrir código',TRACE_LINKS.visual]],note:'“Sin obligación monetaria confirmada” significa únicamente que este escenario QA no contiene una obligación; no afirma ausencia de obligaciones reales del club.'},
+ 'resource:movement':{title:'Movimiento de caja',classification:'EVIDENCIA_QA',state_kind:'DERIVED',rule_ids:['VISUAL_SCENARIO_MOVEMENT_STATE'],source_refs:['escenario QA sin movimientos de caja'],links:[['Abrir código',TRACE_LINKS.visual]],note:'Es una ausencia dentro del escenario QA, no una afirmación financiera del CUDO real.'},
+ 'decision:precedence':{title:'Precedencia causal',classification:'EVIDENCIA_QA',state_kind:'DERIVED',rule_ids:['READY_REQUIRES_NO_ACTIVE_WORK_AND_NO_OPEN_BLOCKER'],source_refs:['función recalc() del visual'],relationships:[['Afecta','resource:recinto'],['Afecta','global:state']],links:[['Abrir código',TRACE_LINKS.visual]],note:'La regla pertenece al contrato visual actual; todavía no está promovida como regla operacional productiva.'}
+};
+const esc=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function save(){localStorage.setItem('cudoClubStateVisualV2',JSON.stringify(s))}
+function event(type,text,by='Usuario QA'){s.events.unshift({type,text,by,at:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})});save()}
+function activeWorks(){return s.works.filter(w=>!['DONE','CANCELLED'].includes(w.state))}
+function unresolvedBlockers(){return s.blockers.filter(b=>activeWorks().some(w=>w.id===b.work_id))}
+function recalc(){
+ const active=activeWorks(),unassigned=active.filter(w=>!w.responsible),blocks=unresolvedBlockers();
+ s.resource.state=active.length===0&&blocks.length===0?'READY':'NOT_READY';
+ save();render();
+}
+function traceButton(key,label='Rastrear'){return '<button class="trace-btn" onclick="openTrace(\''+key.replace(/'/g,'')+'\')">'+label+'</button>'}
+function unique(v){return [...new Set((v||[]).filter(Boolean))]}
+function sourceClassification(refs){
+ const r=unique(refs);
+ const real=r.some(x=>String(x).startsWith('artifact:'));
+ const qa=r.some(x=>String(x).startsWith('qa://'));
+ if(real&&qa) return 'MIXTA · EVIDENCIA REAL + DISPARADOR QA';
+ if(real) return 'EVIDENCIA REAL';
+ if(qa) return 'QA SINTÉTICA';
+ return r.length?'EVIDENCIA CANÓNICA':'GAP';
+}
+function stableObjectData(value){
+ if(Array.isArray(value)) return value.map(stableObjectData);
+ if(value&&typeof value==='object') return Object.fromEntries(Object.keys(value).sort().map(k=>[k,stableObjectData(value[k])]));
+ return value;
+}
+function objectMaterialSignature(object){return JSON.stringify({object_type:object?.object_type,data:stableObjectData(object?.data||{})})}
+function buildCanonicalObjectIndex(stateStore,contracts){
+ const index=new Map(),conflicts=[];
+ const sources=[...(stateStore?.objects||[]),...contracts.flatMap(x=>x?.objects||[])];
+ for(const object of sources){
+  const existing=index.get(object.object_id);
+  if(!existing){index.set(object.object_id,object);continue}
+  if(objectMaterialSignature(existing)!==objectMaterialSignature(object)){
+   conflicts.push({object_id:object.object_id,left:objectMaterialSignature(existing),right:objectMaterialSignature(object)});
+  }
+ }
+ return {index,conflicts};
+}
+function canonicalObjectById(id){return canonicalLive.objectIndex?.get(id)||null}
+function workRefs(work,object){return unique([...(work?.evidence_refs||[]),...(object?.provenance?.source_refs||[])])}
+function canonicalTrace(key){
+ if(!key.startsWith('canonical:')) return null;
+ if(canonicalLive.status!=='READY'){
+  return {title:'Fuente canónica no disponible',classification:'GAP',state_kind:'OPAQUE',gap_id:'CANONICAL_REAL_SOURCE_RUNTIME_NOT_READY',source_refs:[canonicalLive.error||'read model pendiente'],links:[['Abrir read model versionado',TRACE_LINKS.operationalProjection]],note:'No se reemplaza la fuente canónica por datos mock cuando falla la lectura.'};
+ }
+ const w=canonicalLive.work,wo=canonicalLive.workObject,rule=canonicalLive.rule,res=canonicalLive.resource,actor=canonicalLive.actor;
+ if(key==='canonical:summary'){
+  const items=canonicalLive.projection.items||[];
+  const actorIds=unique(items.map(x=>x.responsible?.actor_id));
+  const resourceIds=unique(items.map(x=>x.resource?.resource_id));
+  const sourceIds=unique(items.map(x=>x.source?.object_id));
+  return {title:'Resumen operacional canónico',classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-CLUB-OPERATIONAL-STATE-SUMMARY',rule_ids:['AGGREGATE_EXISTING_CANONICAL_RELATIONSHIPS_ONLY'],source_refs:items.map(x=>x.work_id),relationships:[...actorIds.map(id=>['Persona relacionada','canonical:object:'+id]),...resourceIds.map(id=>['Recurso relacionado','canonical:object:'+id]),...sourceIds.map(id=>['Causa existente','canonical:object:'+id])],links:[['Abrir read model',TRACE_LINKS.operationalProjection],['Abrir estado canónico',TRACE_LINKS.operationalState]],note:items.length+' trabajo(s) existentes. El resumen no crea una situación raíz común ni una prioridad nueva.'};
+ }
+ if(key.startsWith('canonical:item:')){
+  const id=key.slice('canonical:item:'.length);
+  const item=canonicalLive.projection.items?.find(x=>x.work_id===id);
+  const object=canonicalObjectById(id);
+  if(!item||!object) return {title:id,classification:'GAP',state_kind:'OPAQUE',object_id:id,gap_id:'CANONICAL_WORK_NOT_RESOLVED',source_refs:[]};
+  const refs=workRefs(item,object);
+  const ruleIds=unique(Object.values(object.field_semantics||{}).flatMap(x=>x.rule_ids||[]));
+  const rel=(object.relationships||[]).map(r=>[r.relationship_type,'canonical:object:'+r.target_object_id]);
+  return {title:item.title,classification:sourceClassification(refs),state_kind:'DERIVED',object_id:item.work_id,rule_ids:ruleIds,source_refs:refs,relationships:[...rel,['Persistencia QA','canonical:persistence-item:'+id],['Contexto financiero','canonical:financial-item:'+id],['Historial','canonical:history-item:'+id]],links:[['Abrir objeto canónico',TRACE_LINKS.operationalState],['Abrir read model',TRACE_LINKS.operationalProjection]],note:'Estado '+item.state+' · causa visible '+String(item.source?.display_name||'sin causa')+'. El trabajo conserva su propia causalidad; no se fusiona con otros trabajos por conveniencia visual.'};
+ }
+ if(key.startsWith('canonical:object:')){
+  const id=key.slice('canonical:object:'.length);
+  const object=canonicalObjectById(id);
+  if(!object) return {title:id,classification:'GAP_CONTROLADO',state_kind:'OPAQUE',object_id:id,gap_id:'CANONICAL_RELATION_TARGET_NOT_IN_STATE_STORE',source_refs:[],links:[['Abrir estado canónico',TRACE_LINKS.operationalState]],note:'La relación fue observada, pero el objeto objetivo no está resoluble en el state store actual.'};
+  const refs=unique([...(object.provenance?.source_refs||[]),...Object.values(object.field_semantics||{}).flatMap(x=>x.source_refs||[])]);
+  const ruleIds=unique(Object.values(object.field_semantics||{}).flatMap(x=>x.rule_ids||[]));
+  const kinds=unique(Object.values(object.field_semantics||{}).map(x=>x.state_kind));
+  const stateKind=kinds.includes('OPAQUE')?'OPAQUE':kinds.includes('DERIVED')?'DERIVED':'SOURCE';
+  const title=object.data?.title||object.data?.display_name||id;
+  return {title,classification:sourceClassification(refs),state_kind:stateKind,object_id:id,rule_ids:ruleIds,source_refs:refs,relationships:(object.relationships||[]).map(r=>[r.relationship_type,'canonical:object:'+r.target_object_id]),links:[['Abrir estado canónico',TRACE_LINKS.operationalState]],note:'Tipo canónico: '+object.object_type+' · lifecycle: '+object.lifecycle_state+'.'};
+ }
+ if(key.startsWith('canonical:persistence-item:')){
+  const id=key.slice('canonical:persistence-item:'.length);
+  const item=canonicalLive.projection.items?.find(x=>x.work_id===id);
+  return {title:'Persistencia QA · '+(item?.title||id),classification:'EVIDENCIA_RUNTIME',state_kind:'SOURCE',object_id:'CUDO-QA-OPERATIONAL-WORK-STATE-SHEET',source_refs:['Google Sheet CUDO_QA_OPERATIONAL_WORK_STATE / WORK_CONTROL','work_id: '+id,'authority: '+canonicalLive.projection.authority,'generated_at: '+canonicalLive.projection.generated_at],relationships:[['Trabajo persistido','canonical:item:'+id]],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir read model JSON',TRACE_LINKS.operationalProjection]],note:'La Sheet es una proyección QA, no una autoridad independiente.'};
+ }
+ if(key.startsWith('canonical:financial-item:')){
+  const id=key.slice('canonical:financial-item:'.length);
+  const item=canonicalLive.projection.items?.find(x=>x.work_id===id),object=canonicalObjectById(id);
+  if(!item) return null;
+  const ctx=item.financial_context||{};
+  return {title:'Contexto financiero · '+item.title,classification:sourceClassification(workRefs(item,object)),state_kind:'DERIVED',object_id:id+'-FINANCIAL-CONTEXT',rule_ids:unique(Object.entries(object?.field_semantics||{}).filter(([k])=>k.startsWith('financial_context')).flatMap(([,v])=>v.rule_ids||[])),source_refs:workRefs(item,object),relationships:[['Trabajo','canonical:item:'+id]],links:[['Abrir read model',TRACE_LINKS.operationalProjection]],note:'Semántica: '+String(ctx.semantics||'sin semántica')+'. No se convierte en obligación actual salvo que el motor canónico derive explícitamente un efecto financiero.'};
+ }
+ if(key.startsWith('canonical:history-item:')){
+  const id=key.slice('canonical:history-item:'.length);
+  const audit=(canonicalLive.stateStore?.audit||[]).filter(x=>x.work_id===id);
+  return {title:'Historial · '+id,classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:id+'-HISTORY',rule_ids:['APPEND_ONLY_WORK_AUDIT'],source_refs:audit.length?audit.map(x=>x.transition_id||JSON.stringify(x)):['WORK_AUDIT sin transiciones para este trabajo al momento de la lectura'],relationships:[['Trabajo','canonical:item:'+id]],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir estado canónico',TRACE_LINKS.operationalState]],note:audit.length+' transición(es) auditada(s). No se inventa historial cuando aún no existe.'};
+ }
+ if(key==='canonical:work'){
+  const ruleIds=unique(Object.values(wo?.field_semantics||{}).flatMap(x=>x.rule_ids||[]));
+  return {title:w.title,classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:w.work_id,rule_ids:ruleIds,source_refs:unique([...(w.evidence_refs||[]),...(wo?.provenance?.source_refs||[])]),relationships:[['Causa / regla','canonical:rule'],['Recurso','canonical:resource'],['Responsable','canonical:actor'],['Contexto financiero','canonical:financial'],['Persistencia QA','canonical:persistence'],['Historial','canonical:history']],links:[['Abrir objeto canónico',TRACE_LINKS.operationalState],['Abrir read model',TRACE_LINKS.operationalProjection]],note:'Este trabajo no está digitado en esta pantalla: se lee del read model CANONICAL_GRAPH_READ_MODEL.'};
+ }
+ if(key==='canonical:rule'){
+  return {title:rule?.data?.title||w.source?.display_name||'Regla fuente',classification:'EVIDENCIA_REAL',state_kind:'SOURCE',object_id:rule?.object_id||w.source?.object_id,source_refs:unique([...(rule?.provenance?.source_refs||[]),...(rule?.field_semantics?.title?.source_refs||[])]),relationships:(rule?.relationships||[]).map(r=>[r.relationship_type,r.target_object_id===res?.object_id?'canonical:resource':r.target_object_id===actor?.object_id?'canonical:actor':'canonical:object:'+r.target_object_id]),links:[['Abrir contrato de fuente',TRACE_LINKS.irrigationContract]],note:'La regla se materializó desde evidencia operacional real; production_write=false.'};
+ }
+ if(key==='canonical:resource'){
+  return {title:res?.data?.display_name||w.resource?.display_name||'Recurso',classification:'EVIDENCIA_REAL',state_kind:'SOURCE',object_id:res?.object_id||w.resource?.resource_id,source_refs:unique([...(res?.provenance?.source_refs||[]),...(res?.field_semantics?.display_name?.source_refs||[])]),relationships:[['Trabajo derivado','canonical:work'],['Regla aplicable','canonical:rule']],links:[['Abrir contrato de fuente',TRACE_LINKS.irrigationContract]],note:'El recurso visible proviene del objeto canónico y conserva la referencia al artefacto fuente.'};
+ }
+ if(key==='canonical:actor'){
+  return {title:actor?.data?.display_name||w.responsible?.display_name||'Responsable',classification:'EVIDENCIA_REAL',state_kind:'SOURCE',object_id:actor?.object_id||w.responsible?.actor_id,source_refs:unique([...(actor?.provenance?.source_refs||[]),...(actor?.field_semantics?.display_name?.source_refs||[])]),relationships:[['Trabajo asignado','canonical:work'],['Regla estacional','canonical:rule']],links:[['Abrir contrato de fuente',TRACE_LINKS.irrigationContract]],note:'La identidad mostrada ya existía en el read model QA y en su evidencia fuente; esta superficie sólo la proyecta.'};
+ }
+ if(key==='canonical:financial'){
+  return {title:'Contexto financiero del trabajo',classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:w.work_id+'-FINANCIAL-CONTEXT',rule_ids:unique(Object.values(wo?.field_semantics||{}).filter((_,k)=>String(k).startsWith('financial_context')).flatMap(x=>x.rule_ids||[])),source_refs:unique([...(w.evidence_refs||[]),...(wo?.provenance?.source_refs||[])]),relationships:[['Trabajo','canonical:work'],['Regla','canonical:rule']],links:[['Abrir read model',TRACE_LINKS.operationalProjection],['Abrir contrato de fuente',TRACE_LINKS.irrigationContract]],note:'CLP '+String(w.financial_context?.amount_clp??'sin monto')+' · '+String(w.financial_context?.cycle||'sin ciclo')+'. Semántica: '+String(w.financial_context?.semantics||'sin semántica')+'. No se presenta como obligación actual.'};
+ }
+ if(key==='canonical:persistence'){
+  return {title:'Persistencia QA operacional',classification:'EVIDENCIA_RUNTIME',state_kind:'SOURCE',object_id:'CUDO-QA-OPERATIONAL-WORK-STATE-SHEET',source_refs:['Google Sheet CUDO_QA_OPERATIONAL_WORK_STATE / WORK_CONTROL','read model /qa-v8-google/data/operacion.json','authority: '+canonicalLive.projection.authority,'generated_at: '+canonicalLive.projection.generated_at],relationships:[['Trabajo persistido','canonical:work']],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir read model JSON',TRACE_LINKS.operationalProjection]],note:'Google Sheet es proyección/persistencia QA; la autoridad declarada sigue siendo CANONICAL_GRAPH_READ_MODEL.'};
+ }
+ if(key==='canonical:evidence'){
+  const refs=unique([...(w.evidence_refs||[]),...(rule?.provenance?.source_refs||[])]);
+  return {title:'Fuente original demostrada',classification:'EVIDENCIA_REAL',state_kind:'SOURCE',object_id:'CUDO-EVIDENCE-IRRIGATION-CHECKLIST',source_refs:refs,relationships:[['Materializa regla','canonical:rule'],['Deriva trabajo','canonical:work']],links:[['Abrir contrato que mapea la fuente',TRACE_LINKS.irrigationContract]],note:'La referencia original es el archivo Check-List tareas estadio y partidos.xlsx, hoja “Check list”, rango B3:C3. El archivo original no se publica desde esta pantalla.'};
+ }
+ if(key==='canonical:history'){
+  const audit=(canonicalLive.stateStore?.audit||[]).filter(x=>x.work_id===w.work_id);
+  return {title:'Historial auditable',classification:'EVIDENCIA_CANONICA_QA',state_kind:'DERIVED',object_id:w.work_id+'-HISTORY',rule_ids:['APPEND_ONLY_WORK_AUDIT'],source_refs:audit.length?audit.map(x=>x.transition_id||JSON.stringify(x)):['WORK_AUDIT sin transiciones para este trabajo al momento de la lectura'],relationships:[['Trabajo','canonical:work'],['Persistencia QA','canonical:persistence']],links:[['Abrir Google Sheet QA',TRACE_LINKS.workSheet],['Abrir estado canónico',TRACE_LINKS.operationalState]],note:audit.length+' transición(es) auditada(s) para este trabajo. La ausencia de transiciones no borra su proveniencia de creación.'};
+ }
+ return null;
+}
+function dynamicTrace(key){
+ const canonical=canonicalTrace(key); if(canonical) return canonical;
+ if(key.startsWith('work:')){
+  const id=key.slice(5),w=s.works.find(x=>x.id===id); if(!w)return null;
+  const rel=[['Causa','source:need']]; if(w.responsible)rel.push(['Responsable','person:'+encodeURIComponent(w.responsible)]);
+  return {title:w.title,classification:'EVIDENCIA_QA',state_kind:'SOURCE',object_id:'CUDO-VISUAL-'+w.id,source_refs:[w.source,'browser-local://cudoClubStateVisualV2/works/'+w.id],relationships:rel,links:[['Abrir código',TRACE_LINKS.visual]],note:'Trabajo del contrato visual. Si fue creado desde “Registrar nueva necesidad”, la fuente es una entrada local QA y queda visible como tal.'};
+ }
+ if(key.startsWith('person:')){
+  const p=decodeURIComponent(key.slice(7)); const active=s.works.filter(w=>w.responsible===p&&!['DONE','CANCELLED'].includes(w.state));
+  return {title:p,classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-VISUAL-ACTOR-'+p.toUpperCase().replace(/[^A-Z0-9]+/g,'-'),rule_ids:['COUNT_ACTIVE_WORK_BY_RESPONSIBLE'],source_refs:active.map(w=>'work:'+w.id),relationships:active.map(w=>['Trabajo activo','work:'+w.id]),links:[['Abrir código',TRACE_LINKS.visual]],note:'El visual sólo demuestra cobertura de trabajo. No infiere capacidad, carga ni sobrecarga de una persona.'};
+ }
+ if(key==='coverage:unassigned'){
+  const u=activeWorks().filter(w=>!w.responsible);
+  return {title:'Cobertura sin responsable',classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-VISUAL-COVERAGE-GAP',rule_ids:['COUNT_UNASSIGNED_ACTIVE_WORK'],source_refs:u.map(w=>'work:'+w.id),relationships:u.map(w=>['Sin responsable','work:'+w.id]),links:[['Abrir código',TRACE_LINKS.visual]],note:u.length?u.length+' trabajo(s) activo(s) no tienen responsable.':'No hay trabajo activo sin responsable en el estado local actual.'};
+ }
+ if(key==='resource:recinto'){
+  return {title:'Estado del recinto',classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-VISUAL-RESOURCE-RECINTO',rule_ids:['READY_REQUIRES_NO_ACTIVE_WORK_AND_NO_OPEN_BLOCKER'],source_refs:[...activeWorks().map(w=>'work:'+w.id),...unresolvedBlockers().map(b=>'blocker:'+b.id)],relationships:[['Estado global','global:state'],['Regla de precedencia','decision:precedence']],links:[['Abrir código',TRACE_LINKS.visual]],note:'Estado calculado desde trabajo y bloqueos del escenario local.'};
+ }
+ if(key.startsWith('blocker:')){
+  const id=key.slice(8),b=s.blockers.find(x=>x.id===id); if(!b)return {title:'Bloqueo resuelto',classification:'HISTORIAL_QA',state_kind:'SOURCE',object_id:'CUDO-VISUAL-'+id,source_refs:['historial local'],links:[['Abrir código',TRACE_LINKS.visual]],note:'El bloqueo ya no está activo; su resolución permanece en el historial local.'};
+  return {title:b.text,classification:'EVIDENCIA_QA',state_kind:'SOURCE',object_id:'CUDO-VISUAL-'+b.id,source_refs:['seed local del visual'],relationships:[['Bloquea','work:'+b.work_id],['Afecta','global:state']],links:[['Abrir código',TRACE_LINKS.visual]]};
+ }
+ if(key.startsWith('event:')){
+  const i=Number(key.slice(6)),e=s.events[i]; if(!e)return null;
+  return {title:e.type,classification:'HISTORIAL_QA',state_kind:'SOURCE',object_id:'CUDO-VISUAL-EVENT-'+i,source_refs:['browser-local://cudoClubStateVisualV2/events/'+i],links:[['Abrir código',TRACE_LINKS.visual]],note:e.text+' · '+e.by+(e.at?' · '+e.at:'')};
+ }
+ if(key==='global:state'){
+  const a=activeWorks(),u=a.filter(w=>!w.responsible),b=unresolvedBlockers();
+  return {title:'Estado global de la situación',classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-VISUAL-GLOBAL-STATE',rule_ids:['GLOBAL_STATE_FROM_WORK_BLOCKERS_EVIDENCE'],source_refs:[...a.map(w=>'work:'+w.id),...b.map(x=>'blocker:'+x.id),...s.evidence.map((_,i)=>'evidence:'+i)],relationships:[['Resultado esperado','goal:expected'],['Recurso','resource:recinto'],['Cobertura','coverage:unassigned']],links:[['Abrir código',TRACE_LINKS.visual]],note:'Se deriva; no existe un campo manual independiente para editarlo.'};
+ }
+ if(key==='global:evidence'){
+  return {title:'Evidencia registrada',classification:'DERIVADO_QA',state_kind:'DERIVED',object_id:'CUDO-VISUAL-EVIDENCE-SUMMARY',rule_ids:['COUNT_REGISTERED_EVIDENCE'],source_refs:s.evidence.length?s.evidence:['GAP: no hay evidencia agregada en el estado local actual'],links:[['Abrir código',TRACE_LINKS.visual]],note:s.evidence.length+' referencia(s) en este navegador.'};
+ }
+ return null;
+}
+function openTrace(key){
+ const t=dynamicTrace(key)||traceCatalog[key]||{title:key,classification:'GAP',state_kind:'OPAQUE',gap_id:'TRACE_ENTRY_NOT_FOUND',source_refs:[],note:'No existe una trazabilidad demostrada para este dato.'};
+ const refs=(t.source_refs||[]).map(x=>'<div>'+esc(x)+'</div>').join('')||'<div>Sin referencia demostrada.</div>';
+ const rules=(t.rule_ids||[]).map(x=>'<div>'+esc(x)+'</div>').join('');
+ const rels=(t.relationships||[]).map(([label,target])=>'<button class="trace-btn" onclick="openTrace(\''+esc(target)+'\')">'+esc(label)+' → '+esc(target)+'</button>').join('');
+ const links=(t.links||[]).map(([label,url])=>'<a class="trace-link" target="_blank" rel="noopener" href="'+esc(url)+'">'+esc(label)+'</a>').join('');
+ document.getElementById('traceTitle').textContent=t.title||'Trazabilidad';
+ document.getElementById('traceBody').innerHTML=
+  '<div class="trace-card"><strong>Clasificación</strong><div>'+esc(t.classification||'SIN CLASIFICAR')+' · '+esc(t.state_kind||'')+'</div></div>'+
+  '<div class="trace-card"><strong>Objeto / proyección</strong><div>'+esc(t.object_id||'Sin object_id')+'</div></div>'+
+  '<div class="trace-card"><strong>Fuente / referencia</strong>'+refs+'</div>'+
+  (rules?'<div class="trace-card"><strong>Regla(s) que lo derivan</strong>'+rules+'</div>':'')+
+  (rels?'<div class="trace-card trace-rel"><strong>Relaciones navegables</strong>'+rels+'</div>':'')+
+  (t.gap_id?'<div class="trace-gap">GAP: '+esc(t.gap_id)+'</div>':'')+
+  (t.note?'<div class="trace-card"><strong>Qué significa</strong><div>'+esc(t.note)+'</div></div>':'')+
+  (links?'<div class="trace-links">'+links+'</div>':'');
+ document.getElementById('traceModal').classList.add('open');
+}
+function renderCanonicalFullSurface(){
+ const work=document.getElementById('canonicalAllWork'),people=document.getElementById('canonicalPeople'),resources=document.getElementById('canonicalResources'),sources=document.getElementById('canonicalSources'),chips=document.getElementById('canonicalSummaryChips'),actions=document.getElementById('canonicalSummaryActions');
+ if(!work||!people||!resources||!sources) return;
+ if(canonicalLive.status==='ERROR'){
+  work.innerHTML='<div class="row"><span class="chip bad">GAP</span><div class="meta">'+esc(canonicalLive.error||'Fuente no disponible')+'</div></div>';
+  people.innerHTML=resources.innerHTML=sources.innerHTML='<div class="row"><span class="chip">Sin proyección</span></div>';
+  chips.innerHTML='<span class="chip bad">FAIL CLOSED</span>';
+  actions.innerHTML=traceButton('canonical:summary','Rastrear GAP');
+  return;
+ }
+ if(canonicalLive.status!=='READY') return;
+ const items=canonicalLive.projection.items||[];
+ const classify=item=>{
+  const obj=canonicalObjectById(item.work_id);
+  return sourceClassification(workRefs(item,obj));
+ };
+ work.innerHTML=items.map(item=>'<div class="row"><strong>'+esc(item.title)+'</strong><div class="meta">Estado: '+esc(item.state)+' · Responsable: '+esc(item.responsible?.display_name||'SIN ASIGNAR')+' · Recurso: '+esc(item.resource?.display_name||'SIN RECURSO')+' · Causa: '+esc(item.source?.display_name||'SIN CAUSA')+(item.due_date?' · Vence: '+esc(item.due_date):'')+'</div><div class="trace-inline"><span class="chip '+(classify(item).startsWith('MIXTA')?'warn':'good')+'">'+esc(classify(item))+'</span>'+traceButton('canonical:item:'+item.work_id)+'</div></div>').join('');
+ const actorMap=new Map();
+ for(const item of items){const id=item.responsible?.actor_id;if(!id)continue;const prev=actorMap.get(id)||{name:item.responsible.display_name,count:0};prev.count++;actorMap.set(id,prev)}
+ people.innerHTML=[...actorMap.entries()].map(([id,x])=>'<div class="row"><strong>'+esc(x.name)+'</strong><div class="meta">'+x.count+' trabajo(s) relacionado(s). No implica sobrecarga.</div><div class="actions">'+traceButton('canonical:object:'+id)+'</div></div>').join('')||'<div class="row">Sin responsables proyectados.</div>';
+ const resourceMap=new Map();
+ for(const item of items){const id=item.resource?.resource_id;if(!id)continue;const prev=resourceMap.get(id)||{name:item.resource.display_name,count:0};prev.count++;resourceMap.set(id,prev)}
+ resources.innerHTML=[...resourceMap.entries()].map(([id,x])=>'<div class="row"><strong>'+esc(x.name)+'</strong><div class="meta">'+x.count+' trabajo(s) aplican a este recurso.</div><div class="actions">'+traceButton('canonical:object:'+id)+'</div></div>').join('')||'<div class="row">Sin recursos relacionados.</div>';
+ const sourceMap=new Map();
+ for(const item of items){const id=item.source?.object_id;if(!id)continue;const prev=sourceMap.get(id)||{name:item.source.display_name,count:0};prev.count++;sourceMap.set(id,prev)}
+ sources.innerHTML=[...sourceMap.entries()].map(([id,x])=>{const obj=canonicalObjectById(id);const refs=unique([...(obj?.provenance?.source_refs||[]),...Object.values(obj?.field_semantics||{}).flatMap(v=>v.source_refs||[])]);return '<div class="row"><strong>'+esc(x.name)+'</strong><div class="meta">'+x.count+' trabajo(s) · '+esc(sourceClassification(refs))+'</div><div class="actions">'+traceButton('canonical:object:'+id)+'</div></div>'}).join('')||'<div class="row">Sin causas proyectadas.</div>';
+ chips.innerHTML='<span class="chip good">'+items.length+' trabajos canónicos</span><span class="chip">'+actorMap.size+' personas relacionadas</span><span class="chip">'+resourceMap.size+' recurso(s)</span><span class="chip warn">NO CREA RAÍZ COMÚN</span>';
+ actions.innerHTML=traceButton('canonical:summary','Rastrear resumen');
+}
+function renderCanonicalCase(){
+ const title=document.getElementById('canonicalWorkTitle'),summary=document.getElementById('canonicalWorkSummary'),chips=document.getElementById('canonicalWorkChips'),actions=document.getElementById('canonicalWorkActions'),details=document.getElementById('canonicalSourceDetails');
+ if(canonicalLive.status==='ERROR'){
+  title.textContent='GAP · fuente canónica no disponible';
+  summary.textContent='La lectura del read model canónico falló. CUDO no sustituye este dato por un mock.';
+  chips.innerHTML='<span class="chip bad">GAP</span><span class="chip">FAIL CLOSED</span>';
+  actions.innerHTML=traceButton('canonical:work','Rastrear GAP');
+  details.innerHTML='<strong>Estado</strong><span>'+esc(canonicalLive.error||'Error sin detalle')+'</span>';
+  return;
+ }
+ if(canonicalLive.status!=='READY') return;
+ const w=canonicalLive.work;
+ title.textContent=w.title;
+ summary.textContent='Trabajo canónico QA leído en vivo desde la proyección operacional. Estado '+w.state+' · vence '+(w.due_date||'sin fecha')+'.';
+ chips.innerHTML='<span class="chip good">'+esc(canonicalLive.projection.authority)+'</span><span class="chip">REAL SOURCE</span><span class="chip warn">QA · NO PRODUCCIÓN</span>';
+ actions.innerHTML=traceButton('canonical:work','Rastrear trabajo')+traceButton('canonical:rule','Rastrear causa')+traceButton('canonical:persistence','Ver persistencia');
+ details.innerHTML='<strong>Recurso</strong><span>'+esc(w.resource?.display_name||'Sin recurso')+'</span><div class="trace-inline">'+traceButton('canonical:resource')+'</div><br><strong>Responsable</strong><span>'+esc(w.responsible?.display_name||'Sin responsable')+'</span><div class="trace-inline">'+traceButton('canonical:actor')+'</div><br><strong>Fuente original</strong><span>'+esc((w.evidence_refs||[])[0]||'Sin referencia')+'</span><div class="trace-inline">'+traceButton('canonical:evidence','Abrir trazabilidad')+'</div><br><strong>Contexto financiero</strong><span>'+esc(w.financial_context?.amount_clp!=null?'CLP '+w.financial_context.amount_clp+' · '+(w.financial_context.cycle||''): 'Sin monto')+'</span><div class="trace-inline">'+traceButton('canonical:financial')+'</div>';
+}
+async function loadCanonicalCase(){
+ try{
+  const [projectionResponse,stateResponse,...contractResponses]=await Promise.all([
+   fetch(CANONICAL_READ_MODEL_URL,{cache:'no-store'}),
+   fetch(CANONICAL_STATE_URL,{cache:'no-store'}),
+   ...CANONICAL_SOURCE_CONTRACT_URLS.map(url=>fetch(url,{cache:'no-store'}))
+  ]);
+  const allResponses=[projectionResponse,stateResponse,...contractResponses];
+  if(allResponses.some(r=>!r.ok)) throw new Error('HTTP canónico '+allResponses.map(r=>r.status).join('/'));
+  const [projection,stateStore,...contracts]=await Promise.all(allResponses.map(r=>r.json()));
+  if(projection.authority!=='CANONICAL_GRAPH_READ_MODEL') throw new Error('authority inesperada: '+projection.authority);
+  if(projection.production_write!==false||stateStore.production_write!==false||contracts.some(x=>x.production_write!==false)) throw new Error('boundary production_write inválido');
+  const {index:objectIndex,conflicts:objectConflicts}=buildCanonicalObjectIndex(stateStore,contracts);
+  if(objectConflicts.length) throw new Error('conflicto de identidad canónica: '+objectConflicts.map(x=>x.object_id).join(','));
+  const contract=contracts.find(x=>x.schema_version==='CUDO_REAL_RESPONSIBILITY_WORK_STATE_IRRIGATION_V1')||contracts[0];
+  const work=projection.items?.find(x=>x.work_id===CANONICAL_WORK_ID);
+  const workObject=objectIndex.get(CANONICAL_WORK_ID);
+  const rule=objectIndex.get(work?.source?.object_id);
+  const resource=objectIndex.get(work?.resource?.resource_id);
+  const actor=objectIndex.get(work?.responsible?.actor_id);
+  if(!work||!workObject||!rule||!resource||!actor) throw new Error('cadena canónica incompleta');
+  canonicalLive={status:'READY',projection,stateStore,contract,contracts,objectIndex,objectConflicts,work,workObject,rule,resource,actor,error:null};
+ }catch(error){
+  canonicalLive={status:'ERROR',projection:null,stateStore:null,contract:null,contracts:[],objectIndex:new Map(),objectConflicts:[],work:null,workObject:null,rule:null,resource:null,actor:null,error:error.message};
+ }
+ renderCanonicalCase();
+ renderCanonicalFullSurface();
+}
+function render(){
+ document.getElementById('workList').innerHTML=s.works.map(w=>'<div class="row"><strong>'+esc(w.title)+'</strong><div class="meta">Estado: '+esc(w.state)+' · Responsable: '+esc(w.responsible||'SIN ASIGNAR')+' · Causa: '+esc(w.source)+'</div><div class="actions">'+
+ (!w.responsible?'<button class="btn" onclick="assignWork(\''+w.id+'\')">Asignar</button>':'<button class="btn secondary" onclick="assignWork(\''+w.id+'\')">Reasignar</button>')+
+ (!['DONE','CANCELLED'].includes(w.state)?'<button class="btn secondary" onclick="advanceWork(\''+w.id+'\')">Cambiar estado</button>':'')+
+ traceButton('work:'+w.id)+
+ '</div></div>').join('');
+ const counts={};s.works.filter(w=>w.responsible).forEach(w=>counts[w.responsible]=(counts[w.responsible]||0)+(!['DONE','CANCELLED'].includes(w.state)?1:0));
+ const peopleRows=Object.entries(counts).map(([p,n])=>'<div class="row"><strong>'+esc(p)+'</strong><div class="meta">'+n+' trabajo(s) activo(s). Concentración observada; no implica sobrecarga.</div><div class="actions">'+traceButton('person:'+encodeURIComponent(p))+'</div></div>').join('');
+ const unassigned=activeWorks().filter(w=>!w.responsible);
+ document.getElementById('peoplePanel').innerHTML=(peopleRows||'<div class="row">Sin asignaciones.<div class="actions">'+traceButton('coverage:unassigned')+'</div></div>')+(unassigned.length?'<div class="row"><span class="chip bad">'+unassigned.length+' sin responsable</span><div class="meta">Cobertura faltante visible.</div><div class="actions">'+traceButton('coverage:unassigned')+'</div></div>':'<div class="row"><span class="chip good">Cobertura completa</span><div class="actions">'+traceButton('coverage:unassigned')+'</div></div>');
+ document.getElementById('resourcePanel').innerHTML='<div class="row"><strong>Recinto</strong><div class="meta">Estado derivado: '+esc(s.resource.state)+'</div><div class="actions">'+traceButton('resource:recinto')+'</div></div>';
+ document.getElementById('resourceText').textContent=s.resource.state==='READY'?'Recinto derivado como operativo.':'Recinto todavía no operativo.';
+ document.getElementById('obligationText').textContent=s.obligation?'Obligación registrada: '+s.obligation:'Sin obligación monetaria confirmada.';
+ document.getElementById('movementText').textContent='Sin movimiento de caja en este escenario.';
+ const blocks=unresolvedBlockers();
+ document.getElementById('decisionPanel').innerHTML=(blocks.length?blocks.map(b=>'<div class="row"><strong>Bloqueo activo</strong><div class="meta">'+esc(b.text)+'</div><div class="actions"><button class="btn secondary" onclick="resolveBlock(\''+b.id+'\')">Resolver</button>'+traceButton('blocker:'+b.id)+'</div></div>').join(''):'<div class="row"><span class="chip good">Sin bloqueos abiertos</span><div class="actions">'+traceButton('decision:precedence')+'</div></div>')+
+ '<div class="row"><strong>Precedencia causal</strong><div class="meta">No se puede declarar el recinto READY mientras exista trabajo activo o bloqueo abierto.</div><div class="actions">'+traceButton('decision:precedence')+'</div></div>';
+ document.getElementById('timeline').innerHTML=s.events.map((e,i)=>'<div class="event"><strong>'+esc(e.type)+'</strong><p>'+esc(e.text)+'<br>'+esc(e.by)+(e.at?' · '+esc(e.at):'')+'</p>'+traceButton('event:'+i)+'</div>').join('');
+ const a=activeWorks(),u=a.filter(w=>!w.responsible),b=unresolvedBlockers();
+ let state='REQUIERE_ACCION',reason=[];
+ if(u.length)reason.push(u.length+' trabajo(s) sin responsable');
+ if(b.length)reason.push(b.length+' bloqueo(s) abierto(s)');
+ if(a.length)reason.push(a.length+' trabajo(s) activo(s)');
+ if(!a.length&&!b.length&&s.evidence.length){state='RESUELTO';reason=['Todos los trabajos cerrados y existe evidencia']}
+ document.getElementById('globalPanel').innerHTML='<div class="row"><span class="chip '+(state==='RESUELTO'?'good':'warn')+'">'+state+'</span><div class="meta">'+esc(reason.join(' · ')||'Sin detalle')+'</div><div class="actions">'+traceButton('global:state')+'</div></div>'+
+ '<div class="row"><strong>Resultado esperado</strong><div class="meta">Recinto operativo antes de la jornada.</div><div class="actions">'+traceButton('goal:expected')+'</div></div>'+
+ '<div class="row"><strong>Evidencia</strong><div class="meta">'+s.evidence.length+' referencia(s) registrada(s).</div><div class="actions">'+traceButton('global:evidence')+'</div></div>';
+ document.getElementById('sourceState').textContent='Estado: '+state.toLowerCase().replace('_',' ');
+}
+function openModal(title,body,fn){pending=fn;document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open');pending=null}
+document.getElementById('cancelModal').onclick=closeModal;document.getElementById('confirmModal').onclick=()=>{if(pending)pending();closeModal();recalc()};
+document.getElementById('closeTrace').onclick=()=>document.getElementById('traceModal').classList.remove('open');
+window.assignWork=id=>{const w=s.works.find(x=>x.id===id);openModal(w.responsible?'Reasignar trabajo':'Asignar trabajo','<div class="field"><label>Persona</label><select id="person">'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div><div class="field"><label>Motivo</label><textarea id="reason">Asignación operacional</textarea></div>',()=>{const old=w.responsible||'SIN ASIGNAR',p=document.getElementById('person').value;w.responsible=p;event(w.responsible&&old!=='SIN ASIGNAR'?'REASSIGNED':'ASSIGNED',w.title+': '+old+' → '+p+'. '+document.getElementById('reason').value)})};
+window.advanceWork=id=>{const w=s.works.find(x=>x.id===id);const opts=['OPEN','IN_PROGRESS','BLOCKED','WAITING_EXTERNAL','DONE','CANCELLED'];openModal('Cambiar estado','<div class="field"><label>Nuevo estado</label><select id="newState">'+opts.map(x=>'<option '+(x===w.state?'selected':'')+'>'+x+'</option>').join('')+'</select></div><div class="field"><label>Evidencia / comentario</label><textarea id="note">Actualización QA</textarea></div>',()=>{const old=w.state,n=document.getElementById('newState').value;if(n==='DONE'&&!s.evidence.length)throw new Error('Para cerrar trabajo debe existir evidencia');w.state=n;event('WORK_STATE_CHANGED',w.title+': '+old+' → '+n+'. '+document.getElementById('note').value)})};
+window.resolveBlock=id=>{const b=s.blockers.find(x=>x.id===id);const w=s.works.find(x=>x.id===b.work_id);s.blockers=s.blockers.filter(x=>x.id!==id);if(w&&w.state==='WAITING_EXTERNAL')w.state='IN_PROGRESS';event('BLOCKER_RESOLVED',b.text)};
+document.getElementById('discoverWorkBtn').onclick=()=>openModal('Registrar necesidad nueva','<div class="field"><label>Qué apareció</label><input id="newWork" value="Nueva necesidad no prevista"></div><div class="field"><label>Responsable opcional</label><select id="newResp"><option value="">Sin responsable</option>'+people.map(p=>'<option>'+p+'</option>').join('')+'</select></div>',()=>{const title=document.getElementById('newWork').value.trim();if(title){s.works.push({id:'W'+(s.works.length+1),title,state:'OPEN',responsible:document.getElementById('newResp').value||null,source:'OBSERVATION-EMERGENTE'});event('NEW_WORK_DISCOVERED',title)}});
+document.getElementById('evidenceBtn').onclick=()=>openModal('Agregar evidencia','<div class="field"><label>Referencia</label><input id="evi" value="Foto / comprobante / documento QA"></div>',()=>{const v=document.getElementById('evi').value.trim();if(v){s.evidence.push(v);event('EVIDENCE_ADDED',v)}});
+document.getElementById('recalcBtn').onclick=()=>{event('RECALCULATED','Se recalculó el estado global desde trabajo, bloqueos y evidencia.','Motor QA');recalc()};
+document.getElementById('resetBtn').onclick=()=>{s=structuredClone(seed);localStorage.removeItem('cudoClubStateVisualV2');render()};
+render();
+loadCanonicalCase();
+</script>
+</body>
+</html>

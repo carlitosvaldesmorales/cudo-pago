@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Chépica Play · En cancha</title>
+  <link rel="stylesheet" href="./live.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">FÚTBOL CHÉPICA</p>
+        <h1>Chépica Play · En cancha</h1>
+        <p class="subtitle">Resultados informados en tiempo real. Un marcador INFORMADO todavía no es un resultado OFICIAL.</p>
+      </div>
+      <div class="status-wrap">
+        <span id="connection" class="status status-connecting">CONECTANDO</span>
+      </div>
+    </header>
+
+    <section class="controls" aria-label="Control de fecha">
+      <label for="round">Fecha</label>
+      <select id="round" aria-label="Seleccionar fecha"></select>
+      <button id="reload" type="button">Recargar snapshot</button>
+      <span id="updated" class="updated">Sin datos todavía</span>
+    </section>
+
+    <section class="summary" aria-label="Resumen de jornada">
+      <article><strong id="matchesCount">0</strong><span>partidos</span></article>
+      <article><strong id="officialCount">0</strong><span>oficiales</span></article>
+      <article><strong id="reportedCount">0</strong><span>informados</span></article>
+      <article><strong id="emptyCount">0</strong><span>sin resultado</span></article>
+    </section>
+
+    <section id="content" class="content" aria-live="polite">
+      <div class="empty-state">Cargando jornada…</div>
+    </section>
+  </main>
+
+  <script type="module" src="./live.js"></script>
+</body>
+</html>

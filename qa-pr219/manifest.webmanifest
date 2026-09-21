@@ -1,0 +1,44 @@
+{
+  "name": "C.U.D.O. — Club Unión Deportivo Orilla · QA PR219",
+  "short_name": "C.U.D.O. QA",
+  "description": "Aplicación móvil del Club Unión Deportivo Orilla para consultar y administrar la información pública del club.",
+  "id": "/qa-pr219/",
+  "start_url": "/qa-pr219/",
+  "scope": "/qa-pr219/",
+  "display": "standalone",
+  "background_color": "#03163d",
+  "theme_color": "#03163d",
+  "lang": "es-CL",
+  "orientation": "any",
+  "categories": ["sports", "social"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/qa-pr219/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/qa-pr219/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Administrar CUDO",
+      "short_name": "Administrar",
+      "description": "Abrir la administración de contenido del CUDO.",
+      "url": "/qa-pr219/admin/",
+      "icons": [
+        {
+          "src": "/qa-pr219/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}
