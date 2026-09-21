@@ -17,7 +17,7 @@
   <div id="loading" class="loading">Leyendo actividades desde Google…</div>
   <div id="error" class="error hidden"></div>
   <section id="registry" class="hidden">
-    <div class="toolbar"><div><div class="sectiontitle">Registro de actividades</div><p class="sectionlead">Aquí aparece lo que el club tiene que organizar y dónde falta una persona responsable.</p></div><button class="btn" id="reloadRegistry">Recargar</button></div>
+    <div class="toolbar"><div><div class="sectiontitle">Registro de actividades</div><p class="sectionlead">Aquí aparece lo que el club tiene que organizar y dónde falta una persona responsable.</p></div><div class="actions"><button class="btn primary" id="createAcceptanceCase">Crear caso QA de punta a punta</button><button class="btn" id="reloadRegistry">Recargar</button></div></div>
     <div id="activityGrid" class="grid"></div>
   </section>
   <section id="detail" class="hidden">
@@ -57,10 +57,14 @@
   }
   function workstreamCard(w){
     var a=w.assignment||{}, pct=parseInt(w.progress_pct||'0',10)||0, cls=(!a.person_ref||w.state==='BLOCKED')?'alert':a.assignment_state==='ASSIGNED'?'warn':'ok', actions=[];
-    if(!a.person_ref) actions.push('<button class="btn primary" onclick="act(\'ASSIGN_DEMO\',\''+esc(w.workstream_id)+'\')">Tomar responsabilidad (demo)</button>');
-    if(a.assignment_state==='ASSIGNED') actions.push('<button class="btn primary" onclick="act(\'CONFIRM\',\''+esc(w.workstream_id)+'\')">Confirmar</button>');
-    if(w.state==='BLOCKED') actions.push('<button class="btn" onclick="act(\'RESOLVE_BLOCKER\',\''+esc(w.workstream_id)+'\')">Resolver bloqueo</button>');
-    else if(w.state!=='DONE') actions.push('<button class="btn" onclick="act(\'REPORT_BLOCKER\',\''+esc(w.workstream_id)+'\')">Informar bloqueo</button>');
+    if(!a.person_ref) actions.push('<button class="btn primary" data-acceptance-action="assign" onclick="act(\'ASSIGN_DEMO\',\''+esc(w.workstream_id)+'\')">Asignar Persona QA 1</button>');
+    if(a.person_ref) actions.push('<button class="btn" data-acceptance-action="reassign" onclick="act(\'REASSIGN_DEMO\',\''+esc(w.workstream_id)+'\')">Reasignar a Persona QA 2</button>');
+    if(a.assignment_state==='ASSIGNED') actions.push('<button class="btn primary" onclick="act(\'CONFIRM\',\''+esc(w.workstream_id)+'\')">Confirmar asignación</button>');
+    if(w.state==='BLOCKED') actions.push('<button class="btn" data-acceptance-action="blocker" onclick="act(\'RESOLVE_BLOCKER\',\''+esc(w.workstream_id)+'\')">Resolver bloqueo</button>');
+    else if(w.state!=='DONE') actions.push('<button class="btn" data-acceptance-action="blocker" onclick="act(\'REPORT_BLOCKER\',\''+esc(w.workstream_id)+'\')">Informar bloqueo</button>');
+    if(w.state!=='DONE') actions.push('<button class="btn" data-acceptance-action="dependency" onclick="act(\'ADD_DEPENDENCY_DEMO\',\''+esc(w.workstream_id)+'\')">Registrar dependencia</button>');
+    if(w.state!=='DONE') actions.push('<button class="btn" data-acceptance-action="evidence" onclick="act(\'ADD_EVIDENCE_DEMO\',\''+esc(w.workstream_id)+'\')">Agregar evidencia QA</button>');
+    if(w.state!=='DONE' && Number(w.task_total||0)>0 && Number(w.task_done||0)===Number(w.task_total||0)) actions.push('<button class="btn primary" data-acceptance-action="transition" onclick="act(\'COMPLETE_WORKSTREAM_DEMO\',\''+esc(w.workstream_id)+'\')">Completar responsabilidad</button>');
     return '<article class="card '+cls+'"><div class="top"><div><div class="title">'+esc(w.label)+'</div><div class="meta">'+esc(w.purpose||w.activation_reason||'')+'</div></div>'+badge(w.state)+'</div>'+
       '<div class="role"><div class="meta">Responsable</div><div class="owner">'+esc(a.person_display||'Sin responsable')+' · '+esc(human(a.assignment_state||'UNASSIGNED'))+'</div></div>'+
       '<div class="progress"><span style="width:'+pct+'%"></span></div><div class="meta">'+pct+'% · '+Number(w.task_done||0)+' de '+Number(w.task_total||0)+' tareas listas</div>'+
@@ -68,8 +72,10 @@
   }
   function renderDetail(){
     var a=state.activity||{}, s=state.summary||{};
+    var canClose=a.activity_id==='QA-ACTIVITY-ACCEPTANCE-001' && Number(s.workstreams||0)>0 && Number(s.done||0)===Number(s.workstreams||0) && a.status!=='DONE';
     document.getElementById('activityHead').innerHTML='<div class="sectiontitle">'+esc(a.title||'Actividad')+'</div><p class="sectionlead">'+esc(a.starts_at||'')+' · '+esc(human(a.status))+'</p>'+
-      '<div class="stats"><div class="stat"><strong>'+Number(s.workstreams||0)+'</strong><span>responsabilidades</span></div><div class="stat"><strong>'+Number(s.unassigned||0)+'</strong><span>sin persona</span></div><div class="stat"><strong>'+Number(s.blocked||0)+'</strong><span>bloqueadas</span></div><div class="stat"><strong>'+Number(s.confirmed||0)+'</strong><span>confirmadas</span></div></div>';
+      '<div class="stats"><div class="stat"><strong>'+Number(s.workstreams||0)+'</strong><span>responsabilidades</span></div><div class="stat"><strong>'+Number(s.unassigned||0)+'</strong><span>sin persona</span></div><div class="stat"><strong>'+Number(s.blocked||0)+'</strong><span>bloqueadas</span></div><div class="stat"><strong>'+Number(s.done||0)+'</strong><span>listas</span></div></div>'+
+      (canClose?'<div class="actions"><button class="btn primary" data-acceptance-action="close" onclick="closeAcceptanceActivity()">Cerrar actividad QA</button></div>':'');
     document.getElementById('workstreamGrid').innerHTML=(state.workstreams||[]).length?(state.workstreams||[]).map(workstreamCard).join(''):'<div class="empty">Actividad registrada, pero aún no tiene responsabilidades derivadas.</div>';
     document.getElementById('timeline').innerHTML=(state.events||[]).length?(state.events||[]).map(function(e){return '<div class="event"><small>'+esc(e.timestamp)+'</small><div><strong>'+esc(e.event_type)+'</strong> · '+esc(e.comment||'')+'</div></div>';}).join(''):'<div class="empty">Sin eventos todavía.</div>';
     show('detail');setBusy(false);
@@ -78,7 +84,9 @@
   window.openActivity=function(id){currentActivityId=id;setBusy(true,'Leyendo actividad desde Google…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();}).withFailureHandler(fail).getState(id);};
   window.act=function(action,ws){setBusy(true,'Guardando cambio en Google…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();loadRegistrySilent();}).withFailureHandler(fail).applyAction({action:action,workstreamId:ws,activityId:currentActivityId});};
   window.completeTask=function(task){setBusy(true,'Guardando tarea en Google…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();loadRegistrySilent();}).withFailureHandler(fail).applyAction({action:'COMPLETE_TASK',taskId:task,activityId:currentActivityId});};
+  window.closeAcceptanceActivity=function(){setBusy(true,'Cerrando actividad QA…');google.script.run.withSuccessHandler(function(s){state=s;renderDetail();loadRegistrySilent();}).withFailureHandler(fail).applyAction({action:'CLOSE_ACTIVITY_DEMO',activityId:currentActivityId});};
   function loadRegistrySilent(){google.script.run.withSuccessHandler(function(r){registry=r;}).getRegistry();}
+  document.getElementById('createAcceptanceCase').onclick=function(){setBusy(true,'Creando caso QA…');google.script.run.withSuccessHandler(function(s){state=s;currentActivityId=s.activity.activity_id;renderDetail();loadRegistrySilent();}).withFailureHandler(fail).applyAction({action:'CREATE_ACCEPTANCE_CASE'});};
   document.getElementById('back').onclick=function(){loadRegistry();};
   document.getElementById('reloadRegistry').onclick=loadRegistry;
   document.getElementById('reloadActivity').onclick=function(){if(currentActivityId)openActivity(currentActivityId);};
