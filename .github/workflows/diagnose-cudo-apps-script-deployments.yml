@@ -55,6 +55,8 @@ jobs:
           deployments=req(base+'/deployments').get('deployments',[])
           content=req(base+'/content')
           versions=req(base+'/versions').get('versions',[])
+          private_deployment_id='AKfycbxae8ZOaPJElvF9cTa0EdDzb-KBm4nItqHSnUdZngQ2nRnEEy3nX3AJMQHsySt5lE99Sw'
+          private_deployment=req(base+'/deployments/'+urllib.parse.quote(private_deployment_id,safe=''))
 
           inventory=[]
           for d in deployments:
@@ -75,6 +77,11 @@ jobs:
             'script_id':sid,
             'deployment_count':len(inventory),
             'version_count_returned':len(versions),
+            'latest_versions':sorted([
+              {'versionNumber':v.get('versionNumber'),'description':v.get('description'),'createTime':v.get('createTime')}
+              for v in versions
+            ],key=lambda x:int(x.get('versionNumber') or 0),reverse=True)[:10],
+            'private_work_deployment_now':private_deployment,
             'deployments':inventory,
             'source_files':source_names,
             'event_source_present':'CudoEventResourceWeb' in source_names,
