@@ -130,29 +130,92 @@ jobs:
             if state.get('production_write') is not False or state.get('provenance')!='SYNTHETIC_QA':
               raise SystemExit('Fail closed: endpoint provenance/production flags invalid')
 
-            before_events=len(sheet_values('EVENTOS!A2:A500'))
-            assign=http_json(web_url,'POST',{'action':'ASSIGN_DEMO','workstreamId':'QA-WS-104'})
+            before_events=len(sheet_values('EVENTOS!A2:A1000'))
+
+            # Reset first so the acceptance case is deterministic and bounded to synthetic QA.
+            reset0=http_json(web_url,'POST',{'action':'RESET_FIXTURE'})
+            if not reset0.get('ok'):
+              raise SystemExit('Initial RESET_FIXTURE failed: '+json.dumps(reset0))
+
+            created=http_json(web_url,'POST',{'action':'CREATE_ACCEPTANCE_CASE'})
+            if not created.get('ok') or created.get('state',{}).get('activity',{}).get('activity_id')!='QA-ACTIVITY-ACCEPTANCE-001':
+              raise SystemExit('CREATE_ACCEPTANCE_CASE failed: '+json.dumps(created))
+
+            assign=http_json(web_url,'POST',{'action':'ASSIGN_DEMO','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
             if not assign.get('ok'):
               raise SystemExit('ASSIGN_DEMO failed: '+json.dumps(assign))
-            rows=sheet_values('RESPONSABLES!A1:J20')
-            hdr=rows[0]
-            data=[dict(zip(hdr,r+['']*(len(hdr)-len(r)))) for r in rows[1:]]
-            target=next((r for r in data if r.get('workstream_id')=='QA-WS-104'),None)
-            if not target or target.get('assignment_state')!='ASSIGNED' or target.get('person_ref')!='QA-VISITOR':
-              raise SystemExit('Durable assignment not observed in Sheets')
+
+            reassign=http_json(web_url,'POST',{'action':'REASSIGN_DEMO','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not reassign.get('ok'):
+              raise SystemExit('REASSIGN_DEMO failed: '+json.dumps(reassign))
+
+            confirm=http_json(web_url,'POST',{'action':'CONFIRM','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not confirm.get('ok'):
+              raise SystemExit('CONFIRM failed: '+json.dumps(confirm))
+
+            blocked=http_json(web_url,'POST',{'action':'REPORT_BLOCKER','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not blocked.get('ok'):
+              raise SystemExit('REPORT_BLOCKER failed: '+json.dumps(blocked))
+
+            resolved=http_json(web_url,'POST',{'action':'RESOLVE_BLOCKER','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not resolved.get('ok'):
+              raise SystemExit('RESOLVE_BLOCKER failed: '+json.dumps(resolved))
+
+            dependency=http_json(web_url,'POST',{'action':'ADD_DEPENDENCY_DEMO','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not dependency.get('ok'):
+              raise SystemExit('ADD_DEPENDENCY_DEMO failed: '+json.dumps(dependency))
+
+            evidence=http_json(web_url,'POST',{'action':'ADD_EVIDENCE_DEMO','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not evidence.get('ok'):
+              raise SystemExit('ADD_EVIDENCE_DEMO failed: '+json.dumps(evidence))
+
+            task=http_json(web_url,'POST',{'action':'COMPLETE_TASK','taskId':'QA-TASK-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not task.get('ok'):
+              raise SystemExit('COMPLETE_TASK failed: '+json.dumps(task))
+
+            ws_done=http_json(web_url,'POST',{'action':'COMPLETE_WORKSTREAM_DEMO','workstreamId':'QA-WS-901','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not ws_done.get('ok'):
+              raise SystemExit('COMPLETE_WORKSTREAM_DEMO failed: '+json.dumps(ws_done))
+
+            closed=http_json(web_url,'POST',{'action':'CLOSE_ACTIVITY_DEMO','activityId':'QA-ACTIVITY-ACCEPTANCE-001'})
+            if not closed.get('ok'):
+              raise SystemExit('CLOSE_ACTIVITY_DEMO failed: '+json.dumps(closed))
+
+            final_acceptance=http_json(web_url+'?format=json&activity=QA-ACTIVITY-ACCEPTANCE-001')
+            if not final_acceptance.get('ok'):
+              raise SystemExit('Final acceptance state endpoint failed')
+            if final_acceptance.get('activity',{}).get('status')!='DONE':
+              raise SystemExit('Acceptance activity did not close')
+            ws=next((x for x in final_acceptance.get('workstreams',[]) if x.get('workstream_id')=='QA-WS-901'),None)
+            if not ws or ws.get('state')!='DONE':
+              raise SystemExit('Acceptance workstream did not reach DONE')
+            assignment=ws.get('assignment') or {}
+            if assignment.get('person_ref')!='QA-VISITOR-ALT' or assignment.get('assignment_state')!='CONFIRMED':
+              raise SystemExit('Reassignment/confirmation did not persist')
+            tasks=ws.get('tasks') or []
+            if not tasks or any(t.get('state')!='DONE' for t in tasks):
+              raise SystemExit('Acceptance tasks did not persist as DONE')
+
+            event_types=[e.get('event_type') for e in final_acceptance.get('events',[])]
+            required_event_types={
+              'ACTIVITY_CREATED','ROLE_ASSIGNED','ROLE_REASSIGNED','ROLE_ACCEPTED',
+              'BLOCKER_REPORTED','BLOCKER_RESOLVED','DEPENDENCY_RECORDED','EVIDENCE_ADDED',
+              'TASK_COMPLETED','WORKSTREAM_COMPLETED','ACTIVITY_COMPLETED'
+            }
+            missing=sorted(required_event_types-set(event_types))
+            if missing:
+              raise SystemExit('Acceptance history missing events: '+','.join(missing))
+
+            after_events=len(sheet_values('EVENTOS!A2:A1000'))
+            if after_events < before_events + len(required_event_types):
+              raise SystemExit(f'Append-only history did not grow enough: {before_events}->{after_events}')
 
             reset=http_json(web_url,'POST',{'action':'RESET_FIXTURE'})
             if not reset.get('ok'):
-              raise SystemExit('RESET_FIXTURE failed: '+json.dumps(reset))
-            rows=sheet_values('RESPONSABLES!A1:J20')
-            hdr=rows[0]
-            data=[dict(zip(hdr,r+['']*(len(hdr)-len(r)))) for r in rows[1:]]
-            target=next((r for r in data if r.get('workstream_id')=='QA-WS-104'),None)
-            if not target or target.get('assignment_state')!='UNASSIGNED' or target.get('person_ref'):
-              raise SystemExit('Baseline reset not observed in Sheets')
-            after_events=len(sheet_values('EVENTOS!A2:A500'))
-            if after_events < before_events + 2:
-              raise SystemExit(f'Append-only history did not grow as expected: {before_events}->{after_events}')
+              raise SystemExit('Final RESET_FIXTURE failed: '+json.dumps(reset))
+            registry_after=http_json(web_url+'?format=registry')
+            if any(a.get('activity_id')=='QA-ACTIVITY-ACCEPTANCE-001' for a in registry_after.get('activities',[])):
+              raise SystemExit('Acceptance fixture did not reset from operational tables')
 
             final_state=http_json(web_url+'?format=json')
             out={
@@ -171,9 +234,19 @@ jobs:
                 'activityRegistryCount':len(registry.get('activities') or []),
                 'stableDeploymentUpdated':True,
                 'assignmentWritePersisted':True,
+                'reassignmentWritePersisted':True,
+                'blockerRoundtripPersisted':True,
+                'dependencyEventPersisted':True,
+                'evidenceEventPersisted':True,
+                'taskCompletionPersisted':True,
+                'workstreamCompletionPersisted':True,
+                'activityClosurePersisted':True,
+                'appendOnlyHistoryVerified':True,
                 'resetPersisted':True,
+                'acceptanceFixtureRemovedAfterReset':True,
                 'appendOnlyEventsBefore':before_events,
                 'appendOnlyEventsAfter':after_events,
+                'requiredAcceptanceEvents':sorted(required_event_types),
                 'productionWrite':False,
                 'provenance':'SYNTHETIC_QA',
                 'finalSummary':final_state.get('summary',{})
