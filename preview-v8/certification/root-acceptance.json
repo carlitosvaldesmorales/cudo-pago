@@ -75,9 +75,26 @@
         "current canonical cards are read-only; legacy actions are browser-local synthetic"
       ],
       "runtime_certification": {
-        "state": "PENDING",
-        "evidence_ref": null,
-        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+        "state": "PASS",
+        "scope": "SYNTHETIC_QA_MECHANISM",
+        "evidence_ref": "github:carlitosvaldesmorales/cudo-pago/actions/runs/35612142951#artifact-10644886535",
+        "run_id": 35612142951,
+        "artifact_id": 10644886535,
+        "head_sha": "65b955d75364222bbf69a5cd5815078a40a8b300",
+        "stable_deployment_id": "AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ",
+        "proof": [
+          "assignment_persisted",
+          "reassignment_persisted",
+          "blocker_roundtrip_persisted",
+          "dependency_event_persisted",
+          "evidence_event_persisted",
+          "task_completion_persisted",
+          "workstream_completion_persisted",
+          "activity_closure_persisted",
+          "append_only_history_verified",
+          "fixture_reset_verified"
+        ],
+        "limitation": "This proves the reusable QA mechanism only. It does not turn synthetic data into real-club evidence; primary-surface binding is checked separately by the root validator."
       }
     },
     {
@@ -90,9 +107,26 @@
         "legacy synthetic flow only"
       ],
       "runtime_certification": {
-        "state": "PENDING",
-        "evidence_ref": null,
-        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+        "state": "PASS",
+        "scope": "SYNTHETIC_QA_MECHANISM",
+        "evidence_ref": "github:carlitosvaldesmorales/cudo-pago/actions/runs/35612142951#artifact-10644886535",
+        "run_id": 35612142951,
+        "artifact_id": 10644886535,
+        "head_sha": "65b955d75364222bbf69a5cd5815078a40a8b300",
+        "stable_deployment_id": "AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ",
+        "proof": [
+          "assignment_persisted",
+          "reassignment_persisted",
+          "blocker_roundtrip_persisted",
+          "dependency_event_persisted",
+          "evidence_event_persisted",
+          "task_completion_persisted",
+          "workstream_completion_persisted",
+          "activity_closure_persisted",
+          "append_only_history_verified",
+          "fixture_reset_verified"
+        ],
+        "limitation": "This proves the reusable QA mechanism only. It does not turn synthetic data into real-club evidence; primary-surface binding is checked separately by the root validator."
       }
     },
     {
@@ -105,9 +139,26 @@
         "legacy synthetic flow only"
       ],
       "runtime_certification": {
-        "state": "PENDING",
-        "evidence_ref": null,
-        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+        "state": "PASS",
+        "scope": "SYNTHETIC_QA_MECHANISM",
+        "evidence_ref": "github:carlitosvaldesmorales/cudo-pago/actions/runs/35612142951#artifact-10644886535",
+        "run_id": 35612142951,
+        "artifact_id": 10644886535,
+        "head_sha": "65b955d75364222bbf69a5cd5815078a40a8b300",
+        "stable_deployment_id": "AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ",
+        "proof": [
+          "assignment_persisted",
+          "reassignment_persisted",
+          "blocker_roundtrip_persisted",
+          "dependency_event_persisted",
+          "evidence_event_persisted",
+          "task_completion_persisted",
+          "workstream_completion_persisted",
+          "activity_closure_persisted",
+          "append_only_history_verified",
+          "fixture_reset_verified"
+        ],
+        "limitation": "This proves the reusable QA mechanism only. It does not turn synthetic data into real-club evidence; primary-surface binding is checked separately by the root validator."
       }
     },
     {
@@ -140,9 +191,26 @@
         "club-operacion-lab uses localStorage for interactive flow"
       ],
       "runtime_certification": {
-        "state": "PENDING",
-        "evidence_ref": null,
-        "rule": "Visible controls or static markup are not sufficient. PASS requires an executed QA roundtrip with persistent readback/audit evidence."
+        "state": "PASS",
+        "scope": "SYNTHETIC_QA_MECHANISM",
+        "evidence_ref": "github:carlitosvaldesmorales/cudo-pago/actions/runs/35612142951#artifact-10644886535",
+        "run_id": 35612142951,
+        "artifact_id": 10644886535,
+        "head_sha": "65b955d75364222bbf69a5cd5815078a40a8b300",
+        "stable_deployment_id": "AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ",
+        "proof": [
+          "assignment_persisted",
+          "reassignment_persisted",
+          "blocker_roundtrip_persisted",
+          "dependency_event_persisted",
+          "evidence_event_persisted",
+          "task_completion_persisted",
+          "workstream_completion_persisted",
+          "activity_closure_persisted",
+          "append_only_history_verified",
+          "fixture_reset_verified"
+        ],
+        "limitation": "This proves the reusable QA mechanism only. It does not turn synthetic data into real-club evidence; primary-surface binding is checked separately by the root validator."
       }
     },
     {
@@ -185,7 +253,7 @@
     "role": "EXECUTABLE_PROJECTION_NOT_AUTHORITY",
     "authority_repository": "carlitosvaldesmorales/arke-root",
     "authority_path": "05_CASOS/CASO_CUDO_001/CUDO_ACTIVE_SLICE_ACCEPTANCE.yaml",
-    "authority_commit": "8c12d998a27dc70532b589f807c2d82e94bc9caf",
+    "authority_commit": "d803039c1e1c1c5ae7847b23dc3eb5587e9a9efb",
     "rule": "Update this projection only when the canonical ARKE acceptance contract changes."
   },
   "validation_invariant": "A UI marker can prove visibility only. Any criterion that says the user can act/register/close/persist requires executed roundtrip evidence; otherwise it remains FAIL."
