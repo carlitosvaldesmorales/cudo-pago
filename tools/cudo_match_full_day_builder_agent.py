@@ -315,8 +315,8 @@ with sync_playwright() as p:
     page.click("#registerResult")
     result_visible = "Primera · CUDO 2 - 1" in page.locator("#resultList").inner_text()
 
-    for button in page.locator("[data-work]").all():
-        button.click()
+    while page.locator("[data-work]").count() > 0:
+        page.locator("[data-work]").first.click()
     page.click("#closeEvent")
     closed_visible = page.locator("#eventStatus").inner_text() == "CERRADA"
     pending_post = page.locator("#closePending").inner_text()
