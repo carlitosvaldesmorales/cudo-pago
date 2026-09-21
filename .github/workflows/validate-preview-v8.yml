@@ -55,6 +55,11 @@ jobs:
           node --check preview-v8/tools/certify_club_operation_canonical_full_surface.mjs
           node preview-v8/tools/certify_club_operation_canonical_full_surface.mjs
 
+      - name: Certificar entrada visible desde Administración
+        run: |
+          node --check preview-v8/tools/certify_control_entrypoint_canonical.mjs
+          node preview-v8/tools/certify_control_entrypoint_canonical.mjs
+
       - name: Validar modo de datos real sin fallback mock
         run: |
           python3 - <<'PY'
