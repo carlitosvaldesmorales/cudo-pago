@@ -72,7 +72,7 @@ for(const id of expectedIds){
   }
 }
 
-const sourcePath=path.join(root,'preview-v8','club-operacion-lab','index.html');
+const sourcePath=path.join(root,'preview-v8','control','index.html');
 if(!fs.existsSync(sourcePath)){
   failReport('primary control source missing',{sourcePath});
   process.exit();
@@ -102,9 +102,13 @@ try{
   add('CUDO-AS-01-ENTRYPOINT',entryPass,{controlLinkVisible,finalUrl},
     entryPass?'Admin reaches Control through the normal path':'Admin entrypoint did not reach Control');
 
-  if(!finalUrl.includes('/club-operacion-lab/')){
-    await page.goto(baseUrl+'club-operacion-lab/',{waitUntil:'networkidle'});
+  if(!finalUrl.includes('/control/')){
+    await page.goto(baseUrl+'control/',{waitUntil:'networkidle'});
   }
+  await page.waitForFunction(
+    ()=>document.querySelector('[data-acceptance="assignee"]') || document.querySelector('#caseList .empty'),
+    {timeout:15000}
+  );
 
   const visibleText=(await page.locator('body').innerText()).replace(/\s+/g,' ').trim();
 
