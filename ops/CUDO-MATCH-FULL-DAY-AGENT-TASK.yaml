@@ -1,0 +1,97 @@
+schema_version: CUDO_MATCH_FULL_DAY_AGENT_TASK_V1
+as_of: 2026-09-21
+project: CUDO
+status: AUTHORIZED_BOUNDED_QA_IMPLEMENTATION
+production_write: false
+
+authority:
+  arke_source_repo: carlitosvaldesmorales/arke-root
+  active_path_commit: 94a61f72708ff6c716c219ed1b35d3cd8b041d1f
+  intent_files:
+    - 00_ACTIVE_PATH.yaml
+    - 05_CASOS/CASO_CUDO_001/CUDO_EVENT_RESOURCE_PRIMARY_FLOW_CORRECTION_20260921.yaml
+    - 05_CASOS/CASO_CUDO_001/CUDO_FOOTBALL_MATCH_FIRST_OPERATING_SLICE_v1.yaml
+    - 05_CASOS/CASO_CUDO_001/CUDO_DYNAMIC_EVENT_RESOURCE_ALGEBRA_v1.yaml
+    - 05_CASOS/CASO_CUDO_001/CUDO_HUMAN_CERTIFIER_OPERATIONAL_CHECKPOINT_20260921.yaml
+
+human_intent: >-
+  Registrar un partido una vez y luego ver/conducir desde CUDO Web cómo ese hecho activa
+  y conecta las ramas que correspondan: deporte, recinto, personas, cocina/ventas,
+  compras/stock, caja/obligaciones, resultado, trabajo posterior, evidencia y cierre.
+  No convertir el producto en un gestor de tareas ni separar el mismo hecho real en módulos desconectados.
+
+first_candidate:
+  surface: preview-v8/eventos/
+  mode: QA_SYNTHETIC_ONLY
+  primary_object: MATCH_FULL_CLUB_DAY
+  must_show:
+    - contexto_del_partido
+    - condiciones_que_activan_ramas
+    - responsables
+    - cocina_y_ventas
+    - stock
+    - compras_y_proveedor
+    - caja_e_ingresos
+    - resultado_deportivo
+    - trabajo_post_partido
+    - cierre_y_recurso_neto
+  must_operate:
+    - registrar_compra
+    - compra_actualiza_stock
+    - compra_actualiza_costo
+    - compra_crea_obligacion_proveedor
+    - registrar_venta
+    - venta_descuenta_stock
+    - venta_actualiza_ingreso_y_caja
+    - registrar_resultado
+    - registrar_trabajo_post_partido
+    - conciliar_cierre
+  persistence:
+    type: browser_localStorage_QA
+    reason: >-
+      Primer candidato falsable sin escritura productiva. Debe demostrar roundtrip visible antes/después
+      dentro de la misma jornada, sin inventar backend productivo nuevo.
+
+reuse:
+  existing_surface: preview-v8/eventos/index.html
+  existing_real_pattern:
+    - qa-v8-google/contracts/cudo-real-flow-san-ramon-complete-event-v1.json
+    - qa-v8-google/evidence/real-flow-san-ramon/admin-finance.json
+  evidence_pattern: PEDIDO_CUDO
+  generic_event_pattern: ACTIVITY_OR_EVENT
+  do_not_create_second_engine: true
+
+anti_drift:
+  - no_task_manager_as_product_root
+  - no_backend_only_claim
+  - no_double_entry_same_fact
+  - no_second_event_engine
+  - no_direct_main_write
+  - no_production_write
+  - no_paid_api
+  - no_new_external_service
+  - no_real_club_data_mutation
+
+acceptance:
+  deterministic:
+    - one_surface_contains_match_context_and_all_applicable_branches
+    - purchase_roundtrip_changes_stock_cost_and_payable
+    - sale_roundtrip_changes_stock_revenue_and_cash
+    - result_roundtrip_is_visible_on_same_event
+    - post_match_work_is_visible
+    - closure_shows_net_event_result
+    - state_survives_page_reload_in_QA
+  human_certifier:
+    source: ARKE_SELF_HOSTED_HUMAN_CERTIFIER
+    required_for_merge: true
+    expected_initial_behavior: FAIL_until_candidate_meets_human_intent
+  final_merge: forbidden_in_builder_agent
+
+builder:
+  host: olam-prd.soaint.local
+  local_model: llama3.2:3b
+  model_role: plan_and_self_review_only
+  code_application: deterministic_bounded_builder
+  branch: agent/match-full-club-day-roundtrip-20260921
+  open_draft_pr: true
+  stop_after_pr_and_evidence: true
