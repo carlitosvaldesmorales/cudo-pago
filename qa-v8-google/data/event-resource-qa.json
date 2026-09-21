@@ -1,0 +1,64 @@
+{
+  "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V1",
+  "generated_at": "2026-09-21T19:40:00.000Z",
+  "store_revision": 1,
+  "authority": "CANONICAL_GRAPH_READ_MODEL",
+  "MATCH": {
+    "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+    "kind": "MATCH",
+    "display_name": "CUDO vs San Juan · Jornada QA gobernada",
+    "closed": false,
+    "closed_at": null,
+    "permit_confirmed": false,
+    "permit_ref": null,
+    "donated_prizes": [],
+    "sport_results": [],
+    "resource": {
+      "object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001",
+      "opening_stock": 12,
+      "purchased_qty": 0,
+      "purchase_total": 0,
+      "sold_qty": 0,
+      "stock_after_sales": 12,
+      "sales_revenue": 0,
+      "unit_cost": 0,
+      "sell_price": 1500
+    },
+    "supplier_payable": {
+      "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
+      "payable_qty": 0,
+      "amount": 0
+    },
+    "operational_resource_result_clp": 0
+  },
+  "BINGO": {
+    "event_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
+    "kind": "BINGO",
+    "display_name": "Bingo CUDO · Jornada QA gobernada",
+    "closed": false,
+    "closed_at": null,
+    "permit_confirmed": false,
+    "permit_ref": null,
+    "donated_prizes": [],
+    "sport_results": [],
+    "resource": {
+      "object_id": "CUDO-RESOURCE-QA-BINGO-BEV-001",
+      "opening_stock": 16,
+      "purchased_qty": 0,
+      "purchase_total": 0,
+      "sold_qty": 0,
+      "stock_after_sales": 16,
+      "sales_revenue": 0,
+      "unit_cost": 0,
+      "sell_price": 1500
+    },
+    "supplier_payable": {
+      "object_id": "CUDO-OBL-QA-BINGO-SUP-001",
+      "payable_qty": 0,
+      "amount": 0
+    },
+    "operational_resource_result_clp": 0
+  },
+  "audit_count": 0,
+  "production_write": false
+}
