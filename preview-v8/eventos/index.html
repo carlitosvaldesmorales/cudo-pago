@@ -144,11 +144,13 @@
 
 <section class="card wide bingo">
   <h3>🎟️ Bingo · misma raíz, ramas distintas</h3>
-  <p class="sub">La siguiente prueba de generalización reutilizará este mismo núcleo ACTIVITY_OR_EVENT con premios/donaciones, cocina, ventas, caja, permisos y cierre. No se crea un segundo motor.</p>
+  <p class="sub">Bingo reutiliza este mismo núcleo de compras, stock, ventas, caja, obligaciones y cierre, activando permiso, premios/donaciones y limpieza en lugar del resultado deportivo.</p>
+  <div class="actions"><a class="btn" href="./bingo.html">Abrir Bingo / recaudación →</a></div>
 </section>
 </div>
 <div class="foot">Fuente QA: CUDO Match Full Club Day · production_write=false · persistencia local del navegador para el roundtrip.</div>
 </main>
+<script src="./event-core.js"></script>
 <script>
 (function(){
 const DATA_URL='../data/match-full-day-qa.json';
@@ -156,18 +158,19 @@ const STORAGE='cudo-match-full-day-qa-v1';
 let seed=null,state=null;
 const $=id=>document.getElementById(id);
 const clone=x=>JSON.parse(JSON.stringify(x));
-const money=n=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(n||0));
+const C=window.CudoEventCore;
+const money=C.money;
 const num=id=>Number($(id).value||0);
 const now=()=>new Date().toISOString();
-function persist(){localStorage.setItem(STORAGE,JSON.stringify(state))}
-function product(id){return state.products.find(p=>p.product_id===id)}
-function purchaseTotal(){return state.purchases.reduce((n,p)=>n+p.qty*p.unit_cost,0)}
-function salesRevenue(){return state.sales.reduce((n,s)=>n+s.qty*s.unit_price,0)}
-function ticketRevenue(){return state.tickets.reduce((n,t)=>n+t.qty*t.unit_price,0)}
-function income(){return salesRevenue()+ticketRevenue()}
-function payable(){return state.purchases.filter(p=>p.payment==='PENDING').reduce((n,p)=>n+p.qty*p.unit_cost,0)}
-function cashIn(){return state.sales.filter(s=>s.method==='CASH').reduce((n,s)=>n+s.qty*s.unit_price,0)+state.tickets.filter(t=>t.method==='CASH').reduce((n,t)=>n+t.qty*t.unit_price,0)}
-function cashOut(){return state.purchases.filter(p=>p.payment==='CASH').reduce((n,p)=>n+p.qty*p.unit_cost,0)}
+function persist(){C.save(STORAGE,state)}
+function product(id){return C.product(state,id)}
+function purchaseTotal(){return C.purchaseTotal(state)}
+function salesRevenue(){return C.salesRevenue(state)}
+function ticketRevenue(){return C.ticketRevenue(state)}
+function income(){return C.income(state)}
+function payable(){return C.payable(state)}
+function cashIn(){return C.cashIn(state)}
+function cashOut(){return C.cashOut(state)}
 function branches(){
  const c=state.event.conditions, local=state.event.location==='LOCAL';
  const out=['DEPORTE','PERSONAS','RESULTADO','CAJA','CIERRE'];
@@ -202,11 +205,11 @@ function render(){
  if(state.closed_at){notice('closureNotice','Jornada cerrada y persistida en QA · recurso neto '+money(income()-purchaseTotal()),false)}else{$('closureNotice').classList.add('hidden')}
 }
 $('saveEvent').onclick=()=>{state.event.opponent=$('opponent').value.trim()||'Rival QA';state.event.date=$('matchDate').value;state.event.location=$('location').value;state.event.display_name='CUDO vs '+state.event.opponent+' · Jornada QA';state.event.conditions={venue_required:$('venueRequired').checked,kitchen_enabled:$('kitchenEnabled').checked,beverage_sales_enabled:$('salesEnabled').checked,ticketing_enabled:$('ticketingEnabled').checked,broadcast_enabled:$('broadcastEnabled').checked};persist();render();notice('eventNotice','Jornada guardada. Las ramas activas se recalcularon desde estas condiciones.',false)};
-$('registerPurchase').onclick=()=>{const id=$('purchaseProduct').value,qty=num('purchaseQty'),cost=num('purchaseCost'),supplier=$('purchaseSupplier').value.trim()||'Proveedor QA',payment=$('purchasePayment').value,p=product(id);if(!p||qty<=0||cost<0)return notice('purchaseNotice','Revisa cantidad y costo.',true);p.stock+=qty;p.unit_cost=cost;state.purchases.push({purchase_id:'PUR-'+Date.now(),product_id:id,qty,unit_cost:cost,supplier,payment,created_at:now()});persist();render();notice('purchaseNotice','Compra registrada: stock +'+qty+', costo '+money(qty*cost)+(payment==='PENDING'?' y obligación pendiente con '+supplier+'.':'.'),false)};
-$('registerSale').onclick=()=>{const id=$('saleProduct').value,qty=num('saleQty'),price=num('salePrice'),method=$('saleMethod').value,p=product(id);if(!p||qty<=0||price<0)return notice('saleNotice','Revisa cantidad y precio.',true);if(p.stock<qty)return notice('saleNotice','Stock insuficiente: disponible '+p.stock+'.',true);p.stock-=qty;p.sell_price=price;state.sales.push({sale_id:'SALE-'+Date.now(),product_id:id,qty,unit_price:price,method,created_at:now()});persist();render();notice('saleNotice','Venta registrada: stock -'+qty+' e ingreso +'+money(qty*price)+'.',false)};
-$('registerTickets').onclick=()=>{const qty=num('ticketQty'),price=num('ticketPrice'),method=$('ticketMethod').value;if(qty<=0||price<0)return;state.tickets.push({ticket_id:'TICKET-'+Date.now(),qty,unit_price:price,method,created_at:now()});persist();render()};
+$('registerPurchase').onclick=()=>{const id=$('purchaseProduct').value,qty=num('purchaseQty'),cost=num('purchaseCost'),supplier=$('purchaseSupplier').value.trim()||'Proveedor QA',payment=$('purchasePayment').value,p=product(id);if(!p||qty<=0||cost<0)return notice('purchaseNotice','Revisa cantidad y costo.',true);C.purchase(state,{product_id:id,qty,unit_cost:cost,supplier,payment,created_at:now()});persist();render();notice('purchaseNotice','Compra registrada: stock +'+qty+', costo '+money(qty*cost)+(payment==='PENDING'?' y obligación pendiente con '+supplier+'.':'.'),false)};
+$('registerSale').onclick=()=>{const id=$('saleProduct').value,qty=num('saleQty'),price=num('salePrice'),method=$('saleMethod').value,p=product(id);if(!p||qty<=0||price<0)return notice('saleNotice','Revisa cantidad y precio.',true);if(p.stock<qty)return notice('saleNotice','Stock insuficiente: disponible '+p.stock+'.',true);C.sale(state,{product_id:id,qty,unit_price:price,method,created_at:now()});persist();render();notice('saleNotice','Venta registrada: stock -'+qty+' e ingreso +'+money(qty*price)+'.',false)};
+$('registerTickets').onclick=()=>{const qty=num('ticketQty'),price=num('ticketPrice'),method=$('ticketMethod').value;if(qty<=0||price<0)return;C.ticket(state,{qty,unit_price:price,method,created_at:now()});persist();render()};
 $('registerResult').onclick=()=>{const series=$('resultSeries').value,home=num('homeGoals'),away=num('awayGoals');const existing=state.sport_results.find(r=>r.series===series);if(existing){existing.home=home;existing.away=away;existing.updated_at=now()}else state.sport_results.push({series,home,away,created_at:now()});persist();render()};
-$('closeEvent').onclick=()=>{state.closed_at=now();state.event.status='CLOSED';persist();render()};
+$('closeEvent').onclick=()=>{C.closeEvent(state,now());persist();render()};
 $('resetQa').onclick=()=>{localStorage.removeItem(STORAGE);state=clone(seed);persist();render();notice('eventNotice','QA reiniciada al estado inicial.',false)};
 fetch(DATA_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo cargar el seed QA');return r.json()}).then(data=>{if(data.mock!==true||data.production_write!==false)throw new Error('Seed QA inseguro');seed=data;const saved=localStorage.getItem(STORAGE);try{state=saved?JSON.parse(saved):clone(seed)}catch(e){state=clone(seed)};render()}).catch(err=>{document.body.innerHTML='<div class="wrap" style="padding:40px"><h1>QA bloqueada</h1><p>'+err.message+'</p></div>'});
 })();
