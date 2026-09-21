@@ -72,7 +72,7 @@ function cudoPersonaHandlePost_(e){
 function doGet(e){
   const view=String((e&&e.parameter&&e.parameter.view)||'persona').trim().toLowerCase();
   if(view==='work') return cudoWorkRender_('');
-  if(view==='event') return cudoEventRender_('');
+  if(view==='event') return cudoEventRender_('',e);
   return cudoPersonaRender_('');
 }
 function doPost(e){
