@@ -7,7 +7,6 @@ on:
     paths:
       - '.github/workflows/certify-cudo-event-resource-google-qa-live.yml'
       - 'qa-v8-google/tools/process_event_resource_requests.mjs'
-      - 'qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs'
 
 permissions:
   contents: write
@@ -50,8 +49,14 @@ jobs:
           if state.get('production_write') is not False:
               raise SystemExit('Fail closed: state is not QA')
           expected_revision=int(state['store_revision'])
-          request_id='CUDO-QA-EVENT-LIVE-'+os.environ['GITHUB_RUN_ID']
           event_id='CUDO-EVENT-QA-MATCH-FULLDAY-001'
+          resource=next(x for x in state['objects'] if x.get('object_id')=='CUDO-RESOURCE-QA-MATCH-BEV-001')
+          qty=3
+          unit_cost=700
+          expected_stock=int(resource['data']['stock_available_before_sales'])+qty-int(resource['data']['sold_qty'])
+          expected_purchase_total=(int(resource['data']['purchased_qty'])+qty)*unit_cost
+          expected_supplier_payable=(int(resource['data']['received_qty'])+qty-int(resource['data']['returned_qty']))*unit_cost
+          request_id='CUDO-QA-EVENT-LIVE-'+os.environ['GITHUB_RUN_ID']
 
           body=urllib.parse.urlencode({
               'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
@@ -118,7 +123,7 @@ jobs:
               event_id,
               expected_revision,
               'MATCH_PURCHASE',
-              json.dumps({'qty':3,'unit_cost':700},separators=(',',':')),
+              json.dumps({'qty':qty,'unit_cost':unit_cost},separators=(',',':')),
               'Synthetic external Google QA event persistence probe',
               'qa://google-live/'+request_id,
               'sistemas@cudo.cl',
@@ -130,12 +135,18 @@ jobs:
               'expected_revision':expected_revision,
               'expected_new_revision':expected_revision+1,
               'sheet_id':sheet_id,
+              'expected_stock':expected_stock,
+              'expected_purchase_total':expected_purchase_total,
+              'expected_supplier_payable':expected_supplier_payable,
               'production_write':False,
           },indent=2))
           with open(os.environ['GITHUB_OUTPUT'],'a') as out:
               out.write('request_id='+request_id+'\n')
               out.write('expected_revision='+str(expected_revision)+'\n')
               out.write('expected_new_revision='+str(expected_revision+1)+'\n')
+              out.write('expected_stock='+str(expected_stock)+'\n')
+              out.write('expected_purchase_total='+str(expected_purchase_total)+'\n')
+              out.write('expected_supplier_payable='+str(expected_supplier_payable)+'\n')
           print(json.dumps({'request_id':request_id,'expected_revision':expected_revision,'missing_tabs_created':missing,'production_write':False},indent=2))
           PY
 
@@ -149,6 +160,9 @@ jobs:
         env:
           REQUEST_ID: ${{ steps.seed.outputs.request_id }}
           EXPECTED_NEW_REVISION: ${{ steps.seed.outputs.expected_new_revision }}
+          EXPECTED_STOCK: ${{ steps.seed.outputs.expected_stock }}
+          EXPECTED_PURCHASE_TOTAL: ${{ steps.seed.outputs.expected_purchase_total }}
+          EXPECTED_SUPPLIER_PAYABLE: ${{ steps.seed.outputs.expected_supplier_payable }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -156,6 +170,9 @@ jobs:
           sheet_id=os.environ['CUDO_EVENT_RESOURCE_SHEET_ID']
           request_id=os.environ['REQUEST_ID']
           expected_revision=int(os.environ['EXPECTED_NEW_REVISION'])
+          expected_stock=int(os.environ['EXPECTED_STOCK'])
+          expected_purchase_total=int(os.environ['EXPECTED_PURCHASE_TOTAL'])
+          expected_supplier_payable=int(os.environ['EXPECTED_SUPPLIER_PAYABLE'])
 
           body=urllib.parse.urlencode({
               'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
@@ -196,7 +213,7 @@ jobs:
               raise SystemExit('Control revision mismatch')
           if match['AUTHORITY']!='CANONICAL_GRAPH_READ_MODEL' or bingo['AUTHORITY']!='CANONICAL_GRAPH_READ_MODEL':
               raise SystemExit('Control authority mismatch')
-          if int(match['STOCK'])!=15 or int(match['PURCHASE_TOTAL'])!=2100 or int(match['SUPPLIER_PAYABLE'])!=2100:
+          if int(match['STOCK'])!=expected_stock or int(match['PURCHASE_TOTAL'])!=expected_purchase_total or int(match['SUPPLIER_PAYABLE'])!=expected_supplier_payable:
               raise SystemExit('MATCH purchase propagation mismatch: '+repr(match))
 
           state=json.loads(pathlib.Path('qa-v8-google/state/event-resource-state.json').read_text())
