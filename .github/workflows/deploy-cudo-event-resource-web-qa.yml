@@ -1,0 +1,194 @@
+name: Deploy CUDO Event Resource Web QA
+
+on:
+  push:
+    branches:
+      - 'agent/match-full-club-day-roundtrip-20260921'
+    paths:
+      - 'qa-v8-google/apps-script/CudoEventResourceWeb.gs'
+      - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
+      - '.github/workflows/cudo-review-engine.yml'
+      - '.github/workflows/deploy-cudo-event-resource-web-qa.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-event-resource-web-qa-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Deploy event resource source into existing private CUDO Apps Script project
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request,urllib.error
+
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          expected_description='CUDO Event Resource private QA'
+          event_source=pathlib.Path('qa-v8-google/apps-script/CudoEventResourceWeb.gs').read_text()
+          router_source=pathlib.Path('qa-v8-google/apps-script/CudoPersonaReviewWeb.gs').read_text()
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            access=json.load(r)['access_token']
+
+          def req(url,method='GET',payload=None):
+            q=urllib.request.Request(
+              url,
+              data=None if payload is None else json.dumps(payload).encode(),
+              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
+              method=method
+            )
+            try:
+              with urllib.request.urlopen(q) as r:
+                raw=r.read()
+                return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+              body=e.read().decode(errors='replace')
+              raise RuntimeError('Apps Script HTTP '+str(e.code)+' '+body[:800])
+
+          base='https://script.googleapis.com/v1/projects/'+sid
+          current=req(base+'/content')
+          files=[]
+          manifest=None
+          replaced={'CudoEventResourceWeb':False,'CudoPersonaReviewWeb':False}
+          for f in current.get('files',[]):
+            name=f.get('name')
+            if name in replaced:
+              replaced[name]=True
+              continue
+            if name=='appsscript' and f.get('type')=='JSON':
+              manifest=json.loads(f.get('source') or '{}')
+              continue
+            files.append({'name':f['name'],'type':f['type'],'source':f.get('source','')})
+
+          if manifest is None:
+            raise SystemExit('Fail closed: Apps Script manifest missing')
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          files.append({'name':'CudoEventResourceWeb','type':'SERVER_JS','source':event_source})
+          files.append({'name':'CudoPersonaReviewWeb','type':'SERVER_JS','source':router_source})
+
+          req(base+'/content','PUT',{'files':files})
+          verify=req(base+'/content')
+          by_name={f.get('name'):f for f in verify.get('files',[])}
+          if by_name.get('CudoEventResourceWeb',{}).get('source')!=event_source:
+            raise SystemExit('Fail closed: CudoEventResourceWeb source verification failed')
+          if by_name.get('CudoPersonaReviewWeb',{}).get('source')!=router_source:
+            raise SystemExit('Fail closed: CudoPersonaReviewWeb source verification failed')
+          if 'CudoReviewEventBridge' not in by_name:
+            raise SystemExit('Fail closed: existing CudoReviewEventBridge disappeared')
+          if 'CudoWorkStateWeb' not in by_name:
+            raise SystemExit('Fail closed: existing CudoWorkStateWeb disappeared')
+
+          version=req(base+'/versions','POST',{
+            'description':'CUDO Event Resource QA '+os.environ.get('GITHUB_SHA','')[:12]
+          })
+          vn=version['versionNumber']
+
+          deployments=req(base+'/deployments').get('deployments',[])
+          existing=next((d for d in deployments if (d.get('deploymentConfig') or {}).get('description')==expected_description),None)
+          config={
+            'versionNumber':vn,
+            'manifestFileName':'appsscript',
+            'description':expected_description
+          }
+          if existing:
+            did=existing['deploymentId']
+            dep=req(base+'/deployments/'+urllib.parse.quote(did,safe=''),'PUT',{'deploymentConfig':config})
+            mode='UPDATED'
+          else:
+            dep=req(base+'/deployments','POST',config)
+            did=dep['deploymentId']
+            mode='CREATED'
+
+          # Verify deployment is now bound to the created version.
+          refreshed=req(base+'/deployments').get('deployments',[])
+          bound=next((d for d in refreshed if d.get('deploymentId')==did),None)
+          if not bound:
+            raise SystemExit('Fail closed: deployment missing after apply')
+          bound_cfg=bound.get('deploymentConfig') or {}
+          if int(bound_cfg.get('versionNumber',-1))!=int(vn):
+            raise SystemExit('Fail closed: deployment version mismatch')
+
+          url='https://script.google.com/macros/s/'+did+'/exec?view=event'
+          out={
+            'schema_version':'CUDO_EVENT_RESOURCE_APPS_SCRIPT_DEPLOYMENT_V1',
+            'ok':True,
+            'scriptId':sid,
+            'versionNumber':vn,
+            'deploymentId':did,
+            'eventWebUrl':url,
+            'mode':mode,
+            'access':'MYSELF',
+            'executeAs':'USER_DEPLOYING',
+            'eventSourceVerified':True,
+            'routerSourceVerified':True,
+            'existingBridgePreserved':True,
+            'existingWorkSurfacePreserved':True,
+            'targetRef':'agent/match-full-club-day-roundtrip-20260921',
+            'production_write':False
+          }
+          pathlib.Path('event-resource-web-deployment.json').write_text(json.dumps(out,indent=2)+'\n')
+          pathlib.Path('preview-v8/data/event-resource-backend-qa.json').write_text(json.dumps({
+            'schema_version':'CUDO_EVENT_RESOURCE_BACKEND_QA_V1',
+            'provider':'GOOGLE_APPS_SCRIPT',
+            'url':url,
+            'deployment_id':did,
+            'access':'MYSELF',
+            'target_ref':'agent/match-full-club-day-roundtrip-20260921',
+            'production_write':False
+          },indent=2)+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as gh:
+            gh.write('deployment_id='+did+'\n')
+            gh.write('event_url='+url+'\n')
+            gh.write('version='+str(vn)+'\n')
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Persist stable QA backend binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'cudo-event-resource-deployer'
+          git config user.email 'actions@users.noreply.github.com'
+          git add preview-v8/data/event-resource-backend-qa.json
+          if git diff --cached --quiet; then
+            echo 'Stable backend binding unchanged.'
+          else
+            git commit -m 'CUDO QA: bind stable governed event backend'
+            git push
+          fi
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-event-resource-web-qa-${{ github.run_id }}
+          path: event-resource-web-deployment.json
+          if-no-files-found: error
+          retention-days: 30
