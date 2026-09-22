@@ -19,24 +19,7 @@
       "broadcast_enabled": false
     }
   },
-  "responsibilities": [
-    {
-      "role": "Cancha y recinto",
-      "person": "Encargado estadio QA"
-    },
-    {
-      "role": "Cocina / preparación",
-      "person": "Equipo cocina QA"
-    },
-    {
-      "role": "Venta y atención",
-      "person": "Colaboradores QA"
-    },
-    {
-      "role": "Caja",
-      "person": "Tesorería QA"
-    }
-  ],
+  "responsibilities": [],
   "inventory_items": [],
   "offerings": [],
   "purchases": [],
@@ -44,23 +27,121 @@
   "tickets": [],
   "sport_results": [],
   "opening_cash": 20000,
-  "post_event_work": [
+  "post_event_work": [],
+  "evidence": [],
+  "closed_at": null,
+  "workstream_patterns": [
     {
-      "work_id": "ASEO",
-      "title": "Aseo de camarines y entorno",
-      "state": "PENDING"
+      "capability_tag": "VENUE_AND_FIELD",
+      "human_label": "Encargado/a de cancha y recinto",
+      "activation_conditions": [
+        "playing_surface_required",
+        "venue_required"
+      ],
+      "phase": "ANTES",
+      "human_gate": "NONE",
+      "post_tasks": [
+        {
+          "work_id": "CANCHA",
+          "title": "Revisión final de cancha"
+        }
+      ]
     },
     {
-      "work_id": "LAVADO",
-      "title": "Lavado de indumentaria",
-      "state": "PENDING"
+      "capability_tag": "FOOD_SERVICE",
+      "human_label": "Encargado/a de cocina",
+      "activation_conditions": [
+        "food_preparation",
+        "food_service"
+      ],
+      "phase": "ANTES_Y_DURANTE",
+      "human_gate": "NONE",
+      "post_tasks": []
     },
     {
-      "work_id": "CANCHA",
-      "title": "Revisión final de cancha",
-      "state": "PENDING"
+      "capability_tag": "CONCESSIONS",
+      "human_label": "Encargado/a de bar o punto de venta",
+      "activation_conditions": [
+        "beverage_service",
+        "sales_or_cash_handling"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "post_tasks": []
+    },
+    {
+      "capability_tag": "CLEANING_AND_SANITATION",
+      "human_label": "Encargado/a de aseo",
+      "activation_conditions": [
+        "cleaning_required",
+        "teardown_required"
+      ],
+      "phase": "DESPUES",
+      "human_gate": "NONE",
+      "post_tasks": [
+        {
+          "work_id": "ASEO",
+          "title": "Aseo de camarines y entorno"
+        }
+      ]
+    },
+    {
+      "capability_tag": "SETUP_AND_LOGISTICS",
+      "human_label": "Encargado/a de montaje y logística",
+      "activation_conditions": [
+        "setup_required",
+        "equipment_required"
+      ],
+      "phase": "ANTES",
+      "human_gate": "NONE",
+      "post_tasks": []
+    },
+    {
+      "capability_tag": "ACCESS_AND_RECEPTION",
+      "human_label": "Encargado/a de acceso y recepción",
+      "activation_conditions": [
+        "public_access",
+        "ticketing_or_access_control"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "post_tasks": []
+    },
+    {
+      "capability_tag": "COMMUNICATIONS",
+      "human_label": "Encargado/a de comunicaciones",
+      "activation_conditions": [
+        "communications_required"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "post_tasks": []
+    },
+    {
+      "capability_tag": "SPORTS_OPERATION",
+      "human_label": "Encargado/a de operación deportiva",
+      "activation_conditions": [
+        "sports_operation_required"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "post_tasks": [
+        {
+          "work_id": "LAVADO",
+          "title": "Lavado de indumentaria"
+        }
+      ]
+    },
+    {
+      "capability_tag": "FINANCIAL_CONTROL",
+      "human_label": "Encargado/a de caja y control",
+      "activation_conditions": [
+        "sales_or_cash_handling"
+      ],
+      "phase": "DURANTE_Y_CIERRE",
+      "human_gate": "FINANCIAL_TRANSACTION",
+      "post_tasks": []
     }
   ],
-  "evidence": [],
-  "closed_at": null
+  "assignments": {}
 }
