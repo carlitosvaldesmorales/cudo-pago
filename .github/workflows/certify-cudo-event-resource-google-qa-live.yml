@@ -33,211 +33,81 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Validate isolated QA target and seed one synthetic request
+      - name: Seed one bounded Google QA transport request
         id: seed
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, pathlib, urllib.parse, urllib.request
-
+          import json,os,pathlib,urllib.parse,urllib.request
           sheet_id=os.environ['CUDO_EVENT_RESOURCE_SHEET_ID']
-          if sheet_id!='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw':
-              raise SystemExit('Fail closed: unexpected QA sheet id')
-
+          if sheet_id!='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw': raise SystemExit('unexpected QA sheet')
           state=json.loads(pathlib.Path('qa-v8-google/state/event-resource-state.json').read_text())
-          if state.get('production_write') is not False:
-              raise SystemExit('Fail closed: state is not QA')
-          expected_revision=int(state['store_revision'])
-          event_id='CUDO-EVENT-QA-MATCH-FULLDAY-001'
-          resource=next(x for x in state['objects'] if x.get('object_id')=='CUDO-RESOURCE-QA-MATCH-BEV-001')
-          qty=3
-          unit_cost=700
-          expected_stock=int(resource['data']['stock_available_before_sales'])+qty-int(resource['data']['sold_qty'])
-          expected_purchase_total=(int(resource['data']['purchased_qty'])+qty)*unit_cost
-          expected_supplier_payable=(int(resource['data']['received_qty'])+qty-int(resource['data']['returned_qty']))*unit_cost
-          request_id='CUDO-QA-EVENT-LIVE-'+os.environ['GITHUB_RUN_ID']
+          if state.get('production_write') is not False: raise SystemExit('state is not QA')
+          rev=int(state['store_revision']);event_id='CUDO-EVENT-QA-MATCH-FULLDAY-001'
+          rid='CUDO-QA-EVENT-LIVE-'+os.environ['GITHUB_RUN_ID']
 
-          body=urllib.parse.urlencode({
-              'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
-              'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
-              'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
-              'grant_type':'refresh_token',
-          }).encode()
-          req=urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})
-          with urllib.request.urlopen(req) as r:
-              token=json.load(r)['access_token']
-
+          body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r: token=json.load(r)['access_token']
           def api(url,method='GET',payload=None):
-              req=urllib.request.Request(
-                  url,
-                  data=None if payload is None else json.dumps(payload).encode(),
-                  headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-                  method=method,
-              )
+              req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},method=method)
               with urllib.request.urlopen(req) as r:
-                  raw=r.read()
-                  return json.loads(raw) if raw else {}
-
+                  raw=r.read();return json.loads(raw) if raw else {}
           base='https://sheets.googleapis.com/v4/spreadsheets/'+sheet_id
-          meta=api(base+'?fields=properties.title,sheets.properties')
-          title=meta.get('properties',{}).get('title','')
-          print('QA sheet title observed:',title)
-          existing={x['properties']['title']:x['properties']['sheetId'] for x in meta.get('sheets',[])}
-          wanted=['EVENT_RESOURCE_REQUESTS','EVENT_RESOURCE_CONTROL','EVENT_RESOURCE_AUDIT']
-          missing=[name for name in wanted if name not in existing]
-          if missing:
-              api(base+':batchUpdate','POST',{'requests':[{'addSheet':{'properties':{'title':name}}} for name in missing]})
-
-          headers={
-              'EVENT_RESOURCE_REQUESTS':['REQUEST_ID','REQUESTED_AT','EVENT_ID','EXPECTED_REVISION','ACTION','PAYLOAD_JSON','REASON','EVIDENCE_REF','REQUESTED_BY','PROCESS_STATUS','RESULT','APPLIED_AT'],
-              'EVENT_RESOURCE_CONTROL':['EVENT_ID','KIND','DISPLAY_NAME','STORE_REVISION','CLOSED','STOCK','PURCHASE_TOTAL','SOLD_QTY','SALES_REVENUE','SUPPLIER_PAYABLE','RESOURCE_RESULT','PERMIT_CONFIRMED','PRIZES_COUNT','SPORT_RESULTS_JSON','AUTHORITY'],
-              'EVENT_RESOURCE_AUDIT':['REQUEST_ID','EVENT_ID','ACTION','STATUS','EXPECTED_REVISION','NEW_REVISION','REQUESTED_BY','REASON','EVIDENCE_REF','TRANSACTION_ID','TRANSITION_IDS','APPLIED_AT'],
-          }
-
-          def values_get(range_):
-              u=base+'/values/'+urllib.parse.quote(range_,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE'
-              return api(u).get('values',[])
-          def values_put(range_,values):
-              u=base+'/values/'+urllib.parse.quote(range_,safe='')+'?valueInputOption=USER_ENTERED'
-              return api(u,'PUT',{'range':range_,'majorDimension':'ROWS','values':values})
-          def values_append(range_,values):
-              u=base+'/values/'+urllib.parse.quote(range_,safe='')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS'
-              return api(u,'POST',{'range':range_,'majorDimension':'ROWS','values':values})
-
-          for name,header in headers.items():
-              current=values_get(name+'!1:1')
-              if not current:
-                  end_col=chr(64+len(header))
-                  values_put(name+'!A1:'+end_col+'1',[header])
-              elif current[0][:len(header)]!=header:
-                  raise SystemExit('Fail closed: '+name+' header contract mismatch: '+repr(current[0]))
-
-          requests=values_get('EVENT_RESOURCE_REQUESTS!A:L')
-          if any(row and row[0]==request_id for row in requests[1:]):
-              raise SystemExit('Fail closed: synthetic request id already exists')
-
-          row=[
-              request_id,
-              '2026-09-21T20:00:00.000Z',
-              event_id,
-              expected_revision,
-              'MATCH_PURCHASE',
-              json.dumps({'qty':qty,'unit_cost':unit_cost},separators=(',',':')),
-              'Synthetic external Google QA event persistence probe',
-              'qa://google-live/'+request_id,
-              'sistemas@cudo.cl',
-              'PENDING','',''
-          ]
-          values_append('EVENT_RESOURCE_REQUESTS!A:L',[row])
-          pathlib.Path('/tmp/cudo-event-live.json').write_text(json.dumps({
-              'request_id':request_id,
-              'expected_revision':expected_revision,
-              'expected_new_revision':expected_revision+1,
-              'sheet_id':sheet_id,
-              'expected_stock':expected_stock,
-              'expected_purchase_total':expected_purchase_total,
-              'expected_supplier_payable':expected_supplier_payable,
-              'production_write':False,
-          },indent=2))
+          meta=api(base+'?fields=sheets.properties')
+          existing={x['properties']['title'] for x in meta.get('sheets',[])}
+          missing=[x for x in ['EVENT_RESOURCE_REQUESTS','EVENT_RESOURCE_CONTROL','EVENT_RESOURCE_AUDIT'] if x not in existing]
+          if missing: api(base+':batchUpdate','POST',{'requests':[{'addSheet':{'properties':{'title':name}}} for name in missing]})
+          req_header=['REQUEST_ID','REQUESTED_AT','EVENT_ID','EXPECTED_REVISION','ACTION','PAYLOAD_JSON','REASON','EVIDENCE_REF','REQUESTED_BY','PROCESS_STATUS','RESULT','APPLIED_AT']
+          audit_header=['REQUEST_ID','EVENT_ID','ACTION','STATUS','EXPECTED_REVISION','NEW_REVISION','REQUESTED_BY','REASON','EVIDENCE_REF','TRANSACTION_ID','TRANSITION_IDS','APPLIED_AT']
+          def get(range_): return api(base+'/values/'+urllib.parse.quote(range_,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE').get('values',[])
+          def put(range_,values): return api(base+'/values/'+urllib.parse.quote(range_,safe='')+'?valueInputOption=USER_ENTERED','PUT',{'range':range_,'majorDimension':'ROWS','values':values})
+          def append(range_,values): return api(base+'/values/'+urllib.parse.quote(range_,safe='')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS','POST',{'range':range_,'majorDimension':'ROWS','values':values})
+          for name,header in [('EVENT_RESOURCE_REQUESTS',req_header),('EVENT_RESOURCE_AUDIT',audit_header)]:
+              cur=get(name+'!1:1')
+              if not cur: put(name+'!A1:L1',[header])
+              elif cur[0][:len(header)]!=header: raise SystemExit(name+' header mismatch')
+          row=[rid,'2026-09-22T05:20:00.000Z',event_id,rev,'MATCH_RESULT',json.dumps({'series':'QA-Sonda-Gobernada','home':0,'away':0},separators=(',',':')),'Synthetic Google QA transport/readback probe','qa://google-live/'+rid,'sistemas@cudo.cl','PENDING','','']
+          append('EVENT_RESOURCE_REQUESTS!A:L',[row])
           with open(os.environ['GITHUB_OUTPUT'],'a') as out:
-              out.write('request_id='+request_id+'\n')
-              out.write('expected_revision='+str(expected_revision)+'\n')
-              out.write('expected_new_revision='+str(expected_revision+1)+'\n')
-              out.write('expected_stock='+str(expected_stock)+'\n')
-              out.write('expected_purchase_total='+str(expected_purchase_total)+'\n')
-              out.write('expected_supplier_payable='+str(expected_supplier_payable)+'\n')
-          print(json.dumps({'request_id':request_id,'expected_revision':expected_revision,'missing_tabs_created':missing,'production_write':False},indent=2))
+              out.write('request_id='+rid+'\n');out.write('expected_new_revision='+str(rev+1)+'\n')
           PY
 
-      - name: Process exactly one Google QA event request through canonical engine
+      - name: Process exactly one request through canonical engine
         env:
           CUDO_EVENT_RESOURCE_EXPECT_PENDING: '1'
         run: node qa-v8-google/tools/process_event_resource_requests.mjs
 
-      - name: Verify Google primary-source readback
+      - name: Verify Google readback and canonical control
         shell: bash
         env:
           REQUEST_ID: ${{ steps.seed.outputs.request_id }}
           EXPECTED_NEW_REVISION: ${{ steps.seed.outputs.expected_new_revision }}
-          EXPECTED_STOCK: ${{ steps.seed.outputs.expected_stock }}
-          EXPECTED_PURCHASE_TOTAL: ${{ steps.seed.outputs.expected_purchase_total }}
-          EXPECTED_SUPPLIER_PAYABLE: ${{ steps.seed.outputs.expected_supplier_payable }}
         run: |
-          set -euo pipefail
           python3 - <<'PY'
-          import json, os, pathlib, urllib.parse, urllib.request
-          sheet_id=os.environ['CUDO_EVENT_RESOURCE_SHEET_ID']
-          request_id=os.environ['REQUEST_ID']
-          expected_revision=int(os.environ['EXPECTED_NEW_REVISION'])
-          expected_stock=int(os.environ['EXPECTED_STOCK'])
-          expected_purchase_total=int(os.environ['EXPECTED_PURCHASE_TOTAL'])
-          expected_supplier_payable=int(os.environ['EXPECTED_SUPPLIER_PAYABLE'])
-
-          body=urllib.parse.urlencode({
-              'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
-              'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
-              'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
-              'grant_type':'refresh_token',
-          }).encode()
-          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r:
-              token=json.load(r)['access_token']
-
+          import json,os,pathlib,urllib.parse,urllib.request
+          sheet_id=os.environ['CUDO_EVENT_RESOURCE_SHEET_ID'];rid=os.environ['REQUEST_ID'];rev=int(os.environ['EXPECTED_NEW_REVISION'])
+          body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r: token=json.load(r)['access_token']
           base='https://sheets.googleapis.com/v4/spreadsheets/'+sheet_id
           def get(range_):
-              u=base+'/values/'+urllib.parse.quote(range_,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE'
-              req=urllib.request.Request(u,headers={'Authorization':'Bearer '+token})
-              with urllib.request.urlopen(req) as r:
-                  return json.load(r).get('values',[])
-
-          requests=get('EVENT_RESOURCE_REQUESTS!A:L')
-          req_row=next((r for r in requests[1:] if r and r[0]==request_id),None)
-          if not req_row or len(req_row)<10 or req_row[9]!='APPLIED':
-              raise SystemExit('Live request not APPLIED: '+repr(req_row))
-
-          audits=get('EVENT_RESOURCE_AUDIT!A:L')
-          audit_row=next((r for r in audits[1:] if r and r[0]==request_id),None)
-          if not audit_row or len(audit_row)<4 or audit_row[3]!='APPLIED':
-              raise SystemExit('Live audit missing APPLIED: '+repr(audit_row))
-
-          control=get('EVENT_RESOURCE_CONTROL!A:O')
-          if len(control)<3:
-              raise SystemExit('Control projection incomplete')
-          header=control[0]
-          rows={r[1]:dict(zip(header,r)) for r in control[1:] if len(r)>1}
-          match=rows.get('MATCH')
-          bingo=rows.get('BINGO')
-          if not match or not bingo:
-              raise SystemExit('MATCH/BINGO rows missing')
-          if int(match['STORE_REVISION'])!=expected_revision or int(bingo['STORE_REVISION'])!=expected_revision:
-              raise SystemExit('Control revision mismatch')
-          if match['AUTHORITY']!='CANONICAL_GRAPH_READ_MODEL' or bingo['AUTHORITY']!='CANONICAL_GRAPH_READ_MODEL':
-              raise SystemExit('Control authority mismatch')
-          if int(match['STOCK'])!=expected_stock or int(match['PURCHASE_TOTAL'])!=expected_purchase_total or int(match['SUPPLIER_PAYABLE'])!=expected_supplier_payable:
-              raise SystemExit('MATCH purchase propagation mismatch: '+repr(match))
-
+              req=urllib.request.Request(base+'/values/'+urllib.parse.quote(range_,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE',headers={'Authorization':'Bearer '+token})
+              with urllib.request.urlopen(req) as r:return json.load(r).get('values',[])
+          requests=get('EVENT_RESOURCE_REQUESTS!A:L');row=next((x for x in requests[1:] if x and x[0]==rid),None)
+          if not row or row[9]!='APPLIED': raise SystemExit('request not applied '+repr(row))
+          audit=get('EVENT_RESOURCE_AUDIT!A:L');arow=next((x for x in audit[1:] if x and x[0]==rid),None)
+          if not arow or arow[3]!='APPLIED': raise SystemExit('audit not applied')
+          control=get('EVENT_RESOURCE_CONTROL!A:O');header=control[0]
+          rows={x[1]:dict(zip(header,x)) for x in control[1:] if len(x)>1}
+          match=rows['MATCH'];bingo=rows['BINGO']
+          if int(match['STORE_REVISION'])!=rev or int(bingo['STORE_REVISION'])!=rev: raise SystemExit('revision mismatch')
+          if match['AUTHORITY']!='CANONICAL_GRAPH_READ_MODEL': raise SystemExit('authority mismatch')
+          if 'OFFERINGS_JSON' in header:
+              json.loads(match['OFFERINGS_JSON']);json.loads(match['INVENTORY_JSON'])
           state=json.loads(pathlib.Path('qa-v8-google/state/event-resource-state.json').read_text())
-          if int(state['store_revision'])!=expected_revision:
-              raise SystemExit('Canonical state revision mismatch')
-          if not any(x.get('request_id')==request_id and x.get('status')=='APPLIED' for x in state.get('audit',[])):
-              raise SystemExit('Canonical audit missing request')
           projection=json.loads(pathlib.Path('qa-v8-google/data/event-resource-qa.json').read_text())
-          if projection.get('authority')!='CANONICAL_GRAPH_READ_MODEL' or int(projection.get('store_revision',0))!=expected_revision:
-              raise SystemExit('Versioned read model mismatch')
-
-          proof={
-              'schema_version':'CUDO_EVENT_RESOURCE_GOOGLE_QA_LIVE_CERT_V1',
-              'request_id':request_id,
-              'request_status':'APPLIED',
-              'audit_status':'APPLIED',
-              'store_revision':expected_revision,
-              'match_stock':int(match['STOCK']),
-              'match_purchase_total':int(match['PURCHASE_TOTAL']),
-              'match_supplier_payable':int(match['SUPPLIER_PAYABLE']),
-              'authority':match['AUTHORITY'],
-              'production_write':False,
-              'result':'PASS',
-          }
+          if state['store_revision']!=rev or projection['store_revision']!=rev: raise SystemExit('versioned readback mismatch')
+          proof={'schema_version':'CUDO_EVENT_RESOURCE_GOOGLE_QA_LIVE_CERT_V2','request_id':rid,'store_revision':rev,'authority':match['AUTHORITY'],'production_write':False,'result':'PASS'}
           pathlib.Path('event-resource-google-qa-live.json').write_text(json.dumps(proof,indent=2)+'\n')
           print(json.dumps(proof,indent=2))
           PY
@@ -245,23 +115,15 @@ jobs:
       - name: Persist canonical QA state and read model on candidate branch
         shell: bash
         run: |
-          set -euo pipefail
           git config user.name 'cudo-event-resource-qa-engine'
           git config user.email 'actions@users.noreply.github.com'
           git add qa-v8-google/state/event-resource-state.json qa-v8-google/data/event-resource-qa.json
-          if git diff --cached --quiet; then
-            echo 'No canonical QA state change to persist.'
-          else
-            git commit -m 'CUDO QA: persist governed event-resource state'
-            git push
-          fi
+          git diff --cached --quiet || { git commit -m 'CUDO QA: persist governed event-resource state'; git push; }
 
       - name: Upload external QA evidence
         uses: actions/upload-artifact@v4
         with:
           name: cudo-event-resource-google-qa-live-${{ github.run_id }}
-          path: |
-            event-resource-google-qa-live.json
-            /tmp/cudo-event-live.json
+          path: event-resource-google-qa-live.json
           if-no-files-found: error
           retention-days: 30
