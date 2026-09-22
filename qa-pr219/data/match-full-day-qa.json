@@ -1,5 +1,5 @@
 {
-  "schema_version": "CUDO_MATCH_FULL_DAY_QA_V1",
+  "schema_version": "CUDO_MATCH_FULL_DAY_QA_V2",
   "mock": true,
   "production_write": false,
   "event": {
@@ -13,8 +13,8 @@
     "status": "SCHEDULED",
     "conditions": {
       "venue_required": true,
-      "kitchen_enabled": true,
-      "beverage_sales_enabled": true,
+      "food_sales_enabled": true,
+      "bar_sales_enabled": true,
       "ticketing_enabled": true,
       "broadcast_enabled": false
     }
@@ -25,41 +25,20 @@
       "person": "Encargado estadio QA"
     },
     {
-      "role": "Cocina",
+      "role": "Cocina / preparación",
       "person": "Equipo cocina QA"
+    },
+    {
+      "role": "Venta y atención",
+      "person": "Colaboradores QA"
     },
     {
       "role": "Caja",
       "person": "Tesorería QA"
-    },
-    {
-      "role": "Ventas",
-      "person": "Colaboradores QA"
     }
   ],
-  "products": [
-    {
-      "product_id": "BEBIDA",
-      "name": "Bebidas",
-      "stock": 12,
-      "unit_cost": 730,
-      "sell_price": 1500
-    },
-    {
-      "product_id": "PAN",
-      "name": "Pan",
-      "stock": 10,
-      "unit_cost": 400,
-      "sell_price": 1000
-    },
-    {
-      "product_id": "VIENESA",
-      "name": "Vienesas",
-      "stock": 20,
-      "unit_cost": 450,
-      "sell_price": 1200
-    }
-  ],
+  "inventory_items": [],
+  "offerings": [],
   "purchases": [],
   "sales": [],
   "tickets": [],

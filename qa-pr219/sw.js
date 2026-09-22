@@ -1,4 +1,4 @@
-const CACHE_NAME='cudo-qa-pr219-mobile-shell-v1';
+const CACHE_NAME='cudo-qa-pr219-mobile-shell-v2';
 const SCOPE='/qa-pr219/';
 const OFFLINE_URL=`${SCOPE}offline.html`;
 const PRECACHE=[
