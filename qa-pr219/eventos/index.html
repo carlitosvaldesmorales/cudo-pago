@@ -10,19 +10,20 @@
 <link rel="stylesheet" href="../shared/site.css">
 <style>
 :root{--navy:#03163d;--red:#e21b2d;--paper:#f4f2ed;--ink:#172033;--muted:#657386;--line:#d5dbe4;--ok:#147a45;--warn:#8a6500}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,sans-serif}.wrap{width:min(1180px,calc(100% - 24px));margin:auto}.hero{background:var(--navy);color:#fff;border-bottom:6px solid var(--red);padding:26px 0 22px}.hero h1{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:clamp(38px,7vw,62px);line-height:.94;margin:7px 0}.hero p{max-width:860px;line-height:1.55;color:#e7edf8;font-size:13px}.back{color:#fff;font-weight:900;font-size:12px}.body{padding:18px 0 56px}.qa{background:#fff8da;border-left:4px solid #c79b00;padding:12px 14px;border-radius:0 12px 12px 0;font-size:12px;line-height:1.5;margin-bottom:14px}.statusbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.chip{border:1px solid #bdc7d5;background:#fff;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:900}.chip.active{background:var(--navy);border-color:var(--navy);color:#fff}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(3,22,61,.05)}.card.wide{grid-column:1/-1}.card h2,.card h3{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;color:var(--navy);margin:0 0 8px}.card h2{font-size:30px}.card h3{font-size:23px}.sub{color:var(--muted);font-size:12px;line-height:1.5}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.formgrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:10px;font-weight:900;text-transform:uppercase;color:#4e5d72}.field input,.field select{width:100%;border:1px solid #bec8d6;border-radius:10px;padding:10px;background:#fff;font:inherit}.checkrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px}.checkrow label{font-size:12px;font-weight:700}.btn{border:0;border-radius:10px;background:var(--navy);color:#fff;font-weight:900;padding:10px 13px;cursor:pointer}.btn.red{background:var(--red)}.btn.light{background:#edf1f6;color:var(--navy)}.btn.ok{background:var(--ok)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:11px}.kpi{background:#f6f8fb;border-radius:11px;padding:10px}.kpi strong{display:block;color:var(--navy);font-size:20px}.kpi small{display:block;margin-top:3px;font-size:9px;text-transform:uppercase;font-weight:900;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #edf0f3}th{font-size:9px;text-transform:uppercase;color:var(--muted)}.good{color:var(--ok);font-weight:900}.pending{color:var(--warn);font-weight:900}.bad{color:#b50f20;font-weight:900}.eventtitle{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.eventtitle h2{font-size:36px}.badge{border-radius:999px;background:#eef2f7;padding:6px 9px;font-size:10px;font-weight:900}.timeline{display:grid;gap:7px;margin-top:8px}.row{border-top:1px solid #edf0f3;padding:9px 0}.row:first-child{border-top:0}.row strong{font-size:13px}.row span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.notice{margin-top:10px;background:#eff8f2;border-left:4px solid var(--ok);padding:10px 12px;border-radius:0 10px 10px 0;font-size:12px}.danger{background:#fdecec;border-left-color:#b50f20}.hidden{display:none!important}.foot{margin-top:18px;color:var(--muted);font-size:11px}.bingo{opacity:.82}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,sans-serif}.wrap{width:min(1180px,calc(100% - 24px));margin:auto}.hero{background:var(--navy);color:#fff;border-bottom:6px solid var(--red);padding:26px 0 22px}.hero h1{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;font-size:clamp(38px,7vw,62px);line-height:.94;margin:7px 0}.hero p{max-width:900px;line-height:1.55;color:#e7edf8;font-size:13px}.back{color:#fff;font-weight:900;font-size:12px}.body{padding:18px 0 56px}.qa{background:#fff8da;border-left:4px solid #c79b00;padding:12px 14px;border-radius:0 12px 12px 0;font-size:12px;line-height:1.5;margin-bottom:14px}.statusbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.chip{border:1px solid #bdc7d5;background:#fff;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:900}.chip.active{background:var(--navy);border-color:var(--navy);color:#fff}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(3,22,61,.05)}.card.wide{grid-column:1/-1}.card h2,.card h3{font-family:'Barlow Condensed',Arial Narrow,sans-serif;text-transform:uppercase;color:var(--navy);margin:0 0 8px}.card h2{font-size:30px}.card h3{font-size:23px}.sub{color:var(--muted);font-size:12px;line-height:1.5}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.formgrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:10px;font-weight:900;text-transform:uppercase;color:#4e5d72}.field input,.field select{width:100%;border:1px solid #bec8d6;border-radius:10px;padding:10px;background:#fff;font:inherit}.checkrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px}.checkrow label{font-size:12px;font-weight:700}.btn{border:0;border-radius:10px;background:var(--navy);color:#fff;font-weight:900;padding:10px 13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.btn.light{background:#edf1f6;color:var(--navy)}.btn.ok{background:var(--ok)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:11px}.kpi{background:#f6f8fb;border-radius:11px;padding:10px}.kpi strong{display:block;color:var(--navy);font-size:20px}.kpi small{display:block;margin-top:3px;font-size:9px;text-transform:uppercase;font-weight:900;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #edf0f3;vertical-align:top}th{font-size:9px;text-transform:uppercase;color:var(--muted)}.good{color:var(--ok);font-weight:900}.pending{color:var(--warn);font-weight:900}.eventtitle{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.eventtitle h2{font-size:36px}.badge{border-radius:999px;background:#eef2f7;padding:6px 9px;font-size:10px;font-weight:900}.timeline{display:grid;gap:7px;margin-top:8px}.row{border-top:1px solid #edf0f3;padding:9px 0}.row:first-child{border-top:0}.row strong{font-size:13px}.row span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.notice{margin-top:10px;background:#eff8f2;border-left:4px solid var(--ok);padding:10px 12px;border-radius:0 10px 10px 0;font-size:12px}.danger{background:#fdecec;border-left-color:#b50f20}.hidden{display:none!important}.foot{margin-top:18px;color:var(--muted);font-size:11px}.mode{font-size:10px;font-weight:900}.empty{padding:14px;background:#f6f8fb;border-radius:12px;color:var(--muted);font-size:12px}.flowhint{background:#f2f6fc;border:1px solid #dbe3ef;border-radius:12px;padding:12px;margin:10px 0;font-size:12px;line-height:1.5}
 @media(max-width:760px){.grid,.formgrid,.formgrid.three{grid-template-columns:1fr}.card.wide{grid-column:auto}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.eventtitle{flex-direction:column}.wrap{width:min(100% - 16px,1180px)}}
 </style>
 </head>
-<body data-cudo-match-full-day="qa-v1">
+<body data-cudo-match-full-day="qa-v2">
 <header class="hero"><div class="wrap">
 <div class="eyebrow">C.U.D.O. · Club OS · QA</div>
 <h1>Jornada del partido</h1>
-<p>Un partido es el contexto. Desde aquí se ve y se conduce lo que ese día provoca en el club: recinto, personas, cocina y ventas, compras y stock, caja, resultado, trabajo posterior y cierre.</p>
+<p>El partido es el contexto. Cocina y bar no traen un menú fijo: la jornada decide qué se venderá y CUDO deriva los insumos, compras, stock, ventas y caja que correspondan.</p>
 <a class="back" href="../admin/">← Volver a Administración</a>
 </div></header>
+
 <main class="wrap body">
-<div class="qa"><strong>QA sintética:</strong> este candidato no escribe producción. Persiste el roundtrip en <code>localStorage</code> sólo para demostrar la experiencia completa antes de conectar un backend productivo.</div>
+<div class="qa"><strong>QA sintética:</strong> no escribe producción. La prueba se guarda sólo en este navegador y usa un modelo de oferta dinámica por jornada.</div>
 
 <section class="card wide">
   <div class="eventtitle"><div><div class="eyebrow">MATCH · CONTEXTO HUMANO PRINCIPAL</div><h2 id="eventName">Cargando jornada…</h2><div id="eventMeta" class="sub"></div></div><span id="eventStatus" class="badge">QA</span></div>
@@ -31,8 +32,8 @@
 
 <div class="grid">
 <section class="card wide">
-  <h3>1 · Registrar / configurar la jornada</h3>
-  <p class="sub">Se registra el partido una vez. Las condiciones activan sólo las ramas que corresponden.</p>
+  <h3>1 · Configurar la jornada</h3>
+  <p class="sub">Se registra el partido una vez. Las ramas aparecen sólo cuando aplican.</p>
   <div class="formgrid three">
     <div class="field"><label>Rival</label><input id="opponent" autocomplete="off"></div>
     <div class="field"><label>Fecha</label><input id="matchDate" type="date"></div>
@@ -40,8 +41,8 @@
   </div>
   <div class="checkrow">
     <label><input id="venueRequired" type="checkbox"> Usamos estadio CUDO</label>
-    <label><input id="kitchenEnabled" type="checkbox"> Habrá cocina</label>
-    <label><input id="salesEnabled" type="checkbox"> Habrá venta de bebidas</label>
+    <label><input id="foodSalesEnabled" type="checkbox"> Habrá cocina / comida</label>
+    <label><input id="barSalesEnabled" type="checkbox"> Habrá bar / reventa</label>
     <label><input id="ticketingEnabled" type="checkbox"> Se cobra entrada</label>
     <label><input id="broadcastEnabled" type="checkbox"> Habrá transmisión</label>
   </div>
@@ -56,35 +57,62 @@
 
 <section class="card" id="venueCard">
   <h3>Recinto</h3>
-  <p class="sub">El recinto sólo aparece cuando la jornada local lo necesita.</p>
+  <p class="sub">Esta rama sólo aparece cuando el partido local necesita el estadio.</p>
   <div class="timeline">
-    <div class="row"><strong>Estadio CUDO</strong><span>Cancha, camarines y entorno deben quedar disponibles.</span></div>
-    <div class="row"><strong>Preparación previa</strong><span>Riego / corte / demarcación se gestionan como consecuencias del partido.</span></div>
+    <div class="row"><strong>Estadio CUDO</strong><span>Cancha, camarines y entorno disponibles.</span></div>
+    <div class="row"><strong>Preparación previa</strong><span>Riego, corte y demarcación nacen como consecuencias de esta jornada.</span></div>
   </div>
 </section>
 
-<section class="card wide" id="stockCard">
-  <h3>Cocina, compras y stock</h3>
-  <p class="sub">Una compra modifica el stock y genera costo. Si queda pendiente, aparece como obligación con proveedor.</p>
+<section class="card wide" id="commerceCard">
+  <h3>2 · ¿Qué vamos a vender?</h3>
+  <p class="sub">Agrega sólo lo que realmente se venderá en esta jornada. CUDO distingue una preparación de una reventa directa; no crea productos ni stock por defecto.</p>
+  <div class="flowhint"><strong>Patrón:</strong> una preparación consume sus insumos. Una reventa consume unidades del producto comprado. El nombre del alimento no decide el modelo; lo decide cómo lo abastece CUDO.</div>
   <div class="formgrid three">
-    <div class="field"><label>Producto</label><select id="purchaseProduct"></select></div>
-    <div class="field"><label>Cantidad comprada</label><input id="purchaseQty" type="number" min="1" value="10"></div>
-    <div class="field"><label>Costo unitario</label><input id="purchaseCost" type="number" min="0" value="700"></div>
+    <div class="field"><label>Qué venderemos</label><input id="offeringName" placeholder="Ej. completo, empanada, bebida" autocomplete="off"></div>
+    <div class="field"><label>Cómo lo tendremos</label><select id="offeringMode"><option value="PREPARED">Lo preparamos en CUDO</option><option value="DIRECT_RESALE">Lo compramos listo / reventa</option></select></div>
+    <div class="field"><label>Precio de venta</label><input id="offeringPrice" type="number" min="0" value="0"></div>
+  </div>
+  <div class="actions"><button id="addOffering" class="btn">Agregar a la venta</button></div>
+  <div id="offeringNotice" class="notice hidden"></div>
+  <div id="offeringList" class="timeline"></div>
+</section>
+
+<section class="card wide" id="recipeCard">
+  <h3>3 · Preparaciones e insumos</h3>
+  <p class="sub">Si algo se prepara aquí, define de qué está hecho. Los insumos pasan a ser el stock real que CUDO debe comprar y controlar.</p>
+  <div class="formgrid three">
+    <div class="field"><label>Preparación</label><select id="recipeOffering"></select></div>
+    <div class="field"><label>Insumo</label><input id="ingredientName" placeholder="Ej. pan, vienesa, tomate" autocomplete="off"></div>
+    <div class="field"><label>Consumo por unidad vendida</label><input id="ingredientQty" type="number" min="0.001" step="0.001" value="1"></div>
+    <div class="field"><label>Unidad de control</label><select id="ingredientUnit"><option value="unidad">unidad</option><option value="kg">kg</option><option value="litro">litro</option><option value="porcion">porción</option></select></div>
+  </div>
+  <div class="actions"><button id="addIngredient" class="btn">Agregar insumo</button></div>
+  <div id="ingredientNotice" class="notice hidden"></div>
+</section>
+
+<section class="card wide" id="stockCard">
+  <h3>4 · Compras e inventario real</h3>
+  <p class="sub">Aquí aparecen sólo los insumos o unidades que nacieron de lo que la jornada decidió vender.</p>
+  <div class="formgrid three">
+    <div class="field"><label>Insumo / unidad</label><select id="purchaseItem"></select></div>
+    <div class="field"><label>Cantidad comprada</label><input id="purchaseQty" type="number" min="0.001" step="0.001" value="10"></div>
+    <div class="field"><label>Costo por unidad de control</label><input id="purchaseCost" type="number" min="0" value="700"></div>
     <div class="field"><label>Proveedor</label><input id="purchaseSupplier" value="Proveedor QA" autocomplete="off"></div>
     <div class="field"><label>Pago</label><select id="purchasePayment"><option value="PENDING">Pendiente</option><option value="CASH">Pagado efectivo</option><option value="TRANSFER">Pagado transferencia</option></select></div>
   </div>
   <div class="actions"><button id="registerPurchase" class="btn">Registrar compra</button></div>
-  <table><thead><tr><th>Producto</th><th>Stock</th><th>Costo ref.</th><th>Venta ref.</th></tr></thead><tbody id="stockRows"></tbody></table>
+  <table><thead><tr><th>Insumo / unidad</th><th>Stock</th><th>Unidad</th><th>Costo ref.</th></tr></thead><tbody id="stockRows"></tbody></table>
   <div id="purchaseNotice" class="notice hidden"></div>
 </section>
 
 <section class="card wide" id="salesCard">
-  <h3>Ventas del día</h3>
-  <p class="sub">La venta descuenta stock y aumenta ingreso/caja. El mismo hecho no se vuelve a ingresar en otro módulo.</p>
+  <h3>5 · Ventas del día</h3>
+  <p class="sub">Se vende la oferta que ve la gente. CUDO descuenta por detrás los insumos o unidades que correspondan.</p>
   <div class="formgrid three">
-    <div class="field"><label>Producto</label><select id="saleProduct"></select></div>
-    <div class="field"><label>Cantidad vendida</label><input id="saleQty" type="number" min="1" value="5"></div>
-    <div class="field"><label>Precio unitario</label><input id="salePrice" type="number" min="0" value="1500"></div>
+    <div class="field"><label>Qué se vendió</label><select id="saleOffering"></select></div>
+    <div class="field"><label>Cantidad</label><input id="saleQty" type="number" min="1" step="1" value="1"></div>
+    <div class="field"><label>Precio unitario</label><input id="salePrice" type="number" min="0" value="0"></div>
     <div class="field"><label>Medio de pago</label><select id="saleMethod"><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option></select></div>
   </div>
   <div class="actions"><button id="registerSale" class="btn">Registrar venta</button></div>
@@ -105,7 +133,7 @@
   <h3>Caja y obligaciones</h3>
   <div class="kpis">
     <div class="kpi"><strong id="metricIncome">$0</strong><small>Ingresos</small></div>
-    <div class="kpi"><strong id="metricCost">$0</strong><small>Costo compras</small></div>
+    <div class="kpi"><strong id="metricCost">$0</strong><small>Compras</small></div>
     <div class="kpi"><strong id="metricPayable">$0</strong><small>Proveedor pendiente</small></div>
     <div class="kpi"><strong id="metricCash">$0</strong><small>Caja estimada</small></div>
   </div>
@@ -114,7 +142,6 @@
 
 <section class="card wide">
   <h3>Resultado deportivo</h3>
-  <p class="sub">Se registra aquí una vez y queda asociado a la misma jornada.</p>
   <div class="formgrid three">
     <div class="field"><label>Serie</label><select id="resultSeries"><option>Tercera</option><option>Segunda</option><option>Senior</option><option>Primera</option></select></div>
     <div class="field"><label>CUDO</label><input id="homeGoals" type="number" min="0" value="2"></div>
@@ -126,7 +153,6 @@
 
 <section class="card wide" id="postCard">
   <h3>Después del partido</h3>
-  <p class="sub">El cierre del partido activa trabajo posterior. No es una lista separada sin contexto.</p>
   <div id="postWork" class="timeline"></div>
 </section>
 
@@ -136,83 +162,141 @@
     <div class="kpi"><strong id="closeRevenue">$0</strong><small>Ingresos del evento</small></div>
     <div class="kpi"><strong id="closeCost">$0</strong><small>Compras del evento</small></div>
     <div class="kpi"><strong id="closeNet">$0</strong><small>Recurso neto</small></div>
-    <div class="kpi"><strong id="closePending">0</strong><small>Pendientes post-partido</small></div>
+    <div class="kpi"><strong id="closePending">0</strong><small>Pendientes</small></div>
   </div>
   <div class="actions"><button id="closeEvent" class="btn ok">Conciliar y cerrar jornada</button></div>
   <div id="closureNotice" class="notice hidden"></div>
 </section>
 
-<section class="card wide bingo">
+<section class="card wide">
   <h3>🎟️ Bingo · misma raíz, ramas distintas</h3>
-  <p class="sub">Bingo reutiliza este mismo núcleo de compras, stock, ventas, caja, obligaciones y cierre, activando permiso, premios/donaciones y limpieza en lugar del resultado deportivo.</p>
+  <p class="sub">El Bingo reutiliza el mismo patrón dinámico de oferta, insumos, compras, ventas y caja, pero agrega permiso y premios.</p>
   <div class="actions"><a class="btn" href="./bingo.html">Abrir Bingo / recaudación →</a></div>
 </section>
 </div>
-<div class="foot">Fuente QA: CUDO Match Full Club Day · production_write=false · persistencia local del navegador para el roundtrip.</div>
+<div class="foot">CUDO QA · oferta dinámica por evento · production_write=false.</div>
 </main>
+
 <script src="./event-core.js"></script>
 <script>
 (function(){
 const DATA_URL='../data/match-full-day-qa.json';
-const STORAGE='cudo-match-full-day-qa-v1';
+const STORAGE='cudo-match-full-day-qa-v2';
 let seed=null,state=null;
 const $=id=>document.getElementById(id);
-const clone=x=>JSON.parse(JSON.stringify(x));
 const C=window.CudoEventCore;
 const money=C.money;
 const num=id=>Number($(id).value||0);
 const now=()=>new Date().toISOString();
+const modeLabel=m=>m==='PREPARED'?'Preparado en CUDO':m==='DIRECT_RESALE'?'Comprado listo / reventa':m;
 function persist(){C.save(STORAGE,state)}
-function product(id){return C.product(state,id)}
-function purchaseTotal(){return C.purchaseTotal(state)}
-function salesRevenue(){return C.salesRevenue(state)}
-function ticketRevenue(){return C.ticketRevenue(state)}
-function income(){return C.income(state)}
-function payable(){return C.payable(state)}
-function cashIn(){return C.cashIn(state)}
-function cashOut(){return C.cashOut(state)}
+function inventory(id){return C.inventoryItem(state,id)}
+function offering(id){return C.offering(state,id)}
+function notice(id,msg,bad=false){const el=$(id);el.textContent=msg;el.classList.remove('hidden','danger');if(bad)el.classList.add('danger')}
 function branches(){
- const c=state.event.conditions, local=state.event.location==='LOCAL';
- const out=['DEPORTE','PERSONAS','RESULTADO','CAJA','CIERRE'];
+ const c=state.event.conditions,local=state.event.location==='LOCAL',out=['DEPORTE','PERSONAS','RESULTADO','CAJA','CIERRE'];
  if(local&&c.venue_required)out.push('RECINTO');
- if(c.kitchen_enabled||c.beverage_sales_enabled){out.push('COCINA / VENTAS','COMPRAS / STOCK')}
+ if(c.food_sales_enabled)out.push('COCINA');
+ if(c.bar_sales_enabled)out.push('BAR');
+ if(c.food_sales_enabled||c.bar_sales_enabled)out.push('VENTAS','COMPRAS / STOCK');
  if(c.ticketing_enabled)out.push('ENTRADAS');
  if(local)out.push('POST-PARTIDO');
  if(c.broadcast_enabled)out.push('TRANSMISIÓN');
  return out;
 }
-function notice(id,msg,bad){const el=$(id);el.textContent=msg;el.classList.remove('hidden','danger');if(bad)el.classList.add('danger')}
-function fillSelect(id){const el=$(id),selected=el.value;el.innerHTML=state.products.map(p=>'<option value="'+p.product_id+'">'+p.name+'</option>').join('');if(selected&&product(selected))el.value=selected}
+function fillSelect(id,items,valueKey,labelFn){
+ const el=$(id),selected=el.value;
+ el.innerHTML=items.map(x=>'<option value="'+x[valueKey]+'">'+labelFn(x)+'</option>').join('');
+ if(selected&&items.some(x=>x[valueKey]===selected))el.value=selected;
+}
+function renderOfferings(){
+ const list=$('offeringList');
+ if(!state.offerings.length){list.innerHTML='<div class="empty">Todavía no se decidió qué vender en esta jornada.</div>'}
+ else list.innerHTML=state.offerings.map(o=>{
+   const components=(o.components||[]).map(c=>{
+     if(c.kind==='INVENTORY'){const i=inventory(c.item_id);return (i?i.name:c.item_id)+' × '+c.qty_per_sale+' '+(i?i.unit:'')}
+     const child=offering(c.offering_id);return (child?child.name:c.offering_id)+' × '+c.qty_per_sale;
+   });
+   const detail=o.mode==='PREPARED'?(components.length?components.join(' · '):'Falta definir receta'):('Stock unitario · '+C.maxSellable(state,o.offering_id)+' disponible');
+   return '<div class="row" data-offering="'+o.offering_id+'"><strong>'+o.name+' · '+money(o.sell_price)+'</strong><span><b class="mode">'+modeLabel(o.mode)+'</b> · '+detail+' · vendibles ahora: '+C.maxSellable(state,o.offering_id)+'</span></div>';
+ }).join('');
+ fillSelect('recipeOffering',state.offerings.filter(o=>o.mode==='PREPARED'),'offering_id',o=>o.name);
+ fillSelect('saleOffering',state.offerings,'offering_id',o=>o.name+' · disponible '+C.maxSellable(state,o.offering_id));
+ const selected=offering($('saleOffering').value);if(selected&&document.activeElement!==$('salePrice'))$('salePrice').value=String(selected.sell_price||0);
+}
+function renderInventory(){
+ fillSelect('purchaseItem',state.inventory_items,'item_id',i=>i.name+' · '+i.unit);
+ $('stockRows').innerHTML=state.inventory_items.length?state.inventory_items.map(i=>'<tr><td>'+i.name+'</td><td id="stock-'+i.item_id+'">'+Number(i.stock||0).toLocaleString('es-CL',{maximumFractionDigits:3})+'</td><td>'+i.unit+'</td><td>'+money(i.unit_cost)+'</td></tr>').join(''):'<tr><td colspan="4"><div class="empty">El inventario aparecerá cuando una oferta de esta jornada necesite insumos o unidades.</div></td></tr>';
+}
 function render(){
+ C.arrays(state);
  $('eventName').textContent=state.event.display_name;
  $('eventMeta').textContent=state.event.date+' · '+(state.event.location==='LOCAL'?'Local · '+state.event.venue:'Visita')+' · '+(state.closed_at?'Cerrada':'En operación QA');
  $('eventStatus').textContent=state.closed_at?'CERRADA':'QA · '+state.event.status;
  $('branchChips').innerHTML=branches().map(b=>'<span class="chip active">'+b+'</span>').join('');
  $('opponent').value=state.event.opponent;$('matchDate').value=state.event.date;$('location').value=state.event.location;
- $('venueRequired').checked=!!state.event.conditions.venue_required;$('kitchenEnabled').checked=!!state.event.conditions.kitchen_enabled;$('salesEnabled').checked=!!state.event.conditions.beverage_sales_enabled;$('ticketingEnabled').checked=!!state.event.conditions.ticketing_enabled;$('broadcastEnabled').checked=!!state.event.conditions.broadcast_enabled;
+ const c=state.event.conditions;
+ $('venueRequired').checked=!!c.venue_required;$('foodSalesEnabled').checked=!!c.food_sales_enabled;$('barSalesEnabled').checked=!!c.bar_sales_enabled;$('ticketingEnabled').checked=!!c.ticketing_enabled;$('broadcastEnabled').checked=!!c.broadcast_enabled;
  $('responsibilities').innerHTML=state.responsibilities.map(r=>'<div class="row"><strong>'+r.role+'</strong><span>'+r.person+'</span></div>').join('');
- const local=state.event.location==='LOCAL';$('venueCard').classList.toggle('hidden',!(local&&state.event.conditions.venue_required));$('postCard').classList.toggle('hidden',!local);
- const commerce=state.event.conditions.kitchen_enabled||state.event.conditions.beverage_sales_enabled;$('stockCard').classList.toggle('hidden',!commerce);$('salesCard').classList.toggle('hidden',!commerce);$('ticketCard').classList.toggle('hidden',!state.event.conditions.ticketing_enabled);
- fillSelect('purchaseProduct');fillSelect('saleProduct');
- $('stockRows').innerHTML=state.products.map(p=>'<tr><td>'+p.name+'</td><td id="stock-'+p.product_id+'">'+p.stock+'</td><td>'+money(p.unit_cost)+'</td><td>'+money(p.sell_price)+'</td></tr>').join('');
- $('metricIncome').textContent=money(income());$('metricCost').textContent=money(purchaseTotal());$('metricPayable').textContent=money(payable());$('metricCash').textContent=money(state.opening_cash+cashIn()-cashOut());
- const ops=[...state.purchases.map(p=>({title:'Compra · '+product(p.product_id).name,meta:p.qty+' un · '+money(p.qty*p.unit_cost)+' · '+p.supplier+' · '+p.payment})),...state.sales.map(s=>({title:'Venta · '+product(s.product_id).name,meta:s.qty+' un · '+money(s.qty*s.unit_price)+' · '+s.method})),...state.tickets.map(t=>({title:'Entradas',meta:t.qty+' · '+money(t.qty*t.unit_price)+' · '+t.method}))];
- $('financeHistory').innerHTML=ops.length?ops.slice().reverse().map(o=>'<div class="row"><strong>'+o.title+'</strong><span>'+o.meta+'</span></div>').join(''):'<div class="sub">Aún no hay movimientos de esta jornada.</div>';
- $('resultList').innerHTML=state.sport_results.length?state.sport_results.map(r=>'<div class="row"><strong>'+r.series+' · CUDO '+r.home+' - '+r.away+' '+state.event.opponent+'</strong><span>Registrado una vez en esta jornada.</span></div>').join(''):'<div class="sub">Resultado pendiente.</div>';
+ const local=state.event.location==='LOCAL';$('venueCard').classList.toggle('hidden',!(local&&c.venue_required));$('postCard').classList.toggle('hidden',!local);
+ const commerce=c.food_sales_enabled||c.bar_sales_enabled;
+ ['commerceCard','recipeCard','stockCard','salesCard'].forEach(id=>$(id).classList.toggle('hidden',!commerce));
+ $('ticketCard').classList.toggle('hidden',!c.ticketing_enabled);
+ renderOfferings();renderInventory();
+ $('metricIncome').textContent=money(C.income(state));$('metricCost').textContent=money(C.purchaseTotal(state));$('metricPayable').textContent=money(C.payable(state));$('metricCash').textContent=money(state.opening_cash+C.cashIn(state)-C.cashOut(state));
+ const ops=[
+   ...state.purchases.map(p=>({title:'Compra · '+(inventory(p.item_id)?.name||p.item_id),meta:p.qty+' '+(inventory(p.item_id)?.unit||'')+' · '+money(p.qty*p.unit_cost)+' · '+p.supplier+' · '+p.payment})),
+   ...state.sales.map(s=>({title:'Venta · '+(offering(s.offering_id)?.name||s.offering_id),meta:s.qty+' un · '+money(s.qty*s.unit_price)+' · '+s.method})),
+   ...state.tickets.map(t=>({title:'Entradas',meta:t.qty+' · '+money(t.qty*t.unit_price)+' · '+t.method}))
+ ];
+ $('financeHistory').innerHTML=ops.length?ops.slice().reverse().map(o=>'<div class="row"><strong>'+o.title+'</strong><span>'+o.meta+'</span></div>').join(''):'<div class="empty">Aún no hay movimientos de esta jornada.</div>';
+ $('resultList').innerHTML=state.sport_results.length?state.sport_results.map(r=>'<div class="row"><strong>'+r.series+' · CUDO '+r.home+' - '+r.away+' '+state.event.opponent+'</strong></div>').join(''):'<div class="empty">Resultado pendiente.</div>';
  $('postWork').innerHTML=state.post_event_work.map(w=>'<div class="row"><strong>'+w.title+'</strong><span class="'+(w.state==='DONE'?'good':'pending')+'">'+(w.state==='DONE'?'Listo':'Pendiente')+'</span>'+(w.state==='DONE'?'':'<button class="btn light" data-work="'+w.work_id+'">Marcar listo</button>')+'</div>').join('');
  document.querySelectorAll('[data-work]').forEach(btn=>btn.onclick=()=>{const w=state.post_event_work.find(x=>x.work_id===btn.dataset.work);w.state='DONE';w.completed_at=now();persist();render()});
- $('closeRevenue').textContent=money(income());$('closeCost').textContent=money(purchaseTotal());$('closeNet').textContent=money(income()-purchaseTotal());$('closePending').textContent=String(state.post_event_work.filter(w=>w.state!=='DONE').length);
- if(state.closed_at){notice('closureNotice','Jornada cerrada y persistida en QA · recurso neto '+money(income()-purchaseTotal()),false)}else{$('closureNotice').classList.add('hidden')}
+ $('closeRevenue').textContent=money(C.income(state));$('closeCost').textContent=money(C.purchaseTotal(state));$('closeNet').textContent=money(C.income(state)-C.purchaseTotal(state));$('closePending').textContent=String(state.post_event_work.filter(w=>w.state!=='DONE').length);
+ if(state.closed_at)notice('closureNotice','Jornada cerrada · recurso neto '+money(C.income(state)-C.purchaseTotal(state)));else $('closureNotice').classList.add('hidden');
 }
-$('saveEvent').onclick=()=>{state.event.opponent=$('opponent').value.trim()||'Rival QA';state.event.date=$('matchDate').value;state.event.location=$('location').value;state.event.display_name='CUDO vs '+state.event.opponent+' · Jornada QA';state.event.conditions={venue_required:$('venueRequired').checked,kitchen_enabled:$('kitchenEnabled').checked,beverage_sales_enabled:$('salesEnabled').checked,ticketing_enabled:$('ticketingEnabled').checked,broadcast_enabled:$('broadcastEnabled').checked};persist();render();notice('eventNotice','Jornada guardada. Las ramas activas se recalcularon desde estas condiciones.',false)};
-$('registerPurchase').onclick=()=>{const id=$('purchaseProduct').value,qty=num('purchaseQty'),cost=num('purchaseCost'),supplier=$('purchaseSupplier').value.trim()||'Proveedor QA',payment=$('purchasePayment').value,p=product(id);if(!p||qty<=0||cost<0)return notice('purchaseNotice','Revisa cantidad y costo.',true);C.purchase(state,{product_id:id,qty,unit_cost:cost,supplier,payment,created_at:now()});persist();render();notice('purchaseNotice','Compra registrada: stock +'+qty+', costo '+money(qty*cost)+(payment==='PENDING'?' y obligación pendiente con '+supplier+'.':'.'),false)};
-$('registerSale').onclick=()=>{const id=$('saleProduct').value,qty=num('saleQty'),price=num('salePrice'),method=$('saleMethod').value,p=product(id);if(!p||qty<=0||price<0)return notice('saleNotice','Revisa cantidad y precio.',true);if(p.stock<qty)return notice('saleNotice','Stock insuficiente: disponible '+p.stock+'.',true);C.sale(state,{product_id:id,qty,unit_price:price,method,created_at:now()});persist();render();notice('saleNotice','Venta registrada: stock -'+qty+' e ingreso +'+money(qty*price)+'.',false)};
-$('registerTickets').onclick=()=>{const qty=num('ticketQty'),price=num('ticketPrice'),method=$('ticketMethod').value;if(qty<=0||price<0)return;C.ticket(state,{qty,unit_price:price,method,created_at:now()});persist();render()};
-$('registerResult').onclick=()=>{const series=$('resultSeries').value,home=num('homeGoals'),away=num('awayGoals');const existing=state.sport_results.find(r=>r.series===series);if(existing){existing.home=home;existing.away=away;existing.updated_at=now()}else state.sport_results.push({series,home,away,created_at:now()});persist();render()};
+$('saveEvent').onclick=()=>{
+ state.event.opponent=$('opponent').value.trim()||'Rival QA';state.event.date=$('matchDate').value;state.event.location=$('location').value;state.event.display_name='CUDO vs '+state.event.opponent+' · Jornada QA';
+ state.event.conditions={venue_required:$('venueRequired').checked,food_sales_enabled:$('foodSalesEnabled').checked,bar_sales_enabled:$('barSalesEnabled').checked,ticketing_enabled:$('ticketingEnabled').checked,broadcast_enabled:$('broadcastEnabled').checked};
+ persist();render();notice('eventNotice','Jornada guardada. Las ramas se recalcularon desde la necesidad real.');
+};
+$('addOffering').onclick=()=>{
+ try{
+   const o=C.addOffering(state,{name:$('offeringName').value,mode:$('offeringMode').value,sell_price:num('offeringPrice')});
+   $('offeringName').value='';persist();render();
+   notice('offeringNotice',o.mode==='PREPARED'?'Oferta agregada. Ahora define sus insumos.':'Oferta agregada. CUDO creó su unidad de inventario para reventa.');
+ }catch(e){notice('offeringNotice','Indica qué se venderá y cómo se abastece.',true)}
+};
+$('addIngredient').onclick=()=>{
+ try{
+   C.addRecipeComponent(state,{offering_id:$('recipeOffering').value,item_name:$('ingredientName').value,qty_per_sale:num('ingredientQty'),unit:$('ingredientUnit').value});
+   $('ingredientName').value='';persist();render();notice('ingredientNotice','Insumo agregado a la preparación.');
+ }catch(e){notice('ingredientNotice',e.message==='INVALID_RECIPE_TARGET'?'Primero agrega una preparación.':'Revisa el insumo y la cantidad.',true)}
+};
+$('registerPurchase').onclick=()=>{
+ try{
+   const item=inventory($('purchaseItem').value);C.purchase(state,{item_id:item?.item_id,qty:num('purchaseQty'),unit_cost:num('purchaseCost'),supplier:$('purchaseSupplier').value.trim()||'Proveedor QA',payment:$('purchasePayment').value,created_at:now()});
+   persist();render();notice('purchaseNotice','Compra registrada. El stock real y la obligación quedaron actualizados.');
+ }catch(e){notice('purchaseNotice','Primero debe existir un insumo o unidad que comprar.',true)}
+};
+$('saleOffering').onchange=()=>{const o=offering($('saleOffering').value);if(o)$('salePrice').value=String(o.sell_price||0)};
+$('registerSale').onclick=()=>{
+ try{
+   const o=offering($('saleOffering').value);C.sale(state,{offering_id:o?.offering_id,qty:num('saleQty'),unit_price:num('salePrice'),method:$('saleMethod').value,created_at:now()});
+   persist();render();notice('saleNotice','Venta registrada. CUDO descontó los insumos o unidades que corresponden.');
+ }catch(e){
+   const msg=e.message==='INSUFFICIENT_STOCK'?'No alcanza el stock de uno o más insumos.':e.message==='OFFERING_WITHOUT_COMPONENTS'?'Esta preparación aún no tiene receta.':'Revisa la venta.';
+   notice('saleNotice',msg,true);
+ }
+};
+$('registerTickets').onclick=()=>{try{C.ticket(state,{qty:num('ticketQty'),unit_price:num('ticketPrice'),method:$('ticketMethod').value,created_at:now()});persist();render()}catch(e){}};
+$('registerResult').onclick=()=>{state.sport_results.push({result_id:'RES-'+Date.now(),series:$('resultSeries').value,home:num('homeGoals'),away:num('awayGoals'),created_at:now()});persist();render()};
 $('closeEvent').onclick=()=>{C.closeEvent(state,now());persist();render()};
-$('resetQa').onclick=()=>{localStorage.removeItem(STORAGE);state=clone(seed);persist();render();notice('eventNotice','QA reiniciada al estado inicial.',false)};
-fetch(DATA_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo cargar el seed QA');return r.json()}).then(data=>{if(data.mock!==true||data.production_write!==false)throw new Error('Seed QA inseguro');seed=data;const saved=localStorage.getItem(STORAGE);try{state=saved?JSON.parse(saved):clone(seed)}catch(e){state=clone(seed)};render()}).catch(err=>{document.body.innerHTML='<div class="wrap" style="padding:40px"><h1>QA bloqueada</h1><p>'+err.message+'</p></div>'});
+$('resetQa').onclick=()=>{localStorage.removeItem(STORAGE);state=C.clone(seed);persist();render()};
+fetch(DATA_URL,{cache:'no-store'}).then(r=>r.json()).then(x=>{if(x.mock!==true||x.production_write!==false)throw new Error('Seed inseguro');seed=x;state=C.load(STORAGE,seed);render()}).catch(e=>{document.body.innerHTML='<main class="wrap body"><h1>QA bloqueada</h1><p>'+e.message+'</p></main>'});
 })();
 </script>
 <script src="../shared/pwa.js"></script>
-</body></html>
+</body>
+</html>

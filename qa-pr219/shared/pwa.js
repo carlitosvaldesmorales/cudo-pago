@@ -1,10 +1,10 @@
 (()=>{
-  if(window.CUDO_PWA&&window.CUDO_PWA.version==='2.0-qa-pr219') return;
+  if(window.CUDO_PWA&&window.CUDO_PWA.version==='2.0-qa-pr219-v2') return;
 
   const current=document.currentScript;
   const rootUrl=current?new URL('../',current.src):new URL('/qa-pr219/',location.origin);
   const state={
-    version:'2.0-qa-pr219',
+    version:'2.0-qa-pr219-v2',
     supported:'serviceWorker' in navigator,
     scope:'/qa-pr219/',
     registration:null,
