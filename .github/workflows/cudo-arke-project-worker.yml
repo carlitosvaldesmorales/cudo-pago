@@ -1,0 +1,154 @@
+name: CUDO ARKE Project Worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: cudo-arke-project-worker
+  cancel-in-progress: false
+
+jobs:
+  reconcile-handoff:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARKE_HANDOFF_URL: https://raw.githubusercontent.com/carlitosvaldesmorales/arke-root/main/11_OPERACION/PROJECT_HANDOFFS/CUDO.yaml
+    steps:
+      - name: Checkout CUDO repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Read ARKE bounded handoff
+        id: handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "$ARKE_HANDOFF_URL" -o /tmp/arke-cudo-handoff.yaml
+          python3 -m pip install --user --disable-pip-version-check pyyaml >/dev/null
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import yaml
+          d=yaml.safe_load(open('/tmp/arke-cudo-handoff.yaml',encoding='utf-8')) or {}
+          source=d.get('source') or {}
+          target=d.get('target') or {}
+          constraints=d.get('constraints') or {}
+          values={
+            'state':d.get('state') or '',
+            'handoff_id':d.get('handoff_id') or '',
+            'operation':d.get('operation') or '',
+            'source_patch_path':source.get('patch_path') or '',
+            'patch_sha256':source.get('patch_sha256') or '',
+            'target_repository':target.get('repository') or '',
+            'target_branch':target.get('branch') or '',
+            'expected_head':target.get('expected_head_before_patch') or '',
+            'production_write':str(constraints.get('production_write')).lower(),
+            'target_main_allowed':str(constraints.get('target_main_allowed')).lower(),
+          }
+          for k,v in values.items():
+              print(f"{k}={v}")
+          PY
+
+      - name: Stop on no pending handoff
+        if: steps.handoff.outputs.state != 'PENDING'
+        run: echo "CUDO_ARKE_HANDOFF_NOOP state=${{ steps.handoff.outputs.state }}"
+
+      - name: Validate project-local execution boundary
+        if: steps.handoff.outputs.state == 'PENDING'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.handoff.outputs.operation }}" = "APPLY_BUILDER_PATCH_TO_EXISTING_AGENT_BRANCH"
+          test "${{ steps.handoff.outputs.target_repository }}" = "$GITHUB_REPOSITORY"
+          case "${{ steps.handoff.outputs.target_branch }}" in
+            agent/*) ;;
+            *) echo "::error::Only agent/* branches are allowed"; exit 2 ;;
+          esac
+          test "${{ steps.handoff.outputs.target_branch }}" != "main"
+          test "${{ steps.handoff.outputs.production_write }}" = "false"
+          test "${{ steps.handoff.outputs.target_main_allowed }}" = "false"
+          test -n "${{ steps.handoff.outputs.handoff_id }}"
+          test -n "${{ steps.handoff.outputs.source_patch_path }}"
+          test -n "${{ steps.handoff.outputs.patch_sha256 }}"
+
+      - name: Apply and validate bounded builder patch
+        if: steps.handoff.outputs.state == 'PENDING'
+        id: apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="${{ steps.handoff.outputs.target_branch }}"
+          EXPECTED="${{ steps.handoff.outputs.expected_head }}"
+          HANDOFF="${{ steps.handoff.outputs.handoff_id }}"
+          PATCH_PATH="${{ steps.handoff.outputs.source_patch_path }}"
+          PATCH_SHA="${{ steps.handoff.outputs.patch_sha256 }}"
+          STATUS_CONTEXT="arke-handoff/$HANDOFF"
+
+          git fetch origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+          CURRENT="$(git rev-parse HEAD)"
+          PATCH_URL="https://raw.githubusercontent.com/carlitosvaldesmorales/arke-root/main/$PATCH_PATH"
+          curl -fsSL "$PATCH_URL" -o /tmp/arke-builder.patch
+          ACTUAL="$(sha256sum /tmp/arke-builder.patch | awk '{print $1}')"
+
+          fail_status() {
+            local description="$1"
+            gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)"               -f state=failure -f context="$STATUS_CONTEXT" -f description="$description" >/dev/null
+            echo "::error::$description"
+            exit 0
+          }
+
+          if [ "$ACTUAL" != "$PATCH_SHA" ]; then
+            fail_status "ARKE patch sha mismatch"
+          fi
+
+          ALREADY=false
+          if git apply --reverse --check /tmp/arke-builder.patch >/dev/null 2>&1; then
+            ALREADY=true
+          else
+            if [ -n "$EXPECTED" ] && [ "$CURRENT" != "$EXPECTED" ]; then
+              fail_status "ARKE patch stale against target branch"
+            fi
+            git apply --check /tmp/arke-builder.patch || fail_status "ARKE patch no longer applies"
+            git apply /tmp/arke-builder.patch
+            git diff --check || fail_status "ARKE patch introduced diff errors"
+
+            nohup python3 -m http.server 4178 --bind 127.0.0.1 >/tmp/cudo-arke-worker-http.log 2>&1 &
+            SERVER_PID=$!
+            trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+            for i in $(seq 1 20); do
+              curl -fsS http://127.0.0.1:4178/preview-v8/eventos/ >/dev/null && break
+              sleep 1
+            done
+
+            TESTS=(preview-v8/tools/certify_match_full_day_roundtrip.py)
+            case "$PATCH_PATH" in
+              *cudo-bingo-same-core-builder*)
+                TESTS+=(preview-v8/tools/certify_bingo_same_core_roundtrip.py)
+                ;;
+            esac
+            for test in "${TESTS[@]}"; do
+              podman run --rm --network=host --security-opt label=disable                 -v "$PWD:/work" -w /work                 mcr.microsoft.com/playwright/python:v1.44.0-jammy                 bash -lc "pip install --no-cache-dir 'playwright==1.44.0' >/tmp/pw-install.log && python $test"
+            done
+            kill "$SERVER_PID" 2>/dev/null || true
+            trap - EXIT
+
+            git config user.name 'cudo-arke-project-worker[bot]'
+            git config user.email 'actions@users.noreply.github.com'
+            git add -A
+            git commit -m "agent(cudo): apply ARKE handoff $HANDOFF"
+            git push origin "HEAD:$BRANCH"
+          fi
+
+          FINAL_SHA="$(git rev-parse HEAD)"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$FINAL_SHA"             -f state=success -f context="$STATUS_CONTEXT"             -f description="ARKE handoff applied and certified" >/dev/null
+          echo "applied_sha=$FINAL_SHA" >> "$GITHUB_OUTPUT"
+          echo "already_applied=$ALREADY" >> "$GITHUB_OUTPUT"
+          echo "CUDO_ARKE_HANDOFF_APPLIED id=$HANDOFF sha=$FINAL_SHA already=$ALREADY"
