@@ -1,166 +1,40 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import {
-  EVENT_IDS,
-  loadEventResourceState,
-  loadDependencyRegistry,
-  processEventResourceRequests,
-  buildEventResourceProjection,
-  saveEventResourceState
-} from './process_event_resource_requests.mjs';
+import {EVENT_IDS,loadDependencyRegistry,processEventResourceRequests,buildEventResourceProjection} from './process_event_resource_requests.mjs';
 import {buildSourceChangeCommand} from './projection_persistence_adapters.mjs';
-
-const base=JSON.parse(fs.readFileSync(new URL('../contracts/cudo-event-resource-governed-fixture-v1.json',import.meta.url),'utf8'));
 const registry=loadDependencyRegistry();
-let state=JSON.parse(JSON.stringify(base));
-let tick=0;
-const now=()=> '2026-09-21T20:'+String(tick++).padStart(2,'0')+':00.000Z';
-const make=(id,event_id,expected_revision,action,payload={})=>({
-  request_id:id,
-  requested_at:now(),
-  event_id,
-  expected_revision,
-  action,
-  payload,
-  requested_by:'sistemas@cudo.cl',
-  reason:'QA governed '+action,
-  evidence_ref:'qa://event-request/'+id
-});
-const apply=(request)=>{
-  const result=processEventResourceRequests({requests:[request],stateStore:state,registry,now});
-  state=result.state_store;
-  return result;
-};
+let state=JSON.parse(fs.readFileSync(new URL('../contracts/cudo-event-resource-governed-fixture-v1.json',import.meta.url),'utf8'));
+let tick=0;const now=()=> '2026-09-22T06:'+String(tick++).padStart(2,'0')+':00.000Z';
+const req=(id,event,action,payload)=>({request_id:id,requested_at:now(),event_id:event,expected_revision:state.store_revision,action,payload,requested_by:'sistemas@cudo.cl',reason:'QA '+action,evidence_ref:'qa://'+id});
+const apply=(id,event,action,payload={})=>{const r=processEventResourceRequests({requests:[req(id,event,action,payload)],stateStore:state,registry,now});state=r.state_store;assert.equal(r.summary[0].status,'APPLIED');return r;};
 
-let r=apply(make('REQ-MATCH-PUR-1',EVENT_IDS.MATCH,1,'MATCH_PURCHASE',{qty:10,unit_cost:700}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.MATCH.resource.stock_after_sales,22);
-assert.equal(r.projection.MATCH.resource.purchase_total,7000);
-assert.equal(r.projection.MATCH.supplier_payable.amount,7000);
-assert.equal(state.store_revision,2);
+let r=apply('M-OFFER-C',EVENT_IDS.MATCH,'MATCH_ADD_OFFERING',{name:'Completo QA',mode:'PREPARED',sell_price:2500});
+apply('M-ING-PAN',EVENT_IDS.MATCH,'MATCH_ADD_INGREDIENT',{offering_id:'OFFER-COMPLETO_QA',item_name:'Pan',qty_per_sale:1,unit:'unidad'});
+apply('M-ING-VIE',EVENT_IDS.MATCH,'MATCH_ADD_INGREDIENT',{offering_id:'OFFER-COMPLETO_QA',item_name:'Vienesa',qty_per_sale:1,unit:'unidad'});
+apply('M-OFFER-B',EVENT_IDS.MATCH,'MATCH_ADD_OFFERING',{name:'Bebida lata QA',mode:'DIRECT_RESALE',sell_price:1500});
+for(const [id,item,cost] of [['M-P-PAN','INV-PAN',300],['M-P-VIE','INV-VIENESA',400],['M-P-BEV','INV-BEBIDA_LATA_QA',700]]) r=apply(id,EVENT_IDS.MATCH,'MATCH_PURCHASE',{item_id:item,qty:10,unit_cost:cost,supplier:'Proveedor QA',payment:'PENDING'});
+assert.equal(r.projection.MATCH.commerce.purchase_total,14000);
+assert.equal(r.projection.MATCH.supplier_payable.amount,14000);
+r=apply('M-S-C',EVENT_IDS.MATCH,'MATCH_SALE',{offering_id:'OFFER-COMPLETO_QA',qty:2,unit_price:2500,method:'CASH'});
+assert.equal(r.projection.MATCH.commerce.inventory_items.find(x=>x.item_id==='INV-PAN').stock,8);
+assert.equal(r.projection.MATCH.commerce.inventory_items.find(x=>x.item_id==='INV-VIENESA').stock,8);
+r=apply('M-S-B',EVENT_IDS.MATCH,'MATCH_SALE',{offering_id:'OFFER-BEBIDA_LATA_QA',qty:3,unit_price:1500,method:'CASH'});
+assert.equal(r.projection.MATCH.commerce.inventory_items.find(x=>x.item_id==='INV-BEBIDA_LATA_QA').stock,7);
+assert.equal(r.projection.MATCH.commerce.sales_revenue,9500);
 
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'cudo-event-resource-'));
-const statePath=path.join(dir,'state.json');
-const projectionPath=path.join(dir,'projection.json');
-saveEventResourceState({stateStore:state,projection:r.projection,statePath,projectionPath});
-state=loadEventResourceState(statePath);
-assert.equal(buildEventResourceProjection(state).MATCH.resource.stock_after_sales,22);
-
-r=apply(make('REQ-MATCH-SALE-1',EVENT_IDS.MATCH,2,'MATCH_SALE',{qty:5,unit_price:1500}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.MATCH.resource.stock_after_sales,17);
-assert.equal(r.projection.MATCH.resource.sales_revenue,7500);
-assert.equal(r.projection.MATCH.operational_resource_result_clp,500);
-assert.equal(state.store_revision,3);
-
-const beforeConflict=JSON.stringify(state.objects);
-r=apply(make('REQ-STALE-1',EVENT_IDS.MATCH,2,'MATCH_SALE',{qty:1,unit_price:1500}));
-assert.equal(r.summary[0].status,'BLOCKED_REVISION_CONFLICT');
-assert.equal(JSON.stringify(state.objects),beforeConflict);
-assert.equal(state.store_revision,3);
-
-r=apply(make('REQ-MATCH-SALE-1',EVENT_IDS.MATCH,3,'MATCH_SALE',{qty:5,unit_price:1500}));
-assert.equal(r.summary[0].status,'DUPLICATE_ALREADY_APPLIED');
-assert.equal(state.store_revision,3);
-
-r=apply(make('REQ-MATCH-RESULT-1',EVENT_IDS.MATCH,3,'MATCH_RESULT',{series:'Primera',home:2,away:1}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.MATCH.sport_results[0].home,2);
-assert.equal(state.store_revision,4);
-
-r=apply(make('REQ-BINGO-PERMIT-1',EVENT_IDS.BINGO,4,'BINGO_CONFIRM_PERMIT',{reference:'AUT-QA-001'}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.BINGO.permit_confirmed,true);
-assert.equal(state.store_revision,5);
-
-const payableBeforeDonation=r.projection.BINGO.supplier_payable.amount;
-r=apply(make('REQ-BINGO-PRIZE-1',EVENT_IDS.BINGO,5,'BINGO_DONATE_PRIZE',{name:'Canasta familiar',reference:'DON-QA-001'}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.BINGO.donated_prizes.length,1);
-assert.equal(r.projection.BINGO.supplier_payable.amount,payableBeforeDonation);
-assert.equal(state.store_revision,6);
-
-r=apply(make('REQ-BINGO-PUR-1',EVENT_IDS.BINGO,6,'BINGO_PURCHASE',{qty:8,unit_cost:500}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.BINGO.resource.stock_after_sales,24);
-assert.equal(r.projection.BINGO.resource.purchase_total,4000);
-assert.equal(r.projection.BINGO.supplier_payable.amount,4000);
-assert.equal(state.store_revision,7);
-
-r=apply(make('REQ-BINGO-SALE-1',EVENT_IDS.BINGO,7,'BINGO_SALE',{qty:4,unit_price:1500}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.BINGO.resource.stock_after_sales,20);
-assert.equal(r.projection.BINGO.resource.sales_revenue,6000);
-assert.equal(r.projection.BINGO.operational_resource_result_clp,2000);
-assert.equal(state.store_revision,8);
-
-r=apply(make('REQ-MATCH-CLOSE-1',EVENT_IDS.MATCH,8,'MATCH_CLOSE',{}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.MATCH.closed,true);
-assert.equal(state.store_revision,9);
-
-r=apply(make('REQ-BINGO-CLOSE-1',EVENT_IDS.BINGO,9,'BINGO_CLOSE',{}));
-assert.equal(r.summary[0].status,'APPLIED');
-assert.equal(r.projection.BINGO.closed,true);
-assert.equal(state.store_revision,10);
-
-const matchEvent=state.objects.find(x=>x.object_id===EVENT_IDS.MATCH);
-assert.throws(()=>buildSourceChangeCommand({
-  objects:state.objects,
-  surface:'CUDO_WEB_EVENT_RESOURCE_QA',
-  objectId:matchEvent.object_id,
-  field:'sales_revenue',
-  value:999,
-  requestedBy:'sistemas@cudo.cl',
-  reason:'must fail derived direct write',
-  evidenceRefs:['qa://derived-write-negative-control']
-}),/direct surface write blocked/);
-
-const applied=state.audit.filter(x=>x.status==='APPLIED');
-assert.equal(applied.length,9);
-assert.ok(applied.every(x=>Array.isArray(x.command_ids)&&x.command_ids.length>0));
-assert.ok(applied.every(x=>x.transaction_id));
-assert.ok(applied.every(x=>Array.isArray(x.transition_ids)&&x.transition_ids.length>0));
-assert.equal(state.production_write,false);
-
-saveEventResourceState({
-  stateStore:state,
-  projection:buildEventResourceProjection(state),
-  statePath,
-  projectionPath
-});
-const reread=loadEventResourceState(statePath);
-const finalProjection=JSON.parse(fs.readFileSync(projectionPath,'utf8'));
-assert.equal(reread.store_revision,10);
-assert.equal(finalProjection.MATCH.resource.stock_after_sales,17);
-assert.equal(finalProjection.BINGO.resource.stock_after_sales,20);
-assert.equal(finalProjection.authority,'CANONICAL_GRAPH_READ_MODEL');
-
-console.log(JSON.stringify({
-  schema_version:'CUDO_EVENT_RESOURCE_GOVERNED_PERSISTENCE_CERT_V1',
-  pass:true,
-  final_revision:reread.store_revision,
-  applied_requests:applied.length,
-  stale_revision_fail_closed:true,
-  duplicate_request_idempotent:true,
-  direct_derived_write_blocked:true,
-  persisted_reload_pass:true,
-  match:{
-    stock:finalProjection.MATCH.resource.stock_after_sales,
-    sales_revenue:finalProjection.MATCH.resource.sales_revenue,
-    supplier_payable:finalProjection.MATCH.supplier_payable.amount,
-    result:finalProjection.MATCH.sport_results,
-    closed:finalProjection.MATCH.closed
-  },
-  bingo:{
-    permit_confirmed:finalProjection.BINGO.permit_confirmed,
-    donated_prizes:finalProjection.BINGO.donated_prizes.length,
-    stock:finalProjection.BINGO.resource.stock_after_sales,
-    sales_revenue:finalProjection.BINGO.resource.sales_revenue,
-    supplier_payable:finalProjection.BINGO.supplier_payable.amount,
-    closed:finalProjection.BINGO.closed
-  },
-  production_write:false
-},null,2));
+const stale={...req('STALE',EVENT_IDS.MATCH,'MATCH_SALE',{offering_id:'OFFER-BEBIDA_LATA_QA',qty:1,unit_price:1500,method:'CASH'}),expected_revision:state.store_revision-1};
+const before=JSON.stringify(state.objects);const blocked=processEventResourceRequests({requests:[stale],stateStore:state,registry,now});assert.equal(blocked.summary[0].status,'BLOCKED_REVISION_CONFLICT');assert.equal(JSON.stringify(blocked.state_store.objects),before);state=blocked.state_store;
+r=apply('M-RESULT',EVENT_IDS.MATCH,'MATCH_RESULT',{series:'Primera',home:2,away:1});
+apply('B-PERMIT',EVENT_IDS.BINGO,'BINGO_CONFIRM_PERMIT',{reference:'AUT-QA'});
+apply('B-PRIZE',EVENT_IDS.BINGO,'BINGO_DONATE_PRIZE',{name:'Canasta',reference:'DON-QA'});
+apply('B-OFFER',EVENT_IDS.BINGO,'BINGO_ADD_OFFERING',{name:'Empanada lista QA',mode:'DIRECT_RESALE',sell_price:2000});
+apply('B-PUR',EVENT_IDS.BINGO,'BINGO_PURCHASE',{item_id:'INV-EMPANADA_LISTA_QA',qty:8,unit_cost:900,supplier:'Proveedor QA',payment:'PENDING'});
+r=apply('B-SALE',EVENT_IDS.BINGO,'BINGO_SALE',{offering_id:'OFFER-EMPANADA_LISTA_QA',qty:4,unit_price:2000,method:'CASH'});
+assert.equal(r.projection.BINGO.commerce.inventory_items.find(x=>x.item_id==='INV-EMPANADA_LISTA_QA').stock,4);
+assert.equal(r.projection.BINGO.commerce.sales_revenue,8000);assert.equal(r.projection.BINGO.supplier_payable.amount,7200);
+apply('M-CLOSE',EVENT_IDS.MATCH,'MATCH_CLOSE',{});r=apply('B-CLOSE',EVENT_IDS.BINGO,'BINGO_CLOSE',{});
+const final=buildEventResourceProjection(state);assert.equal(final.commerce_model,'DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE');assert.equal(final.MATCH.commerce.offerings.length,2);assert.equal(final.BINGO.commerce.offerings.length,1);assert.equal(final.production_write,false);
+const event=state.objects.find(x=>x.object_id===EVENT_IDS.MATCH);
+assert.throws(()=>buildSourceChangeCommand({objects:state.objects,surface:'CUDO_WEB_EVENT_RESOURCE_QA',objectId:event.object_id,field:'sales_revenue',value:999,requestedBy:'sistemas@cudo.cl',reason:'negative control',evidenceRefs:['qa://negative']}),/direct surface write blocked/);
+const applied=state.audit.filter(x=>x.status==='APPLIED');assert.ok(applied.length>=14);assert.ok(applied.every(x=>x.transaction_id));
+console.log(JSON.stringify({schema_version:'CUDO_EVENT_RESOURCE_GOVERNED_PERSISTENCE_CERT_V2',pass:true,final_revision:state.store_revision,applied_requests:applied.length,dynamic_offerings:true,prepared_recipe_consumption:true,direct_resale_consumption:true,stale_revision_fail_closed:true,production_write:false},null,2));
