@@ -15,19 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Esperar publicación QA en cudo.cl
+      - name: Esperar publicación QA dinámica en cudo.cl
         shell: bash
         run: |
           set -euo pipefail
           QA_SOURCE='https://cudo.cl/qa-pr219/QA_SOURCE.json'
           QA_ADMIN='https://cudo.cl/qa-pr219/admin/'
+          QA_EVENT='https://cudo.cl/qa-pr219/eventos/'
           PROD='https://cudo.cl/preview-v8/'
-          expected='fea67dd7d4ec0f28b680ba0c9dce2a1f0285c8b1'
+          expected='f4572b7f626ccb5c01e0f58d060c36419b031b81'
 
           ok=0
           for i in $(seq 1 60); do
             code="$(curl -L -sS -o /tmp/qa-source.json -w '%{http_code}' --max-time 15 "$QA_SOURCE" || true)"
-            if [ "$code" = '200' ] && grep -q "$expected" /tmp/qa-source.json; then
+            if [ "$code" = '200' ] && grep -q "$expected" /tmp/qa-source.json && grep -q 'DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE' /tmp/qa-source.json; then
               ok=1
               break
             fi
@@ -39,11 +40,20 @@ jobs:
           curl -LfsS --max-time 20 "$QA_ADMIN" -o /tmp/qa-admin.html
           grep -q 'Partido y Bingo · QA gobernada' /tmp/qa-admin.html
 
+          curl -LfsS --max-time 20 "$QA_EVENT" -o /tmp/qa-event.html
+          grep -q '¿Qué vamos a vender?' /tmp/qa-event.html
+          grep -q 'Preparaciones e insumos' /tmp/qa-event.html
+          grep -q 'Compras e inventario real' /tmp/qa-event.html
+          grep -q 'Lo preparamos en CUDO' /tmp/qa-event.html
+          grep -q 'Lo compramos listo / reventa' /tmp/qa-event.html
+          ! grep -q 'Habrá venta de bebidas' /tmp/qa-event.html
+
           prod_code="$(curl -L -sS -o /tmp/prod.html -w '%{http_code}' --max-time 20 "$PROD")"
           test "$prod_code" = '200'
 
-          echo 'PASS_CUDO_OFFICIAL_QA_PR219'
+          echo 'PASS_CUDO_OFFICIAL_DYNAMIC_QA_PR219'
           echo "qa_source=$QA_SOURCE"
           echo "qa_admin=$QA_ADMIN"
+          echo "qa_event=$QA_EVENT"
           echo "production=$PROD"
           cat /tmp/qa-source.json
