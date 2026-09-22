@@ -85,16 +85,49 @@ function cudoEventHidden_(row,action){
     '<input type="hidden" name="expected_revision" value="'+cudoEventEsc_(row.STORE_REVISION)+'">'+
     '<input type="hidden" name="action" value="'+cudoEventEsc_(action)+'">';
 }
+function cudoEventJson_(value,fallback){try{return JSON.parse(String(value||''))}catch(e){return fallback}}
+function cudoEventOptions_(rows,key,label){
+  return (rows||[]).map(function(x){return '<option value="'+cudoEventEsc_(x[key])+'">'+cudoEventEsc_(label(x))+'</option>';}).join('');
+}
+function cudoEventCommerceForms_(row,prefix){
+  const offerings=cudoEventJson_(row.OFFERINGS_JSON,[]);
+  const inventory=cudoEventJson_(row.INVENTORY_JSON,[]);
+  const prepared=offerings.filter(function(x){return x.mode==='PREPARED'});
+  let html=''+
+    '<details open><summary>Qué vamos a vender</summary><form method="post">'+cudoEventHidden_(row,prefix+'_ADD_OFFERING')+
+    '<label>Producto / preparación</label><input name="name" placeholder="Ej. completo, empanada, bebida" required>'+
+    '<label>Cómo lo tendremos</label><select name="mode"><option value="PREPARED">Lo preparamos en CUDO</option><option value="DIRECT_RESALE">Lo compramos listo / reventa</option></select>'+
+    '<label>Precio de venta</label><input name="sell_price" type="number" min="0" required>'+
+    '<button>Agregar a esta jornada</button></form></details>';
+  if(prepared.length){
+    html+='<details><summary>Preparación e insumos</summary><form method="post">'+cudoEventHidden_(row,prefix+'_ADD_INGREDIENT')+
+      '<label>Preparación</label><select name="offering_id">'+cudoEventOptions_(prepared,'offering_id',function(x){return x.name})+'</select>'+
+      '<label>Insumo</label><input name="item_name" placeholder="Ej. pan, tomate, palta" required>'+
+      '<label>Consumo por unidad vendida</label><input name="qty_per_sale" type="number" min="0.001" step="0.001" required>'+
+      '<label>Unidad de control</label><select name="unit"><option value="unidad">unidad</option><option value="kg">kg</option><option value="litro">litro</option><option value="porcion">porción</option></select>'+
+      '<button>Agregar insumo</button></form></details>';
+  }
+  if(inventory.length){
+    html+='<details><summary>Compra / inventario real</summary><form method="post">'+cudoEventHidden_(row,prefix+'_PURCHASE')+
+      '<label>Insumo / unidad</label><select name="item_id">'+cudoEventOptions_(inventory,'item_id',function(x){return x.name+' · '+x.unit+' · stock '+x.stock})+'</select>'+
+      '<label>Cantidad comprada</label><input name="qty" type="number" min="0.001" step="0.001" required>'+
+      '<label>Costo por unidad de control</label><input name="unit_cost" type="number" min="1" required>'+
+      '<label>Proveedor</label><input name="supplier" value="Proveedor QA" required>'+
+      '<label>Pago</label><select name="payment"><option value="PENDING">Pendiente</option><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option></select>'+
+      '<button>Registrar compra</button></form></details>';
+  }
+  if(offerings.length){
+    html+='<details><summary>Venta</summary><form method="post">'+cudoEventHidden_(row,prefix+'_SALE')+
+      '<label>Qué se vendió</label><select name="offering_id">'+cudoEventOptions_(offerings,'offering_id',function(x){return x.name+' · disponible '+String(x.available_qty||0)})+'</select>'+
+      '<label>Cantidad vendida</label><input name="qty" type="number" min="1" required>'+
+      '<label>Precio unitario</label><input name="unit_price" type="number" min="0" required>'+
+      '<label>Medio de pago</label><select name="method"><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option></select>'+
+      '<button>Registrar venta</button></form></details>';
+  }
+  return html;
+}
 function cudoEventMatchForms_(row){
-  return ''+
-    '<details><summary>Compra / stock</summary><form method="post">'+cudoEventHidden_(row,'MATCH_PURCHASE')+
-    '<label>Cantidad comprada</label><input name="qty" type="number" min="1" required>'+
-    '<label>Costo unitario</label><input name="unit_cost" type="number" min="1" required>'+
-    '<button>Registrar compra</button></form></details>'+
-    '<details><summary>Venta</summary><form method="post">'+cudoEventHidden_(row,'MATCH_SALE')+
-    '<label>Cantidad vendida</label><input name="qty" type="number" min="1" required>'+
-    '<label>Precio unitario</label><input name="unit_price" type="number" min="1" required>'+
-    '<button>Registrar venta</button></form></details>'+
+  return cudoEventCommerceForms_(row,'MATCH')+
     '<details><summary>Resultado deportivo</summary><form method="post">'+cudoEventHidden_(row,'MATCH_RESULT')+
     '<label>Serie</label><select name="series"><option>Tercera</option><option>Segunda</option><option>Senior</option><option>Primera</option></select>'+
     '<label>CUDO</label><input name="home" type="number" min="0" required>'+
@@ -112,25 +145,22 @@ function cudoEventBingoForms_(row){
     '<label>Premio</label><input name="name" required>'+
     '<label>Referencia de donación</label><input name="reference" required>'+
     '<button>Registrar premio donado</button></form></details>'+
-    '<details><summary>Compra / stock</summary><form method="post">'+cudoEventHidden_(row,'BINGO_PURCHASE')+
-    '<label>Cantidad comprada</label><input name="qty" type="number" min="1" required>'+
-    '<label>Costo unitario</label><input name="unit_cost" type="number" min="1" required>'+
-    '<button>Registrar compra</button></form></details>'+
-    '<details><summary>Venta</summary><form method="post">'+cudoEventHidden_(row,'BINGO_SALE')+
-    '<label>Cantidad vendida</label><input name="qty" type="number" min="1" required>'+
-    '<label>Precio unitario</label><input name="unit_price" type="number" min="1" required>'+
-    '<button>Registrar venta</button></form></details>'+
+    cudoEventCommerceForms_(row,'BINGO')+
     '<details><summary>Cierre</summary><form method="post">'+cudoEventHidden_(row,'BINGO_CLOSE')+
     '<button>Cerrar bingo QA</button></form></details>';
 }
+
 function cudoEventCard_(row){
   const isMatch=row.KIND==='MATCH';
   const forms=isMatch?cudoEventMatchForms_(row):cudoEventBingoForms_(row);
+  const offerings=cudoEventJson_(row.OFFERINGS_JSON,[]);
+  const inventory=cudoEventJson_(row.INVENTORY_JSON,[]);
   return '<article class="card">'+
     '<div class="meta">'+cudoEventEsc_(row.KIND)+' · revisión '+cudoEventEsc_(row.STORE_REVISION)+'</div>'+
     '<h2>'+cudoEventEsc_(row.DISPLAY_NAME)+'</h2>'+
     '<div class="stats">'+
-      '<span><b>Stock</b>'+cudoEventEsc_(row.STOCK)+'</span>'+
+      '<span><b>Oferta</b>'+cudoEventEsc_(offerings.length)+' ítems</span>'+
+      '<span><b>Inventario</b>'+cudoEventEsc_(inventory.length)+' insumos/unidades</span>'+
       '<span><b>Ventas</b>$'+cudoEventEsc_(row.SALES_REVENUE)+'</span>'+
       '<span><b>Proveedor</b>$'+cudoEventEsc_(row.SUPPLIER_PAYABLE)+'</span>'+
       '<span><b>Recurso</b>$'+cudoEventEsc_(row.RESOURCE_RESULT)+'</span>'+
@@ -138,6 +168,7 @@ function cudoEventCard_(row){
     (row.CLOSED==='TRUE'?'<div class="closed">Jornada cerrada</div>':forms)+
     '</article>';
 }
+
 function cudoEventRender_(message,e){
   const reviewer=cudoEventReviewer_();
   const rows=cudoEventRows_();
@@ -149,7 +180,7 @@ function cudoEventRender_(message,e){
     (wait.refresh_url?'<meta http-equiv="refresh" content="3;url='+cudoEventEsc_(wait.refresh_url)+'">':'')+
     '<title>CUDO · Hechos del club QA</title><style>'+
     'body{margin:0;background:#f4f2ed;color:#03163d;font-family:Arial,sans-serif}.head{background:#03163d;color:#fff;border-bottom:6px solid #e21b2d;padding:25px 18px}.head a{color:#fff;font-weight:800}.wrap{max-width:920px;margin:auto}.content{padding:18px}.note{background:#fff8da;border-left:4px solid #c79b00;padding:11px 13px;margin-bottom:14px}.msg{background:#e7f6ee;border-left:4px solid #0a7b48;padding:11px 13px;margin-bottom:14px}.card{background:#fff;border:1px solid #ccd4df;border-radius:16px;padding:18px;margin:14px 0;box-shadow:0 8px 24px rgba(3,22,61,.08)}h1,h2{margin:4px 0 10px}h2{font-size:27px}.meta{font-size:12px;color:#657188}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stats span{background:#f4f7fb;border-radius:10px;padding:10px;font-size:12px}.stats b{display:block;margin-bottom:4px}details{border-top:1px solid #e6e9ee;padding:11px 0}summary{font-weight:800;cursor:pointer}label{display:block;font-size:12px;font-weight:800;margin:9px 0 5px}input,select{width:100%;box-sizing:border-box;border:1px solid #abb6c5;border-radius:9px;padding:10px}button{border:0;border-radius:9px;padding:11px 13px;background:#03163d;color:#fff;font-weight:800;margin-top:10px}.closed{background:#e7f6ee;padding:12px;border-radius:10px;font-weight:800}@media(max-width:650px){.stats{grid-template-columns:1fr 1fr}}'+
-    '</style></head><body><header class="head"><div class="wrap"><a href="https://cudo.cl/preview-v8/admin/">← Administración CUDO</a><small style="display:block;margin-top:10px">C.U.D.O. · Administración privada · QA</small><h1>Partido y Bingo</h1><p>Acciones gobernadas sobre el mismo núcleo canónico.</p></div></header>'+
+    '</style></head><body><header class="head"><div class="wrap"><a href="https://cudo.cl/qa-pr219/admin/">← Administración CUDO</a><small style="display:block;margin-top:10px">C.U.D.O. · Administración privada · QA</small><h1>Partido y Bingo</h1><p>Acciones gobernadas sobre el mismo núcleo canónico.</p></div></header>'+
     '<main class="wrap content">'+
     (visibleMessage?'<div class="msg">'+cudoEventEsc_(visibleMessage)+'</div>':'')+
     '<div class="note"><b>QA gobernada:</b> Google sólo recibe solicitudes y proyecciones. La autoridad es el estado canónico versionado. Acceso: '+cudoEventEsc_(reviewer)+'</div>'+
@@ -160,14 +191,17 @@ function cudoEventRender_(message,e){
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function cudoEventPayload_(action,p){
-  if(action==='MATCH_PURCHASE'||action==='BINGO_PURCHASE') return {qty:Number(p.qty),unit_cost:Number(p.unit_cost)};
-  if(action==='MATCH_SALE'||action==='BINGO_SALE') return {qty:Number(p.qty),unit_price:Number(p.unit_price)};
+  if(action==='MATCH_ADD_OFFERING'||action==='BINGO_ADD_OFFERING') return {name:String(p.name||'').trim(),mode:String(p.mode||'').trim(),sell_price:Number(p.sell_price)};
+  if(action==='MATCH_ADD_INGREDIENT'||action==='BINGO_ADD_INGREDIENT') return {offering_id:String(p.offering_id||'').trim(),item_name:String(p.item_name||'').trim(),qty_per_sale:Number(p.qty_per_sale),unit:String(p.unit||'unidad').trim()};
+  if(action==='MATCH_PURCHASE'||action==='BINGO_PURCHASE') return {item_id:String(p.item_id||'').trim(),qty:Number(p.qty),unit_cost:Number(p.unit_cost),supplier:String(p.supplier||'').trim(),payment:String(p.payment||'PENDING').trim()};
+  if(action==='MATCH_SALE'||action==='BINGO_SALE') return {offering_id:String(p.offering_id||'').trim(),qty:Number(p.qty),unit_price:Number(p.unit_price),method:String(p.method||'CASH').trim()};
   if(action==='MATCH_RESULT') return {series:String(p.series||''),home:Number(p.home),away:Number(p.away)};
   if(action==='BINGO_CONFIRM_PERMIT') return {reference:String(p.reference||'').trim()};
   if(action==='BINGO_DONATE_PRIZE') return {name:String(p.name||'').trim(),reference:String(p.reference||'').trim()};
   if(action==='MATCH_CLOSE'||action==='BINGO_CLOSE') return {};
   throw new Error('Acción de evento inválida.');
 }
+
 function cudoEventHandlePost_(e){
   const reviewer=cudoEventReviewer_();
   const p=(e&&e.parameter)||{};
@@ -175,8 +209,8 @@ function cudoEventHandlePost_(e){
   const expectedRevision=Number(p.expected_revision);
   const action=String(p.action||'').trim().toUpperCase();
   const allowed={
-    'CUDO-EVENT-QA-MATCH-FULLDAY-001':['MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE'],
-    'CUDO-EVENT-QA-BINGO-FULLDAY-001':['BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE']
+    'CUDO-EVENT-QA-MATCH-FULLDAY-001':['MATCH_ADD_OFFERING','MATCH_ADD_INGREDIENT','MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE'],
+    'CUDO-EVENT-QA-BINGO-FULLDAY-001':['BINGO_ADD_OFFERING','BINGO_ADD_INGREDIENT','BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE']
   };
   if(!allowed[eventId]||allowed[eventId].indexOf(action)<0) throw new Error('Evento o acción no autorizada.');
   if(!Number.isInteger(expectedRevision)||expectedRevision<1) throw new Error('Revisión inválida.');
