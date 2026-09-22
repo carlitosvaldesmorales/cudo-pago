@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V2",
-  "generated_at": "2026-09-22T05:25:00.000Z",
-  "store_revision": 5,
+  "generated_at": "2026-09-22T05:19:46.230Z",
+  "store_revision": 6,
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "commerce_model": "DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE",
   "MATCH": {
@@ -18,7 +18,7 @@
         "series": "QA-Sonda-Gobernada",
         "home": 0,
         "away": 0,
-        "recorded_at": "2026-09-22T05:18:25.282Z"
+        "recorded_at": "2026-09-22T05:19:46.230Z"
       }
     ],
     "commerce": {
@@ -75,6 +75,6 @@
     },
     "operational_resource_result_clp": 0
   },
-  "audit_count": 4,
+  "audit_count": 5,
   "production_write": false
 }
