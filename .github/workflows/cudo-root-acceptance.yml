@@ -62,6 +62,26 @@ jobs:
           print('PASS_QA_SLOT_ISOLATED_FROM_PRODUCTION')
           PY
 
+      - name: Validar worker ARKĒ event-driven sin polling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('.github/workflows/cudo-arke-project-worker.yml').read_text(encoding='utf-8')
+          assert 'repository_dispatch:' in text
+          assert 'arke_cudo_handoff' in text
+          assert 'schedule:' not in text
+          assert '*/5' not in text
+          assert 'runs-on: ubuntu-latest' in text
+          assert 'runs-on: self-hosted' not in text
+          assert 'raw.githubusercontent.com/carlitosvaldesmorales/arke-root' not in text
+          assert 'github.event.client_payload.patch_b64' in text
+          assert 'target_main_allowed' in text
+          assert 'production_write' in text
+          print('PASS_ARKE_PROJECT_WORKER_EVENT_DRIVEN_NO_POLLING')
+          PY
+
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
