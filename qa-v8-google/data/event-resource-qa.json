@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V1",
-  "generated_at": "2026-09-21T20:07:30.925Z",
-  "store_revision": 4,
+  "generated_at": "2026-09-22T05:18:25.282Z",
+  "store_revision": 5,
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "MATCH": {
     "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
@@ -12,7 +12,14 @@
     "permit_confirmed": false,
     "permit_ref": null,
     "donated_prizes": [],
-    "sport_results": [],
+    "sport_results": [
+      {
+        "series": "QA-Sonda-Gobernada",
+        "home": 0,
+        "away": 0,
+        "recorded_at": "2026-09-22T05:18:25.282Z"
+      }
+    ],
     "resource": {
       "object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001",
       "opening_stock": 12,
@@ -59,6 +66,6 @@
     },
     "operational_resource_result_clp": 0
   },
-  "audit_count": 3,
+  "audit_count": 4,
   "production_write": false
 }
