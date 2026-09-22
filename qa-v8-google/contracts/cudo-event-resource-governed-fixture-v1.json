@@ -3,9 +3,6 @@
   "store_revision": 1,
   "generated_at": "2026-09-21T19:40:00.000Z",
   "active_conditions": [
-    "SINGLE_RESOURCE_DIRECT_SALES_MODEL",
-    "SUPPLIER_RETURN_MODEL_APPLIES",
-    "UNIT_COST_MODEL_APPLIES",
     "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES"
   ],
   "objects": [
@@ -83,184 +80,6 @@
         }
       },
       "relationships": [],
-      "provenance": {
-        "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": null,
-        "source_system": "CUDO_EVENT_RESOURCE_QA",
-        "source_refs": [
-          "qa://event-resource-governed-persistence"
-        ]
-      },
-      "legacy_refs": []
-    },
-    {
-      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
-      "object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001",
-      "object_type": "RESOURCE_FACILITY",
-      "object_version": 1,
-      "lifecycle_state": "AVAILABLE",
-      "data": {
-        "resource_kind": "BEVERAGE_STOCK",
-        "opening_stock": 12,
-        "received_qty": 0,
-        "returned_qty": 0,
-        "purchased_qty": 0,
-        "unit_cost": 0,
-        "purchase_total": 0,
-        "stock_available_before_sales": 12,
-        "sold_qty": 0,
-        "sell_price": 1500,
-        "stock_after_sales": 12
-      },
-      "field_semantics": {
-        "resource_kind": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/kind"
-          ]
-        },
-        "opening_stock": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/opening_stock"
-          ]
-        },
-        "received_qty": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/received_qty"
-          ]
-        },
-        "returned_qty": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/returned_qty"
-          ]
-        },
-        "purchased_qty": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/purchased_qty"
-          ]
-        },
-        "unit_cost": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/unit_cost"
-          ]
-        },
-        "purchase_total": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_PURCHASE_TOTAL_V1"
-          ]
-        },
-        "stock_available_before_sales": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/stock_available_before_sales"
-          ]
-        },
-        "sold_qty": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/sold_qty"
-          ]
-        },
-        "sell_price": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/sell_price"
-          ]
-        },
-        "stock_after_sales": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_STOCK_AFTER_SALES_V1"
-          ]
-        }
-      },
-      "relationships": [
-        {
-          "relationship_id": "REL-CUDO-RESOURCE-QA-MATCH-BEV-001-OBL",
-          "relationship_type": "CREATES_OBLIGATION",
-          "target_object_id": "CUDO-OBL-QA-MATCH-SUP-001"
-        },
-        {
-          "relationship_id": "REL-CUDO-RESOURCE-QA-MATCH-BEV-001-EVENT",
-          "relationship_type": "USED_BY_EVENT",
-          "target_object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001"
-        }
-      ],
-      "provenance": {
-        "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": null,
-        "source_system": "CUDO_EVENT_RESOURCE_QA",
-        "source_refs": [
-          "qa://event-resource-governed-persistence"
-        ]
-      },
-      "legacy_refs": []
-    },
-    {
-      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
-      "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
-      "object_type": "FINANCIAL_OBLIGATION",
-      "object_version": 1,
-      "lifecycle_state": "OPEN",
-      "data": {
-        "obligation_direction": "PAYABLE",
-        "obligation_kind": "SUPPLIER_SETTLEMENT",
-        "currency": "CLP",
-        "payable_qty": 0,
-        "supplier_payable": 0,
-        "amount": 0
-      },
-      "field_semantics": {
-        "obligation_direction": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://obligation/direction"
-          ]
-        },
-        "obligation_kind": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://obligation/kind"
-          ]
-        },
-        "currency": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://obligation/currency"
-          ]
-        },
-        "payable_qty": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
-          ]
-        },
-        "supplier_payable": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_SUPPLIER_PAYABLE_V1"
-          ]
-        },
-        "amount": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
-          ]
-        }
-      },
-      "relationships": [
-        {
-          "relationship_id": "REL-CUDO-OBL-QA-MATCH-SUP-001-RESOURCE",
-          "relationship_type": "CAUSED_BY_RESOURCE",
-          "target_object_id": "CUDO-RESOURCE-QA-MATCH-BEV-001"
-        }
-      ],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
         "updated_at": null,
@@ -357,101 +176,59 @@
     },
     {
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
-      "object_id": "CUDO-RESOURCE-QA-BINGO-BEV-001",
+      "object_id": "CUDO-COMMERCE-QA-MATCH-001",
       "object_type": "RESOURCE_FACILITY",
       "object_version": 1,
       "lifecycle_state": "AVAILABLE",
       "data": {
-        "resource_kind": "BEVERAGE_STOCK",
-        "opening_stock": 16,
-        "received_qty": 0,
-        "returned_qty": 0,
-        "purchased_qty": 0,
-        "unit_cost": 0,
-        "purchase_total": 0,
-        "stock_available_before_sales": 16,
-        "sold_qty": 0,
-        "sell_price": 1500,
-        "stock_after_sales": 16
+        "resource_kind": "EVENT_COMMERCE",
+        "offerings": [],
+        "inventory_items": [],
+        "purchases": [],
+        "sales": []
       },
       "field_semantics": {
         "resource_kind": {
           "state_kind": "SOURCE",
           "source_refs": [
-            "qa://resource/kind"
+            "qa://commerce/kind"
           ]
         },
-        "opening_stock": {
+        "offerings": {
           "state_kind": "SOURCE",
           "source_refs": [
-            "qa://resource/opening_stock"
+            "qa://commerce/offerings"
           ]
         },
-        "received_qty": {
+        "inventory_items": {
           "state_kind": "SOURCE",
           "source_refs": [
-            "qa://resource/received_qty"
+            "qa://commerce/inventory"
           ]
         },
-        "returned_qty": {
+        "purchases": {
           "state_kind": "SOURCE",
           "source_refs": [
-            "qa://resource/returned_qty"
+            "qa://commerce/purchases"
           ]
         },
-        "purchased_qty": {
+        "sales": {
           "state_kind": "SOURCE",
           "source_refs": [
-            "qa://resource/purchased_qty"
-          ]
-        },
-        "unit_cost": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/unit_cost"
-          ]
-        },
-        "purchase_total": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_PURCHASE_TOTAL_V1"
-          ]
-        },
-        "stock_available_before_sales": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/stock_available_before_sales"
-          ]
-        },
-        "sold_qty": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/sold_qty"
-          ]
-        },
-        "sell_price": {
-          "state_kind": "SOURCE",
-          "source_refs": [
-            "qa://resource/sell_price"
-          ]
-        },
-        "stock_after_sales": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_STOCK_AFTER_SALES_V1"
+            "qa://commerce/sales"
           ]
         }
       },
       "relationships": [
         {
-          "relationship_id": "REL-CUDO-RESOURCE-QA-BINGO-BEV-001-OBL",
+          "relationship_id": "REL-CUDO-COMMERCE-QA-MATCH-001-OBL",
           "relationship_type": "CREATES_OBLIGATION",
-          "target_object_id": "CUDO-OBL-QA-BINGO-SUP-001"
+          "target_object_id": "CUDO-OBL-QA-MATCH-SUP-001"
         },
         {
-          "relationship_id": "REL-CUDO-RESOURCE-QA-BINGO-BEV-001-EVENT",
+          "relationship_id": "REL-CUDO-COMMERCE-QA-MATCH-001-EVENT",
           "relationship_type": "USED_BY_EVENT",
-          "target_object_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001"
+          "target_object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001"
         }
       ],
       "provenance": {
@@ -459,14 +236,14 @@
         "updated_at": null,
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
-          "qa://event-resource-governed-persistence"
+          "qa://dynamic-event-commerce"
         ]
       },
       "legacy_refs": []
     },
     {
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
-      "object_id": "CUDO-OBL-QA-BINGO-SUP-001",
+      "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
       "object_type": "FINANCIAL_OBLIGATION",
       "object_version": 1,
       "lifecycle_state": "OPEN",
@@ -474,7 +251,6 @@
         "obligation_direction": "PAYABLE",
         "obligation_kind": "SUPPLIER_SETTLEMENT",
         "currency": "CLP",
-        "payable_qty": 0,
         "supplier_payable": 0,
         "amount": 0
       },
@@ -497,16 +273,10 @@
             "qa://obligation/currency"
           ]
         },
-        "payable_qty": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_PAYABLE_QTY_AFTER_RETURN_V1"
-          ]
-        },
         "supplier_payable": {
-          "state_kind": "DERIVED",
-          "rule_ids": [
-            "RULE_SUPPLIER_PAYABLE_V1"
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/pending-payable"
           ]
         },
         "amount": {
@@ -518,9 +288,9 @@
       },
       "relationships": [
         {
-          "relationship_id": "REL-CUDO-OBL-QA-BINGO-SUP-001-RESOURCE",
+          "relationship_id": "REL-CUDO-OBL-QA-MATCH-SUP-001-COMMERCE",
           "relationship_type": "CAUSED_BY_RESOURCE",
-          "target_object_id": "CUDO-RESOURCE-QA-BINGO-BEV-001"
+          "target_object_id": "CUDO-COMMERCE-QA-MATCH-001"
         }
       ],
       "provenance": {
@@ -528,7 +298,136 @@
         "updated_at": null,
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
-          "qa://event-resource-governed-persistence"
+          "qa://dynamic-event-commerce"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-COMMERCE-QA-BINGO-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "AVAILABLE",
+      "data": {
+        "resource_kind": "EVENT_COMMERCE",
+        "offerings": [],
+        "inventory_items": [],
+        "purchases": [],
+        "sales": []
+      },
+      "field_semantics": {
+        "resource_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/kind"
+          ]
+        },
+        "offerings": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/offerings"
+          ]
+        },
+        "inventory_items": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/inventory"
+          ]
+        },
+        "purchases": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/purchases"
+          ]
+        },
+        "sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/sales"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-CUDO-COMMERCE-QA-BINGO-001-OBL",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-QA-BINGO-SUP-001"
+        },
+        {
+          "relationship_id": "REL-CUDO-COMMERCE-QA-BINGO-001-EVENT",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://dynamic-event-commerce"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-QA-BINGO-SUP-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "supplier_payable": 0,
+        "amount": 0
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/direction"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/kind"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/currency"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/pending-payable"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-CUDO-OBL-QA-BINGO-SUP-001-COMMERCE",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-COMMERCE-QA-BINGO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://dynamic-event-commerce"
         ]
       },
       "legacy_refs": []
