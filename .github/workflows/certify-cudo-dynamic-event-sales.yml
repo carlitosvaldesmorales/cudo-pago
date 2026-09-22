@@ -1,0 +1,80 @@
+name: Certify CUDO Dynamic Event Sales
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview-v8/eventos/**'
+      - 'preview-v8/data/match-full-day-qa.json'
+      - 'preview-v8/data/bingo-full-day-qa.json'
+      - 'preview-v8/tools/certify_match_full_day_roundtrip.py'
+      - 'preview-v8/tools/certify_bingo_same_core_roundtrip.py'
+      - '.github/workflows/certify-cudo-dynamic-event-sales.yml'
+  push:
+    branches:
+      - 'agent/match-full-club-day-roundtrip-20260921'
+    paths:
+      - 'preview-v8/eventos/**'
+      - 'preview-v8/data/match-full-day-qa.json'
+      - 'preview-v8/data/bingo-full-day-qa.json'
+      - 'preview-v8/tools/certify_match_full_day_roundtrip.py'
+      - 'preview-v8/tools/certify_bingo_same_core_roundtrip.py'
+      - '.github/workflows/certify-cudo-dynamic-event-sales.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  dynamic-event-sales:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright
+        run: |
+          pip install playwright==1.55.0
+          playwright install --with-deps chromium
+      - name: Validate JS and data contracts
+        run: |
+          node --check preview-v8/eventos/event-core.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in ['preview-v8/data/match-full-day-qa.json','preview-v8/data/bingo-full-day-qa.json']:
+              data=json.loads(Path(path).read_text())
+              assert data['production_write'] is False
+              assert data.get('offerings') == [], path
+              assert data.get('inventory_items') == [], path
+              assert 'products' not in data, path
+          core=Path('preview-v8/eventos/event-core.js').read_text()
+          for token in ['addOffering','addRecipeComponent','componentNeeds','maxSellable','consumeOffering']:
+              assert token in core, token
+          print('PASS_DYNAMIC_EVENT_MODEL')
+          PY
+      - name: Start local CUDO candidate
+        run: |
+          python3 -m http.server 4178 --bind 127.0.0.1 >/tmp/cudo-dynamic-sales.log 2>&1 &
+          echo $! > /tmp/cudo-dynamic-sales.pid
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:4178/preview-v8/eventos/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/cudo-dynamic-sales.log
+          exit 1
+      - name: Certify Match dynamic offering roundtrip
+        run: python3 preview-v8/tools/certify_match_full_day_roundtrip.py
+      - name: Certify Bingo same-core dynamic offering roundtrip
+        run: python3 preview-v8/tools/certify_bingo_same_core_roundtrip.py
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-dynamic-event-sales-${{ github.run_id }}
+          path: |
+            evidence/cudo-match-full-day-builder/roundtrip.json
+            evidence/cudo-bingo-same-core/roundtrip.json
+          if-no-files-found: warn
+          retention-days: 30

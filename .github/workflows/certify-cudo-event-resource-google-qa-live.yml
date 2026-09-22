@@ -1,0 +1,129 @@
+name: Certify CUDO Event Resource Google QA Live
+
+on:
+  push:
+    branches:
+      - 'agent/match-full-club-day-roundtrip-20260921'
+    paths:
+      - '.github/workflows/certify-cudo-event-resource-google-qa-live.yml'
+      - 'qa-v8-google/tools/process_event_resource_requests.mjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-event-resource-google-qa-live
+  cancel-in-progress: false
+
+jobs:
+  live-google-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_EVENT_RESOURCE_SHEET_ID: 1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw
+      CUDO_EVENT_RESOURCE_APPLY_GOOGLE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Seed one bounded Google QA transport request
+        id: seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request
+          sheet_id=os.environ['CUDO_EVENT_RESOURCE_SHEET_ID']
+          if sheet_id!='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw': raise SystemExit('unexpected QA sheet')
+          state=json.loads(pathlib.Path('qa-v8-google/state/event-resource-state.json').read_text())
+          if state.get('production_write') is not False: raise SystemExit('state is not QA')
+          rev=int(state['store_revision']);event_id='CUDO-EVENT-QA-MATCH-FULLDAY-001'
+          rid='CUDO-QA-EVENT-LIVE-'+os.environ['GITHUB_RUN_ID']
+
+          body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r: token=json.load(r)['access_token']
+          def api(url,method='GET',payload=None):
+              req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},method=method)
+              with urllib.request.urlopen(req) as r:
+                  raw=r.read();return json.loads(raw) if raw else {}
+          base='https://sheets.googleapis.com/v4/spreadsheets/'+sheet_id
+          meta=api(base+'?fields=sheets.properties')
+          existing={x['properties']['title'] for x in meta.get('sheets',[])}
+          missing=[x for x in ['EVENT_RESOURCE_REQUESTS','EVENT_RESOURCE_CONTROL','EVENT_RESOURCE_AUDIT'] if x not in existing]
+          if missing: api(base+':batchUpdate','POST',{'requests':[{'addSheet':{'properties':{'title':name}}} for name in missing]})
+          req_header=['REQUEST_ID','REQUESTED_AT','EVENT_ID','EXPECTED_REVISION','ACTION','PAYLOAD_JSON','REASON','EVIDENCE_REF','REQUESTED_BY','PROCESS_STATUS','RESULT','APPLIED_AT']
+          audit_header=['REQUEST_ID','EVENT_ID','ACTION','STATUS','EXPECTED_REVISION','NEW_REVISION','REQUESTED_BY','REASON','EVIDENCE_REF','TRANSACTION_ID','TRANSITION_IDS','APPLIED_AT']
+          def get(range_): return api(base+'/values/'+urllib.parse.quote(range_,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE').get('values',[])
+          def put(range_,values): return api(base+'/values/'+urllib.parse.quote(range_,safe='')+'?valueInputOption=USER_ENTERED','PUT',{'range':range_,'majorDimension':'ROWS','values':values})
+          def append(range_,values): return api(base+'/values/'+urllib.parse.quote(range_,safe='')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS','POST',{'range':range_,'majorDimension':'ROWS','values':values})
+          for name,header in [('EVENT_RESOURCE_REQUESTS',req_header),('EVENT_RESOURCE_AUDIT',audit_header)]:
+              cur=get(name+'!1:1')
+              if not cur: put(name+'!A1:L1',[header])
+              elif cur[0][:len(header)]!=header: raise SystemExit(name+' header mismatch')
+          row=[rid,'2026-09-22T05:20:00.000Z',event_id,rev,'MATCH_RESULT',json.dumps({'series':'QA-Sonda-Gobernada','home':0,'away':0},separators=(',',':')),'Synthetic Google QA transport/readback probe','qa://google-live/'+rid,'sistemas@cudo.cl','PENDING','','']
+          append('EVENT_RESOURCE_REQUESTS!A:L',[row])
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write('request_id='+rid+'\n');out.write('expected_new_revision='+str(rev+1)+'\n')
+          PY
+
+      - name: Process exactly one request through canonical engine
+        env:
+          CUDO_EVENT_RESOURCE_EXPECT_PENDING: '1'
+        run: node qa-v8-google/tools/process_event_resource_requests.mjs
+
+      - name: Verify Google readback and canonical control
+        shell: bash
+        env:
+          REQUEST_ID: ${{ steps.seed.outputs.request_id }}
+          EXPECTED_NEW_REVISION: ${{ steps.seed.outputs.expected_new_revision }}
+        run: |
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request
+          sheet_id=os.environ['CUDO_EVENT_RESOURCE_SHEET_ID'];rid=os.environ['REQUEST_ID'];rev=int(os.environ['EXPECTED_NEW_REVISION'])
+          body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r: token=json.load(r)['access_token']
+          base='https://sheets.googleapis.com/v4/spreadsheets/'+sheet_id
+          def get(range_):
+              req=urllib.request.Request(base+'/values/'+urllib.parse.quote(range_,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE',headers={'Authorization':'Bearer '+token})
+              with urllib.request.urlopen(req) as r:return json.load(r).get('values',[])
+          requests=get('EVENT_RESOURCE_REQUESTS!A:L');row=next((x for x in requests[1:] if x and x[0]==rid),None)
+          if not row or row[9]!='APPLIED': raise SystemExit('request not applied '+repr(row))
+          audit=get('EVENT_RESOURCE_AUDIT!A:L');arow=next((x for x in audit[1:] if x and x[0]==rid),None)
+          if not arow or arow[3]!='APPLIED': raise SystemExit('audit not applied')
+          control=get('EVENT_RESOURCE_CONTROL!A:O');header=control[0]
+          rows={x[1]:dict(zip(header,x)) for x in control[1:] if len(x)>1}
+          match=rows['MATCH'];bingo=rows['BINGO']
+          if int(match['STORE_REVISION'])!=rev or int(bingo['STORE_REVISION'])!=rev: raise SystemExit('revision mismatch')
+          if match['AUTHORITY']!='CANONICAL_GRAPH_READ_MODEL': raise SystemExit('authority mismatch')
+          if 'OFFERINGS_JSON' in header:
+              json.loads(match['OFFERINGS_JSON']);json.loads(match['INVENTORY_JSON'])
+          state=json.loads(pathlib.Path('qa-v8-google/state/event-resource-state.json').read_text())
+          projection=json.loads(pathlib.Path('qa-v8-google/data/event-resource-qa.json').read_text())
+          if state['store_revision']!=rev or projection['store_revision']!=rev: raise SystemExit('versioned readback mismatch')
+          proof={'schema_version':'CUDO_EVENT_RESOURCE_GOOGLE_QA_LIVE_CERT_V2','request_id':rid,'store_revision':rev,'authority':match['AUTHORITY'],'production_write':False,'result':'PASS'}
+          pathlib.Path('event-resource-google-qa-live.json').write_text(json.dumps(proof,indent=2)+'\n')
+          print(json.dumps(proof,indent=2))
+          PY
+
+      - name: Persist canonical QA state and read model on candidate branch
+        shell: bash
+        run: |
+          git config user.name 'cudo-event-resource-qa-engine'
+          git config user.email 'actions@users.noreply.github.com'
+          git add qa-v8-google/state/event-resource-state.json qa-v8-google/data/event-resource-qa.json
+          git diff --cached --quiet || { git commit -m 'CUDO QA: persist governed event-resource state'; git push; }
+
+      - name: Upload external QA evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-event-resource-google-qa-live-${{ github.run_id }}
+          path: event-resource-google-qa-live.json
+          if-no-files-found: error
+          retention-days: 30

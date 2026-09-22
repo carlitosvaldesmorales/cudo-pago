@@ -16,6 +16,7 @@ const expectedAdminActions=[
   {label:'Control del club · QA',path:'control/',provider:'CUDO_INTERNAL',readyToken:'Qué necesita atención'},
   {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL',readyToken:'Actividades del club',backend:'GOOGLE_APPS_SCRIPT_EMBED'},
   {label:'Eventos del club · QA',path:'eventos/',provider:'CUDO_INTERNAL',readyToken:'Partido Mock Programado'},
+  {label:'Partido y Bingo · QA gobernada',host:'script.google.com',provider:'GOOGLE_APPS_SCRIPT_PRIVATE'},
   {label:'Completar mi ficha',host:'tally.so',provider:'TALLY'},
   {label:'Publicar una noticia',host:'tally.so',provider:'TALLY'},
   {label:'Administrar equipo o serie',host:'docs.google.com',provider:'GOOGLE_FORMS'},

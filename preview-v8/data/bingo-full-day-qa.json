@@ -1,0 +1,62 @@
+{
+  "schema_version": "CUDO_BINGO_FULL_DAY_QA_V2",
+  "mock": true,
+  "production_write": false,
+  "event": {
+    "event_id": "QA-BINGO-001",
+    "kind": "BINGO",
+    "display_name": "Bingo CUDO · Jornada QA",
+    "date": "2026-10-10",
+    "venue": "Sede / recinto CUDO",
+    "status": "SCHEDULED",
+    "conditions": {
+      "permit_required": true,
+      "food_sales_enabled": true,
+      "bar_sales_enabled": true
+    }
+  },
+  "permit": {
+    "required": true,
+    "confirmed": false,
+    "reference": ""
+  },
+  "responsibilities": [
+    {
+      "role": "Coordinación general",
+      "person": "Dirigencia QA"
+    },
+    {
+      "role": "Cocina / preparación",
+      "person": "Equipo cocina QA"
+    },
+    {
+      "role": "Venta y atención",
+      "person": "Colaboradores QA"
+    },
+    {
+      "role": "Caja",
+      "person": "Tesorería QA"
+    }
+  ],
+  "inventory_items": [],
+  "offerings": [],
+  "purchases": [],
+  "sales": [],
+  "tickets": [],
+  "other_income": [],
+  "prizes": [],
+  "opening_cash": 15000,
+  "post_event_work": [
+    {
+      "work_id": "ASEO",
+      "title": "Aseo del recinto",
+      "state": "PENDING"
+    },
+    {
+      "work_id": "CAJA",
+      "title": "Revisión final de caja",
+      "state": "PENDING"
+    }
+  ],
+  "closed_at": null
+}

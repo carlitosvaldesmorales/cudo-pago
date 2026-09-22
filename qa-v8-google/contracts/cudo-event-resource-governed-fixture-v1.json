@@ -1,0 +1,438 @@
+{
+  "schema_version": "CUDO_EVENT_RESOURCE_STATE_STORE_V1",
+  "store_revision": 1,
+  "generated_at": "2026-09-21T19:40:00.000Z",
+  "active_conditions": [
+    "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES"
+  ],
+  "objects": [
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "IN_PROGRESS",
+      "data": {
+        "activity_kind": "MATCH",
+        "display_name": "CUDO vs San Juan · Jornada QA gobernada",
+        "closed": false,
+        "closed_at": "",
+        "sales_revenue": 0,
+        "sport_results": [],
+        "permit_confirmed": false,
+        "permit_ref": "",
+        "donated_prizes": []
+      },
+      "field_semantics": {
+        "activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/kind"
+          ]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/name"
+          ]
+        },
+        "closed": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/closed"
+          ]
+        },
+        "closed_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/closed_at"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SALES_REVENUE_V1"
+          ]
+        },
+        "sport_results": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/sport_results"
+          ]
+        },
+        "permit_confirmed": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/permit"
+          ]
+        },
+        "permit_ref": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/permit_ref"
+          ]
+        },
+        "donated_prizes": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/donated_prizes"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://event-resource-governed-persistence"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
+      "object_type": "ACTIVITY_EVENT",
+      "object_version": 1,
+      "lifecycle_state": "IN_PROGRESS",
+      "data": {
+        "activity_kind": "BINGO",
+        "display_name": "Bingo CUDO · Jornada QA gobernada",
+        "closed": false,
+        "closed_at": "",
+        "sales_revenue": 0,
+        "sport_results": [],
+        "permit_confirmed": false,
+        "permit_ref": "",
+        "donated_prizes": []
+      },
+      "field_semantics": {
+        "activity_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/kind"
+          ]
+        },
+        "display_name": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/name"
+          ]
+        },
+        "closed": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/closed"
+          ]
+        },
+        "closed_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/closed_at"
+          ]
+        },
+        "sales_revenue": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_SALES_REVENUE_V1"
+          ]
+        },
+        "sport_results": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/sport_results"
+          ]
+        },
+        "permit_confirmed": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/permit"
+          ]
+        },
+        "permit_ref": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/permit_ref"
+          ]
+        },
+        "donated_prizes": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/donated_prizes"
+          ]
+        }
+      },
+      "relationships": [],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://event-resource-governed-persistence"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-COMMERCE-QA-MATCH-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "AVAILABLE",
+      "data": {
+        "resource_kind": "EVENT_COMMERCE",
+        "offerings": [],
+        "inventory_items": [],
+        "purchases": [],
+        "sales": []
+      },
+      "field_semantics": {
+        "resource_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/kind"
+          ]
+        },
+        "offerings": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/offerings"
+          ]
+        },
+        "inventory_items": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/inventory"
+          ]
+        },
+        "purchases": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/purchases"
+          ]
+        },
+        "sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/sales"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-CUDO-COMMERCE-QA-MATCH-001-OBL",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-QA-MATCH-SUP-001"
+        },
+        {
+          "relationship_id": "REL-CUDO-COMMERCE-QA-MATCH-001-EVENT",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://dynamic-event-commerce"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "supplier_payable": 0,
+        "amount": 0
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/direction"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/kind"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/currency"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/pending-payable"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-CUDO-OBL-QA-MATCH-SUP-001-COMMERCE",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-COMMERCE-QA-MATCH-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://dynamic-event-commerce"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-COMMERCE-QA-BINGO-001",
+      "object_type": "RESOURCE_FACILITY",
+      "object_version": 1,
+      "lifecycle_state": "AVAILABLE",
+      "data": {
+        "resource_kind": "EVENT_COMMERCE",
+        "offerings": [],
+        "inventory_items": [],
+        "purchases": [],
+        "sales": []
+      },
+      "field_semantics": {
+        "resource_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/kind"
+          ]
+        },
+        "offerings": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/offerings"
+          ]
+        },
+        "inventory_items": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/inventory"
+          ]
+        },
+        "purchases": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/purchases"
+          ]
+        },
+        "sales": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/sales"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-CUDO-COMMERCE-QA-BINGO-001-OBL",
+          "relationship_type": "CREATES_OBLIGATION",
+          "target_object_id": "CUDO-OBL-QA-BINGO-SUP-001"
+        },
+        {
+          "relationship_id": "REL-CUDO-COMMERCE-QA-BINGO-001-EVENT",
+          "relationship_type": "USED_BY_EVENT",
+          "target_object_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://dynamic-event-commerce"
+        ]
+      },
+      "legacy_refs": []
+    },
+    {
+      "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
+      "object_id": "CUDO-OBL-QA-BINGO-SUP-001",
+      "object_type": "FINANCIAL_OBLIGATION",
+      "object_version": 1,
+      "lifecycle_state": "OPEN",
+      "data": {
+        "obligation_direction": "PAYABLE",
+        "obligation_kind": "SUPPLIER_SETTLEMENT",
+        "currency": "CLP",
+        "supplier_payable": 0,
+        "amount": 0
+      },
+      "field_semantics": {
+        "obligation_direction": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/direction"
+          ]
+        },
+        "obligation_kind": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/kind"
+          ]
+        },
+        "currency": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://obligation/currency"
+          ]
+        },
+        "supplier_payable": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://commerce/pending-payable"
+          ]
+        },
+        "amount": {
+          "state_kind": "DERIVED",
+          "rule_ids": [
+            "RULE_OBLIGATION_AMOUNT_FROM_SUPPLIER_PAYABLE_V1"
+          ]
+        }
+      },
+      "relationships": [
+        {
+          "relationship_id": "REL-CUDO-OBL-QA-BINGO-SUP-001-COMMERCE",
+          "relationship_type": "CAUSED_BY_RESOURCE",
+          "target_object_id": "CUDO-COMMERCE-QA-BINGO-001"
+        }
+      ],
+      "provenance": {
+        "created_at": "2026-09-21T19:40:00.000Z",
+        "updated_at": null,
+        "source_system": "CUDO_EVENT_RESOURCE_QA",
+        "source_refs": [
+          "qa://dynamic-event-commerce"
+        ]
+      },
+      "legacy_refs": []
+    }
+  ],
+  "audit": [],
+  "production_write": false
+}

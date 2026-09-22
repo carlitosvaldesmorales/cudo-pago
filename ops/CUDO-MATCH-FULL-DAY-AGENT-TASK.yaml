@@ -1,0 +1,113 @@
+schema_version: CUDO_MATCH_FULL_DAY_AGENT_TASK_V2
+as_of: 2026-09-22
+project: CUDO
+status: AUTHORIZED_BOUNDED_QA_IMPLEMENTATION
+production_write: false
+
+authority:
+  arke_source_repo: carlitosvaldesmorales/arke-root
+  root_gap: ARKE_EXISTING_AGENT_LOOP_NOT_CLOSED
+  absorption_source:
+    - 11_operating_model/cudo_activity_coordination_reconciler.py
+    - 05_CASOS/CASO_CUDO_001/CUDO_CLUB_OS_ACTIVITY_COORDINATION_CONTRACT_v1.yaml
+    - 05_CASOS/CASO_CUDO_001/CUDO_REAL_EVENT_SEMANTIC_MAP_v1.yaml
+  current_product_checkpoint:
+    - 05_CASOS/CASO_CUDO_001/CUDO_GOVERNED_DYNAMIC_EVENT_SALES_ALIGNED_CHECKPOINT_20260922.yaml
+
+human_intent: >-
+  Registrar/configurar un partido una vez y hacer que CUDO derive automaticamente el trabajo
+  que esa jornada requiere. El usuario no diseña una lista de tareas ni inventa responsables.
+  Las condiciones reales del evento activan o desactivan workstreams, cada workstream expone
+  su rol accountable y un rol sin persona queda REQUIRED_UNASSIGNED hasta una asignacion real.
+
+same_slice_only:
+  primary_object: MATCH_FULL_CLUB_DAY
+  surface: preview-v8/eventos/
+  branch: agent/match-full-club-day-roundtrip-20260921
+  pull_request: 219
+  rule: DO_NOT_OPEN_NEW_CUDO_SLICE
+
+must_absorb_existing_capability:
+  source_semantics:
+    - WORKSTREAMS_ARE_DERIVED_FROM_ACTIVITY_CONDITIONS
+    - ONE_ACCOUNTABLE_ROLE_PER_ACTIVE_WORKSTREAM
+    - UNASSIGNED_ROLE_IS_A_VISIBLE_GAP_NOT_A_SILENT_DEFAULT
+    - REAL_PEOPLE_ARE_ASSIGNED_ONLY_FROM_REAL_VALIDATED_DATA
+    - REMOVING_CONDITION_DEACTIVATES_NON_APPLICABLE_WORKSTREAM
+  required_projection:
+    - event_conditions_to_active_workstreams
+    - active_workstream_to_accountable_role
+    - unassigned_role_to_visible_gap
+    - applicable_post_event_work_derived_from_active_workstreams
+  no_invented_people: true
+
+current_capabilities_that_must_not_regress:
+  - dynamic_event_offerings
+  - recipe_prepared_items
+  - direct_resale_items
+  - inventory_inputs_distinct_from_sellable_offerings
+  - purchase_stock_payable_roundtrip
+  - sale_inventory_revenue_roundtrip
+  - sport_result_same_event
+  - event_close
+  - localStorage_QA_roundtrip
+  - production_write_false
+
+event_signals_for_this_slice:
+  venue_required: local_and_venue_required
+  playing_surface_required: local_and_venue_required
+  food_preparation: food_sales_enabled
+  food_service: food_sales_enabled
+  beverage_service: bar_sales_enabled
+  sales_or_cash_handling: food_sales_enabled_or_bar_sales_enabled_or_ticketing_enabled
+  public_access: ticketing_enabled
+  cleaning_required: local_and_venue_required
+  setup_required: local_and_venue_required
+  teardown_required: local_and_venue_required
+  equipment_required: local_and_venue_required
+  ticketing_or_access_control: ticketing_enabled
+  communications_required: broadcast_enabled
+  sports_operation_required: match_event_always
+
+acceptance:
+  deterministic:
+    - local_match_with_venue_derives_VENUE_AND_FIELD
+    - food_sales_derives_FOOD_SERVICE
+    - commerce_derives_CONCESSIONS_and_FINANCIAL_CONTROL
+    - ticketing_derives_ACCESS_AND_RECEPTION
+    - match_derives_SPORTS_OPERATION
+    - used_local_venue_derives_CLEANING_AND_SANITATION_and_SETUP_AND_LOGISTICS
+    - broadcast_false_does_not_derive_COMMUNICATIONS
+    - visit_with_optional_branches_disabled_removes_non_applicable_workstreams
+    - every_active_workstream_has_one_accountable_role
+    - no_synthetic_person_is_invented
+    - unassigned_roles_are_visible
+    - post_event_work_is_derived_not_seeded_as_fixed_list
+    - dynamic_sales_roundtrip_still_passes
+    - event_close_still_passes
+  independent:
+    - existing_ARKE_human_certifier_after_project_worker_apply
+
+anti_drift:
+  - do_not_restore_fixed_food_menu
+  - do_not_restore_hardcoded_responsible_people
+  - do_not_restore_fixed_post_event_work_list
+  - no_task_manager_as_product_root
+  - no_second_event_engine
+  - no_second_backend
+  - no_direct_main_write
+  - no_production_write
+  - no_paid_api
+  - no_new_external_service
+  - no_real_club_data_mutation
+
+builder:
+  host: olam-prd.soaint.local
+  local_model: llama3.2:3b
+  model_role: plan_and_self_review_only
+  code_application: deterministic_bounded_builder
+  patch_handoff: ARKE_PROJECT_EXECUTION_PROFILE_CUDO
+  stop_condition: >-
+    PATCH_READY is an intermediate checkpoint only. Continue through project-local handoff,
+    deterministic checks, independent certification and reconciliation until terminal state
+    or real blocker.

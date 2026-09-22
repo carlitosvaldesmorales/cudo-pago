@@ -1,0 +1,63 @@
+schema_version: CUDO_BINGO_SAME_CORE_AGENT_TASK_V1
+as_of: 2026-09-21
+project: CUDO
+status: AUTHORIZED_BOUNDED_QA_GENERALIZATION
+production_write: false
+
+authority:
+  arke_checkpoint: 05_CASOS/CASO_CUDO_001/CUDO_MATCH_FULL_DAY_PR219_CERTIFIED_CHECKPOINT_20260921.yaml
+  pull_request: 219
+  branch: agent/match-full-club-day-roundtrip-20260921
+  match_head_passed: 5a15446c981763d399f280c1015108884e4bb0bd
+
+intent: >-
+  Probar que ACTIVITY_OR_EVENT no está hardcodeado al fútbol. Bingo debe usar el mismo núcleo
+  de recursos, compras, ventas, caja, obligaciones, persistencia y cierre que el Partido,
+  pero activar ramas propias: permiso, premios/donaciones, cocina/ventas, personas y limpieza.
+
+reuse_required:
+  shared_core_path: preview-v8/eventos/event-core.js
+  match_surface: preview-v8/eventos/index.html
+  bingo_surface: preview-v8/eventos/bingo.html
+  match_seed: preview-v8/data/match-full-day-qa.json
+  bingo_seed: preview-v8/data/bingo-full-day-qa.json
+
+bingo_human_flow:
+  - abrir_Bingo_desde_Eventos_del_club
+  - ver_contexto_Bingo_como_raiz
+  - confirmar_permiso_o_autorizacion
+  - registrar_premio_donado_o_comprado
+  - registrar_compra_para_cocina_o_venta
+  - compra_actualiza_stock_costo_y_obligacion_si_corresponde
+  - registrar_venta
+  - venta_actualiza_stock_ingreso_y_caja
+  - ver_personas_y_responsabilidades
+  - completar_limpieza_post_evento
+  - cerrar_y_ver_recurso_neto
+
+acceptance:
+  - match_and_bingo_import_same_event_core
+  - no_second_financial_or_inventory_engine
+  - bingo_has_no_sport_result_branch
+  - bingo_has_permission_and_prize_donation_branch
+  - purchase_roundtrip_persists_after_reload
+  - sale_roundtrip_persists_after_reload
+  - donated_prize_does_not_create_supplier_payable
+  - post_event_cleanup_visible
+  - closure_net_result_visible
+  - production_write_false
+
+anti_drift:
+  - no_second_engine
+  - no_task_manager_root
+  - no_backend_only_claim
+  - no_direct_main_write
+  - no_real_club_data
+  - no_paid_api
+  - no_duplicate_entry_same_fact
+
+builder:
+  host: olam-prd.soaint.local
+  local_model: llama3.2:3b
+  output: PATCH_ONLY_TO_PR219_BRANCH
+  independent_certifier_required_after_patch: true

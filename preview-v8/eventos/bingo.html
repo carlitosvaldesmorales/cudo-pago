@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#03163d">
+<title>C.U.D.O. · Bingo / recaudación · QA</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="stylesheet" href="../shared/site.css">
+<style>
+:root{--navy:#03163d;--red:#e21b2d;--paper:#f4f2ed;--ink:#172033;--muted:#657386;--line:#d5dbe4;--ok:#147a45;--warn:#8a6500}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,sans-serif}.wrap{width:min(1180px,calc(100% - 24px));margin:auto}.hero{background:var(--navy);color:#fff;border-bottom:6px solid var(--red);padding:26px 0 22px}.hero h1{font-size:clamp(38px,7vw,62px);line-height:.94;margin:7px 0}.hero p{max-width:900px;line-height:1.55;color:#e7edf8;font-size:13px}.back{color:#fff;font-weight:900;font-size:12px}.body{padding:18px 0 56px}.qa{background:#fff8da;border-left:4px solid #c79b00;padding:12px 14px;border-radius:0 12px 12px 0;font-size:12px;line-height:1.5;margin-bottom:14px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}.card.wide{grid-column:1/-1}.card h2,.card h3{color:var(--navy);margin:0 0 8px;text-transform:uppercase}.sub{color:var(--muted);font-size:12px;line-height:1.5}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.formgrid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.field{display:flex;flex-direction:column;gap:4px}.field label{font-size:10px;font-weight:900;text-transform:uppercase;color:#4e5d72}.field input,.field select{width:100%;border:1px solid #bec8d6;border-radius:10px;padding:10px;background:#fff;font:inherit}.btn{border:0;border-radius:10px;background:var(--navy);color:#fff;font-weight:900;padding:10px 13px;cursor:pointer}.btn.light{background:#edf1f6;color:var(--navy)}.btn.ok{background:var(--ok)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}.timeline{display:grid;gap:7px;margin-top:8px}.row{border-top:1px solid #edf0f3;padding:9px 0}.row:first-child{border-top:0}.row strong{font-size:13px}.row span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.notice{margin-top:10px;background:#eff8f2;border-left:4px solid var(--ok);padding:10px 12px;border-radius:0 10px 10px 0;font-size:12px}.danger{background:#fdecec;border-left-color:#b50f20}.hidden{display:none!important}.chip{display:inline-block;border-radius:999px;background:#edf1f6;padding:7px 10px;margin:3px;font-size:10px;font-weight:900}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:11px}.kpi{background:#f6f8fb;border-radius:11px;padding:10px}.kpi strong{display:block;color:var(--navy);font-size:20px}.kpi small{font-size:9px;text-transform:uppercase;font-weight:900;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}th,td{text-align:left;padding:8px;border-bottom:1px solid #edf0f3}th{font-size:9px;text-transform:uppercase;color:var(--muted)}.empty{padding:14px;background:#f6f8fb;border-radius:12px;color:var(--muted);font-size:12px}.pending{color:var(--warn)!important;font-weight:900}.good{color:var(--ok)!important;font-weight:900}
+@media(max-width:760px){.grid,.formgrid,.formgrid.three{grid-template-columns:1fr}.card.wide{grid-column:auto}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body data-cudo-bingo-full-day="qa-v2">
+<header class="hero"><div class="wrap">
+<div class="eyebrow">C.U.D.O. · Club OS · QA</div>
+<h1>Bingo / recaudación</h1>
+<p>La misma raíz de evento, con permiso, premios y una oferta de cocina/bar que nace de lo que realmente se decide vender ese día.</p>
+<a class="back" href="./">← Volver al partido</a>
+</div></header>
+<main class="wrap body">
+<div class="qa"><strong>QA sintética:</strong> no escribe producción. No existe menú fijo de Bingo: las ofertas e insumos se crean según la jornada.</div>
+<div class="grid">
+<section class="card wide"><h2 id="eventName">Cargando…</h2><div id="eventMeta" class="sub"></div><div id="branches"></div></section>
+
+<section class="card">
+<h3>Permiso</h3>
+<div id="permitState" class="timeline"></div>
+<div class="field"><label>Referencia / respaldo</label><input id="permitRef" autocomplete="off"></div>
+<div class="actions"><button id="confirmPermit" class="btn">Confirmar permiso</button></div>
+</section>
+
+<section class="card">
+<h3>Personas</h3><div id="people" class="timeline"></div>
+</section>
+
+<section class="card wide">
+<h3>Premios y donaciones</h3>
+<div class="formgrid three">
+<div class="field"><label>Premio</label><input id="prizeName" placeholder="Premio" autocomplete="off"></div>
+<div class="field"><label>Origen</label><select id="prizeSource"><option value="DONATED">Donado</option><option value="PURCHASED">Comprado</option></select></div>
+<div class="field"><label>Valor de referencia</label><input id="prizeValue" type="number" min="0" value="0"></div>
+</div>
+<div class="actions"><button id="registerPrize" class="btn">Registrar premio</button></div>
+<div id="prizes" class="timeline"></div>
+</section>
+
+<section class="card wide">
+<h3>¿Qué vamos a vender?</h3>
+<p class="sub">Agrega sólo la oferta real de este Bingo. Una preparación usa receta; una reventa usa unidades.</p>
+<div class="formgrid three">
+<div class="field"><label>Qué venderemos</label><input id="offeringName" placeholder="Ej. completo, papas fritas, bebida" autocomplete="off"></div>
+<div class="field"><label>Cómo lo tendremos</label><select id="offeringMode"><option value="PREPARED">Lo preparamos en CUDO</option><option value="DIRECT_RESALE">Lo compramos listo / reventa</option></select></div>
+<div class="field"><label>Precio</label><input id="offeringPrice" type="number" min="0" value="0"></div>
+</div>
+<div class="actions"><button id="addOffering" class="btn">Agregar a la venta</button></div>
+<div id="offeringNotice" class="notice hidden"></div>
+<div id="offeringList" class="timeline"></div>
+</section>
+
+<section class="card wide">
+<h3>Preparaciones e insumos</h3>
+<div class="formgrid three">
+<div class="field"><label>Preparación</label><select id="recipeOffering"></select></div>
+<div class="field"><label>Insumo</label><input id="ingredientName" placeholder="Ej. pan, tomate, palta" autocomplete="off"></div>
+<div class="field"><label>Consumo por venta</label><input id="ingredientQty" type="number" min="0.001" step="0.001" value="1"></div>
+<div class="field"><label>Unidad</label><select id="ingredientUnit"><option value="unidad">unidad</option><option value="kg">kg</option><option value="litro">litro</option><option value="porcion">porción</option></select></div>
+</div>
+<div class="actions"><button id="addIngredient" class="btn">Agregar insumo</button></div>
+<div id="ingredientNotice" class="notice hidden"></div>
+</section>
+
+<section class="card wide">
+<h3>Compras e inventario real</h3>
+<div class="formgrid three">
+<div class="field"><label>Insumo / unidad</label><select id="purchaseItem"></select></div>
+<div class="field"><label>Cantidad</label><input id="purchaseQty" type="number" min="0.001" step="0.001" value="10"></div>
+<div class="field"><label>Costo unitario</label><input id="purchaseCost" type="number" min="0" value="700"></div>
+<div class="field"><label>Proveedor</label><input id="purchaseSupplier" value="Proveedor QA" autocomplete="off"></div>
+<div class="field"><label>Pago</label><select id="purchasePayment"><option value="PENDING">Pendiente</option><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option></select></div>
+</div>
+<div class="actions"><button id="registerPurchase" class="btn">Registrar compra</button></div>
+<table><thead><tr><th>Insumo / unidad</th><th>Stock</th><th>Unidad</th><th>Costo</th></tr></thead><tbody id="stockRows"></tbody></table>
+<div id="purchaseNotice" class="notice hidden"></div>
+</section>
+
+<section class="card wide">
+<h3>Ventas</h3>
+<div class="formgrid three">
+<div class="field"><label>Qué se vendió</label><select id="saleOffering"></select></div>
+<div class="field"><label>Cantidad</label><input id="saleQty" type="number" min="1" value="1"></div>
+<div class="field"><label>Precio</label><input id="salePrice" type="number" min="0" value="0"></div>
+<div class="field"><label>Medio</label><select id="saleMethod"><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option></select></div>
+</div>
+<div class="actions"><button id="registerSale" class="btn">Registrar venta</button></div>
+<div id="saleNotice" class="notice hidden"></div>
+</section>
+
+<section class="card wide">
+<h3>Caja y obligaciones</h3>
+<div class="kpis">
+<div class="kpi"><strong id="income">$0</strong><small>Ingresos</small></div>
+<div class="kpi"><strong id="cost">$0</strong><small>Compras</small></div>
+<div class="kpi"><strong id="payable">$0</strong><small>Proveedor pendiente</small></div>
+<div class="kpi"><strong id="cash">$0</strong><small>Caja estimada</small></div>
+</div>
+<div id="finance" class="timeline"></div>
+</section>
+
+<section class="card wide">
+<h3>Después del evento</h3><div id="postWork" class="timeline"></div>
+</section>
+
+<section class="card wide">
+<h3>Cierre</h3>
+<div class="kpis">
+<div class="kpi"><strong id="closeIncome">$0</strong><small>Ingresos</small></div>
+<div class="kpi"><strong id="closeCost">$0</strong><small>Compras</small></div>
+<div class="kpi"><strong id="closeNet">$0</strong><small>Recurso neto</small></div>
+<div class="kpi"><strong id="closePending">0</strong><small>Pendientes</small></div>
+</div>
+<div class="actions"><button id="closeEvent" class="btn ok">Cerrar Bingo</button><button id="resetQa" class="btn light">Reiniciar QA</button></div>
+<div id="closure" class="notice hidden"></div>
+</section>
+</div>
+</main>
+
+<script src="./event-core.js"></script>
+<script>
+(function(){
+const C=window.CudoEventCore,KEY='cudo-bingo-full-day-qa-v2',DATA='../data/bingo-full-day-qa.json';let seed,state;
+const $=id=>document.getElementById(id),num=id=>Number($(id).value||0),now=()=>new Date().toISOString();
+const inv=id=>C.inventoryItem(state,id),offer=id=>C.offering(state,id);
+function persist(){C.save(KEY,state)}function notice(id,msg,bad=false){const e=$(id);e.textContent=msg;e.classList.remove('hidden','danger');if(bad)e.classList.add('danger')}
+function fill(id,items,key,label){const e=$(id),v=e.value;e.innerHTML=items.map(x=>'<option value="'+x[key]+'">'+label(x)+'</option>').join('');if(v&&items.some(x=>x[key]===v))e.value=v}
+function render(){
+ C.arrays(state);
+ $('eventName').textContent=state.event.display_name;$('eventMeta').textContent=state.event.date+' · '+state.event.venue+' · '+(state.closed_at?'Cerrado':'En operación QA');
+ $('branches').innerHTML=['EVENTO','PERSONAS','PERMISO','PREMIOS / DONACIONES','COCINA / BAR','VENTAS','COMPRAS / STOCK','CAJA','POST-EVENTO','CIERRE'].map(x=>'<span class="chip">'+x+'</span>').join('');
+ $('permitState').innerHTML='<div class="row"><strong>'+(state.permit.confirmed?'✅ Permiso confirmado':'🟡 Permiso pendiente')+'</strong><span>'+(state.permit.reference||'Sin referencia todavía')+'</span></div>';$('permitRef').value=state.permit.reference||'';
+ $('people').innerHTML=state.responsibilities.map(x=>'<div class="row"><strong>'+x.role+'</strong><span>'+x.person+'</span></div>').join('');
+ $('prizes').innerHTML=state.prizes.length?state.prizes.map(x=>'<div class="row"><strong>'+x.name+'</strong><span>'+x.source+' · '+C.money(x.value)+'</span></div>').join(''):'<div class="empty">Sin premios registrados.</div>';
+ $('offeringList').innerHTML=state.offerings.length?state.offerings.map(o=>{const parts=(o.components||[]).map(c=>c.kind==='INVENTORY'?((inv(c.item_id)?.name||c.item_id)+' × '+c.qty_per_sale+' '+(inv(c.item_id)?.unit||'')):(offer(c.offering_id)?.name||c.offering_id));return '<div class="row"><strong>'+o.name+' · '+C.money(o.sell_price)+'</strong><span>'+(o.mode==='PREPARED'?'Preparado en CUDO':'Comprado listo / reventa')+' · '+(parts.join(' · ')||'Sin componentes')+' · vendibles '+C.maxSellable(state,o.offering_id)+'</span></div>'}).join(''):'<div class="empty">Aún no se decidió qué vender.</div>';
+ fill('recipeOffering',state.offerings.filter(o=>o.mode==='PREPARED'),'offering_id',o=>o.name);
+ fill('purchaseItem',state.inventory_items,'item_id',i=>i.name+' · '+i.unit);
+ fill('saleOffering',state.offerings,'offering_id',o=>o.name+' · disponible '+C.maxSellable(state,o.offering_id));
+ const selected=offer($('saleOffering').value);if(selected&&document.activeElement!==$('salePrice'))$('salePrice').value=String(selected.sell_price||0);
+ $('stockRows').innerHTML=state.inventory_items.length?state.inventory_items.map(i=>'<tr><td>'+i.name+'</td><td id="stock-'+i.item_id+'">'+Number(i.stock||0).toLocaleString('es-CL',{maximumFractionDigits:3})+'</td><td>'+i.unit+'</td><td>'+C.money(i.unit_cost)+'</td></tr>').join(''):'<tr><td colspan="4"><div class="empty">Sin inventario hasta que la oferta lo necesite.</div></td></tr>';
+ $('income').textContent=C.money(C.income(state));$('cost').textContent=C.money(C.purchaseTotal(state));$('payable').textContent=C.money(C.payable(state));$('cash').textContent=C.money(state.opening_cash+C.cashIn(state)-C.cashOut(state));
+ const ops=[...state.purchases.map(x=>'<div class="row"><strong>Compra · '+(inv(x.item_id)?.name||x.item_id)+'</strong><span>'+x.qty+' '+(inv(x.item_id)?.unit||'')+' · '+C.money(x.qty*x.unit_cost)+' · '+x.payment+'</span></div>'),...state.sales.map(x=>'<div class="row"><strong>Venta · '+(offer(x.offering_id)?.name||x.offering_id)+'</strong><span>'+x.qty+' un · '+C.money(x.qty*x.unit_price)+' · '+x.method+'</span></div>')];$('finance').innerHTML=ops.join('')||'<div class="empty">Sin movimientos.</div>';
+ $('postWork').innerHTML=state.post_event_work.map(w=>'<div class="row"><strong>'+w.title+'</strong><span class="'+(w.state==='DONE'?'good':'pending')+'">'+(w.state==='DONE'?'Listo':'Pendiente')+'</span>'+(w.state==='DONE'?'':'<button class="btn light" data-work="'+w.work_id+'">Marcar listo</button>')+'</div>').join('');
+ document.querySelectorAll('[data-work]').forEach(b=>b.onclick=()=>{state.post_event_work.find(w=>w.work_id===b.dataset.work).state='DONE';persist();render()});
+ $('closeIncome').textContent=C.money(C.income(state));$('closeCost').textContent=C.money(C.purchaseTotal(state));$('closeNet').textContent=C.money(C.income(state)-C.purchaseTotal(state));$('closePending').textContent=state.post_event_work.filter(w=>w.state!=='DONE').length;
+ if(state.closed_at){$('closure').textContent='Bingo cerrado · recurso neto '+C.money(C.income(state)-C.purchaseTotal(state));$('closure').classList.remove('hidden')}else $('closure').classList.add('hidden');
+}
+$('confirmPermit').onclick=()=>{state.permit.confirmed=true;state.permit.reference=$('permitRef').value.trim()||'Confirmado en QA';persist();render()};
+$('registerPrize').onclick=()=>{const source=$('prizeSource').value,value=num('prizeValue');state.prizes.push({prize_id:'PRIZE-'+Date.now(),name:$('prizeName').value.trim()||'Premio QA',source,value,created_at:now()});if(source==='PURCHASED')state.other_income=state.other_income||[];persist();render()};
+$('addOffering').onclick=()=>{try{const o=C.addOffering(state,{name:$('offeringName').value,mode:$('offeringMode').value,sell_price:num('offeringPrice')});$('offeringName').value='';persist();render();notice('offeringNotice',o.mode==='PREPARED'?'Oferta agregada. Define ahora sus insumos.':'Oferta agregada como reventa directa.')}catch(e){notice('offeringNotice','Indica qué se venderá.',true)}};
+$('addIngredient').onclick=()=>{try{C.addRecipeComponent(state,{offering_id:$('recipeOffering').value,item_name:$('ingredientName').value,qty_per_sale:num('ingredientQty'),unit:$('ingredientUnit').value});$('ingredientName').value='';persist();render();notice('ingredientNotice','Insumo agregado.')}catch(e){notice('ingredientNotice','Primero agrega una preparación y define un insumo válido.',true)}};
+$('registerPurchase').onclick=()=>{try{C.purchase(state,{item_id:$('purchaseItem').value,qty:num('purchaseQty'),unit_cost:num('purchaseCost'),supplier:$('purchaseSupplier').value,payment:$('purchasePayment').value,created_at:now()});persist();render();notice('purchaseNotice','Compra registrada: stock y obligación actualizados.')}catch(e){notice('purchaseNotice','Primero debe existir algo que comprar.',true)}};
+$('saleOffering').onchange=()=>{const o=offer($('saleOffering').value);if(o)$('salePrice').value=String(o.sell_price||0)};
+$('registerSale').onclick=()=>{try{C.sale(state,{offering_id:$('saleOffering').value,qty:num('saleQty'),unit_price:num('salePrice'),method:$('saleMethod').value,created_at:now()});persist();render();notice('saleNotice','Venta registrada; se descontó el inventario real.')}catch(e){notice('saleNotice',e.message==='INSUFFICIENT_STOCK'?'Stock insuficiente.':e.message==='OFFERING_WITHOUT_COMPONENTS'?'La preparación aún no tiene receta.':'Revisa la venta.',true)}};
+$('closeEvent').onclick=()=>{C.closeEvent(state,now());persist();render()};$('resetQa').onclick=()=>{localStorage.removeItem(KEY);state=C.clone(seed);persist();render()};
+fetch(DATA,{cache:'no-store'}).then(r=>r.json()).then(x=>{if(x.mock!==true||x.production_write!==false)throw new Error('Seed inseguro');seed=x;state=C.load(KEY,seed);render()}).catch(e=>{document.body.innerHTML='<main class="wrap body"><h1>QA bloqueada</h1><p>'+e.message+'</p></main>'});
+})();
+</script>
+<script src="../shared/pwa.js"></script>
+</body>
+</html>

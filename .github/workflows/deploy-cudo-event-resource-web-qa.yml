@@ -1,0 +1,293 @@
+name: Deploy CUDO Event Resource Web QA
+
+on:
+  push:
+    branches:
+      - 'agent/match-full-club-day-roundtrip-20260921'
+    paths:
+      - 'qa-v8-google/apps-script/CudoEventResourceWeb.gs'
+      - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
+      - '.github/workflows/cudo-review-engine.yml'
+      - '.github/workflows/deploy-cudo-event-resource-web-qa.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-event-resource-web-qa-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Deploy event resource source into existing private CUDO Apps Script project
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request,urllib.error
+
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          event_description='CUDO Event Resource private QA'
+          shared_private_description='CUDO Work State private QA'
+          event_source=pathlib.Path('qa-v8-google/apps-script/CudoEventResourceWeb.gs').read_text()
+          router_source=pathlib.Path('qa-v8-google/apps-script/CudoPersonaReviewWeb.gs').read_text()
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            access=json.load(r)['access_token']
+
+          def req(url,method='GET',payload=None):
+            q=urllib.request.Request(
+              url,
+              data=None if payload is None else json.dumps(payload).encode(),
+              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
+              method=method
+            )
+            try:
+              with urllib.request.urlopen(q) as r:
+                raw=r.read()
+                return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+              body=e.read().decode(errors='replace')
+              raise RuntimeError('Apps Script HTTP '+str(e.code)+' '+body[:800])
+
+          base='https://script.googleapis.com/v1/projects/'+sid
+          current=req(base+'/content')
+          files=[]
+          manifest=None
+          replaced={'CudoEventResourceWeb':False,'CudoPersonaReviewWeb':False}
+          for f in current.get('files',[]):
+            name=f.get('name')
+            if name in replaced:
+              replaced[name]=True
+              continue
+            if name=='appsscript' and f.get('type')=='JSON':
+              manifest=json.loads(f.get('source') or '{}')
+              continue
+            files.append({'name':f['name'],'type':f['type'],'source':f.get('source','')})
+
+          if manifest is None:
+            raise SystemExit('Fail closed: Apps Script manifest missing')
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          files.append({'name':'CudoEventResourceWeb','type':'SERVER_JS','source':event_source})
+          files.append({'name':'CudoPersonaReviewWeb','type':'SERVER_JS','source':router_source})
+
+          req(base+'/content','PUT',{'files':files})
+          verify=req(base+'/content')
+          by_name={f.get('name'):f for f in verify.get('files',[])}
+          if by_name.get('CudoEventResourceWeb',{}).get('source')!=event_source:
+            raise SystemExit('Fail closed: CudoEventResourceWeb source verification failed')
+          if by_name.get('CudoPersonaReviewWeb',{}).get('source')!=router_source:
+            raise SystemExit('Fail closed: CudoPersonaReviewWeb source verification failed')
+          if 'CudoReviewEventBridge' not in by_name:
+            raise SystemExit('Fail closed: existing CudoReviewEventBridge disappeared')
+          if 'CudoWorkStateWeb' not in by_name:
+            raise SystemExit('Fail closed: existing CudoWorkStateWeb disappeared')
+
+          version=req(base+'/versions','POST',{
+            'description':'CUDO Event Resource QA '+os.environ.get('GITHUB_SHA','')[:12]
+          })
+          vn=version['versionNumber']
+
+          deployments=req(base+'/deployments').get('deployments',[])
+          existing_event=next((d for d in deployments if (d.get('deploymentConfig') or {}).get('description')==event_description),None)
+          existing_shared=next((d for d in deployments if (d.get('deploymentConfig') or {}).get('description')==shared_private_description),None)
+          existing=existing_event or existing_shared
+          if not existing:
+            raise SystemExit('Fail closed: no existing private CUDO deployment available for reuse')
+          did=existing['deploymentId']
+          preserved_description=(existing.get('deploymentConfig') or {}).get('description') or shared_private_description
+          config={
+            'versionNumber':vn,
+            'manifestFileName':'appsscript',
+            'description':preserved_description
+          }
+          dep=req(base+'/deployments/'+urllib.parse.quote(did,safe=''),'PUT',{'deploymentConfig':config})
+          mode='UPDATED_EXISTING_PRIVATE_DEPLOYMENT'
+
+          # Verify the specific deployment, allowing bounded API propagation time.
+          import time
+          bound=None
+          observed_version=None
+          for attempt in range(10):
+            bound=req(base+'/deployments/'+urllib.parse.quote(did,safe=''))
+            bound_cfg=bound.get('deploymentConfig') or {}
+            observed_version=bound_cfg.get('versionNumber')
+            if int(observed_version or -1)==int(vn):
+              break
+            time.sleep(1)
+          if not bound:
+            raise SystemExit('Fail closed: deployment missing after apply')
+          bound_cfg=bound.get('deploymentConfig') or {}
+          if int(bound_cfg.get('versionNumber',-1))!=int(vn):
+            raise SystemExit('Fail closed: deployment version mismatch expected '+str(vn)+' observed '+str(observed_version))
+
+          web_entry=next((x.get('webApp') for x in (bound.get('entryPoints') or []) if x.get('entryPointType')=='WEB_APP' and x.get('webApp')),None)
+          if not web_entry or not web_entry.get('url'):
+            raise SystemExit('Fail closed: updated private deployment has no web app URL')
+          acl=(web_entry.get('entryPointConfig') or {}).get('access')
+          if acl!='MYSELF':
+            raise SystemExit('Fail closed: event backend must remain MYSELF, got '+str(acl))
+          url=web_entry['url']+'?view=event'
+          out={
+            'schema_version':'CUDO_EVENT_RESOURCE_APPS_SCRIPT_DEPLOYMENT_V1',
+            'ok':True,
+            'scriptId':sid,
+            'versionNumber':vn,
+            'deploymentId':did,
+            'eventWebUrl':url,
+            'mode':mode,
+            'reusedDeploymentDescription':preserved_description,
+            'access':acl,
+            'executeAs':'USER_DEPLOYING',
+            'eventSourceVerified':True,
+            'routerSourceVerified':True,
+            'existingBridgePreserved':True,
+            'existingWorkSurfacePreserved':True,
+            'targetRef':'agent/match-full-club-day-roundtrip-20260921',
+            'production_write':False
+          }
+          pathlib.Path('event-resource-web-deployment.json').write_text(json.dumps(out,indent=2)+'\n')
+          pathlib.Path('preview-v8/data/event-resource-backend-qa.json').write_text(json.dumps({
+            'schema_version':'CUDO_EVENT_RESOURCE_BACKEND_QA_V1',
+            'provider':'GOOGLE_APPS_SCRIPT',
+            'url':url,
+            'deployment_id':did,
+            'access':'MYSELF',
+            'target_ref':'agent/match-full-club-day-roundtrip-20260921',
+            'production_write':False
+          },indent=2)+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a') as gh:
+            gh.write('deployment_id='+did+'\n')
+            gh.write('event_url='+url+'\n')
+            gh.write('version='+str(vn)+'\n')
+          print(json.dumps(out,indent=2))
+          PY
+
+      - name: Persist stable QA backend binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'cudo-event-resource-deployer'
+          git config user.email 'actions@users.noreply.github.com'
+          git add preview-v8/data/event-resource-backend-qa.json
+          if git diff --cached --quiet; then
+            echo 'Stable backend binding unchanged.'
+          else
+            git commit -m 'CUDO QA: bind stable governed event backend'
+            git push
+          fi
+
+      - name: Certify deployed Apps Script runtime by API executable
+        shell: bash
+        env:
+          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request,urllib.error
+
+          deployment_id=os.environ['DEPLOYMENT_ID']
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          )) as r:
+            token=json.load(r)['access_token']
+
+          import time
+          response=None
+          last_error=None
+          for attempt in range(15):
+            request=urllib.request.Request(
+              'https://script.googleapis.com/v1/scripts/'+urllib.parse.quote(deployment_id,safe='')+':run',
+              data=json.dumps({'function':'cudoEventRuntimeStatus'}).encode(),
+              headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+              method='POST'
+            )
+            try:
+              with urllib.request.urlopen(request,timeout=120) as r:
+                candidate=json.load(r)
+            except urllib.error.HTTPError as e:
+              last_error='HTTP '+str(e.code)+' '+e.read().decode(errors='replace')[:1500]
+              time.sleep(2)
+              continue
+            if candidate.get('error'):
+              last_error=json.dumps(candidate['error'])[:2000]
+              time.sleep(2)
+              continue
+            candidate_result=(candidate.get('response') or {}).get('result')
+            if isinstance(candidate_result,dict) and candidate_result.get('allowed_reviewer')=='sistemas@cudo.cl':
+              response=candidate
+              break
+            last_error='stale runtime contract: '+json.dumps(candidate_result)[:1200]
+            time.sleep(2)
+
+          if response is None:
+            raise SystemExit('Apps Script runtime did not converge: '+str(last_error))
+          result=(response.get('response') or {}).get('result')
+          if not isinstance(result,dict):
+            raise SystemExit('Apps Script runtime result missing: '+json.dumps(response)[:2000])
+          if result.get('ok') is not True:
+            raise SystemExit('Apps Script runtime not ok: '+json.dumps(result))
+          if result.get('allowed_reviewer')!='sistemas@cudo.cl':
+            raise SystemExit('Apps Script reviewer policy mismatch: '+repr(result.get('allowed_reviewer')))
+          events=result.get('events') or []
+          if len(events)!=2 or {x.get('kind') for x in events}!={'MATCH','BINGO'}:
+            raise SystemExit('Apps Script runtime events mismatch: '+json.dumps(events))
+          if any(x.get('authority')!='CANONICAL_GRAPH_READ_MODEL' for x in events):
+            raise SystemExit('Apps Script runtime authority mismatch: '+json.dumps(events))
+          if result.get('production_write') is not False:
+            raise SystemExit('Apps Script runtime production_write unsafe')
+
+          proof={
+            'schema_version':'CUDO_EVENT_RESOURCE_APPS_SCRIPT_RUNTIME_CERT_V1',
+            'deployment_id':deployment_id,
+            'allowed_reviewer':result['allowed_reviewer'],
+            'row_count':result['row_count'],
+            'events':events,
+            'production_write':False,
+            'result':'PASS'
+          }
+          pathlib.Path('event-resource-apps-script-runtime.json').write_text(json.dumps(proof,indent=2)+'\n')
+          print(json.dumps(proof,indent=2))
+          PY
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-event-resource-web-qa-${{ github.run_id }}
+          path: |
+            event-resource-web-deployment.json
+            event-resource-apps-script-runtime.json
+          if-no-files-found: error
+          retention-days: 30

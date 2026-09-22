@@ -1,0 +1,80 @@
+{
+  "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V2",
+  "generated_at": "2026-09-22T05:19:46.230Z",
+  "store_revision": 6,
+  "authority": "CANONICAL_GRAPH_READ_MODEL",
+  "commerce_model": "DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE",
+  "MATCH": {
+    "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+    "kind": "MATCH",
+    "display_name": "CUDO vs San Juan · Jornada QA gobernada",
+    "closed": false,
+    "closed_at": null,
+    "permit_confirmed": false,
+    "permit_ref": null,
+    "donated_prizes": [],
+    "sport_results": [
+      {
+        "series": "QA-Sonda-Gobernada",
+        "home": 0,
+        "away": 0,
+        "recorded_at": "2026-09-22T05:19:46.230Z"
+      }
+    ],
+    "commerce": {
+      "object_id": "CUDO-COMMERCE-QA-MATCH-001",
+      "offerings": [],
+      "inventory_items": [],
+      "purchases": [],
+      "sales": [],
+      "purchase_total": 0,
+      "sales_revenue": 0
+    },
+    "resource": {
+      "object_id": "CUDO-COMMERCE-QA-MATCH-001",
+      "offerings_count": 0,
+      "inventory_items_count": 0,
+      "purchase_total": 0,
+      "sales_revenue": 0
+    },
+    "supplier_payable": {
+      "object_id": "CUDO-OBL-QA-MATCH-SUP-001",
+      "amount": 0
+    },
+    "operational_resource_result_clp": 0
+  },
+  "BINGO": {
+    "event_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
+    "kind": "BINGO",
+    "display_name": "Bingo CUDO · Jornada QA gobernada",
+    "closed": false,
+    "closed_at": null,
+    "permit_confirmed": false,
+    "permit_ref": null,
+    "donated_prizes": [],
+    "sport_results": [],
+    "commerce": {
+      "object_id": "CUDO-COMMERCE-QA-BINGO-001",
+      "offerings": [],
+      "inventory_items": [],
+      "purchases": [],
+      "sales": [],
+      "purchase_total": 0,
+      "sales_revenue": 0
+    },
+    "resource": {
+      "object_id": "CUDO-COMMERCE-QA-BINGO-001",
+      "offerings_count": 0,
+      "inventory_items_count": 0,
+      "purchase_total": 0,
+      "sales_revenue": 0
+    },
+    "supplier_payable": {
+      "object_id": "CUDO-OBL-QA-BINGO-SUP-001",
+      "amount": 0
+    },
+    "operational_resource_result_clp": 0
+  },
+  "audit_count": 5,
+  "production_write": false
+}
