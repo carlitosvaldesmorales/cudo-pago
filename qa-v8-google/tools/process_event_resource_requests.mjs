@@ -17,12 +17,12 @@ export const EVENT_REQUEST_HEADERS=['REQUEST_ID','REQUESTED_AT','EVENT_ID','EXPE
 export const EVENT_AUDIT_HEADERS=['REQUEST_ID','EVENT_ID','ACTION','STATUS','EXPECTED_REVISION','NEW_REVISION','REQUESTED_BY','REASON','EVIDENCE_REF','TRANSACTION_ID','TRANSITION_IDS','APPLIED_AT'];
 
 export const EVENT_IDS={MATCH:'CUDO-EVENT-QA-MATCH-FULLDAY-001',BINGO:'CUDO-EVENT-QA-BINGO-FULLDAY-001'};
-export const RESOURCE_IDS={MATCH:'CUDO-RESOURCE-QA-MATCH-BEV-001',BINGO:'CUDO-RESOURCE-QA-BINGO-BEV-001'};
+export const RESOURCE_IDS={MATCH:'CUDO-COMMERCE-QA-MATCH-001',BINGO:'CUDO-COMMERCE-QA-BINGO-001'};
 export const OBLIGATION_IDS={MATCH:'CUDO-OBL-QA-MATCH-SUP-001',BINGO:'CUDO-OBL-QA-BINGO-SUP-001'};
 
 const ACTIONS=new Set([
-  'MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE',
-  'BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE'
+  'MATCH_ADD_OFFERING','MATCH_ADD_INGREDIENT','MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE',
+  'BINGO_ADD_OFFERING','BINGO_ADD_INGREDIENT','BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE'
 ]);
 
 function clone(v){return JSON.parse(JSON.stringify(v));}
@@ -37,6 +37,42 @@ function payloadOf(request){
   return {};
 }
 function sourceSpec(objectId,field,value){return {objectId,field,value};}
+function number(v,label,{positive=false,integer=false}={}){
+  const n=Number(v);
+  if(!Number.isFinite(n)||(positive?n<=0:n<0)||(integer&&!Number.isInteger(n))) throw new Error(label+' invalid');
+  return n;
+}
+function slug(v){return clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,42)||'ITEM';}
+function commerce(resource){
+  for(const field of ['offerings','inventory_items','purchases','sales']) if(!Array.isArray(resource.data[field])) throw new Error(resource.object_id+': dynamic commerce field missing '+field);
+  return resource.data;
+}
+function findOffering(resource,id){return commerce(resource).offerings.find(x=>x.offering_id===id);}
+function findItem(resource,id){return commerce(resource).inventory_items.find(x=>x.item_id===id);}
+function uniqueId(prefix,name,rows,key){
+  const base=prefix+'-'+slug(name),used=new Set(rows.map(x=>x[key]));
+  if(!used.has(base)) return base;
+  let i=2;while(used.has(base+'-'+i)) i++;
+  return base+'-'+i;
+}
+function componentNeeds(resource,offeringId,qty=1,stack=[]){
+  const o=findOffering(resource,offeringId);
+  if(!o) throw new Error('offering not found: '+offeringId);
+  if(stack.includes(offeringId)) throw new Error('BUNDLE_CYCLE');
+  const needs=new Map(),add=(id,n)=>needs.set(id,(needs.get(id)||0)+n);
+  for(const c of o.components||[]){
+    const per=Number(c.qty_per_sale||0);if(!(per>0)) continue;
+    if(c.kind==='INVENTORY') add(c.item_id,per*qty);
+    else if(c.kind==='OFFERING') for(const [id,n] of componentNeeds(resource,c.offering_id,per*qty,[...stack,offeringId])) add(id,n);
+  }
+  return needs;
+}
+function maxSellable(resource,offeringId){
+  const needs=componentNeeds(resource,offeringId,1);if(!needs.size) return 0;
+  let max=Infinity;
+  for(const [id,need] of needs){const item=findItem(resource,id);if(!item||!(need>0)) return 0;max=Math.min(max,Math.floor((Number(item.stock||0)+1e-9)/need));}
+  return Number.isFinite(max)?Math.max(0,max):0;
+}
 
 export function loadEventResourceState(statePath=DEFAULT_STATE_PATH){
   const state=JSON.parse(fs.readFileSync(statePath,'utf8'));
@@ -52,59 +88,70 @@ export function loadDependencyRegistry(registryPath=REGISTRY_PATH){
 function mapActionToSourceSpecs({state,request,now}){
   const action=clean(request.action).toUpperCase();
   if(!ACTIONS.has(action)) throw new Error('unsupported action '+action);
-  const family=actionFamily(action);
-  const expectedEventId=EVENT_IDS[family];
-  const eventId=clean(request.event_id)||expectedEventId;
-  if(eventId!==expectedEventId) throw new Error('event/action mismatch '+eventId+' '+action);
-  const resourceId=RESOURCE_IDS[family];
-  const event=objectById(state.objects,eventId);
-  const resource=objectById(state.objects,resourceId);
-  const payload=payloadOf(request);
+  const family=actionFamily(action),eventId=clean(request.event_id)||EVENT_IDS[family];
+  if(eventId!==EVENT_IDS[family]) throw new Error('event/action mismatch '+eventId+' '+action);
+  const resourceId=RESOURCE_IDS[family],obligationId=OBLIGATION_IDS[family];
+  const event=objectById(state.objects,eventId),resource=objectById(state.objects,resourceId),obligation=objectById(state.objects,obligationId);
+  const payload=payloadOf(request),data=commerce(resource);
 
+  if(action.endsWith('_ADD_OFFERING')){
+    const name=clean(payload.name),mode=clean(payload.mode).toUpperCase(),sellPrice=number(payload.sell_price,'sell_price');
+    if(!name) throw new Error('offering name required');
+    if(!['PREPARED','DIRECT_RESALE'].includes(mode)) throw new Error('unsupported offering mode '+mode);
+    if(data.offerings.some(x=>slug(x.name)===slug(name))) throw new Error('OFFERING_ALREADY_EXISTS');
+    const offerings=clone(data.offerings),inventory=clone(data.inventory_items);
+    const offeringId=clean(payload.offering_id)||uniqueId('OFFER',name,offerings,'offering_id');
+    const next={offering_id:offeringId,name,mode,sell_price:sellPrice,components:[]};
+    if(mode==='DIRECT_RESALE'){
+      const itemId=uniqueId('INV',name,inventory,'item_id');
+      inventory.push({item_id:itemId,name,unit:'unidad',stock:0,unit_cost:0});
+      next.components.push({kind:'INVENTORY',item_id:itemId,qty_per_sale:1});
+    }
+    offerings.push(next);
+    return [sourceSpec(resourceId,'offerings',offerings),sourceSpec(resourceId,'inventory_items',inventory)];
+  }
+  if(action.endsWith('_ADD_INGREDIENT')){
+    const offeringId=clean(payload.offering_id),itemName=clean(payload.item_name),unit=clean(payload.unit)||'unidad';
+    const qty=number(payload.qty_per_sale,'qty_per_sale',{positive:true});
+    if(!itemName) throw new Error('item_name required');
+    const offerings=clone(data.offerings),inventory=clone(data.inventory_items),o=offerings.find(x=>x.offering_id===offeringId);
+    if(!o||o.mode!=='PREPARED') throw new Error('INVALID_RECIPE_TARGET');
+    let item=inventory.find(x=>slug(x.name)===slug(itemName)&&x.unit===unit);
+    if(!item){item={item_id:uniqueId('INV',itemName,inventory,'item_id'),name:itemName,unit,stock:0,unit_cost:0};inventory.push(item);}
+    const current=(o.components||[]).find(x=>x.kind==='INVENTORY'&&x.item_id===item.item_id);
+    if(current) current.qty_per_sale=qty; else (o.components||(o.components=[])).push({kind:'INVENTORY',item_id:item.item_id,qty_per_sale:qty});
+    return [sourceSpec(resourceId,'offerings',offerings),sourceSpec(resourceId,'inventory_items',inventory)];
+  }
   if(action.endsWith('_PURCHASE')){
-    const qty=positive(payload.qty,'qty');
-    const unitCost=positive(payload.unit_cost,'unit_cost');
-    return [
-      sourceSpec(resourceId,'purchased_qty',Number(resource.data.purchased_qty)+qty),
-      sourceSpec(resourceId,'received_qty',Number(resource.data.received_qty)+qty),
-      sourceSpec(resourceId,'stock_available_before_sales',Number(resource.data.stock_available_before_sales)+qty),
-      sourceSpec(resourceId,'unit_cost',unitCost)
-    ];
+    const itemId=clean(payload.item_id),qty=number(payload.qty,'qty',{positive:true}),unitCost=number(payload.unit_cost,'unit_cost',{positive:true});
+    const payment=clean(payload.payment).toUpperCase()||'PENDING',supplier=clean(payload.supplier)||'Proveedor QA';
+    if(!['PENDING','CASH','TRANSFER'].includes(payment)) throw new Error('invalid payment');
+    const inventory=clone(data.inventory_items),purchases=clone(data.purchases),item=inventory.find(x=>x.item_id===itemId);
+    if(!item) throw new Error('inventory item not found: '+itemId);
+    item.stock=Number(item.stock||0)+qty;item.unit_cost=unitCost;
+    purchases.push({purchase_id:'PUR-'+clean(request.request_id),item_id:itemId,qty,unit_cost:unitCost,supplier,payment,created_at:now});
+    const payable=purchases.filter(x=>x.payment==='PENDING').reduce((sum,x)=>sum+Number(x.qty)*Number(x.unit_cost),0);
+    return [sourceSpec(resourceId,'inventory_items',inventory),sourceSpec(resourceId,'purchases',purchases),sourceSpec(obligationId,'supplier_payable',payable)];
   }
   if(action.endsWith('_SALE')){
-    const qty=positive(payload.qty,'qty');
-    const unitPrice=positive(payload.unit_price,'unit_price');
-    if(Number(resource.data.stock_after_sales)<qty) throw new Error('INSUFFICIENT_STOCK');
-    return [
-      sourceSpec(resourceId,'sold_qty',Number(resource.data.sold_qty)+qty),
-      sourceSpec(resourceId,'sell_price',unitPrice)
-    ];
+    const offeringId=clean(payload.offering_id),qty=number(payload.qty,'qty',{positive:true,integer:true}),unitPrice=number(payload.unit_price,'unit_price');
+    const method=clean(payload.method).toUpperCase()||'CASH';if(!['CASH','TRANSFER'].includes(method)) throw new Error('invalid sale method');
+    const snapshot={...resource,data:{...resource.data,inventory_items:clone(data.inventory_items),offerings:clone(data.offerings)}};
+    if(!findOffering(snapshot,offeringId)) throw new Error('offering not found: '+offeringId);
+    const needs=componentNeeds(snapshot,offeringId,qty);if(!needs.size) throw new Error('OFFERING_WITHOUT_COMPONENTS');
+    for(const [id,need] of needs){const item=findItem(snapshot,id);if(!item||Number(item.stock||0)+1e-9<need) throw new Error('INSUFFICIENT_STOCK');}
+    for(const [id,need] of needs) findItem(snapshot,id).stock=Number(findItem(snapshot,id).stock||0)-need;
+    const sales=clone(data.sales);sales.push({sale_id:'SALE-'+clean(request.request_id),offering_id:offeringId,qty,unit_price:unitPrice,method,created_at:now});
+    return [sourceSpec(resourceId,'inventory_items',snapshot.data.inventory_items),sourceSpec(resourceId,'sales',sales)];
   }
   if(action==='MATCH_RESULT'){
-    const series=clean(payload.series);
-    const home=int(payload.home,'home');
-    const away=int(payload.away,'away');
-    if(!series) throw new Error('series required');
-    const prior=Array.isArray(event.data.sport_results)?clone(event.data.sport_results):[];
-    const next=prior.filter(x=>x.series!==series);
-    next.push({series,home,away,recorded_at:now});
+    const series=clean(payload.series),home=int(payload.home,'home'),away=int(payload.away,'away');if(!series) throw new Error('series required');
+    const prior=Array.isArray(event.data.sport_results)?clone(event.data.sport_results):[],next=prior.filter(x=>x.series!==series);next.push({series,home,away,recorded_at:now});
     return [sourceSpec(eventId,'sport_results',next)];
   }
-  if(action==='BINGO_CONFIRM_PERMIT'){
-    const ref=clean(payload.reference);
-    if(!ref) throw new Error('permit reference required');
-    return [sourceSpec(eventId,'permit_confirmed',true),sourceSpec(eventId,'permit_ref',ref)];
-  }
-  if(action==='BINGO_DONATE_PRIZE'){
-    const name=clean(payload.name),reference=clean(payload.reference);
-    if(!name||!reference) throw new Error('donated prize name and reference required');
-    const prior=Array.isArray(event.data.donated_prizes)?clone(event.data.donated_prizes):[];
-    prior.push({name,reference,source:'DONATED',recorded_at:now});
-    return [sourceSpec(eventId,'donated_prizes',prior)];
-  }
-  if(action.endsWith('_CLOSE')){
-    return [sourceSpec(eventId,'closed',true),sourceSpec(eventId,'closed_at',now)];
-  }
+  if(action==='BINGO_CONFIRM_PERMIT'){const ref=clean(payload.reference);if(!ref) throw new Error('permit reference required');return [sourceSpec(eventId,'permit_confirmed',true),sourceSpec(eventId,'permit_ref',ref)];}
+  if(action==='BINGO_DONATE_PRIZE'){const name=clean(payload.name),reference=clean(payload.reference);if(!name||!reference) throw new Error('donated prize name and reference required');const prior=Array.isArray(event.data.donated_prizes)?clone(event.data.donated_prizes):[];prior.push({name,reference,source:'DONATED',recorded_at:now});return [sourceSpec(eventId,'donated_prizes',prior)];}
+  if(action.endsWith('_CLOSE')) return [sourceSpec(eventId,'closed',true),sourceSpec(eventId,'closed_at',now)];
   throw new Error('action mapping missing '+action);
 }
 
@@ -131,50 +178,19 @@ function buildGovernedChanges({state,request,now}){
 
 export function buildEventResourceProjection(state){
   const project=(family)=>{
-    const event=objectById(state.objects,EVENT_IDS[family]);
-    const resource=objectById(state.objects,RESOURCE_IDS[family]);
-    const obligation=objectById(state.objects,OBLIGATION_IDS[family]);
-    const sales=Number(event.data.sales_revenue||0);
-    const payable=Number(obligation.data.supplier_payable||0);
+    const event=objectById(state.objects,EVENT_IDS[family]),resource=objectById(state.objects,RESOURCE_IDS[family]),obligation=objectById(state.objects,OBLIGATION_IDS[family]);
+    const data=commerce(resource),purchaseTotal=data.purchases.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unit_cost||0),0),salesRevenue=data.sales.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unit_price||0),0),payable=Number(obligation.data.supplier_payable||0);
+    const offerings=clone(data.offerings).map(o=>({...o,available_qty:maxSellable(resource,o.offering_id)}));
     return {
-      event_id:event.object_id,
-      kind:event.data.activity_kind,
-      display_name:event.data.display_name,
-      closed:Boolean(event.data.closed),
-      closed_at:event.data.closed_at||null,
-      permit_confirmed:Boolean(event.data.permit_confirmed),
-      permit_ref:event.data.permit_ref||null,
-      donated_prizes:clone(event.data.donated_prizes||[]),
-      sport_results:clone(event.data.sport_results||[]),
-      resource:{
-        object_id:resource.object_id,
-        opening_stock:Number(resource.data.opening_stock||0),
-        purchased_qty:Number(resource.data.purchased_qty||0),
-        purchase_total:Number(resource.data.purchase_total||0),
-        sold_qty:Number(resource.data.sold_qty||0),
-        stock_after_sales:Number(resource.data.stock_after_sales||0),
-        sales_revenue:sales,
-        unit_cost:Number(resource.data.unit_cost||0),
-        sell_price:Number(resource.data.sell_price||0)
-      },
-      supplier_payable:{
-        object_id:obligation.object_id,
-        payable_qty:Number(obligation.data.payable_qty||0),
-        amount:payable
-      },
-      operational_resource_result_clp:sales-payable
+      event_id:event.object_id,kind:event.data.activity_kind,display_name:event.data.display_name,closed:Boolean(event.data.closed),closed_at:event.data.closed_at||null,
+      permit_confirmed:Boolean(event.data.permit_confirmed),permit_ref:event.data.permit_ref||null,donated_prizes:clone(event.data.donated_prizes||[]),sport_results:clone(event.data.sport_results||[]),
+      commerce:{object_id:resource.object_id,offerings,inventory_items:clone(data.inventory_items),purchases:clone(data.purchases),sales:clone(data.sales),purchase_total:purchaseTotal,sales_revenue:salesRevenue},
+      resource:{object_id:resource.object_id,offerings_count:offerings.length,inventory_items_count:data.inventory_items.length,purchase_total:purchaseTotal,sales_revenue:salesRevenue},
+      supplier_payable:{object_id:obligation.object_id,amount:payable},
+      operational_resource_result_clp:salesRevenue-purchaseTotal
     };
   };
-  return {
-    schema_version:'CUDO_EVENT_RESOURCE_QA_READ_MODEL_V1',
-    generated_at:state.generated_at,
-    store_revision:state.store_revision,
-    authority:'CANONICAL_GRAPH_READ_MODEL',
-    MATCH:project('MATCH'),
-    BINGO:project('BINGO'),
-    audit_count:state.audit.length,
-    production_write:false
-  };
+  return {schema_version:'CUDO_EVENT_RESOURCE_QA_READ_MODEL_V2',generated_at:state.generated_at,store_revision:state.store_revision,authority:'CANONICAL_GRAPH_READ_MODEL',commerce_model:'DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE',MATCH:project('MATCH'),BINGO:project('BINGO'),audit_count:state.audit.length,production_write:false};
 }
 
 function auditEntry({request,status,now,details={}}){
@@ -293,12 +309,10 @@ function externalAuditRow(summary){
   ];
 }
 function controlRows(projection){
-  const h=['EVENT_ID','KIND','DISPLAY_NAME','STORE_REVISION','CLOSED','STOCK','PURCHASE_TOTAL','SOLD_QTY','SALES_REVENUE','SUPPLIER_PAYABLE','RESOURCE_RESULT','PERMIT_CONFIRMED','PRIZES_COUNT','SPORT_RESULTS_JSON','AUTHORITY'];
-  return [h,...['MATCH','BINGO'].map(key=>{
-    const e=projection[key];
-    return [e.event_id,e.kind,e.display_name,projection.store_revision,e.closed?'TRUE':'FALSE',e.resource.stock_after_sales,e.resource.purchase_total,e.resource.sold_qty,e.resource.sales_revenue,e.supplier_payable.amount,e.operational_resource_result_clp,e.permit_confirmed?'TRUE':'FALSE',e.donated_prizes.length,JSON.stringify(e.sport_results),projection.authority];
-  })];
+  const h=['EVENT_ID','KIND','DISPLAY_NAME','STORE_REVISION','CLOSED','OFFERINGS_JSON','INVENTORY_JSON','PURCHASE_TOTAL','SALES_REVENUE','SUPPLIER_PAYABLE','RESOURCE_RESULT','PERMIT_CONFIRMED','PRIZES_COUNT','SPORT_RESULTS_JSON','AUTHORITY'];
+  return [h,...['MATCH','BINGO'].map(key=>{const e=projection[key];return [e.event_id,e.kind,e.display_name,projection.store_revision,e.closed?'TRUE':'FALSE',JSON.stringify(e.commerce.offerings),JSON.stringify(e.commerce.inventory_items),e.commerce.purchase_total,e.commerce.sales_revenue,e.supplier_payable.amount,e.operational_resource_result_clp,e.permit_confirmed?'TRUE':'FALSE',e.donated_prizes.length,JSON.stringify(e.sport_results),projection.authority];})];
 }
+
 
 export function planEventResourceSheetRequests({requestValues,stateStore,registry=loadDependencyRegistry(),now=()=>new Date().toISOString(),expectedPending=null}){
   assertHeaders(requestValues,EVENT_REQUEST_HEADERS,EVENT_REQUESTS_SHEET);
