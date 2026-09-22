@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validar aislamiento del slot QA oficial
+      - name: Validar aislamiento cuando este PR publica el slot QA oficial
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -30,9 +30,14 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "${BASE_SHA:-}" ] && [ -n "${HEAD_SHA:-}" ]; then
-            git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- preview-v8 || {
-              echo 'El PR del slot QA no puede modificar preview-v8.' >&2
-              git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- preview-v8
+            MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
+            if git diff --quiet "$MERGE_BASE" "$HEAD_SHA" -- qa-pr219; then
+              echo 'Este PR no publica/modifica qa-pr219; aislamiento del slot no aplica.'
+              exit 0
+            fi
+            git diff --quiet "$MERGE_BASE" "$HEAD_SHA" -- preview-v8 || {
+              echo 'Un PR que publica qa-pr219 no puede modificar preview-v8.' >&2
+              git diff --name-only "$MERGE_BASE" "$HEAD_SHA" -- preview-v8
               exit 1
             }
           fi
@@ -56,7 +61,6 @@ jobs:
           print('PASS_QA_SLOT_ISOLATED_FROM_PRODUCTION')
           PY
 
-
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -78,7 +82,6 @@ jobs:
           python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/cudo-root-acceptance-http.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-
           ready=0
           for i in $(seq 1 20); do
             if curl -fsS "$CUDO_BASE_URL" >/dev/null; then ready=1; break; fi
@@ -88,7 +91,6 @@ jobs:
             cat /tmp/cudo-root-acceptance-http.log
             exit 1
           fi
-
           node preview-v8/tools/certify_root_acceptance.mjs
 
       - name: Guardar evidencia del gate raíz
