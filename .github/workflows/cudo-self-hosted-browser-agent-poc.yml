@@ -1,3 +1,4 @@
+# root-cause-probe: 2026-09-22 cudo self-hosted reachability
 name: CUDO Self-Hosted Browser Agent POC
 
 on:
