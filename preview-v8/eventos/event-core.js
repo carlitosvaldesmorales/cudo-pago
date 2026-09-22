@@ -177,10 +177,93 @@ function load(key,seed){
   }catch(e){return clone(seed)}
 }
 
+
+function eventSignals(state){
+  arrays(state);
+  const event=state.event||{}, c=event.conditions||{}, local=event.location==='LOCAL';
+  const commerce=!!c.food_sales_enabled||!!c.bar_sales_enabled||!!c.ticketing_enabled;
+  return {
+    venue_required:local&&!!c.venue_required,
+    playing_surface_required:local&&!!c.venue_required,
+    food_preparation:!!c.food_sales_enabled,
+    food_service:!!c.food_sales_enabled,
+    beverage_service:!!c.bar_sales_enabled,
+    sales_or_cash_handling:commerce,
+    public_access:!!c.ticketing_enabled,
+    cleaning_required:local&&!!c.venue_required,
+    setup_required:local&&!!c.venue_required,
+    teardown_required:local&&!!c.venue_required,
+    equipment_required:local&&!!c.venue_required,
+    ticketing_or_access_control:!!c.ticketing_enabled,
+    communications_required:!!c.broadcast_enabled,
+    sports_operation_required:event.kind==='MATCH'
+  };
+}
+
+function deriveWorkstreams(state){
+  const signals=eventSignals(state), assignments=state.assignments||{}, patterns=state.workstream_patterns||[];
+  return patterns.flatMap(pattern=>{
+    const reasons=(pattern.activation_conditions||[]).filter(key=>signals[key]===true);
+    if(!reasons.length)return [];
+    const assignment=assignments[pattern.capability_tag]||null;
+    const person=assignment&&String(assignment.person||'').trim()?String(assignment.person).trim():null;
+    const assignmentState=person?'ASSIGNED':'UNASSIGNED';
+    return [{
+      workstream_id:(state.event?.event_id||'EVENT')+'::'+pattern.capability_tag,
+      activity_id:state.event?.event_id||null,
+      capability_tag:pattern.capability_tag,
+      activation_reason:reasons,
+      phase:pattern.phase||'DURANTE',
+      state:person?'READY':'REQUIRED_UNASSIGNED',
+      human_gate:pattern.human_gate||'NONE',
+      accountable_role:{
+        role_instance_id:(state.event?.event_id||'EVENT')+'::'+pattern.capability_tag+'::ACCOUNTABLE',
+        role_kind:'ACCOUNTABLE',
+        display_name:pattern.human_label,
+        assignment_state:assignmentState,
+        assignee:person
+      },
+      post_tasks:clone(pattern.post_tasks||[])
+    }];
+  });
+}
+
+function reconcileEventWork(state){
+  arrays(state);
+  const previous=new Map((state.post_event_work||[]).map(item=>[item.work_id,item]));
+  const workstreams=deriveWorkstreams(state);
+  state.workstreams=workstreams;
+  state.responsibilities=workstreams.map(w=>({
+    capability_tag:w.capability_tag,
+    role:w.accountable_role.display_name,
+    person:w.accountable_role.assignee,
+    assignment_state:w.accountable_role.assignment_state,
+    state:w.state,
+    phase:w.phase,
+    activation_reason:clone(w.activation_reason),
+    human_gate:w.human_gate
+  }));
+  const next=[];
+  for(const w of workstreams){
+    for(const task of w.post_tasks||[]){
+      const prior=previous.get(task.work_id);
+      next.push({
+        work_id:task.work_id,
+        title:task.title,
+        capability_tag:w.capability_tag,
+        state:prior?.state||'PENDING',
+        completed_at:prior?.completed_at||null
+      });
+    }
+  }
+  state.post_event_work=next;
+  return {signals:eventSignals(state),workstreams:clone(workstreams)};
+}
+
 root.CudoEventCore={
   clone,money,slug,arrays,inventoryItem,product,offering,ensureInventoryItem,addOffering,
   addRecipeComponent,addBundleComponent,componentNeeds,maxSellable,consumeOffering,
   purchaseTotal,salesRevenue,ticketRevenue,income,payable,cashIn,cashOut,purchase,sale,ticket,
-  closeEvent,save,load
+  closeEvent,eventSignals,deriveWorkstreams,reconcileEventWork,save,load
 };
 })(window);
