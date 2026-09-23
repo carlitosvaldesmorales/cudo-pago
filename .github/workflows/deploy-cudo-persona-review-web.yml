@@ -2,9 +2,12 @@ name: Deploy CUDO Persona Review Web
 
 on:
   push:
-    branches: [main, feat/persona-review-queue]
+    branches: [main, feat/persona-review-queue, feat/event-assignment-private-20260923]
     paths:
       - 'qa-v8-google/apps-script/CudoPersonaReviewWeb.gs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/apps-script/CudoEventAssignmentWeb.gs'
+      - 'preview-v8/admin/forms-config.json'
       - '.github/workflows/deploy-cudo-persona-review-web.yml'
   workflow_dispatch:
 
@@ -29,6 +32,13 @@ jobs:
           import json,os,pathlib,re,urllib.parse,urllib.request
           sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
           source=pathlib.Path('qa-v8-google/apps-script/CudoPersonaReviewWeb.gs').read_text()
+          work_source=pathlib.Path('qa-v8-google/apps-script/CudoWorkStateWeb.gs').read_text()
+          assignment_source=pathlib.Path('qa-v8-google/apps-script/CudoEventAssignmentWeb.gs').read_text()
+          cfg=json.loads(pathlib.Path('preview-v8/admin/forms-config.json').read_text())
+          stable_url=cfg['persona_review_url']
+          m=re.search(r'/s/([^/]+)/exec',stable_url)
+          if not m: raise SystemExit('persona_review_url does not contain a stable deployment id')
+          stable_deployment_id=m.group(1)
           body=urllib.parse.urlencode({'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],'grant_type':'refresh_token'}).encode()
           with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r: access=json.load(r)['access_token']
           def req(url,method='GET',payload=None):
@@ -39,7 +49,7 @@ jobs:
           current=req(base+'/content')
           files=[]; manifest=None
           for f in current.get('files',[]):
-            if f.get('name')=='CudoPersonaReviewWeb': continue
+            if f.get('name') in ('CudoPersonaReviewWeb','CudoWorkStateWeb','CudoEventAssignmentWeb'): continue
             if f.get('type')=='SERVER_JS' and re.search(r'\bfunction\s+(doGet|doPost)\s*\(',f.get('source','')):
               raise SystemExit('Fail closed: existing doGet/doPost found in '+f.get('name','?'))
             if f.get('name')=='appsscript' and f.get('type')=='JSON':
@@ -50,14 +60,17 @@ jobs:
           manifest['timeZone']='America/Santiago'
           manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
           files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
+          files.append({'name':'CudoWorkStateWeb','type':'SERVER_JS','source':work_source})
+          files.append({'name':'CudoEventAssignmentWeb','type':'SERVER_JS','source':assignment_source})
           files.append({'name':'CudoPersonaReviewWeb','type':'SERVER_JS','source':source})
           req(base+'/content','PUT',{'files':files})
           version=req(base+'/versions','POST',{'description':'CUDO Persona Review '+os.environ.get('GITHUB_SHA','')[:12]})
           vn=version['versionNumber']
-          dep=req(base+'/deployments','POST',{'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Persona Review private'})
-          did=dep['deploymentId']
+          dep=req(base+'/deployments/'+stable_deployment_id,'PUT',{'deploymentConfig':{'scriptId':sid,'versionNumber':vn,'manifestFileName':'appsscript','description':'CUDO Private Admin · persona + work + event assignments'}})
+          did=stable_deployment_id
           url='https://script.google.com/macros/s/'+did+'/exec'
-          out={'ok':True,'scriptId':sid,'versionNumber':vn,'deploymentId':did,'webAppUrl':url,'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          if url!=stable_url: raise SystemExit('stable private admin URL changed unexpectedly')
+          out={'ok':True,'scriptId':sid,'versionNumber':vn,'deploymentId':did,'webAppUrl':url,'access':'MYSELF','executeAs':'USER_DEPLOYING','eventAssignmentsView':url+'?view=assignments'}
           pathlib.Path('persona-review-deployment.json').write_text(json.dumps(out,indent=2))
           print(json.dumps(out,indent=2))
           PY
