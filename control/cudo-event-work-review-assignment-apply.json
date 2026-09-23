@@ -1,0 +1,8 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_REVIEW_ASSIGNMENT_APPLY_V1",
+  "apply": false,
+  "idempotency_key": "CUDO-EVENT-WORK-REVIEW-ASSIGNMENT-PR219-001",
+  "target": "GOOGLE_ACTIVITY_QA",
+  "production_write": false,
+  "authorized_by": "USER_INTENT_20260923_RETURN_TO_EVENT_TASK_REVIEW_ASSIGNMENT"
+}
