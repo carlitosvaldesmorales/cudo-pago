@@ -1,0 +1,51 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_REVIEW_CONFIG_V1",
+  "production_write": false,
+  "source_event_ref": "preview-v8/data/match-full-day-qa.json",
+  "target_activity_id": "QA-ACTIVITY-MATCH-PR219-001",
+  "provenance": "SYNTHETIC",
+  "assignment_policy": "WORKSTREAM_ACCOUNTABLE_STARTS_UNASSIGNED",
+  "source_backed_task_overrides": {
+    "CANCHA": {
+      "title": "Revisión final de cancha",
+      "assignee_ref": "",
+      "assignee_display": "",
+      "source_refs": [
+        "preview-v8/data/match-full-day-qa.json"
+      ]
+    },
+    "ASEO": {
+      "title": "Aseo general del estadio",
+      "assignee_ref": "CUDO-ACTOR-SANDRA-SALINAS-001",
+      "assignee_display": "Sandra Salinas",
+      "source_refs": [
+        "05_CASOS/CASO_CUDO_001/CUDO_OPERATIONAL_WORK_STATE_WEB_CHECKPOINT_v1.yaml",
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+      ]
+    },
+    "LAVADO": {
+      "title": "Lavado de camisetas del partido",
+      "assignee_ref": "CUDO-ACTOR-CECILIA-001",
+      "assignee_display": "Cecilia",
+      "source_refs": [
+        "05_CASOS/CASO_CUDO_001/CUDO_OPERATIONAL_WORK_STATE_WEB_CHECKPOINT_v1.yaml",
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+      ]
+    }
+  },
+  "conditional_source_backed_rules": [
+    {
+      "rule_id": "GRASS_CUT_MATCH_ON_SATURDAY",
+      "applies_when": "MATCH_LOCAL_AND_EVENT_DATE_IS_SATURDAY",
+      "workstream_capability_tag": "VENUE_AND_FIELD",
+      "title": "Corte de pasto del estadio",
+      "assignee_ref": "CUDO-ACTOR-MAX-FIGUEROA-001",
+      "assignee_display": "Maximiliano Figueroa",
+      "due_rule": "PREVIOUS_DAY_FRIDAY",
+      "source_refs": [
+        "05_CASOS/CASO_CUDO_001/CUDO_OPERATIONAL_WORK_STATE_WEB_CHECKPOINT_v1.yaml",
+        "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B4:C4"
+      ]
+    }
+  ]
+}
