@@ -1,0 +1,79 @@
+schema_version: CUDO_ACTIVITY_ABSORPTION_CERTIFIER_HOSTED_EQUIVALENCE_V1
+source_contract: arke-root/05_CASOS/CASO_CUDO_001/CUDO_ACTIVITY_ABSORPTION_CERTIFIER_CONTRACT_V1.yaml
+source_arke_sha: 2d48d6b7f3d41a9c24804730e71c40b87b093767
+production_write: false
+
+target:
+  repository: carlitosvaldesmorales/cudo-pago
+  ref: ops/hosted-activity-certifier-20260922
+  candidate_head_sha: 4df1ccb5ba67528d3c8684a4bd2168bb3b3fb060
+  web_root: /preview-v8/
+  discovery_paths:
+    - /preview-v8/eventos/
+  maximum_same_origin_pages: 8
+
+mission:
+  id: EVENT_TO_REQUIRED_WORK_ABSORPTION
+  human_goal: >-
+    Actua como una persona que administra CUDO durante una jornada real. El Partido debe ser el contexto
+    principal y, al cambiar sus condiciones, CUDO debe derivar automaticamente solo el trabajo que corresponde.
+    Debes poder ver que recinto/cancha, cocina, bar/ventas, aseo, montaje, acceso, comunicaciones, operacion
+    deportiva y caja aparecen o desaparecen por las condiciones del evento; cada trabajo debe mostrar una
+    responsabilidad explicita sin inventar una persona si no esta asignada. El trabajo posterior debe seguir
+    perteneciendo a la misma jornada. Falla si las tareas son una lista estatica, si aparecen ramas que no
+    aplican, si CUDO inventa responsables, o si el usuario debe reconstruir la jornada en modulos separados.
+  expected_current_control_result: PASS
+
+semantic_groups:
+  event_context: [partido, jornada, local, visita, rival]
+  work_context: [responsabilidad, encargado, persona, trabajo, pendiente]
+  facility: [cancha, estadio, recinto]
+  food_service: [cocina]
+  concessions: [bar, venta]
+  cleaning: [aseo, limpieza]
+  setup: [montaje, logistica, logística]
+  access: [acceso, recepcion, recepción, entrada]
+  communications: [comunicacion, comunicación, transmision, transmisión]
+  sports_operation: [deporte, deportivo, resultado]
+  finance: [caja, ingreso, pagar, obligacion, obligación]
+  post_event: [post, despues, después, lavado, revision final, revisión final]
+
+deterministic_acceptance:
+  required_primary_context: event_context
+  required_branch_groups:
+    - work_context
+    - facility
+    - food_service
+    - concessions
+    - cleaning
+    - setup
+    - access
+    - sports_operation
+    - finance
+    - post_event
+  minimum_branch_groups_on_one_surface: 9
+  require_actionable_controls_on_same_surface: true
+
+reviewer:
+  engine: BrowserGym_OpenEndedTask
+  local_model: llama3.2:3b
+  model_runtime: Ollama
+  execution_host: github_hosted_ephemeral
+  source_code_access: false
+  pr_context_access: false
+  repository_mount: false
+  external_model_api: false
+  paid_credits: 0
+
+equivalence_rule:
+  invariant:
+    - same_human_goal
+    - same_semantic_groups
+    - same_deterministic_acceptance
+    - same_BrowserGym_engine
+    - same_local_model
+    - reviewer_has_no_repo_mount
+    - zero_paid_model_api
+    - production_write_false
+  changed_dimension:
+    - execution_host
