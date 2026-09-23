@@ -1,0 +1,25 @@
+{
+  "schema_version": "CUDO_PARTIDOS_HOSTED_CAPTURE_POC_V1",
+  "generated_at": "2026-09-23T10:46:26.093Z",
+  "run_id": "35850644364",
+  "marker": "CUDO-QA-HOSTED-PARTIDO-35850644364",
+  "execution_plane": "GitHub_hosted",
+  "olam_required": false,
+  "production_write": false,
+  "real_club_data": false,
+  "preflight": {
+    "provider": false,
+    "raw": false,
+    "control": false,
+    "public_export": false
+  },
+  "selections": {
+    "competencia": "Copa/Otro"
+  },
+  "writes": 0,
+  "form_submit_confirmed": false,
+  "postflight": null,
+  "decision": "FAIL",
+  "error": "Error: Time inputs missing\n    at main (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:135:64)",
+  "completed_at": "2026-09-23T10:46:28.443Z"
+}
