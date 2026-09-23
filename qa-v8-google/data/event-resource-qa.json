@@ -1,20 +1,20 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V2",
-  "generated_at": "2026-09-23T11:49:34.164Z",
-  "store_revision": 7,
+  "generated_at": "2026-09-23T11:58:35.234Z",
+  "store_revision": 8,
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "commerce_model": "DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE",
   "MATCH": {
     "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
     "kind": "MATCH",
     "display_name": "CUDO vs San Juan · Jornada QA gobernada",
-    "starts_at": null,
-    "location": null,
+    "starts_at": "2026-09-27T13:00:00-03:00",
+    "location": "LOCAL",
     "conditions": {
-      "venue_required": false,
-      "food_sales_enabled": false,
-      "bar_sales_enabled": false,
-      "ticketing_enabled": false,
+      "venue_required": true,
+      "food_sales_enabled": true,
+      "bar_sales_enabled": true,
+      "ticketing_enabled": true,
       "broadcast_enabled": false
     },
     "closed": false,
@@ -93,6 +93,6 @@
     },
     "operational_resource_result_clp": 0
   },
-  "audit_count": 6,
+  "audit_count": 7,
   "production_write": false
 }

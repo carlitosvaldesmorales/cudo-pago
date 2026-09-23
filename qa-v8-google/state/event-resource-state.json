@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_STATE_STORE_V1",
-  "store_revision": 7,
-  "generated_at": "2026-09-23T11:49:34.164Z",
+  "store_revision": 8,
+  "generated_at": "2026-09-23T11:58:35.234Z",
   "active_conditions": [
     "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES"
   ],
@@ -10,7 +10,7 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
       "object_type": "ACTIVITY_EVENT",
-      "object_version": 5,
+      "object_version": 8,
       "lifecycle_state": "IN_PROGRESS",
       "data": {
         "activity_kind": "MATCH",
@@ -29,13 +29,13 @@
         "permit_confirmed": false,
         "permit_ref": "",
         "donated_prizes": [],
-        "starts_at": "",
-        "location": "",
+        "starts_at": "2026-09-27T13:00:00-03:00",
+        "location": "LOCAL",
         "conditions": {
-          "venue_required": false,
-          "food_sales_enabled": false,
-          "bar_sales_enabled": false,
-          "ticketing_enabled": false,
+          "venue_required": true,
+          "food_sales_enabled": true,
+          "bar_sales_enabled": true,
+          "ticketing_enabled": true,
           "broadcast_enabled": false
         }
       },
@@ -116,13 +116,13 @@
       "relationships": [],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": "2026-09-23T11:49:34.164Z",
+        "updated_at": "2026-09-23T11:58:35.234Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
           "qa://event-resource-governed-persistence",
           "qa://event-operational-conditions-schema-v1"
         ],
-        "transition_id": "CUDO-TRANS-159495D2EB1CDDE7B1C9"
+        "transition_id": "CUDO-TRANS-049E7EC876580AB0525E"
       },
       "legacy_refs": []
     },
@@ -654,6 +654,31 @@
         "CUDO-TRANS-159495D2EB1CDDE7B1C9"
       ],
       "transaction_fingerprint": "555ced98663683351fcaf521138df9cda16b032832ed5810abdf2f08d400dff9"
+    },
+    {
+      "request_id": "CUDO-EVENT-WORK-AUTO-PROJECTION-MATCH-001",
+      "requested_at": "2026-09-23T11:58:21.488495Z",
+      "applied_at": "2026-09-23T11:58:35.234Z",
+      "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+      "action": "MATCH_CONFIGURE_OPERATION",
+      "expected_revision": 7,
+      "requested_by": "sistemas@cudo.cl",
+      "reason": "Synthetic governed configuration from versioned PR219 fixture",
+      "evidence_ref": "qa://event-work-auto-projection/CUDO-EVENT-WORK-AUTO-PROJECTION-MATCH-001",
+      "status": "APPLIED",
+      "new_revision": 8,
+      "command_ids": [
+        "CUDO-CMD-5BE5341466E9434319B9",
+        "CUDO-CMD-7D04CD7C375809DDB25E",
+        "CUDO-CMD-92AC95707DBC7E78BB61"
+      ],
+      "transaction_id": "CUDO-TXN-34E4576B791691C690B3",
+      "transition_ids": [
+        "CUDO-TRANS-8005F6E8ADED83CEF49E",
+        "CUDO-TRANS-A533800C9A3F3A132E18",
+        "CUDO-TRANS-049E7EC876580AB0525E"
+      ],
+      "transaction_fingerprint": "d951f87b2ee9b826efc70dd80e7a515771281f5d70c98f8074c5f9ca8f2022ae"
     }
   ],
   "production_write": false,
