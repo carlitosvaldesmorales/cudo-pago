@@ -1,8 +1,8 @@
 {
   "schema_version": "CUDO_PARTIDOS_HOSTED_CAPTURE_POC_V1",
-  "generated_at": "2026-09-23T10:48:24.012Z",
-  "run_id": "35850832969",
-  "marker": "CUDO-QA-HOSTED-PARTIDO-35850832969",
+  "generated_at": "2026-09-23T10:52:32.130Z",
+  "run_id": "35851179145",
+  "marker": "CUDO-QA-HOSTED-PARTIDO-35851179145",
   "execution_plane": "GitHub_hosted",
   "olam_required": false,
   "production_write": false,
@@ -51,6 +51,6 @@
     }
   ],
   "form_response_status": 200,
-  "error": "Error: Sheets read 'PUBLICO_EXPORT'!A:AZ HTTP 429: Quota exceeded for quota metric 'Read requests' and limit 'Read requests per minute per user' of service 'sheets.googleapis.com' for consumer 'project_number:257090036200'.\n    at readValues (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:63:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Promise.all (index 3)\n    at async stageSnapshot (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:70:36)\n    at async waitForStages (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:88:10)\n    at async main (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:205:25)",
-  "completed_at": "2026-09-23T10:49:24.657Z"
+  "error": "Error: Timeout waiting downstream stages: {\"provider\":false,\"raw\":true,\"control\":true,\"public_export\":false}\n    at waitForStages (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:107:9)\n    at async main (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:258:25)",
+  "completed_at": "2026-09-23T10:54:40.378Z"
 }
