@@ -1,0 +1,63 @@
+name: Inspect CUDO Apps Script Deployments
+
+on:
+  push:
+    branches:
+      - 'ops/mobile-adoption-production-deploy-20260923'
+    paths:
+      - '.github/workflows/inspect-cudo-apps-script-deployments.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: List deployments read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request
+          sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'}),timeout=30) as r:
+            access=json.load(r)['access_token']
+          req=urllib.request.Request(
+            f'https://script.googleapis.com/v1/projects/{sid}/deployments',
+            headers={'Authorization':'Bearer '+access,'Accept':'application/json'}
+          )
+          with urllib.request.urlopen(req,timeout=30) as r:
+            data=json.load(r)
+          rows=[]
+          for d in data.get('deployments',[]):
+            cfg=d.get('deploymentConfig') or {}
+            rows.append({
+              'deploymentId':d.get('deploymentId'),
+              'versionNumber':cfg.get('versionNumber'),
+              'manifestFileName':cfg.get('manifestFileName'),
+              'description':cfg.get('description'),
+              'updateTime':d.get('updateTime'),
+              'entryPoints':d.get('entryPoints')
+            })
+          out={'ok':True,'count':len(rows),'deployments':rows}
+          pathlib.Path('apps-script-deployments.json').write_text(json.dumps(out,indent=2,ensure_ascii=False))
+          print(json.dumps(out,indent=2,ensure_ascii=False))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cudo-apps-script-deployments-${{ github.run_id }}
+          path: apps-script-deployments.json
+          retention-days: 30
