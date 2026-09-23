@@ -1,0 +1,52 @@
+{
+  "schema_version": "CUDO_RESULTS_TO_STANDINGS_CORRELATED_ROUNDTRIP_V1",
+  "generated_at": "2026-09-23T19:39:50.215Z",
+  "classification": "PASS_CORRELATED_RESULTS_TO_STANDINGS_ROUNDTRIP",
+  "marker": "ANFA-CHEPICA-2026:A-F1-M1",
+  "production_write": false,
+  "real_club_data_source": "existing_verified_versioned_result",
+  "source_match": {
+    "match_id": "A-F1-M1",
+    "validation_status": "VERIFIED",
+    "home_name": "Santa Elena La Ruda",
+    "away_name": "Unión Orilla",
+    "series": [
+      {
+        "series": "TERCERA",
+        "home_score": 1,
+        "away_score": 0
+      },
+      {
+        "series": "SEGUNDA",
+        "home_score": 2,
+        "away_score": 1
+      },
+      {
+        "series": "SENIOR",
+        "home_score": 0,
+        "away_score": 2
+      },
+      {
+        "series": "PRIMERA",
+        "home_score": 1,
+        "away_score": 2
+      }
+    ]
+  },
+  "correlation": {
+    "cudo_general_contribution": 4,
+    "cudo_senior_contribution": 3,
+    "visible_general_points": 4,
+    "visible_senior_points": 3,
+    "mobile_visible": true,
+    "mobile_pj_pts_priority": true,
+    "renderer_result_source": "live"
+  },
+  "source_files": {
+    "results": "preview-v8/data/anfa-chepica-2026-series-results.json",
+    "rules": "preview-v8/data/anfa-chepica-2026-standings-rules.json",
+    "fixture": "preview-v8/data/championship-fixture.json",
+    "renderer": "preview-v8/shared/standings.js"
+  },
+  "current_sha": "02df6322051246297ab790093d7095a3abcc593d"
+}
