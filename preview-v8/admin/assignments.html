@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#03163d">
+<title>CUDO · Asignación privada</title>
+<link rel="stylesheet" href="../shared/site.css">
+<style>
+body{margin:0;background:#f4f2ed;color:#03163d;font-family:Arial,sans-serif}.wrap{max-width:720px;margin:60px auto;padding:24px}.card{background:#fff;border:1px solid #c8d0dc;border-radius:18px;padding:24px}.error{color:#a51c30}
+</style>
+</head>
+<body>
+<main class="wrap"><div class="card"><h1>Abriendo administración privada…</h1><p id="state">Validando la ruta del evento.</p></div></main>
+<script>
+(async function(){
+  const state=document.getElementById('state');
+  try{
+    const activity=new URLSearchParams(location.search).get('activity')||'';
+    if(!/^QA-ACTIVITY-[A-Z0-9_-]+$/.test(activity)) throw new Error('Actividad inválida');
+    const cfg=await fetch('./forms-config.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se pudo leer configuración');return r.json();});
+    if(!cfg.event_assignment_url) throw new Error('Administración privada no configurada');
+    const sep=cfg.event_assignment_url.includes('?')?'&':'?';
+    location.replace(cfg.event_assignment_url+sep+'activity='+encodeURIComponent(activity));
+  }catch(e){
+    state.className='error';
+    state.textContent='No se pudo abrir la asignación privada: '+(e&&e.message?e.message:e);
+  }
+})();
+</script>
+</body>
+</html>
