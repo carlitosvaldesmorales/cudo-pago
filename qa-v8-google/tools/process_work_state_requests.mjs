@@ -80,14 +80,14 @@ function financialContextLabel(ctx){
 }
 function buildControlRows(projection){
   return [
-    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','SCHEDULE_CONTEXT','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','FINANCIAL_EFFECT','OUTSTANDING_CLP','OBJECT_VERSION','AUTHORITY'],
+    ['WORK_ID','TITLE','STATE','RESPONSIBLE','DUE_DATE','ATTENTION','RESOURCE','SOURCE','SCHEDULE_CONTEXT','FINANCIAL_CONTEXT','FINANCIAL_CONTEXT_SEMANTICS','FINANCIAL_EFFECT','OUTSTANDING_CLP','OBJECT_VERSION','AUTHORITY','RESPONSIBLE_ACTOR_ID'],
     ...projection.items.map(item=>[
       item.work_id,item.title,item.state,item.responsible.display_name,item.due_date,item.attention,
       item.resource.display_name,item.source.display_name,scheduleContextLabel(item.schedule),financialContextLabel(item.financial_context),
       item.financial_context.semantics,
       item.financial_effect?`${item.financial_effect.state} · ${item.financial_effect.obligation_id}`:'',
       item.financial_effect?.outstanding_amount_clp??'',
-      item.object_version,projection.authority
+      item.object_version,projection.authority,item.responsible.actor_id
     ])
   ];
 }
@@ -238,7 +238,7 @@ export function planWorkStateRequests({
     op:'replace',
     kind:'WORK_CONTROL',
     spreadsheetId:WORK_SHEET_ID,
-    range:`${WORK_CONTROL_SHEET}!A:O`,
+    range:`${WORK_CONTROL_SHEET}!A:P`,
     values:buildControlRows(projection)
   });
 
