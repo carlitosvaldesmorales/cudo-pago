@@ -1,0 +1,62 @@
+name: CUDO Mobile Adoption Candidate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview-v8/shared/adoption-config.js'
+      - 'preview-v8/shared/adoption.js'
+      - 'preview-v8/shared/site.js'
+      - 'preview-v8/certification/mobile-capabilities.json'
+      - 'preview-v8/tools/certify_mobile_adoption_candidate.mjs'
+      - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
+      - '.github/workflows/certify-cudo-mobile-adoption-candidate.yml'
+  push:
+    branches:
+      - 'feat/mobile-production-adoption-evidence-20260923'
+    paths:
+      - 'preview-v8/shared/adoption-config.js'
+      - 'preview-v8/shared/adoption.js'
+      - 'preview-v8/shared/site.js'
+      - 'preview-v8/certification/mobile-capabilities.json'
+      - 'preview-v8/tools/certify_mobile_adoption_candidate.mjs'
+      - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
+      - '.github/workflows/certify-cudo-mobile-adoption-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout QA certification authority
+        uses: actions/checkout@v4
+        with:
+          repository: carlitosvaldesmorales/cudo-pago
+          ref: qa-v8-google-data
+          path: qa-authority
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate syntax and no-production boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check preview-v8/shared/adoption-config.js
+          node --check preview-v8/shared/adoption.js
+          node --check preview-v8/tools/certify_mobile_adoption_candidate.mjs
+          grep -q "enabled:false" preview-v8/shared/adoption-config.js
+          ! grep -q "AKfy" preview-v8/shared/adoption-config.js
+      - name: Install Playwright browsers
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium webkit
+      - name: Certify candidate in Chromium and WebKit
+        run: node preview-v8/tools/certify_mobile_adoption_candidate.mjs
+      - name: Validate mobile certification registry
+        env:
+          CUDO_QA_ROOT: qa-authority
+        run: node preview-v8/tools/validate_mobile_certification.mjs
