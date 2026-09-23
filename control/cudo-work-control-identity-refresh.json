@@ -1,0 +1,7 @@
+{
+  "schema_version": "CUDO_WORK_CONTROL_IDENTITY_REFRESH_V1",
+  "apply": false,
+  "expected_pending": 0,
+  "production_write": false,
+  "purpose": "Refresh existing WORK_CONTROL projection so stable RESPONSIBLE_ACTOR_ID is available to assignment identity adapter."
+}
