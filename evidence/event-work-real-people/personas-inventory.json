@@ -1,6 +1,6 @@
 {
   "schema_version": "CUDO_ASSIGNABLE_PERSONAS_INVENTORY_V1",
-  "generated_at": "2026-09-23T12:05:01.638Z",
+  "generated_at": "2026-09-23T12:12:47.588Z",
   "spreadsheet_id": "1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y",
   "control_sheet": "PERSONAS_CONTROL",
   "production_write": false,
@@ -36,6 +36,55 @@
   "active_count": 0,
   "assignable_count": 0,
   "assignable_people": [],
+  "operational_actor_projection": {
+    "headers": [
+      "WORK_ID",
+      "TITLE",
+      "STATE",
+      "RESPONSIBLE",
+      "DUE_DATE",
+      "ATTENTION",
+      "RESOURCE",
+      "SOURCE",
+      "SCHEDULE_CONTEXT",
+      "FINANCIAL_CONTEXT",
+      "FINANCIAL_CONTEXT_SEMANTICS",
+      "FINANCIAL_EFFECT",
+      "OUTSTANDING_CLP",
+      "OBJECT_VERSION",
+      "AUTHORITY",
+      "RESPONSIBLE_ACTOR_ID"
+    ],
+    "row_count": 4,
+    "actor_count": 4,
+    "actors": [
+      {
+        "person_ref": "CUDO-ACTOR-MAX-FIGUEROA-001",
+        "person_display": "Maximiliano Figueroa",
+        "source": "ACTOR_OPERATIONAL",
+        "status": "ACTIVE_EVIDENCE_BACKED"
+      },
+      {
+        "person_ref": "CUDO-ACTOR-MARIO-DIAZ-001",
+        "person_display": "Mario Díaz",
+        "source": "ACTOR_OPERATIONAL",
+        "status": "ACTIVE_EVIDENCE_BACKED"
+      },
+      {
+        "person_ref": "CUDO-ACTOR-CECILIA-001",
+        "person_display": "Cecilia",
+        "source": "ACTOR_OPERATIONAL",
+        "status": "ACTIVE_EVIDENCE_BACKED"
+      },
+      {
+        "person_ref": "CUDO-ACTOR-SANDRA-SALINAS-001",
+        "person_display": "Sandra Salinas",
+        "source": "ACTOR_OPERATIONAL",
+        "status": "ACTIVE_EVIDENCE_BACKED"
+      }
+    ]
+  },
+  "combined_assignable_count": 4,
   "safe_fields_exposed": [
     "ID_PERSONA",
     "NOMBRE_PUBLICO",
