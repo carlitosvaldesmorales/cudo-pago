@@ -17,7 +17,8 @@
       "bar_sales_enabled": true,
       "ticketing_enabled": true,
       "broadcast_enabled": false
-    }
+    },
+    "operational_activity_id": "QA-ACTIVITY-MATCH-PR219-001"
   },
   "responsibilities": [],
   "inventory_items": [],
