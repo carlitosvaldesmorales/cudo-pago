@@ -32,6 +32,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout QA certification authority
+        uses: actions/checkout@v4
+        with:
+          repository: carlitosvaldesmorales/cudo-pago
+          ref: qa-v8-google-data
+          path: qa-authority
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -51,4 +57,6 @@ jobs:
       - name: Certify candidate in Chromium and WebKit
         run: node preview-v8/tools/certify_mobile_adoption_candidate.mjs
       - name: Validate mobile certification registry
+        env:
+          CUDO_QA_ROOT: qa-authority
         run: node preview-v8/tools/validate_mobile_certification.mjs
