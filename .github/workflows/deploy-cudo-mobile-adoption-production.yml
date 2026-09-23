@@ -52,9 +52,13 @@ jobs:
               headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
               method=method
             )
-            with urllib.request.urlopen(q,timeout=30) as r:
-              raw=r.read()
-              return json.loads(raw) if raw else {}
+            try:
+              with urllib.request.urlopen(q,timeout=30) as r:
+                raw=r.read()
+                return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as exc:
+              detail=exc.read().decode(errors='replace')
+              raise RuntimeError(f'{method} {url} -> HTTP {exc.code}: {detail[:1200]}') from exc
 
           base=f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}'
           current=req(base+'/content')
@@ -62,7 +66,12 @@ jobs:
           if not original:
             raise SystemExit('Apps Script project content empty')
 
-          manifest={'timeZone':'America/Santiago','webapp':{'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING'}}
+          manifest_file=next((f for f in original if f['name']=='appsscript' and f['type']=='JSON'),None)
+          if manifest_file is None:
+            raise SystemExit('Apps Script manifest missing')
+          manifest=json.loads(manifest_file.get('source') or '{}')
+          manifest['timeZone']='America/Santiago'
+          manifest['webapp']={'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING'}
           isolated=[
             {'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))},
             {'name':'CudoMobileAdoptionWeb','type':'SERVER_JS','source':SOURCE},
