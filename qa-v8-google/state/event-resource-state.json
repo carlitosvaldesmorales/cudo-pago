@@ -1,7 +1,7 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_STATE_STORE_V1",
-  "store_revision": 6,
-  "generated_at": "2026-09-22T05:19:46.230Z",
+  "store_revision": 7,
+  "generated_at": "2026-09-23T11:49:34.164Z",
   "active_conditions": [
     "CANONICAL_FINANCIAL_AMOUNT_BINDING_APPLIES"
   ],
@@ -10,7 +10,7 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
       "object_type": "ACTIVITY_EVENT",
-      "object_version": 4,
+      "object_version": 5,
       "lifecycle_state": "IN_PROGRESS",
       "data": {
         "activity_kind": "MATCH",
@@ -23,7 +23,7 @@
             "series": "QA-Sonda-Gobernada",
             "home": 0,
             "away": 0,
-            "recorded_at": "2026-09-22T05:19:46.230Z"
+            "recorded_at": "2026-09-23T11:49:34.164Z"
           }
         ],
         "permit_confirmed": false,
@@ -116,13 +116,13 @@
       "relationships": [],
       "provenance": {
         "created_at": "2026-09-21T19:40:00.000Z",
-        "updated_at": "2026-09-22T05:19:46.230Z",
+        "updated_at": "2026-09-23T11:49:34.164Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
           "qa://event-resource-governed-persistence",
           "qa://event-operational-conditions-schema-v1"
         ],
-        "transition_id": "CUDO-TRANS-96366B463848FC409959"
+        "transition_id": "CUDO-TRANS-159495D2EB1CDDE7B1C9"
       },
       "legacy_refs": []
     },
@@ -633,6 +633,27 @@
         "CUDO-TRANS-96366B463848FC409959"
       ],
       "transaction_fingerprint": "928fe83d562803ae811d47772ec610355d70caec8050a2aaca0fcf1cb1e0fa99"
+    },
+    {
+      "request_id": "CUDO-QA-EVENT-LIVE-35856742473",
+      "requested_at": "2026-09-22T05:20:00.000Z",
+      "applied_at": "2026-09-23T11:49:34.164Z",
+      "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+      "action": "MATCH_RESULT",
+      "expected_revision": 6,
+      "requested_by": "sistemas@cudo.cl",
+      "reason": "Synthetic Google QA transport/readback probe",
+      "evidence_ref": "qa://google-live/CUDO-QA-EVENT-LIVE-35856742473",
+      "status": "APPLIED",
+      "new_revision": 7,
+      "command_ids": [
+        "CUDO-CMD-CE499204843BE4600AA9"
+      ],
+      "transaction_id": "CUDO-TXN-4F477B694B2DC8AF7C6B",
+      "transition_ids": [
+        "CUDO-TRANS-159495D2EB1CDDE7B1C9"
+      ],
+      "transaction_fingerprint": "555ced98663683351fcaf521138df9cda16b032832ed5810abdf2f08d400dff9"
     }
   ],
   "production_write": false,

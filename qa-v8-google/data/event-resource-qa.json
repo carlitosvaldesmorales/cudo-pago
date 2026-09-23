@@ -1,13 +1,22 @@
 {
   "schema_version": "CUDO_EVENT_RESOURCE_QA_READ_MODEL_V2",
-  "generated_at": "2026-09-22T05:19:46.230Z",
-  "store_revision": 6,
+  "generated_at": "2026-09-23T11:49:34.164Z",
+  "store_revision": 7,
   "authority": "CANONICAL_GRAPH_READ_MODEL",
   "commerce_model": "DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE",
   "MATCH": {
     "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
     "kind": "MATCH",
     "display_name": "CUDO vs San Juan · Jornada QA gobernada",
+    "starts_at": null,
+    "location": null,
+    "conditions": {
+      "venue_required": false,
+      "food_sales_enabled": false,
+      "bar_sales_enabled": false,
+      "ticketing_enabled": false,
+      "broadcast_enabled": false
+    },
     "closed": false,
     "closed_at": null,
     "permit_confirmed": false,
@@ -18,7 +27,7 @@
         "series": "QA-Sonda-Gobernada",
         "home": 0,
         "away": 0,
-        "recorded_at": "2026-09-22T05:19:46.230Z"
+        "recorded_at": "2026-09-23T11:49:34.164Z"
       }
     ],
     "commerce": {
@@ -47,6 +56,15 @@
     "event_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
     "kind": "BINGO",
     "display_name": "Bingo CUDO · Jornada QA gobernada",
+    "starts_at": null,
+    "location": null,
+    "conditions": {
+      "venue_required": false,
+      "food_sales_enabled": false,
+      "bar_sales_enabled": false,
+      "ticketing_enabled": false,
+      "broadcast_enabled": false
+    },
     "closed": false,
     "closed_at": null,
     "permit_confirmed": false,
@@ -75,6 +93,6 @@
     },
     "operational_resource_result_clp": 0
   },
-  "audit_count": 5,
+  "audit_count": 6,
   "production_write": false
 }
