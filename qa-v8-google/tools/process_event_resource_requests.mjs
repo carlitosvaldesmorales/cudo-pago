@@ -364,7 +364,7 @@ export function planEventResourceSheetRequests({requestValues,stateStore,registr
     sheetMutations.push({op:'append',kind:'EVENT_AUDIT',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_AUDIT_SHEET+'!A:L',values:[externalAuditRow(item)]});
   }
   const projection=buildEventResourceProjection(state);
-  sheetMutations.push({op:'replace',kind:'EVENT_CONTROL',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_CONTROL_SHEET+'!A:O',values:controlRows(projection)});
+  sheetMutations.push({op:'replace',kind:'EVENT_CONTROL',spreadsheetId:EVENT_RESOURCE_SHEET_ID,range:EVENT_CONTROL_SHEET+'!A:R',values:controlRows(projection)});
   return {ok:true,pending_count:rows.length,summary,state_store:state,projection,sheet_mutations:sheetMutations,production_write:false};
 }
 
