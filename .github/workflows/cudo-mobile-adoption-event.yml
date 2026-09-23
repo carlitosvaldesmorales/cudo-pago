@@ -1,0 +1,202 @@
+name: CUDO Mobile Adoption Event
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        required: true
+        type: string
+      observed_at:
+        required: true
+        type: string
+      event_type:
+        required: true
+        type: string
+      app_version:
+        required: true
+        type: string
+      route:
+        required: true
+        type: string
+      display_mode:
+        required: true
+        type: string
+      trigger:
+        required: true
+        type: string
+      source_system:
+        required: true
+        type: string
+      privacy_class:
+        required: true
+        type: string
+      sheet_row:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cudo-mobile-adoption-event-${{ inputs.observed_at }}
+  cancel-in-progress: false
+
+jobs:
+  validate-and-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate real adoption against canonical Sheet
+        shell: bash
+        env:
+          INPUT_SOURCE: ${{ inputs.source }}
+          INPUT_OBSERVED_AT: ${{ inputs.observed_at }}
+          INPUT_EVENT_TYPE: ${{ inputs.event_type }}
+          INPUT_APP_VERSION: ${{ inputs.app_version }}
+          INPUT_ROUTE: ${{ inputs.route }}
+          INPUT_DISPLAY_MODE: ${{ inputs.display_mode }}
+          INPUT_TRIGGER: ${{ inputs.trigger }}
+          INPUT_SOURCE_SYSTEM: ${{ inputs.source_system }}
+          INPUT_PRIVACY_CLASS: ${{ inputs.privacy_class }}
+          INPUT_SHEET_ROW: ${{ inputs.sheet_row }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, re, urllib.parse, urllib.request
+
+          spreadsheet_id='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms'
+          expected={
+            'source':'apps_script_mobile_adoption_post',
+            'event_type':'mobile.production.adoption.observed',
+            'display_mode':'standalone',
+            'source_system':'CUDO_PWA',
+            'privacy_class':'ANONYMOUS_PRIVACY_MINIMAL',
+          }
+          actual={
+            'source':os.environ['INPUT_SOURCE'],
+            'event_type':os.environ['INPUT_EVENT_TYPE'],
+            'display_mode':os.environ['INPUT_DISPLAY_MODE'],
+            'source_system':os.environ['INPUT_SOURCE_SYSTEM'],
+            'privacy_class':os.environ['INPUT_PRIVACY_CLASS'],
+          }
+          if actual != expected:
+            raise SystemExit('adoption event contract mismatch')
+          if os.environ['INPUT_TRIGGER'] not in {'pointerdown','keydown'}:
+            raise SystemExit('trusted interaction class mismatch')
+          if not re.fullmatch(r'/preview-v8/[A-Za-z0-9._~!$&\'()*+,;=:@%/-]*',os.environ['INPUT_ROUTE']):
+            raise SystemExit('route outside CUDO PWA scope')
+          row=int(os.environ['INPUT_SHEET_ROW'])
+          if row < 2:
+            raise SystemExit('invalid canonical sheet row')
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          request=urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})
+          with urllib.request.urlopen(request,timeout=30) as response:
+            access=json.load(response)['access_token']
+
+          rng=urllib.parse.quote(f'MOBILE_ADOPTION_EVENTS!A{row}:H{row}',safe='!:$')
+          request=urllib.request.Request(
+            f'https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{rng}',
+            headers={'Authorization':'Bearer '+access,'Accept':'application/json'}
+          )
+          with urllib.request.urlopen(request,timeout=30) as response:
+            rows=(json.load(response).get('values') or [])
+          if len(rows)!=1:
+            raise SystemExit('canonical adoption row not found')
+          values=rows[0]+['']*(8-len(rows[0]))
+          canonical=[
+            os.environ['INPUT_OBSERVED_AT'],
+            os.environ['INPUT_EVENT_TYPE'],
+            os.environ['INPUT_APP_VERSION'],
+            os.environ['INPUT_ROUTE'],
+            os.environ['INPUT_DISPLAY_MODE'],
+            os.environ['INPUT_TRIGGER'],
+            os.environ['INPUT_SOURCE_SYSTEM'],
+            os.environ['INPUT_PRIVACY_CLASS'],
+          ]
+          if values[:8] != canonical:
+            raise SystemExit('workflow payload does not match canonical Sheet row')
+
+          evidence={
+            'schema_version':'CUDO_MOBILE_ADOPTION_REAL_EVENT_EVIDENCE_V1',
+            'observed_at':canonical[0],
+            'event_type':canonical[1],
+            'app_version':canonical[2],
+            'route':canonical[3],
+            'display_mode':canonical[4],
+            'trigger':canonical[5],
+            'source':canonical[6],
+            'privacy_class':canonical[7],
+            'sheet_row':row,
+            'source_repository':os.environ.get('GITHUB_REPOSITORY',''),
+            'source_run_id':os.environ.get('GITHUB_RUN_ID',''),
+            'source_head_sha':os.environ.get('GITHUB_SHA',''),
+            'synthetic':False,
+            'polling':False,
+          }
+          pathlib.Path('mobile-adoption-real-event.json').write_text(json.dumps(evidence,indent=2)+"\n")
+          print(json.dumps(evidence,indent=2))
+          PY
+
+      - name: Mint dedicated CUDO to ARKE token
+        id: arke_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CUDO_TO_ARKE_APP_ID }}
+          private-key: ${{ secrets.CUDO_TO_ARKE_APP_PRIVATE_KEY }}
+          owner: carlitosvaldesmorales
+          repositories: arke-root
+          permission-contents: write
+
+      - name: Dispatch validated event to ARKE
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.arke_token.outputs.token }}
+          INPUT_OBSERVED_AT: ${{ inputs.observed_at }}
+          INPUT_EVENT_TYPE: ${{ inputs.event_type }}
+          INPUT_APP_VERSION: ${{ inputs.app_version }}
+          INPUT_ROUTE: ${{ inputs.route }}
+          INPUT_DISPLAY_MODE: ${{ inputs.display_mode }}
+          INPUT_TRIGGER: ${{ inputs.trigger }}
+          INPUT_SOURCE_SYSTEM: ${{ inputs.source_system }}
+          INPUT_PRIVACY_CLASS: ${{ inputs.privacy_class }}
+          INPUT_SHEET_ROW: ${{ inputs.sheet_row }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg observed_at "$INPUT_OBSERVED_AT" \
+            --arg event_type "$INPUT_EVENT_TYPE" \
+            --arg app_version "$INPUT_APP_VERSION" \
+            --arg route "$INPUT_ROUTE" \
+            --arg display_mode "$INPUT_DISPLAY_MODE" \
+            --arg trigger "$INPUT_TRIGGER" \
+            --arg source "$INPUT_SOURCE_SYSTEM" \
+            --arg privacy_class "$INPUT_PRIVACY_CLASS" \
+            --arg sheet_row "$INPUT_SHEET_ROW" \
+            --arg source_repository "$GITHUB_REPOSITORY" \
+            --arg source_run_id "$GITHUB_RUN_ID" \
+            --arg source_head_sha "$GITHUB_SHA" \
+            '{event_type:"cudo_mobile_adoption_observed",client_payload:{
+              observed_at:$observed_at,event_type:$event_type,app_version:$app_version,route:$route,
+              display_mode:$display_mode,trigger:$trigger,source:$source,privacy_class:$privacy_class,
+              sheet_row:$sheet_row,source_repository:$source_repository,source_run_id:$source_run_id,
+              source_head_sha:$source_head_sha,synthetic:false,polling:false}}' > /tmp/dispatch.json
+          gh api --method POST repos/carlitosvaldesmorales/arke-root/dispatches --input /tmp/dispatch.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-adoption-real-event-${{ github.run_id }}
+          path: mobile-adoption-real-event.json
+          if-no-files-found: error
+          retention-days: 30
