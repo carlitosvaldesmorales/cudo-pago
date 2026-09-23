@@ -1,0 +1,104 @@
+name: Reuse CUDO QA Deployment for Mobile Adoption
+
+on:
+  push:
+    branches:
+      - 'ops/mobile-adoption-production-deploy-20260923'
+    paths:
+      - '.github/workflows/reuse-cudo-mobile-adoption-production-deployment.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reuse unreferenced obsolete QA deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request
+
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          TARGET='AKfycbzZGwp2q8XEU3rZK5jyaddo5lnXTPcChBdPu-G7cnh6xesdVsOBlL2FA1u6f_qbYlqh'
+          EXPECTED_VERSION=49
+          EXPECTED_DESCRIPTION='CUDO Club OS Activity Google QA'
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'}),timeout=30) as r:
+            access=json.load(r)['access_token']
+
+          def req(url,method='GET',payload=None):
+            q=urllib.request.Request(
+              url,
+              data=None if payload is None else json.dumps(payload).encode(),
+              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
+              method=method
+            )
+            with urllib.request.urlopen(q,timeout=30) as r:
+              raw=r.read()
+              return json.loads(raw) if raw else {}
+
+          base=f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}'
+          current=req(base+'/deployments/'+TARGET)
+          cfg=current.get('deploymentConfig') or {}
+          if cfg.get('versionNumber')!=EXPECTED_VERSION or cfg.get('description')!=EXPECTED_DESCRIPTION:
+            raise SystemExit('Fail closed: target deployment changed since inventory')
+
+          versions=req(base+'/versions?pageSize=200').get('versions',[])
+          candidates=[v for v in versions if str(v.get('description') or '').startswith('CUDO Mobile Adoption production ')]
+          if not candidates:
+            raise SystemExit('No adoption version found')
+          adoption=max(candidates,key=lambda v:int(v.get('versionNumber') or 0))
+          vn=int(adoption['versionNumber'])
+
+          updated=req(base+'/deployments/'+TARGET,'PUT',{
+            'deploymentConfig':{
+              'scriptId':SCRIPT_ID,
+              'versionNumber':vn,
+              'manifestFileName':'appsscript',
+              'description':'CUDO Mobile Adoption production anonymous intake'
+            }
+          })
+          actual=updated.get('deploymentConfig') or {}
+          if actual.get('versionNumber')!=vn:
+            raise SystemExit('Deployment did not move to adoption version')
+
+          verify=req(base+'/deployments/'+TARGET)
+          vcfg=verify.get('deploymentConfig') or {}
+          if vcfg.get('versionNumber')!=vn or vcfg.get('description')!='CUDO Mobile Adoption production anonymous intake':
+            raise SystemExit('Deployment verification failed')
+
+          web='https://script.google.com/macros/s/'+TARGET+'/exec'
+          out={
+            'ok':True,
+            'deploymentId':TARGET,
+            'previousVersion':EXPECTED_VERSION,
+            'versionNumber':vn,
+            'versionDescription':adoption.get('description'),
+            'webAppUrl':web,
+            'syntheticProductionEventCreated':False,
+            'reusedUnreferencedQaDeployment':True
+          }
+          pathlib.Path('mobile-adoption-reused-deployment.json').write_text(json.dumps(out,indent=2))
+          print('WEB_APP_URL='+web)
+          print(json.dumps(out,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-adoption-reused-${{ github.run_id }}
+          path: mobile-adoption-reused-deployment.json
+          retention-days: 30
