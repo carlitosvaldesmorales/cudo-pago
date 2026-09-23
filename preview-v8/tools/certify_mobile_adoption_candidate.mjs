@@ -82,9 +82,9 @@ async function runScenario(browserType,{webdriver,standalone,expectCount,dedupe=
     if(observed.length!==1) fail(browserType.name()+': local dedupe did not suppress repeat adoption');
   }
 
-  const state=await page.evaluate(()=>window.CUDO_ADOPTION);
+  const state=await page.evaluate(()=>({eligible:window.CUDO_ADOPTION?.eligible===true,reason:window.CUDO_ADOPTION?.reason||null}));
   await browser.close();
-  return {browser:browserType.name(),observed:observed.length,state:{eligible:state.eligible,reason:state.reason}};
+  return {browser:browserType.name(),observed:observed.length,state};
 }
 
 const results=[];
