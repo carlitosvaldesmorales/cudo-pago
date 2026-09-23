@@ -21,8 +21,8 @@ export const RESOURCE_IDS={MATCH:'CUDO-COMMERCE-QA-MATCH-001',BINGO:'CUDO-COMMER
 export const OBLIGATION_IDS={MATCH:'CUDO-OBL-QA-MATCH-SUP-001',BINGO:'CUDO-OBL-QA-BINGO-SUP-001'};
 
 const ACTIONS=new Set([
-  'MATCH_ADD_OFFERING','MATCH_ADD_INGREDIENT','MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE',
-  'BINGO_ADD_OFFERING','BINGO_ADD_INGREDIENT','BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE'
+  'MATCH_CONFIGURE_OPERATION','MATCH_ADD_OFFERING','MATCH_ADD_INGREDIENT','MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE',
+  'BINGO_CONFIGURE_OPERATION','BINGO_ADD_OFFERING','BINGO_ADD_INGREDIENT','BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE'
 ]);
 
 function clone(v){return JSON.parse(JSON.stringify(v));}
@@ -93,6 +93,26 @@ function mapActionToSourceSpecs({state,request,now}){
   const resourceId=RESOURCE_IDS[family],obligationId=OBLIGATION_IDS[family];
   const event=objectById(state.objects,eventId),resource=objectById(state.objects,resourceId),obligation=objectById(state.objects,obligationId);
   const payload=payloadOf(request),data=commerce(resource);
+
+  if(action.endsWith('_CONFIGURE_OPERATION')){
+    const startsAt=clean(payload.starts_at);
+    const location=clean(payload.location).toUpperCase();
+    if(!startsAt||!Number.isFinite(Date.parse(startsAt))) throw new Error('starts_at invalid');
+    if(!['LOCAL','VISITA','OTRO'].includes(location)) throw new Error('location invalid');
+    const raw=payload.conditions&&typeof payload.conditions==='object'?payload.conditions:{};
+    const conditions={
+      venue_required:Boolean(raw.venue_required),
+      food_sales_enabled:Boolean(raw.food_sales_enabled),
+      bar_sales_enabled:Boolean(raw.bar_sales_enabled),
+      ticketing_enabled:Boolean(raw.ticketing_enabled),
+      broadcast_enabled:Boolean(raw.broadcast_enabled)
+    };
+    return [
+      sourceSpec(eventId,'starts_at',startsAt),
+      sourceSpec(eventId,'location',location),
+      sourceSpec(eventId,'conditions',conditions)
+    ];
+  }
 
   if(action.endsWith('_ADD_OFFERING')){
     const name=clean(payload.name),mode=clean(payload.mode).toUpperCase(),sellPrice=number(payload.sell_price,'sell_price');
@@ -182,7 +202,9 @@ export function buildEventResourceProjection(state){
     const data=commerce(resource),purchaseTotal=data.purchases.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unit_cost||0),0),salesRevenue=data.sales.reduce((s,x)=>s+Number(x.qty||0)*Number(x.unit_price||0),0),payable=Number(obligation.data.supplier_payable||0);
     const offerings=clone(data.offerings).map(o=>({...o,available_qty:maxSellable(resource,o.offering_id)}));
     return {
-      event_id:event.object_id,kind:event.data.activity_kind,display_name:event.data.display_name,closed:Boolean(event.data.closed),closed_at:event.data.closed_at||null,
+      event_id:event.object_id,kind:event.data.activity_kind,display_name:event.data.display_name,
+      starts_at:event.data.starts_at||null,location:event.data.location||null,conditions:clone(event.data.conditions||{}),
+      closed:Boolean(event.data.closed),closed_at:event.data.closed_at||null,
       permit_confirmed:Boolean(event.data.permit_confirmed),permit_ref:event.data.permit_ref||null,donated_prizes:clone(event.data.donated_prizes||[]),sport_results:clone(event.data.sport_results||[]),
       commerce:{object_id:resource.object_id,offerings,inventory_items:clone(data.inventory_items),purchases:clone(data.purchases),sales:clone(data.sales),purchase_total:purchaseTotal,sales_revenue:salesRevenue},
       resource:{object_id:resource.object_id,offerings_count:offerings.length,inventory_items_count:data.inventory_items.length,purchase_total:purchaseTotal,sales_revenue:salesRevenue},
@@ -309,8 +331,8 @@ function externalAuditRow(summary){
   ];
 }
 function controlRows(projection){
-  const h=['EVENT_ID','KIND','DISPLAY_NAME','STORE_REVISION','CLOSED','OFFERINGS_JSON','INVENTORY_JSON','PURCHASE_TOTAL','SALES_REVENUE','SUPPLIER_PAYABLE','RESOURCE_RESULT','PERMIT_CONFIRMED','PRIZES_COUNT','SPORT_RESULTS_JSON','AUTHORITY'];
-  return [h,...['MATCH','BINGO'].map(key=>{const e=projection[key];return [e.event_id,e.kind,e.display_name,projection.store_revision,e.closed?'TRUE':'FALSE',JSON.stringify(e.commerce.offerings),JSON.stringify(e.commerce.inventory_items),e.commerce.purchase_total,e.commerce.sales_revenue,e.supplier_payable.amount,e.operational_resource_result_clp,e.permit_confirmed?'TRUE':'FALSE',e.donated_prizes.length,JSON.stringify(e.sport_results),projection.authority];})];
+  const h=['EVENT_ID','KIND','DISPLAY_NAME','STORE_REVISION','CLOSED','OFFERINGS_JSON','INVENTORY_JSON','PURCHASE_TOTAL','SALES_REVENUE','SUPPLIER_PAYABLE','RESOURCE_RESULT','PERMIT_CONFIRMED','PRIZES_COUNT','SPORT_RESULTS_JSON','AUTHORITY','STARTS_AT','LOCATION','CONDITIONS_JSON'];
+  return [h,...['MATCH','BINGO'].map(key=>{const e=projection[key];return [e.event_id,e.kind,e.display_name,projection.store_revision,e.closed?'TRUE':'FALSE',JSON.stringify(e.commerce.offerings),JSON.stringify(e.commerce.inventory_items),e.commerce.purchase_total,e.commerce.sales_revenue,e.supplier_payable.amount,e.operational_resource_result_clp,e.permit_confirmed?'TRUE':'FALSE',e.donated_prizes.length,JSON.stringify(e.sport_results),projection.authority,e.starts_at||'',e.location||'',JSON.stringify(e.conditions||{})];})];
 }
 
 
