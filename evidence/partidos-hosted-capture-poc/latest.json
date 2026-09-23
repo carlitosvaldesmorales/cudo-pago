@@ -1,56 +1,27 @@
 {
   "schema_version": "CUDO_PARTIDOS_HOSTED_CAPTURE_POC_V1",
-  "generated_at": "2026-09-23T10:52:32.130Z",
-  "run_id": "35851179145",
+  "generated_at": "2026-09-23T10:57:00.742Z",
+  "run_id": "35851635991",
   "marker": "CUDO-QA-HOSTED-PARTIDO-35851179145",
+  "mode": "VERIFY_EXISTING_MARKER",
   "execution_plane": "GitHub_hosted",
   "olam_required": false,
   "production_write": false,
   "real_club_data": false,
   "preflight": {
     "provider": false,
-    "raw": false,
-    "control": false,
+    "raw": true,
+    "control": true,
     "public_export": false
   },
-  "selections": {
-    "competencia": "Copa/Otro",
-    "categoria": "TERCERA",
-    "estado": "FINALIZADO"
+  "writes": 0,
+  "form_submit_confirmed": "in_prior_run_35850832969",
+  "postflight": {
+    "provider": false,
+    "raw": true,
+    "control": true,
+    "public_export": false
   },
-  "writes": 1,
-  "form_submit_confirmed": true,
-  "postflight": null,
-  "decision": "FAIL",
-  "time_input_shape": [
-    {
-      "index": 0,
-      "type": "number",
-      "aria": "Hour",
-      "placeholder": null
-    },
-    {
-      "index": 1,
-      "type": "number",
-      "aria": "Minute",
-      "placeholder": null
-    }
-  ],
-  "score_page_observed": [
-    {
-      "text": "Resultado final Completa el marcador sólo cuando el partido haya finalizado.",
-      "input_count": 0
-    },
-    {
-      "text": "Goles del equipo local Completa sólo si el partido terminó. Your answer",
-      "input_count": 1
-    },
-    {
-      "text": "Goles del equipo visitante Completa sólo si el partido terminó. Your answer",
-      "input_count": 1
-    }
-  ],
-  "form_response_status": 200,
-  "error": "Error: Timeout waiting downstream stages: {\"provider\":false,\"raw\":true,\"control\":true,\"public_export\":false}\n    at waitForStages (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:107:9)\n    at async main (file:///work/qa-v8-google/tools/prove_partidos_hosted_capture.mjs:258:25)",
-  "completed_at": "2026-09-23T10:54:40.378Z"
+  "decision": "PASS",
+  "completed_at": "2026-09-23T10:57:00.933Z"
 }
