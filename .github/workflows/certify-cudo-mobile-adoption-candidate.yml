@@ -13,6 +13,7 @@ on:
       - 'qa-v8-google/tools/mobile_adoption_event_bridge_fixture_harness.mjs'
       - '.github/workflows/cudo-mobile-adoption-event.yml'
       - '.github/workflows/certify-cudo-mobile-adoption-candidate.yml'
+      - '.github/workflows/cudo-root-acceptance.yml'
   push:
     branches:
       - 'feat/mobile-production-adoption-evidence-20260923'
