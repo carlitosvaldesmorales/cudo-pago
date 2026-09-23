@@ -1,0 +1,263 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_REGISTRY_INVENTORY_V1",
+  "generated_at": "2026-09-23T11:14:30.707Z",
+  "spreadsheet_id": "1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA",
+  "production_write": false,
+  "tabs": {
+    "ACTIVIDADES": {
+      "headers": [
+        "activity_id",
+        "title",
+        "activity_type",
+        "starts_at",
+        "status",
+        "provenance",
+        "created_at",
+        "updated_at"
+      ],
+      "row_count": 2,
+      "sample_rows": [
+        {
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "title": "Actividad comunitaria QA · Bingo (ejemplo)",
+          "activity_type": "COMMUNITY_EVENT",
+          "starts_at": "2026-09-20T13:00:00-03:00",
+          "status": "IN_PREPARATION",
+          "provenance": "SYNTHETIC",
+          "created_at": "2026-09-18T01:25:00Z",
+          "updated_at": "2026-09-18T01:25:00Z"
+        },
+        {
+          "activity_id": "QA-ACTIVITY-BINGO-002",
+          "title": "Bingo CUDO · actividad QA (mock)",
+          "activity_type": "COMMUNITY_EVENT",
+          "starts_at": "2026-09-20T14:00:00-03:00",
+          "status": "IN_PREPARATION",
+          "provenance": "SYNTHETIC",
+          "created_at": "2026-09-18T01:40:00Z",
+          "updated_at": "2026-09-18T01:40:00Z"
+        }
+      ]
+    },
+    "FRENTES": {
+      "headers": [
+        "workstream_id",
+        "activity_id",
+        "capability_tag",
+        "label",
+        "activation_reason",
+        "state",
+        "accountable_role_id",
+        "human_gate",
+        "progress_pct",
+        "purpose",
+        "dependencies"
+      ],
+      "row_count": 14,
+      "sample_rows": [
+        {
+          "workstream_id": "QA-WS-001",
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "capability_tag": "VENUE_AND_FIELD",
+          "label": "Cancha / recinto",
+          "activation_reason": "venue_required",
+          "state": "BLOCKED",
+          "accountable_role_id": "QA-ROLE-001",
+          "human_gate": "NONE",
+          "progress_pct": "80",
+          "purpose": "",
+          "dependencies": ""
+        },
+        {
+          "workstream_id": "QA-WS-002",
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "capability_tag": "FOOD_SERVICE",
+          "label": "Cocina",
+          "activation_reason": "food_preparation",
+          "state": "BLOCKED",
+          "accountable_role_id": "QA-ROLE-002",
+          "human_gate": "NONE",
+          "progress_pct": "55",
+          "purpose": "",
+          "dependencies": ""
+        },
+        {
+          "workstream_id": "QA-WS-003",
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "capability_tag": "CONCESSIONS",
+          "label": "Bar / punto de venta",
+          "activation_reason": "beverage_service",
+          "state": "READY",
+          "accountable_role_id": "QA-ROLE-003",
+          "human_gate": "NONE",
+          "progress_pct": "25",
+          "purpose": "",
+          "dependencies": ""
+        }
+      ]
+    },
+    "RESPONSABLES": {
+      "headers": [
+        "assignment_id",
+        "workstream_id",
+        "role_instance_id",
+        "display_role",
+        "person_ref",
+        "person_display",
+        "assignment_state",
+        "assigned_at",
+        "confirmed_at",
+        "provenance"
+      ],
+      "row_count": 14,
+      "sample_rows": [
+        {
+          "assignment_id": "QA-ASG-001",
+          "workstream_id": "QA-WS-001",
+          "role_instance_id": "QA-ROLE-001",
+          "display_role": "Responsable de cancha / recinto",
+          "person_ref": "QA-PER-001",
+          "person_display": "Persona QA 01",
+          "assignment_state": "CONFIRMED",
+          "assigned_at": "2026-09-17T20:10:00-03:00",
+          "confirmed_at": "2026-09-17T20:14:00-03:00",
+          "provenance": "SYNTHETIC"
+        },
+        {
+          "assignment_id": "QA-ASG-002",
+          "workstream_id": "QA-WS-002",
+          "role_instance_id": "QA-ROLE-002",
+          "display_role": "Responsable de cocina",
+          "person_ref": "QA-PER-002",
+          "person_display": "Persona QA 02",
+          "assignment_state": "CONFIRMED",
+          "assigned_at": "2026-09-17T20:15:00-03:00",
+          "confirmed_at": "2026-09-17T20:18:00-03:00",
+          "provenance": "SYNTHETIC"
+        },
+        {
+          "assignment_id": "QA-ASG-003",
+          "workstream_id": "QA-WS-003",
+          "role_instance_id": "QA-ROLE-003",
+          "display_role": "Responsable de bar / punto de venta",
+          "person_ref": "QA-PER-003",
+          "person_display": "Persona QA 03",
+          "assignment_state": "ASSIGNED",
+          "assigned_at": "2026-09-17T20:20:00-03:00",
+          "confirmed_at": "",
+          "provenance": "SYNTHETIC"
+        }
+      ]
+    },
+    "TAREAS": {
+      "headers": [
+        "task_id",
+        "workstream_id",
+        "title",
+        "state",
+        "due_at",
+        "assignee_ref",
+        "assignee_display",
+        "priority",
+        "updated_at"
+      ],
+      "row_count": 34,
+      "sample_rows": [
+        {
+          "task_id": "QA-TASK-001",
+          "workstream_id": "QA-WS-001",
+          "title": "Revisar camarines",
+          "state": "DONE",
+          "due_at": "2026-09-20T11:30:00-03:00",
+          "assignee_ref": "QA-PER-001",
+          "assignee_display": "Persona QA 01",
+          "priority": "NORMAL",
+          "updated_at": "2026-09-17T22:33:18-03:00"
+        },
+        {
+          "task_id": "QA-TASK-002",
+          "workstream_id": "QA-WS-001",
+          "title": "Abrir recinto",
+          "state": "DONE",
+          "due_at": "2026-09-20T13:00:00-03:00",
+          "assignee_ref": "QA-PER-001",
+          "assignee_display": "Persona QA 01",
+          "priority": "HIGH",
+          "updated_at": "2026-09-19T14:19:37-03:00"
+        },
+        {
+          "task_id": "QA-TASK-003",
+          "workstream_id": "QA-WS-002",
+          "title": "Comprar insumos",
+          "state": "DONE",
+          "due_at": "2026-09-19T18:00:00-03:00",
+          "assignee_ref": "QA-PER-002",
+          "assignee_display": "Persona QA 02",
+          "priority": "HIGH",
+          "updated_at": "2026-09-17T22:33:18-03:00"
+        }
+      ]
+    },
+    "EVENTOS": {
+      "headers": [
+        "event_id",
+        "activity_id",
+        "workstream_id",
+        "task_id",
+        "timestamp",
+        "event_type",
+        "actor_type",
+        "actor_ref",
+        "previous_state",
+        "new_state",
+        "comment",
+        "provenance"
+      ],
+      "row_count": 79,
+      "sample_rows": [
+        {
+          "event_id": "QA-EVT-001",
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "workstream_id": "",
+          "task_id": "",
+          "timestamp": "2026-09-17T19:30:00-03:00",
+          "event_type": "ACTIVITY_CREATED",
+          "actor_type": "SYSTEM",
+          "actor_ref": "CUDO_QA",
+          "previous_state": "",
+          "new_state": "IN_PREPARATION",
+          "comment": "Actividad sintética creada",
+          "provenance": "SYNTHETIC"
+        },
+        {
+          "event_id": "QA-EVT-002",
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "workstream_id": "QA-WS-001",
+          "task_id": "",
+          "timestamp": "2026-09-17T20:10:00-03:00",
+          "event_type": "ROLE_ASSIGNED",
+          "actor_type": "SYSTEM",
+          "actor_ref": "CUDO_QA",
+          "previous_state": "UNASSIGNED",
+          "new_state": "ASSIGNED",
+          "comment": "Persona QA 01 asignada",
+          "provenance": "SYNTHETIC"
+        },
+        {
+          "event_id": "QA-EVT-003",
+          "activity_id": "QA-ACTIVITY-COMMUNITY-001",
+          "workstream_id": "QA-WS-001",
+          "task_id": "",
+          "timestamp": "2026-09-17T20:14:00-03:00",
+          "event_type": "ROLE_ACCEPTED",
+          "actor_type": "PERSON",
+          "actor_ref": "QA-PER-001",
+          "previous_state": "ASSIGNED",
+          "new_state": "CONFIRMED",
+          "comment": "Responsabilidad confirmada",
+          "provenance": "SYNTHETIC"
+        }
+      ]
+    }
+  }
+}
