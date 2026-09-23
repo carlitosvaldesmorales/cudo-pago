@@ -22,11 +22,18 @@ async function main(){
   };
   try{
     await page.goto(WEB_APP+'?activity='+encodeURIComponent(ACTIVITY_ID),{waitUntil:'domcontentloaded',timeout:90000});
-    await page.waitForTimeout(6000);
-    const text=(await page.locator('body').innerText()).replace(/\s+/g,' ');
+    await page.waitForTimeout(7000);
+    const frameEvidence=[];
+    for(const frame of page.frames()){
+      let body='';
+      try{ body=(await frame.locator('body').innerText({timeout:3000})).replace(/\s+/g,' '); }catch{}
+      frameEvidence.push({url:frame.url(),text:body.slice(0,7000)});
+    }
+    const text=frameEvidence.map(x=>x.text).join(' ');
     result.final_url=page.url();
     result.page_title=await page.title();
-    result.visible_excerpt=text.slice(0,5000);
+    result.frames=frameEvidence;
+    result.visible_excerpt=text.slice(0,9000);
     result.browser_events=browserEvents.slice(0,30);
     result.checks.activity_title_visible=/CUDO vs San Juan/i.test(text);
     result.checks.workstream_visible=/cancha y recinto/i.test(text);
