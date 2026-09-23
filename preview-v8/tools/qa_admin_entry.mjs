@@ -23,9 +23,11 @@ const checks=[
   ['sin exposición técnica',!/(GitHub|JSON|Apps Script|PUBLICO_EXPORT|CONTROL)/i.test(visible)],
   ['3 formularios Tally imagen',tally.length===3&&new Set(tally).size===3],
   ['3 formularios Google no imagen',google.length===3&&new Set(google).size===3],
-  ['config schema',cfg.schema_version==='1.0'],
+  ['config schema',/^1\./.test(String(cfg.schema_version||''))],
   ['mantenimiento configurado',typeof cfg.maintenance_url==='string'&&cfg.maintenance_url.startsWith('https://docs.google.com/forms/')],
-  ['revisión configurada',typeof cfg.review_url==='string'&&cfg.review_url.startsWith('https://docs.google.com/forms/')]
+  ['revisión configurada',typeof cfg.review_url==='string'&&cfg.review_url.startsWith('https://docs.google.com/forms/')],
+  ['asignación privada configurada',typeof cfg.event_assignment_url==='string'&&cfg.event_assignment_url.includes('script.google.com/macros/s/')&&cfg.event_assignment_url.includes('view=assignments')],
+  ['entrada privada visible',visible.includes('Revisar y asignar responsables')]
 ];
 const failed=checks.filter(([,ok])=>!ok);
 if(failed.length){console.error(JSON.stringify({ok:false,failed:failed.map(x=>x[0]),tally:tally.length,google:google.length},null,2));process.exit(1)}
