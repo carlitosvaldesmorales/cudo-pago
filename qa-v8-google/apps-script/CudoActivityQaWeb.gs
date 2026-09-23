@@ -474,8 +474,10 @@ function doGet(e) {
     return cudoQaJson_(getState((e.parameter && e.parameter.activity) || CUDO_ACTIVITY_QA_DEFAULT_ACTIVITY_ID));
   }
 
-  return HtmlService
-    .createHtmlOutputFromFile('CudoActivityQaView')
+  const template = HtmlService.createTemplateFromFile('CudoActivityQaView');
+  template.initialActivityId = String((e && e.parameter && e.parameter.activity) || '');
+  return template
+    .evaluate()
     .setTitle('CUDO · Actividades QA')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport','width=device-width,initial-scale=1,viewport-fit=cover');
