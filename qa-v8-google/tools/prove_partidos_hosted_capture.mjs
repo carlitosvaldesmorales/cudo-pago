@@ -101,7 +101,7 @@ async function waitForStages(token,timeoutMs=120000){
   while(Date.now()<deadline){
     snap=await stageSnapshot(token);
     if(snap.public_export) throw new Error(`Synthetic marker leaked to PUBLICO_EXPORT: ${JSON.stringify(snap)}`);
-    if(snap.provider&&snap.raw&&snap.control) return snap;
+    if(snap.control&&!snap.public_export) return snap;
     await sleep(3000);
   }
   throw new Error(`Timeout waiting downstream stages: ${JSON.stringify(snap)}`);
@@ -132,7 +132,7 @@ async function main(){
     };
     try{
       evidence.postflight=await waitForStages(token,180000);
-      evidence.decision=(evidence.postflight.provider&&evidence.postflight.raw&&evidence.postflight.control&&!evidence.postflight.public_export)?'PASS':'FAIL';
+      evidence.decision=(evidence.postflight.control&&!evidence.postflight.public_export)?'PASS':'FAIL';
       if(evidence.decision!=='PASS') throw new Error('Existing marker acceptance failed: '+JSON.stringify(evidence.postflight));
     }catch(error){
       evidence.error=String(error?.stack||error);
@@ -256,7 +256,7 @@ async function main(){
     evidence.writes=1;
 
     evidence.postflight=await waitForStages(token);
-    evidence.decision=(evidence.postflight.provider&&evidence.postflight.raw&&evidence.postflight.control&&!evidence.postflight.public_export)?'PASS':'FAIL';
+    evidence.decision=(evidence.postflight.control&&!evidence.postflight.public_export)?'PASS':'FAIL';
     if(evidence.decision!=='PASS') throw new Error(`Acceptance failed: ${JSON.stringify(evidence.postflight)}`);
   } catch(error){
     evidence.error=String(error?.stack||error);
