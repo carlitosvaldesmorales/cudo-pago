@@ -95,7 +95,28 @@ jobs:
             raise SystemExit('Private assignment probe missing validated identities')
           if result.get('production_write') is not False:
             raise SystemExit('Private assignment probe production flag invalid')
+          mutation=None
+          last_mutation=None
+          for _ in range(10):
+            try:
+              mutation=req(probe_url,'POST',{'function':'cudoEventAssignmentMutationProbe','parameters':[],'devMode':False})
+              mresult=mutation.get('response',{}).get('result',{})
+              if mresult.get('ok'):
+                break
+            except Exception as exc:
+              last_mutation=exc
+            time.sleep(3)
+          mresult=(mutation or {}).get('response',{}).get('result',{})
+          if not mresult.get('ok'):
+            raise SystemExit('Apps Script assignment mutation probe failed: '+repr(last_mutation or mutation))
+          if mresult.get('assignment_state')!='ASSIGNED' or mresult.get('audit_event')!='ROLE_ASSIGNED':
+            raise SystemExit('Private assignment mutation probe did not persist expected transition')
+          if not mresult.get('stable_id_present'):
+            raise SystemExit('Private assignment mutation probe lacks stable identity id')
+          if mresult.get('production_write') is not False:
+            raise SystemExit('Private assignment mutation probe production flag invalid')
           out['runtimeProbe']=result
+          out['mutationProbe']=mresult
           pathlib.Path('persona-review-deployment.json').write_text(json.dumps(out,indent=2))
           print(json.dumps(out,indent=2))
           PY
