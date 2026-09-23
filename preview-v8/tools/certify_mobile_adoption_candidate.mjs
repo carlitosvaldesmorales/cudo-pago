@@ -31,6 +31,17 @@ async function runScenario(browserType,{webdriver,standalone,expectCount,dedupe=
   await context.addInitScript(({webdriver,standalone})=>{
     try{Object.defineProperty(navigator,'webdriver',{configurable:true,get:()=>webdriver});}catch{}
     try{Object.defineProperty(navigator,'standalone',{configurable:true,get:()=>standalone});}catch{}
+    window.__cudoAdoptionBeacons=[];
+    try{
+      Object.defineProperty(navigator,'sendBeacon',{
+        configurable:true,
+        value:(url,body)=>{
+          Promise.resolve(body&&typeof body.text==='function'?body.text():String(body||''))
+            .then(text=>window.__cudoAdoptionBeacons.push({url:String(url),body:text}));
+          return true;
+        }
+      });
+    }catch{}
   },{webdriver,standalone});
 
   const observed=[];
@@ -43,7 +54,6 @@ async function runScenario(browserType,{webdriver,standalone,expectCount,dedupe=
     route.fulfill({status:200,contentType:'application/javascript',body:adoptionSource});
   });
   await context.route(ENDPOINT,async route=>{
-    observed.push(JSON.parse(route.request().postData()||'{}'));
     await route.fulfill({status:204,body:''});
   });
   await context.route(PAGE,route=>{
@@ -60,6 +70,8 @@ async function runScenario(browserType,{webdriver,standalone,expectCount,dedupe=
   await page.goto(PAGE,{waitUntil:'load'});
   await page.locator('#use').click();
   await page.waitForTimeout(350);
+  const firstBeacons=await page.evaluate(()=>window.__cudoAdoptionBeacons||[]);
+  observed.push(...firstBeacons.map(item=>JSON.parse(item.body||'{}')));
 
   if(observed.length!==expectCount) fail(browserType.name()+': expected '+expectCount+' event(s), got '+observed.length);
 
@@ -79,7 +91,8 @@ async function runScenario(browserType,{webdriver,standalone,expectCount,dedupe=
     await page.reload({waitUntil:'load'});
     await page.locator('#use').click();
     await page.waitForTimeout(350);
-    if(observed.length!==1) fail(browserType.name()+': local dedupe did not suppress repeat adoption');
+    const repeatBeacons=await page.evaluate(()=>window.__cudoAdoptionBeacons||[]);
+    if(repeatBeacons.length!==0) fail(browserType.name()+': local dedupe did not suppress repeat adoption');
   }
 
   const state=await page.evaluate(()=>({eligible:window.CUDO_ADOPTION?.eligible===true,reason:window.CUDO_ADOPTION?.reason||null}));
