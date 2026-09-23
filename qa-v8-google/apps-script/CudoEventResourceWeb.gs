@@ -89,6 +89,21 @@ function cudoEventJson_(value,fallback){try{return JSON.parse(String(value||''))
 function cudoEventOptions_(rows,key,label){
   return (rows||[]).map(function(x){return '<option value="'+cudoEventEsc_(x[key])+'">'+cudoEventEsc_(label(x))+'</option>';}).join('');
 }
+function cudoEventChecked_(conditions,key){return conditions&&conditions[key]?' checked':'';}
+function cudoEventOperationForm_(row,prefix){
+  const c=cudoEventJson_(row.CONDITIONS_JSON,{});
+  return '<details open><summary>Configurar esta actividad</summary><form method="post">'+cudoEventHidden_(row,prefix+'_CONFIGURE_OPERATION')+
+    '<label>Fecha y hora</label><input name="starts_at" type="datetime-local" value="'+cudoEventEsc_(String(row.STARTS_AT||'').slice(0,16))+'" required>'+
+    '<label>Dónde se realiza</label><select name="location"><option value="LOCAL"'+(row.LOCATION==='LOCAL'?' selected':'')+'>En CUDO / local</option><option value="VISITA"'+(row.LOCATION==='VISITA'?' selected':'')+'>De visita</option><option value="OTRO"'+(row.LOCATION==='OTRO'?' selected':'')+'>Otro lugar</option></select>'+
+    '<div class="checks">'+
+      '<label><input type="checkbox" name="venue_required"'+cudoEventChecked_(c,'venue_required')+'>Necesitamos cancha o recinto preparado</label>'+
+      '<label><input type="checkbox" name="food_sales_enabled"'+cudoEventChecked_(c,'food_sales_enabled')+'>Habrá cocina / venta de comida</label>'+
+      '<label><input type="checkbox" name="bar_sales_enabled"'+cudoEventChecked_(c,'bar_sales_enabled')+'>Habrá bar / venta de bebidas</label>'+
+      '<label><input type="checkbox" name="ticketing_enabled"'+cudoEventChecked_(c,'ticketing_enabled')+'>Habrá acceso público / entradas</label>'+
+      '<label><input type="checkbox" name="broadcast_enabled"'+cudoEventChecked_(c,'broadcast_enabled')+'>Habrá transmisión o comunicaciones</label>'+
+    '</div><button>Guardar configuración de la actividad</button></form></details>';
+}
+
 function cudoEventCommerceForms_(row,prefix){
   const offerings=cudoEventJson_(row.OFFERINGS_JSON,[]);
   const inventory=cudoEventJson_(row.INVENTORY_JSON,[]);
@@ -127,7 +142,7 @@ function cudoEventCommerceForms_(row,prefix){
   return html;
 }
 function cudoEventMatchForms_(row){
-  return cudoEventCommerceForms_(row,'MATCH')+
+  return cudoEventOperationForm_(row,'MATCH')+cudoEventCommerceForms_(row,'MATCH')+
     '<details><summary>Resultado deportivo</summary><form method="post">'+cudoEventHidden_(row,'MATCH_RESULT')+
     '<label>Serie</label><select name="series"><option>Tercera</option><option>Segunda</option><option>Senior</option><option>Primera</option></select>'+
     '<label>CUDO</label><input name="home" type="number" min="0" required>'+
@@ -137,7 +152,7 @@ function cudoEventMatchForms_(row){
     '<button>Cerrar jornada QA</button></form></details>';
 }
 function cudoEventBingoForms_(row){
-  return ''+
+  return cudoEventOperationForm_(row,'BINGO')+
     '<details><summary>Permiso / autorización</summary><form method="post">'+cudoEventHidden_(row,'BINGO_CONFIRM_PERMIT')+
     '<label>Referencia de autorización</label><input name="reference" required>'+
     '<button>Confirmar permiso</button></form></details>'+
@@ -191,6 +206,17 @@ function cudoEventRender_(message,e){
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 function cudoEventPayload_(action,p){
+  if(action==='MATCH_CONFIGURE_OPERATION'||action==='BINGO_CONFIGURE_OPERATION') return {
+    starts_at:String(p.starts_at||'').trim(),
+    location:String(p.location||'').trim(),
+    conditions:{
+      venue_required:Boolean(p.venue_required),
+      food_sales_enabled:Boolean(p.food_sales_enabled),
+      bar_sales_enabled:Boolean(p.bar_sales_enabled),
+      ticketing_enabled:Boolean(p.ticketing_enabled),
+      broadcast_enabled:Boolean(p.broadcast_enabled)
+    }
+  };
   if(action==='MATCH_ADD_OFFERING'||action==='BINGO_ADD_OFFERING') return {name:String(p.name||'').trim(),mode:String(p.mode||'').trim(),sell_price:Number(p.sell_price)};
   if(action==='MATCH_ADD_INGREDIENT'||action==='BINGO_ADD_INGREDIENT') return {offering_id:String(p.offering_id||'').trim(),item_name:String(p.item_name||'').trim(),qty_per_sale:Number(p.qty_per_sale),unit:String(p.unit||'unidad').trim()};
   if(action==='MATCH_PURCHASE'||action==='BINGO_PURCHASE') return {item_id:String(p.item_id||'').trim(),qty:Number(p.qty),unit_cost:Number(p.unit_cost),supplier:String(p.supplier||'').trim(),payment:String(p.payment||'PENDING').trim()};
@@ -209,8 +235,8 @@ function cudoEventHandlePost_(e){
   const expectedRevision=Number(p.expected_revision);
   const action=String(p.action||'').trim().toUpperCase();
   const allowed={
-    'CUDO-EVENT-QA-MATCH-FULLDAY-001':['MATCH_ADD_OFFERING','MATCH_ADD_INGREDIENT','MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE'],
-    'CUDO-EVENT-QA-BINGO-FULLDAY-001':['BINGO_ADD_OFFERING','BINGO_ADD_INGREDIENT','BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE']
+    'CUDO-EVENT-QA-MATCH-FULLDAY-001':['MATCH_CONFIGURE_OPERATION','MATCH_ADD_OFFERING','MATCH_ADD_INGREDIENT','MATCH_PURCHASE','MATCH_SALE','MATCH_RESULT','MATCH_CLOSE'],
+    'CUDO-EVENT-QA-BINGO-FULLDAY-001':['BINGO_CONFIGURE_OPERATION','BINGO_ADD_OFFERING','BINGO_ADD_INGREDIENT','BINGO_CONFIRM_PERMIT','BINGO_DONATE_PRIZE','BINGO_PURCHASE','BINGO_SALE','BINGO_CLOSE']
   };
   if(!allowed[eventId]||allowed[eventId].indexOf(action)<0) throw new Error('Evento o acción no autorizada.');
   if(!Number.isInteger(expectedRevision)||expectedRevision<1) throw new Error('Revisión inválida.');
