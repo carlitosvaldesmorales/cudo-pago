@@ -54,6 +54,8 @@ assert.equal(controlMutation.values[0][9],'FINANCIAL_CONTEXT');
 assert.equal(controlMutation.values[0][10],'FINANCIAL_CONTEXT_SEMANTICS');
 assert.equal(controlMutation.values[0][11],'FINANCIAL_EFFECT');
 assert.equal(controlMutation.values[0][12],'OUTSTANDING_CLP');
+assert.equal(controlMutation.values[0][15],'RESPONSIBLE_ACTOR_ID');
+assert.equal(controlMutation.values.find(row=>row[0]===workId)[15],'CUDO-ACTOR-MAX-FIGUEROA-001');
 const scheduleText=controlMutation.values.slice(1).map(row=>String(row[8]||''));
 const controlText=controlMutation.values.slice(1).map(row=>String(row[9]||''));
 assert.ok(controlText.includes('CLP 50000 · EVERY_TWO_MONTHS'));
