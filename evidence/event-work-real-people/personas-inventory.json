@@ -1,0 +1,49 @@
+{
+  "schema_version": "CUDO_ASSIGNABLE_PERSONAS_INVENTORY_V1",
+  "generated_at": "2026-09-23T12:05:01.638Z",
+  "spreadsheet_id": "1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y",
+  "control_sheet": "PERSONAS_CONTROL",
+  "production_write": false,
+  "headers": [
+    "ID_PERSONA",
+    "TALLY_SUBMISSION_ID",
+    "FECHA_ENVIO",
+    "RELACION_CUDO",
+    "NOMBRE_PUBLICO",
+    "SERIE_CATEGORIA",
+    "POSICION",
+    "NUMERO",
+    "FUNCION_CLUB",
+    "FOTO_TALLY_ID",
+    "FOTO_NOMBRE",
+    "RED_SOCIAL_REF",
+    "PRESENTACION",
+    "AUTORIZACION_FOTO",
+    "AUTORIZACION_REVISION",
+    "ESTADO",
+    "DECISION",
+    "REVISOR",
+    "FECHA_REVISION",
+    "OBSERVACIONES",
+    "PUBLICAR",
+    "PRIVACIDAD",
+    "DESTINO_PUBLICO"
+  ],
+  "row_count": 12,
+  "state_counts": {
+    "PENDIENTE_REVISION": 12
+  },
+  "active_count": 0,
+  "assignable_count": 0,
+  "assignable_people": [],
+  "safe_fields_exposed": [
+    "ID_PERSONA",
+    "NOMBRE_PUBLICO",
+    "RELACION_CUDO",
+    "FUNCION_CLUB",
+    "ESTADO",
+    "PUBLICAR",
+    "PRIVACIDAD"
+  ],
+  "sensitive_fields_omitted": true
+}
