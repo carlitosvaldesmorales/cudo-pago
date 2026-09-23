@@ -68,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, pathlib, re, urllib.parse, urllib.request
+          import json, os, pathlib, urllib.parse, urllib.request
 
           spreadsheet_id='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms'
           expected={
@@ -89,7 +89,8 @@ jobs:
             raise SystemExit('adoption event contract mismatch')
           if os.environ['INPUT_TRIGGER'] not in {'pointerdown','keydown'}:
             raise SystemExit('trusted interaction class mismatch')
-          if not re.fullmatch(r'/preview-v8/[A-Za-z0-9._~!$&\'()*+,;=:@%/-]*',os.environ['INPUT_ROUTE']):
+          route=os.environ['INPUT_ROUTE']
+          if not route.startswith('/preview-v8/') or len(route)>180:
             raise SystemExit('route outside CUDO PWA scope')
           row=int(os.environ['INPUT_SHEET_ROW'])
           if row < 2:
