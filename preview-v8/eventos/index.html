@@ -54,6 +54,7 @@
   <h3>Trabajo que activa esta jornada</h3>
   <p class="sub">CUDO deriva estos frentes desde las condiciones del partido. Primero aparece el rol que hace falta; una persona se asigna sólo cuando existe un dato real.</p>
   <div id="responsibilities" class="timeline"></div>
+  <div class="actions"><a id="reviewWorkLink" class="btn hidden" href="../actividades/">Revisar y asignar trabajo →</a></div>
 </section>
 
 <section class="card" id="venueCard">
@@ -240,6 +241,13 @@ function render(){
  const c=state.event.conditions;
  $('venueRequired').checked=!!c.venue_required;$('foodSalesEnabled').checked=!!c.food_sales_enabled;$('barSalesEnabled').checked=!!c.bar_sales_enabled;$('ticketingEnabled').checked=!!c.ticketing_enabled;$('broadcastEnabled').checked=!!c.broadcast_enabled;
  $('responsibilities').innerHTML=state.responsibilities.map(r=>'<div class="row" data-workstream="'+r.capability_tag+'" data-assignment="'+r.assignment_state+'"><strong>'+r.role+'</strong><span>'+r.phase+' · '+(r.person||'Sin persona asignada')+(r.assignment_state==='UNASSIGNED'?' · GAP de asignación':'')+'</span></div>').join('');
+ const workLink=$('reviewWorkLink'),operationalActivityId=state.event.operational_activity_id||'';
+ if(operationalActivityId){
+   workLink.href='../actividades/?activity='+encodeURIComponent(operationalActivityId);
+   workLink.classList.remove('hidden');
+ } else {
+   workLink.classList.add('hidden');
+ }
  const local=state.event.location==='LOCAL';$('venueCard').classList.toggle('hidden',!(local&&c.venue_required));$('postCard').classList.toggle('hidden',!local);
  const commerce=c.food_sales_enabled||c.bar_sales_enabled;
  ['commerceCard','recipeCard','stockCard','salesCard'].forEach(id=>$(id).classList.toggle('hidden',!commerce));
