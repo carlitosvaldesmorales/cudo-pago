@@ -92,7 +92,7 @@ try:
         page.goto(best['url'],wait_until='domcontentloaded',timeout=20000); page.wait_for_timeout(500)
         page.screenshot(path='/evidence/reviewer.png',full_page=True)
     evidence=[{k:r.get(k) for k in ('url','title','primary_event_context_visible','required_branch_groups_visible','actionable_labels','visible_excerpt','error')} for r in scored[:10]]
-    prompt=f"""You are the independent human-first certifier for an amateur sports club web system.
+    prompt=f'''You are the independent human-first certifier for an amateur sports club web system.
 You do not have source code, PR context, architecture documentation, or the builder's explanation.
 Judge only the browser-visible evidence and the canonical human mission.
 
@@ -118,7 +118,7 @@ unresolved_confusion: array of strings
 first_failure: string
 reason: string
 
-PASS is allowed only if deterministic acceptance is green and a normal club administrator can satisfy the canonical human mission from the visible CUDO Web surface. If visible evidence does not prove the whole mission, return FAIL."""
+PASS is allowed only if deterministic acceptance is green and a normal club administrator can satisfy the canonical human mission from the visible CUDO Web surface. If visible evidence does not prove the whole mission, return FAIL.'''
     req=urllib.request.Request('http://127.0.0.1:11434/api/chat',data=json.dumps({'model':model,'stream':False,'format':'json','messages':[{'role':'user','content':prompt}],'options':{'temperature':0}}).encode(),headers={'Content-Type':'application/json'})
     with urllib.request.urlopen(req,timeout=300) as r: ollama=json.load(r)
     verdict=json.loads((ollama.get('message') or {}).get('content') or '{}')
