@@ -9,6 +9,7 @@ on:
       - 'preview-v8/admin/forms-config.json'
       - 'preview-v8/admin/assignments.html'
       - 'preview-v8/eventos/index.html'
+      - 'preview-v8/data/match-full-day-qa.json'
       - 'preview-v8/tools/qa_admin_entry.mjs'
       - '.github/workflows/cudo-private-event-assignment-entry.yml'
   workflow_dispatch:
