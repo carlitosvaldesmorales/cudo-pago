@@ -1,0 +1,19 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_AUTO_PROJECTION_LIVE_CONTROL_V1",
+  "apply": false,
+  "idempotency_key": "CUDO-EVENT-WORK-AUTO-PROJECTION-MATCH-001",
+  "target_event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+  "target_ref": "agent/match-full-club-day-roundtrip-20260921",
+  "production_write": false,
+  "payload": {
+    "starts_at": "2026-09-27T13:00:00-03:00",
+    "location": "LOCAL",
+    "conditions": {
+      "venue_required": true,
+      "food_sales_enabled": true,
+      "bar_sales_enabled": true,
+      "ticketing_enabled": true,
+      "broadcast_enabled": false
+    }
+  }
+}
