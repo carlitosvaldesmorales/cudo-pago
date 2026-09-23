@@ -1,0 +1,96 @@
+name: CUDO Event Work Auto Projection Live Seed
+
+on:
+  push:
+    branches:
+      - agent/match-full-club-day-roundtrip-20260921
+    paths:
+      - '.github/workflows/cudo-event-work-auto-projection-live-seed.yml'
+      - 'control/cudo-event-work-auto-projection-live.json'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read explicit QA apply gate
+        id: gate
+        shell: bash
+        run: |
+          APPLY=$(node -p "require('./control/cudo-event-work-auto-projection-live.json').apply")
+          echo "apply=$APPLY" >> "$GITHUB_OUTPUT"
+          echo "QA apply=$APPLY"
+      - name: Seed exactly one governed event configuration request
+        if: steps.gate.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request,datetime
+          control=json.loads(pathlib.Path('control/cudo-event-work-auto-projection-live.json').read_text())
+          if control.get('production_write') is not False: raise SystemExit('unsafe production flag')
+          state=json.loads(pathlib.Path('qa-v8-google/state/event-resource-state.json').read_text())
+          event_id=control['target_event_id'];rev=int(state['store_revision'])
+          sheet_id='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw'
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'})) as r:
+            token=json.load(r)['access_token']
+          def api(url,method='GET',payload=None):
+            req=urllib.request.Request(url,data=None if payload is None else json.dumps(payload).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},method=method)
+            with urllib.request.urlopen(req) as r:
+              raw=r.read();return json.loads(raw) if raw else {}
+          base='https://sheets.googleapis.com/v4/spreadsheets/'+sheet_id
+          rng='EVENT_RESOURCE_REQUESTS!A:L'
+          values=api(base+'/values/'+urllib.parse.quote(rng,safe='')+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE').get('values',[])
+          headers=values[0] if values else []
+          if headers[:12] != ['REQUEST_ID','REQUESTED_AT','EVENT_ID','EXPECTED_REVISION','ACTION','PAYLOAD_JSON','REASON','EVIDENCE_REF','REQUESTED_BY','PROCESS_STATUS','RESULT','APPLIED_AT']:
+            raise SystemExit('request ledger header mismatch')
+          pending=[r for r in values[1:] if len(r)>9 and str(r[9]).strip()=='PENDING']
+          if pending: raise SystemExit('fail closed: pending event requests already exist: '+str(len(pending)))
+          rid=control['idempotency_key']
+          prior=[r for r in values[1:] if r and str(r[0]).strip()==rid]
+          if prior:
+            if any(len(r)>9 and str(r[9]).strip()=='APPLIED' for r in prior):
+              print(json.dumps({'ok':True,'already_applied':True,'request_id':rid}))
+              raise SystemExit(0)
+            raise SystemExit('idempotency key already exists without APPLIED state')
+          ts=datetime.datetime.now(datetime.timezone.utc).isoformat().replace('+00:00','Z')
+          row=[
+            rid,ts,event_id,rev,'MATCH_CONFIGURE_OPERATION',
+            json.dumps(control['payload'],separators=(',',':')),
+            'Synthetic governed configuration from versioned PR219 fixture',
+            'qa://event-work-auto-projection/'+rid,
+            'sistemas@cudo.cl','PENDING','',''
+          ]
+          url=base+'/values/'+urllib.parse.quote(rng,safe='')+':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS'
+          api(url,'POST',{'range':rng,'majorDimension':'ROWS','values':[row]})
+          print(json.dumps({'ok':True,'request_id':rid,'expected_revision':rev,'production_write':False},indent=2))
+          PY
+      - name: Dispatch existing Review Engine event-resource path
+        if: steps.gate.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONTROL_REF=$(node -p "require('./control/cudo-event-work-auto-projection-live.json').target_ref")
+          curl --fail-with-body -sS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/cudo-review-engine.yml/dispatches" \
+            -d "$(node -e "console.log(JSON.stringify({ref:process.argv[1],inputs:{apply_changes:'true',source:'apps_script_event_resource'}}))" "$CONTROL_REF")"
+          echo "Review Engine dispatched through existing apps_script_event_resource path."
