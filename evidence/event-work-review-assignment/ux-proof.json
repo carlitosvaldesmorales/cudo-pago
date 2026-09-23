@@ -1,19 +1,33 @@
 {
   "schema_version": "CUDO_EVENT_WORK_REVIEW_ASSIGNMENT_UX_PROOF_V1",
-  "generated_at": "2026-09-23T11:34:48.575Z",
+  "generated_at": "2026-09-23T11:35:57.071Z",
   "production_write": false,
   "activity_id": "QA-ACTIVITY-MATCH-PR219-001",
   "checks": {
-    "activity_title_visible": false,
-    "workstream_visible": false,
-    "task_visible": false,
-    "assignment_visible": false,
-    "assignment_action_visible": false
+    "activity_title_visible": true,
+    "workstream_visible": true,
+    "task_visible": true,
+    "assignment_visible": true,
+    "assignment_action_visible": true
   },
-  "decision": "FAIL",
+  "decision": "PASS",
   "final_url": "https://script.google.com/macros/s/AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ/exec?activity=QA-ACTIVITY-MATCH-PR219-001",
   "page_title": "CUDO · Actividades QA",
-  "visible_excerpt": "This application was created by a Google Apps Script user Report abuse Learn more ",
+  "frames": [
+    {
+      "url": "https://script.google.com/macros/s/AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ/exec?activity=QA-ACTIVITY-MATCH-PR219-001",
+      "text": "This application was created by a Google Apps Script user Report abuse Learn more "
+    },
+    {
+      "url": "https://n-hri24sdnypzjls34xmue7h3g4jjh4hl7ipwaxky-0lu-script.googleusercontent.com/userCodeAppPanel",
+      "text": ""
+    },
+    {
+      "url": "https://n-hri24sdnypzjls34xmue7h3g4jjh4hl7ipwaxky-0lu-script.googleusercontent.com/blank",
+      "text": "C.U.D.O. · ADMINISTRACIÓN · GOOGLE QA ACTIVIDADES DEL CLUB Registro visible de actividades, responsables, pendientes y bloqueos. Los datos de esta POC viven en Google Sheets. QA sintética: esta superficie usa el Google Sheet real de pruebas, pero personas y actividades son mock. No modifica datos productivos del club. ← Todas las actividades Recargar desde Google CUDO VS SAN JUAN · JORNADA QA 2026-09-27T00:00:00-03:00 · En preparación 8 RESPONSABILIDADES 7 SIN PERSONA 0 BLOQUEADAS 0 LISTAS RESPONSABILIDADES DE ESTA ACTIVIDAD Cada responsabilidad conserva persona asignada, estado, tareas y trazabilidad. cancha y recinto playing_surface_required|venue_required Preparado Responsable Persona QA 2 · Asignado · falta confirmar 0% · 0 de 1 tareas listas ○ Revisión final de cancha Pendiente Lista Reasignar a Persona QA 2 Confirmar asignación Informar bloqueo Registrar dependencia Agregar evidencia QA cocina food_preparation|food_service Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA bar o punto de venta beverage_service|sales_or_cash_handling Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA aseo cleaning_required|teardown_required Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 1 tareas listas ○ Aseo general del estadio Pendiente Lista Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA montaje y logística setup_required|equipment_required Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA acceso y recepción public_access|ticketing_or_access_control Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA operación deportiva sports_operation_required Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 1 tareas listas ○ Lavado de camisetas del partido Pendiente Lista Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA caja y control sales_or_cash_handling Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA HISTORIAL 2026-09-23T08:24:27-03:00 ROLE_REASSIGNED · Responsabilidad reasignada explícitamente desde la web QA 2026-09-23T08:24:21-03:00 ROLE_ASSIGNED · Responsabilidad asignada desde la web QA 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de caja y control 2026-09-23T11:17:44.569Z TASK_CREATED · Tarea derivada: Lavado de camisetas del partido 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de operación deportiva 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de acceso y recepción 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de montaje y logística 2026-09-23T11:17:44.569Z TASK_CREATED · Tarea derivada: Aseo general del estadio 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de aseo 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de bar o punto de venta 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de cocina 2026-09-23T11:17:44.569Z TASK_CREATED · Tarea derivada: Revisión final de cancha 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de cancha y recinto 2026-09-23T11:17:44.569Z ACTIVITY_CREATED · MATCH PR219 proyectado al registro operacional QA Backend operacional QA: Google Sheets · Acciones: Google Apps Script · Historial: EVENTOS · production_write=false"
+    }
+  ],
+  "visible_excerpt": "This application was created by a Google Apps Script user Report abuse Learn more   C.U.D.O. · ADMINISTRACIÓN · GOOGLE QA ACTIVIDADES DEL CLUB Registro visible de actividades, responsables, pendientes y bloqueos. Los datos de esta POC viven en Google Sheets. QA sintética: esta superficie usa el Google Sheet real de pruebas, pero personas y actividades son mock. No modifica datos productivos del club. ← Todas las actividades Recargar desde Google CUDO VS SAN JUAN · JORNADA QA 2026-09-27T00:00:00-03:00 · En preparación 8 RESPONSABILIDADES 7 SIN PERSONA 0 BLOQUEADAS 0 LISTAS RESPONSABILIDADES DE ESTA ACTIVIDAD Cada responsabilidad conserva persona asignada, estado, tareas y trazabilidad. cancha y recinto playing_surface_required|venue_required Preparado Responsable Persona QA 2 · Asignado · falta confirmar 0% · 0 de 1 tareas listas ○ Revisión final de cancha Pendiente Lista Reasignar a Persona QA 2 Confirmar asignación Informar bloqueo Registrar dependencia Agregar evidencia QA cocina food_preparation|food_service Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA bar o punto de venta beverage_service|sales_or_cash_handling Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA aseo cleaning_required|teardown_required Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 1 tareas listas ○ Aseo general del estadio Pendiente Lista Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA montaje y logística setup_required|equipment_required Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA acceso y recepción public_access|ticketing_or_access_control Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA operación deportiva sports_operation_required Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 1 tareas listas ○ Lavado de camisetas del partido Pendiente Lista Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA caja y control sales_or_cash_handling Sin responsable Responsable Sin responsable · Sin responsable 0% · 0 de 0 tareas listas Asignar Persona QA 1 Informar bloqueo Registrar dependencia Agregar evidencia QA HISTORIAL 2026-09-23T08:24:27-03:00 ROLE_REASSIGNED · Responsabilidad reasignada explícitamente desde la web QA 2026-09-23T08:24:21-03:00 ROLE_ASSIGNED · Responsabilidad asignada desde la web QA 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de caja y control 2026-09-23T11:17:44.569Z TASK_CREATED · Tarea derivada: Lavado de camisetas del partido 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de operación deportiva 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de acceso y recepción 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de montaje y logística 2026-09-23T11:17:44.569Z TASK_CREATED · Tarea derivada: Aseo general del estadio 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de aseo 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de bar o punto de venta 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de cocina 2026-09-23T11:17:44.569Z TASK_CREATED · Tarea derivada: Revisión final de cancha 2026-09-23T11:17:44.569Z ROLE_REQUIRED · Responsabilidad derivada: Encargado/a de cancha y recinto 2026-09-23T11:17:44.569Z ACTIVITY_CREATED · MATCH PR219 proyectado al registro operacional QA Backend operacional QA: Google Sheets · Acciones: Google Apps Script · Historial: EVENTOS · production_write=false",
   "browser_events": [
     {
       "kind": "console",
@@ -64,6 +78,11 @@
       "kind": "console",
       "type": "info",
       "text": "Net state changed from IDLE to BUSY"
+    },
+    {
+      "kind": "console",
+      "type": "info",
+      "text": "Net state changed from BUSY to IDLE"
     }
   ]
 }
