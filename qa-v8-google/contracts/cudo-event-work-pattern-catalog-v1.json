@@ -1,0 +1,199 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_PATTERN_CATALOG_QA_V1",
+  "production_write": false,
+  "authority": "VERSIONED_QA_PATTERN_CATALOG",
+  "source_refs": [
+    "preview-v8/data/match-full-day-qa.json",
+    "05_CASOS/CASO_CUDO_001/CUDO_CLUB_OS_ACTIVITY_COORDINATION_CONTRACT_v1.yaml"
+  ],
+  "registry_spreadsheet_id": "1Yf2JeTLY6_Vk9URlV2FoXhuKWyJGcXEePx1OmApEYqA",
+  "activity_bindings": {
+    "MATCH": {
+      "event_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
+      "activity_id": "QA-ACTIVITY-MATCH-PR219-001",
+      "workstream_ids": {
+        "VENUE_AND_FIELD": "QA-WS-201",
+        "FOOD_SERVICE": "QA-WS-202",
+        "CONCESSIONS": "QA-WS-203",
+        "CLEANING_AND_SANITATION": "QA-WS-204",
+        "SETUP_AND_LOGISTICS": "QA-WS-205",
+        "ACCESS_AND_RECEPTION": "QA-WS-206",
+        "SPORTS_OPERATION": "QA-WS-207",
+        "FINANCIAL_CONTROL": "QA-WS-208",
+        "COMMUNICATIONS": "QA-WS-209"
+      },
+      "assignment_ids": {
+        "VENUE_AND_FIELD": "QA-ASG-201",
+        "FOOD_SERVICE": "QA-ASG-202",
+        "CONCESSIONS": "QA-ASG-203",
+        "CLEANING_AND_SANITATION": "QA-ASG-204",
+        "SETUP_AND_LOGISTICS": "QA-ASG-205",
+        "ACCESS_AND_RECEPTION": "QA-ASG-206",
+        "SPORTS_OPERATION": "QA-ASG-207",
+        "FINANCIAL_CONTROL": "QA-ASG-208",
+        "COMMUNICATIONS": "QA-ASG-209"
+      },
+      "task_ids": {
+        "CANCHA": "QA-TASK-201",
+        "ASEO": "QA-TASK-202",
+        "LAVADO": "QA-TASK-203"
+      }
+    },
+    "BINGO": {
+      "event_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
+      "activity_id": "QA-ACTIVITY-BINGO-PR219-001",
+      "workstream_ids": {
+        "VENUE_AND_FIELD": "QA-WS-301",
+        "FOOD_SERVICE": "QA-WS-302",
+        "CONCESSIONS": "QA-WS-303",
+        "CLEANING_AND_SANITATION": "QA-WS-304",
+        "SETUP_AND_LOGISTICS": "QA-WS-305",
+        "ACCESS_AND_RECEPTION": "QA-WS-306",
+        "COMMUNICATIONS": "QA-WS-307",
+        "FINANCIAL_CONTROL": "QA-WS-308"
+      },
+      "assignment_ids": {
+        "VENUE_AND_FIELD": "QA-ASG-301",
+        "FOOD_SERVICE": "QA-ASG-302",
+        "CONCESSIONS": "QA-ASG-303",
+        "CLEANING_AND_SANITATION": "QA-ASG-304",
+        "SETUP_AND_LOGISTICS": "QA-ASG-305",
+        "ACCESS_AND_RECEPTION": "QA-ASG-306",
+        "COMMUNICATIONS": "QA-ASG-307",
+        "FINANCIAL_CONTROL": "QA-ASG-308"
+      },
+      "task_ids": {}
+    }
+  },
+  "patterns": [
+    {
+      "capability_tag": "VENUE_AND_FIELD",
+      "human_label": "Encargado/a de cancha y recinto",
+      "activation_conditions": [
+        "playing_surface_required",
+        "venue_required"
+      ],
+      "phase": "ANTES",
+      "human_gate": "NONE",
+      "tasks": [
+        {
+          "work_id": "CANCHA",
+          "title": "Revisión final de cancha",
+          "activity_kinds": [
+            "MATCH"
+          ],
+          "source_refs": [
+            "preview-v8/data/match-full-day-qa.json"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_tag": "FOOD_SERVICE",
+      "human_label": "Encargado/a de cocina",
+      "activation_conditions": [
+        "food_preparation",
+        "food_service"
+      ],
+      "phase": "ANTES_Y_DURANTE",
+      "human_gate": "NONE",
+      "tasks": []
+    },
+    {
+      "capability_tag": "CONCESSIONS",
+      "human_label": "Encargado/a de bar o punto de venta",
+      "activation_conditions": [
+        "beverage_service",
+        "sales_or_cash_handling"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "tasks": []
+    },
+    {
+      "capability_tag": "CLEANING_AND_SANITATION",
+      "human_label": "Encargado/a de aseo",
+      "activation_conditions": [
+        "cleaning_required",
+        "teardown_required"
+      ],
+      "phase": "DESPUES",
+      "human_gate": "NONE",
+      "tasks": [
+        {
+          "work_id": "ASEO",
+          "title": "Aseo general del estadio",
+          "activity_kinds": [
+            "MATCH"
+          ],
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B5:C5"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_tag": "SETUP_AND_LOGISTICS",
+      "human_label": "Encargado/a de montaje y logística",
+      "activation_conditions": [
+        "setup_required",
+        "equipment_required"
+      ],
+      "phase": "ANTES",
+      "human_gate": "NONE",
+      "tasks": []
+    },
+    {
+      "capability_tag": "ACCESS_AND_RECEPTION",
+      "human_label": "Encargado/a de acceso y recepción",
+      "activation_conditions": [
+        "public_access",
+        "ticketing_or_access_control"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "tasks": []
+    },
+    {
+      "capability_tag": "COMMUNICATIONS",
+      "human_label": "Encargado/a de comunicaciones",
+      "activation_conditions": [
+        "communications_required"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "tasks": []
+    },
+    {
+      "capability_tag": "SPORTS_OPERATION",
+      "human_label": "Encargado/a de operación deportiva",
+      "activation_conditions": [
+        "sports_operation_required"
+      ],
+      "phase": "DURANTE",
+      "human_gate": "NONE",
+      "tasks": [
+        {
+          "work_id": "LAVADO",
+          "title": "Lavado de camisetas del partido",
+          "activity_kinds": [
+            "MATCH"
+          ],
+          "source_refs": [
+            "artifact:Check-List tareas estadio y partidos.xlsx#'Check list'!B6:C6"
+          ]
+        }
+      ]
+    },
+    {
+      "capability_tag": "FINANCIAL_CONTROL",
+      "human_label": "Encargado/a de caja y control",
+      "activation_conditions": [
+        "sales_or_cash_handling"
+      ],
+      "phase": "DURANTE_Y_CIERRE",
+      "human_gate": "FINANCIAL_TRANSACTION",
+      "tasks": []
+    }
+  ]
+}
