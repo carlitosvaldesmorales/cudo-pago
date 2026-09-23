@@ -44,6 +44,12 @@
       "runner": "node preview-v8/tools/visual_qa.mjs",
       "workflow": ".github/workflows/sync-qa-google-data.yml",
       "evidence": "cudo-v8-responsive-media-${GITHUB_RUN_ID}"
+    },
+    "MOBILE_ADOPTION_CANDIDATE_E2E": {
+      "source": "local",
+      "runner": "node preview-v8/tools/certify_mobile_adoption_candidate.mjs",
+      "workflow": ".github/workflows/certify-cudo-mobile-adoption-candidate.yml",
+      "evidence": "github_actions"
     }
   },
   "capabilities": [
@@ -164,6 +170,15 @@
         "RESPONSIVE_MEDIA_E2E",
         "MOBILE_WEBKIT_CHROMIUM_E2E",
         "LIVE_PRODUCTION_E2E"
+      ]
+    },
+    {
+      "id": "mobile_production_adoption_evidence",
+      "status": "candidate",
+      "release_blocking": true,
+      "manual_gate": false,
+      "tests": [
+        "MOBILE_ADOPTION_CANDIDATE_E2E"
       ]
     }
   ],
