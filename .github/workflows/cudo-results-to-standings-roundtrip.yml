@@ -1,0 +1,51 @@
+name: CUDO Results to Standings Correlated Roundtrip
+
+on:
+  push:
+    branches:
+      - ops/tabla-correlated-roundtrip-20260923
+    paths:
+      - '.github/workflows/cudo-results-to-standings-roundtrip.yml'
+      - 'preview-v8/tools/certify_results_to_standings_roundtrip.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Certify verified result to mobile standings
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull mcr.microsoft.com/playwright:v1.55.0-noble
+          docker run --rm \
+            -e GITHUB_SHA \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            mcr.microsoft.com/playwright:v1.55.0-noble \
+            bash -lc "npm install --no-save --package-lock=false playwright@1.55.0 >/dev/null && python3 -m http.server 8000 >/tmp/cudo-http.log 2>&1 & SERVER=\$!; trap 'kill \$SERVER || true' EXIT; sleep 2; node preview-v8/tools/certify_results_to_standings_roundtrip.mjs"
+      - name: Persist certificate evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f evidence/tabla-correlated-roundtrip/latest.json
+          git config user.name 'cudo-tabla-roundtrip[bot]'
+          git config user.email 'actions@users.noreply.github.com'
+          git add evidence/tabla-correlated-roundtrip/latest.json
+          git commit -m 'evidence(cudo): certify results to standings roundtrip' || true
+          git push origin HEAD:refs/heads/ops/tabla-correlated-roundtrip-20260923
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cudo-tabla-correlated-roundtrip
+          path: evidence/tabla-correlated-roundtrip
+          if-no-files-found: error
+          retention-days: 14
