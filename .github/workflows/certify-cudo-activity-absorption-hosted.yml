@@ -53,8 +53,7 @@ jobs:
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add evidence/hosted-activity-certifier
             git commit -m 'evidence(cudo): hosted activity absorption certifier' || true
-            git pull --rebase origin HEAD || true
-            git push origin HEAD || true
+            git push origin HEAD:refs/heads/ops/hosted-activity-certifier-20260922
           fi
 
       - name: Upload evidence
