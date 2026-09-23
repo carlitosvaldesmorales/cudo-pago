@@ -14,7 +14,7 @@ permissions:
 
 concurrency:
   group: cudo-partidos-hosted-capture-poc
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   prove-host-neutral-capture:
