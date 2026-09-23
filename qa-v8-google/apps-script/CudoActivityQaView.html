@@ -34,6 +34,7 @@
 <script>
 (function(){
   var registry=null,state=null,currentActivityId=null;
+  var initialActivityId=<?!= JSON.stringify(initialActivityId || '') ?>;
   var labels={CONFIRMED:'Confirmado',ASSIGNED:'Asignado · falta confirmar',UNASSIGNED:'Sin responsable',IN_PROGRESS:'En curso',READY:'Preparado',BLOCKED:'Bloqueado',REQUIRED_UNASSIGNED:'Sin responsable',DONE:'Listo',TODO:'Pendiente',IN_PREPARATION:'En preparación'};
   function esc(v){return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function human(v){return labels[v]||String(v||'');}
@@ -90,7 +91,11 @@
   document.getElementById('back').onclick=function(){loadRegistry();};
   document.getElementById('reloadRegistry').onclick=loadRegistry;
   document.getElementById('reloadActivity').onclick=function(){if(currentActivityId)openActivity(currentActivityId);};
-  loadRegistry();
+  if(initialActivityId){
+    window.openActivity(initialActivityId);
+  } else {
+    loadRegistry();
+  }
 })();
 </script>
 </body>
