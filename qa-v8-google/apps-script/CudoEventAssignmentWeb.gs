@@ -176,3 +176,19 @@ function cudoEventAssignmentHandlePost_(e){
 
   throw new Error('Acción de asignación no soportada');
 }
+
+function cudoEventAssignmentProbe(){
+  const reviewer=cudoPersonaReviewer_();
+  const state=cudoEventAssignmentState_(CUDO_EVENT_ASSIGNMENT_DEFAULT_ACTIVITY_ID_);
+  return {
+    ok:true,
+    reviewer:reviewer,
+    activity_id:state.activity.activity_id,
+    workstreams:state.workstreams.length,
+    tasks:state.workstreams.reduce(function(n,w){return n+(w.tasks||[]).length;},0),
+    assignable_people:state.people.length,
+    all_people_have_stable_ids:state.people.every(function(p){return Boolean(p.person_ref&&p.person_display);}),
+    sources:Array.from(new Set(state.people.map(function(p){return p.source;}))).sort(),
+    production_write:false
+  };
+}
