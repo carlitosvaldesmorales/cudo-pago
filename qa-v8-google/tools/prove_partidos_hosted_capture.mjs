@@ -4,7 +4,8 @@ import { chromium } from 'playwright';
 const FORM='https://docs.google.com/forms/d/e/1FAIpQLSfD8jwbGL_kUAYm2A6DR3yYmANMoyTr2ja609JTFqBH9zvg2w/viewform';
 const SHEET_ID='1AiIAh-gjtiWRTGoMAnhF-iN83XB4cWSgbeEUX_C7VbI';
 const RUN_ID=process.env.GITHUB_RUN_ID||String(Date.now());
-const MARKER=`CUDO-QA-HOSTED-PARTIDO-${RUN_ID}`;
+const VERIFY_ONLY_MARKER=String(process.env.CUDO_VERIFY_ONLY_MARKER||'').trim();
+const MARKER=VERIFY_ONLY_MARKER||`CUDO-QA-HOSTED-PARTIDO-${RUN_ID}`;
 const OUTDIR='evidence/partidos-hosted-capture-poc';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -56,28 +57,41 @@ async function refreshAccessToken(){
   return d.access_token;
 }
 
-async function readValues(token,range){
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`;
-  const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(`Sheets read ${range} HTTP ${r.status}: ${d.error?.message||'unknown'}`);
-  return d.values||[];
+async function batchReadStages(token){
+  const ranges=[
+    "'Respuestas de formulario 1'!A:AZ",
+    "'RAW_FORM_PARTIDOS'!A:AZ",
+    "'CONTROL'!A:AZ",
+    "'PUBLICO_EXPORT'!A:AZ"
+  ];
+  const qs=new URLSearchParams();
+  for(const range of ranges) qs.append('ranges',range);
+  qs.set('majorDimension','ROWS');
+  qs.set('valueRenderOption','FORMATTED_VALUE');
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchGet?${qs}`;
+  let last=null;
+  for(let i=0;i<7;i++){
+    const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok) return d.valueRanges||[];
+    last={status:r.status,message:d.error?.message||'unknown'};
+    if(![429,500,502,503,504].includes(r.status)) break;
+    await sleep(Math.min(30000,2000*(2**i)));
+  }
+  throw new Error(`Sheets batchGet HTTP ${last?.status}: ${last?.message}`);
 }
 
 function hasMarker(rows){return rows.some(row=>row.some(v=>String(v??'').includes(MARKER)));}
 
 async function stageSnapshot(token){
-  const [provider,raw,control,pub]=await Promise.all([
-    readValues(token,"'Respuestas de formulario 1'!A:AZ"),
-    readValues(token,"'RAW_FORM_PARTIDOS'!A:AZ"),
-    readValues(token,"'CONTROL'!A:AZ"),
-    readValues(token,"'PUBLICO_EXPORT'!A:AZ")
-  ]);
+  const valueRanges=await batchReadStages(token);
+  const values=valueRanges.map(v=>v.values||[]);
+  while(values.length<4) values.push([]);
   return {
-    provider:hasMarker(provider),
-    raw:hasMarker(raw),
-    control:hasMarker(control),
-    public_export:hasMarker(pub)
+    provider:hasMarker(values[0]),
+    raw:hasMarker(values[1]),
+    control:hasMarker(values[2]),
+    public_export:hasMarker(values[3])
   };
 }
 
@@ -98,6 +112,45 @@ async function main(){
   const token=await refreshAccessToken();
   const preflight=await stageSnapshot(token);
   if(preflight.public_export) throw new Error('Marker unexpectedly in PUBLICO_EXPORT before run');
+
+  if(VERIFY_ONLY_MARKER){
+    const evidence={
+      schema_version:'CUDO_PARTIDOS_HOSTED_CAPTURE_POC_V1',
+      generated_at:new Date().toISOString(),
+      run_id:RUN_ID,
+      marker:MARKER,
+      mode:'VERIFY_EXISTING_MARKER',
+      execution_plane:'GitHub_hosted',
+      olam_required:false,
+      production_write:false,
+      real_club_data:false,
+      preflight,
+      writes:0,
+      form_submit_confirmed:'in_prior_run_35850832969',
+      postflight:null,
+      decision:'FAIL'
+    };
+    try{
+      evidence.postflight=await waitForStages(token,180000);
+      evidence.decision=(evidence.postflight.provider&&evidence.postflight.raw&&evidence.postflight.control&&!evidence.postflight.public_export)?'PASS':'FAIL';
+      if(evidence.decision!=='PASS') throw new Error('Existing marker acceptance failed: '+JSON.stringify(evidence.postflight));
+    }catch(error){
+      evidence.error=String(error?.stack||error);
+      throw error;
+    }finally{
+      evidence.completed_at=new Date().toISOString();
+      fs.writeFileSync(`${OUTDIR}/latest.json`,JSON.stringify(evidence,null,2)+'\n');
+      fs.writeFileSync(`${OUTDIR}/latest.md`,
+        `# CUDO Partidos Hosted Capture POC\n\n`+
+        `decision: ${evidence.decision}\n`+
+        `mode: VERIFY_EXISTING_MARKER\n`+
+        `marker: ${MARKER}\n`+
+        `production_write: false\n`+
+        `postflight: ${JSON.stringify(evidence.postflight)}\n`+
+        (evidence.error?`error: ${evidence.error.replace(/\n/g,' ')}\n`:''));
+    }
+    return;
+  }
 
   const browser=await chromium.launch({headless:true});
   const context=await browser.newContext({viewport:{width:1280,height:900}});
