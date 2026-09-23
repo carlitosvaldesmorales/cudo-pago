@@ -1,0 +1,520 @@
+{
+  "schema_version": "CUDO_HOSTED_HUMAN_CERTIFIER_RESULT_V1",
+  "decision": "PASS",
+  "deterministic_acceptance_pass": true,
+  "model_verdict": "PASS",
+  "semantic_consistency_pass": true,
+  "first_demonstrated_failure": "none",
+  "reviewer_engine": "BrowserGym_OpenEndedTask",
+  "local_model": "llama3.2:3b",
+  "execution_host": "github_hosted_ephemeral",
+  "production_write": false,
+  "reviewer_source_code_access": false,
+  "reviewer_pr_context_access": false,
+  "reviewer_repo_mounted": false,
+  "paid_model_api_used": false,
+  "paid_browser_api_used": false,
+  "pages_visited": [
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/eventos/",
+      "status": 200,
+      "title": "C.U.D.O. · Jornada integral · QA",
+      "visible_excerpt": "C.U.D.O. · CLUB OS · QA\nJORNADA DEL PARTIDO\n\nEl partido es el contexto. Cocina y bar no traen un menú fijo: la jornada decide qué se venderá y CUDO deriva los insumos, compras, stock, ventas y caja que correspondan.\n\n← Volver a Administración\nQA sintética: no escribe producción. La prueba se guarda sólo en este navegador y usa un modelo de oferta dinámica por jornada.\nMATCH · CONTEXTO HUMANO PRINCIPAL\nCUDO VS SAN JUAN · JORNADA QA\n2026-09-27 · Local · Estadio CUDO · En operación QA\nQA · SCHEDULED\nDEPORTE\nPERSONAS\nRESULTADO\nCAJA\nCIERRE\nRECINTO\nCOCINA\nBAR\nVENTAS\nCOMPRAS / STOCK\nENTRADAS\nPOST-PARTIDO\n1 · CONFIGURAR LA JORNADA\n\nSe registra el partido una vez. Las ramas aparecen sólo cuando aplican.\n\nRIVAL\nFECHA\nCONDICIÓN\nLocal\nVisita\n Usamos estadio CUDO\n Habrá cocina / comida\n Habrá bar / reventa\n Se cobra entrada\n Habrá transmisión\nGuardar jornada\nReiniciar QA\nTRABAJO QUE ACTIVA ESTA JORNADA\n\nCUDO deriva estos frentes desde las condiciones del partido. Primero aparece el rol que hace falta; una persona se asigna sólo cuando existe un dato real.\n\nEncargado/a de cancha y recinto\nANTES · Sin persona asignada · GAP de asignación\nEncargado/a de cocina\nANTES_Y_DURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de bar o punto de venta\nDURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de aseo\nDESPUES · Sin persona asignada · GAP de asignación\nEncargado/a de montaje y logística\nANTES · Sin persona asignada · GAP de asignación\nEncargado/a de acceso y recepción\nDURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de operación deportiva\nDURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de caja y control\nDURANTE_Y_CIERRE · Sin persona asignada · GAP de asignación\nRECINTO\n\nEsta rama sólo aparece cuando el partido local necesita el estadio.\n\nEstadio CUDO\nCancha, camarines y entorno disponibles.\nPreparación previa\nRiego, corte y demarcación nacen como consecuencias de esta jornada.\n2 · ¿QUÉ VAMOS A VENDER?\n\nAgrega sólo lo que realmente se venderá en esta jornada. CUDO distingue una preparación de una reventa directa; no crea productos ni stock por defecto.\n\nPatrón: una preparación consume sus insumos. Una reventa consume unidades del producto comprado. El nombre del alimento no decide el modelo; lo decide cómo lo abastece CUDO.\nQUÉ VENDEREMOS\nCÓMO LO TENDREMOS\nLo preparamos en CUDO\nLo compramos listo / reventa\nPRECIO DE VENTA\nAgregar a la venta\nTodavía no se decidió qué vender en esta jornada.\n3 · PREPARACIONES E INSUMOS\n\nSi algo se prepara aquí, define de qué está hecho. Los insumos pasan a ser el stock real que CUDO debe comprar y controlar.\n\nPREPARACIÓN\nINSUMO\nCONSUMO POR UNIDAD VENDIDA\nUNIDAD DE CONTROL\nunidad\nkg\nlitro\nporción\nAgregar insumo\n4 · COMPRAS E INVENTARIO REAL\n\nAquí aparecen sólo los insumos o unidades que nacieron de lo que la jornada decidió vender.\n\nINSUMO / UNIDAD\nCANTIDAD COMPRADA\nCOSTO POR UNIDAD DE CONTROL\nPROVEEDOR\nPAGO\nPendiente\nPagado efectivo\nPagado transferencia\nRegistrar compra\nINSUMO / UNIDAD\tSTOCK\tUNIDAD\tCOSTO REF.\n\nEl inventario aparecerá cuando una oferta de esta jornada necesite insumos o unidades.\n5 · VENTAS DEL DÍA\n\nSe vende la oferta que ve la gente. CUDO descuenta por detrás los insumos o unidades que correspondan.\n\nQUÉ SE VENDIÓ\nCANTIDAD\nPRECIO UNITARIO\nMEDIO DE PAGO\nEfectivo\nTransferencia\nRegistrar venta\nENTRADAS\nCANTIDAD\nVALOR ENTRADA\nMEDIO\nEfectivo\nTransferencia\nRegistrar entradas\nCAJA Y OBLIGACIONES\n$0\nINGRESOS\n$0\nCOMPRAS\n$0\nPROVEEDOR PENDIENTE\n$20.000\nCAJA ESTIMADA\nAún no hay movimientos de esta jornada.\nRESULTADO DEPORTIVO\nSERIE\nTercera\nSegunda\nSenior\nPrimera\nCUDO\nRIVAL\nRegistrar resultado\nResultado pendiente.\nDESPUÉS DEL PARTIDO\nRevisión final de cancha\nPendiente\nMarcar listo\nAseo de camarines y entorno\nPendiente\nMarcar listo\nLavado de indumentaria\nPendiente\nMarcar listo\nCIERRE DE JORNADA\n$0\nINGRESOS DEL EVENTO\n$0\nCOMPRAS DEL EVENTO\n$0\nRECURSO NETO\n3\nPENDIENTES\nConciliar y cerrar jornada\n🎟️ BINGO · MISMA RAÍZ, RAMAS DISTINTAS\n\nEl Bingo reutiliza el mismo patrón dinámico de oferta, insumos, compras, ventas y caja, pero agrega permiso y premios.\n\nAbrir Bingo / recaudación →\nCUDO QA · oferta dinámica por evento · production_write=false.",
+      "group_hits": {
+        "event_context": [
+          "partido",
+          "jornada",
+          "local",
+          "visita",
+          "rival"
+        ],
+        "work_context": [
+          "encargado",
+          "persona",
+          "trabajo",
+          "pendiente"
+        ],
+        "facility": [
+          "cancha",
+          "estadio",
+          "recinto"
+        ],
+        "food_service": [
+          "cocina"
+        ],
+        "concessions": [
+          "bar",
+          "venta"
+        ],
+        "cleaning": [
+          "aseo"
+        ],
+        "setup": [
+          "montaje",
+          "logística"
+        ],
+        "access": [
+          "acceso",
+          "recepción",
+          "entrada"
+        ],
+        "communications": [
+          "transmisión"
+        ],
+        "sports_operation": [
+          "deporte",
+          "deportivo",
+          "resultado"
+        ],
+        "finance": [
+          "caja",
+          "ingreso",
+          "obligacion"
+        ],
+        "post_event": [
+          "post",
+          "despues",
+          "después",
+          "lavado",
+          "revisión final"
+        ]
+      },
+      "required_branch_groups_visible": [
+        "work_context",
+        "facility",
+        "food_service",
+        "concessions",
+        "cleaning",
+        "setup",
+        "access",
+        "sports_operation",
+        "finance",
+        "post_event"
+      ],
+      "required_branch_count": 10,
+      "primary_event_context_visible": true,
+      "actionable_labels": [
+        "Guardar jornada",
+        "Agregar a la venta",
+        "Agregar insumo",
+        "Registrar compra",
+        "Registrar venta",
+        "Registrar entradas",
+        "Registrar resultado",
+        "Conciliar y cerrar jornada"
+      ],
+      "actionable_label_count": 8
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/admin/",
+      "status": 200,
+      "title": "Administrar contenido del CUDO",
+      "visible_excerpt": "C.U.D.O. · ADMINISTRACIÓN WEB\nADMINISTRAR CONTENIDO DEL CUDO\n\nDesde aquí puedes completar tu propia ficha o administrar la información que aparece en la web. No necesitas usar planillas ni herramientas técnicas: elige el camino que corresponde.\n\n← Volver a la web\nORGANIZACIÓN DEL CLUB\n\nRegistra y revisa el trabajo del club desde una sola vista: qué actividades existen, quién está a cargo, qué falta asignar y qué está bloqueado.\n\nCONTROL DEL CLUB · QA\nQué está pasando en el club, qué necesita atención, quién lo está haciendo y qué falta para resolverlo. El origen de cada dato sigue disponible.\nAbrir Control del club →\nACTIVIDADES DEL CLUB\nRegistro operativo respaldado por Google. Muestra cada actividad, sus responsabilidades, personas asignadas, tareas, bloqueos e historial.\nVer y asignar actividades →\nEVENTOS DEL CLUB · QA\nVista algebraica del Club OS: abre Partido o Bingo y muestra sólo las ramas activas de trabajo, recursos, finanzas y evidencia.\nVer patrón dinámico →\nPARTIDO Y BINGO · QA GOBERNADA\nOpera la jornada desde la superficie privada conectada al motor canónico. Las acciones se procesan con revisión de versión, auditoría y lectura desde Google QA.\nAbrir operación gobernada →\nTU FICHA CUDO\n\nEste camino es personal. Cada integrante completa sus propios datos desde el celular y el formulario se adapta según su relación con el club.\n\nCOMPLETAR MI FICHA\nPara jugadores, dirigentes, cuerpo técnico, socios y colaboradores. Foto y red social son opcionales; CUDO revisa todo antes de publicar.\nCompletar mi ficha →\nAGREGAR CONTENIDO\n\nEstas opciones son administrativas: úsalas para registrar o mantener información del club y de otras personas.\n\nPUBLICAR UNA NOTICIA\nActividad, resultado, convocatoria o comunicado del club.\nAbrir formulario →\nADMINISTRAR EQUIPO O SERIE\nInformación pública de las series y equipos que aparecen en la web.\nAbrir formulario →\nAGREGAR JUGADOR\nRegistro administrativo de un jugador: nombre público, dorsal, posición, categoría y fotografía autorizada.\nAbrir formulario →\nREGISTRAR PARTIDO O RESULTADO\nProgramación, resultado, suspensión o cambio de un partido.\nAbrir formulario →\nTABLA DE POSICIONES\nSe actualiza automáticamente con los resultados verificados. Para modificarla, registra un partido o resultado; si el dato ya fue publicado, usa la opción de corrección.\nAutomática · sin formulario manual\nSUBIR FOTOS A LA GALERÍA\nFotografías autorizadas de partidos y actividades del CUDO.\nAbrir formulario →\nCORREGIR O RETIRAR CONTENIDO\n\nSi la información ya existe, no la ingreses nuevamente. Usa esta opción para modificarla, retirarla o volver a activarla.\n\nCORREGIR, ACTUALIZAR, RETIRAR O REACTIVAR\nIdentifica el contenido con palabras normales. La solicitud conserva el historial y será revisada antes de aplicarse.\nAbrir formulario →\nSOLICITUDES DE FICHAS\n\nCuando una persona envía “Mi ficha CUDO”, el administrador recibe un aviso en sistemas@cudo.cl. Desde aquí puede entrar a la bandeja privada para resolver las fichas pendientes.\n\nREVISAR SOLICITUDES DE FICHAS\nAcceso privado del administrador. Permite dar de alta, pedir corrección o rechazar una ficha sin publicarla automáticamente.\nAbrir solicitudes →\nREVISAR ANTES DE PUBLICAR\n\nEsta opción es para la persona autorizada por el club. Permite aprobar o rechazar publicaciones, correcciones, retiros y reactivaciones.\n\nREVISAR CONTENIDO PENDIENTE\nConfirma la decisión y las autorizaciones antes de aplicar cualquier cambio visible en la web.\nAbrir formulario →\nEnviar información no la publica inmediatamente. Primero se revisa para evitar errores, duplicados o contenido sin autorización.\n\nAdministración de contenido web CUDO.",
+      "group_hits": {
+        "event_context": [
+          "partido",
+          "jornada"
+        ],
+        "work_context": [
+          "responsabilidad",
+          "persona",
+          "trabajo",
+          "pendiente"
+        ],
+        "facility": [],
+        "food_service": [],
+        "concessions": [
+          "bar"
+        ],
+        "cleaning": [],
+        "setup": [],
+        "access": [
+          "acceso"
+        ],
+        "communications": [],
+        "sports_operation": [
+          "resultado"
+        ],
+        "finance": [],
+        "post_event": []
+      },
+      "required_branch_groups_visible": [
+        "work_context",
+        "concessions",
+        "access",
+        "sports_operation"
+      ],
+      "required_branch_count": 4,
+      "primary_event_context_visible": true,
+      "actionable_labels": [
+        "ACTIVIDADES DEL CLUB\nRegistro operativo respaldado por Google. Muestra cada actividad, sus responsabilidades, personas asignadas, tareas, bloqueos e historial.\nVer y asignar actividades →",
+        "PUBLICAR UNA NOTICIA\nActividad, resultado, convocatoria o comunicado del club.\nAbrir formulario →",
+        "AGREGAR JUGADOR\nRegistro administrativo de un jugador: nombre público, dorsal, posición, categoría y fotografía autorizada.\nAbrir formulario →",
+        "REGISTRAR PARTIDO O RESULTADO\nProgramación, resultado, suspensión o cambio de un partido.\nAbrir formulario →",
+        "CORREGIR, ACTUALIZAR, RETIRAR O REACTIVAR\nIdentifica el contenido con palabras normales. La solicitud conserva el historial y será revisada antes de aplicarse.\nAbrir formulario →"
+      ],
+      "actionable_label_count": 5
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/eventos/bingo.html",
+      "status": 200,
+      "title": "C.U.D.O. · Bingo / recaudación · QA",
+      "visible_excerpt": "C.U.D.O. · CLUB OS · QA\nBINGO / RECAUDACIÓN\n\nLa misma raíz de evento, con permiso, premios y una oferta de cocina/bar que nace de lo que realmente se decide vender ese día.\n\n← Volver al partido\nQA sintética: no escribe producción. No existe menú fijo de Bingo: las ofertas e insumos se crean según la jornada.\nBINGO CUDO · JORNADA QA\n2026-10-10 · Sede / recinto CUDO · En operación QA\nEVENTOPERSONASPERMISOPREMIOS / DONACIONESCOCINA / BARVENTASCOMPRAS / STOCKCAJAPOST-EVENTOCIERRE\nPERMISO\n🟡 Permiso pendiente\nSin referencia todavía\nREFERENCIA / RESPALDO\nConfirmar permiso\nPERSONAS\nCoordinación general\nDirigencia QA\nCocina / preparación\nEquipo cocina QA\nVenta y atención\nColaboradores QA\nCaja\nTesorería QA\nPREMIOS Y DONACIONES\nPREMIO\nORIGEN\nDonado\nComprado\nVALOR DE REFERENCIA\nRegistrar premio\nSin premios registrados.\n¿QUÉ VAMOS A VENDER?\n\nAgrega sólo la oferta real de este Bingo. Una preparación usa receta; una reventa usa unidades.\n\nQUÉ VENDEREMOS\nCÓMO LO TENDREMOS\nLo preparamos en CUDO\nLo compramos listo / reventa\nPRECIO\nAgregar a la venta\nAún no se decidió qué vender.\nPREPARACIONES E INSUMOS\nPREPARACIÓN\nINSUMO\nCONSUMO POR VENTA\nUNIDAD\nunidad\nkg\nlitro\nporción\nAgregar insumo\nCOMPRAS E INVENTARIO REAL\nINSUMO / UNIDAD\nCANTIDAD\nCOSTO UNITARIO\nPROVEEDOR\nPAGO\nPendiente\nEfectivo\nTransferencia\nRegistrar compra\nINSUMO / UNIDAD\tSTOCK\tUNIDAD\tCOSTO\n\nSin inventario hasta que la oferta lo necesite.\nVENTAS\nQUÉ SE VENDIÓ\nCANTIDAD\nPRECIO\nMEDIO\nEfectivo\nTransferencia\nRegistrar venta\nCAJA Y OBLIGACIONES\n$0\nINGRESOS\n$0\nCOMPRAS\n$0\nPROVEEDOR PENDIENTE\n$15.000\nCAJA ESTIMADA\nSin movimientos.\nDESPUÉS DEL EVENTO\nAseo del recinto\nPendiente\nMarcar listo\nRevisión final de caja\nPendiente\nMarcar listo\nCIERRE\n$0\nINGRESOS\n$0\nCOMPRAS\n$0\nRECURSO NETO\n2\nPENDIENTES\nCerrar Bingo\nReiniciar QA",
+      "group_hits": {
+        "event_context": [
+          "partido",
+          "jornada"
+        ],
+        "work_context": [
+          "persona",
+          "pendiente"
+        ],
+        "facility": [
+          "recinto"
+        ],
+        "food_service": [
+          "cocina"
+        ],
+        "concessions": [
+          "bar",
+          "venta"
+        ],
+        "cleaning": [
+          "aseo"
+        ],
+        "setup": [],
+        "access": [],
+        "communications": [],
+        "sports_operation": [],
+        "finance": [
+          "caja",
+          "ingreso",
+          "obligacion"
+        ],
+        "post_event": [
+          "post",
+          "después",
+          "revisión final"
+        ]
+      },
+      "required_branch_groups_visible": [
+        "work_context",
+        "facility",
+        "food_service",
+        "concessions",
+        "cleaning",
+        "finance",
+        "post_event"
+      ],
+      "required_branch_count": 7,
+      "primary_event_context_visible": true,
+      "actionable_labels": [
+        "Registrar premio",
+        "Agregar a la venta",
+        "Agregar insumo",
+        "Registrar compra",
+        "Registrar venta",
+        "Cerrar Bingo"
+      ],
+      "actionable_label_count": 6
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/",
+      "status": 200,
+      "title": "C.U.D.O. — Portal V8",
+      "visible_excerpt": "CLUB UNIÓN DEPORTIVO ORILLA\nC.U.D.O.\nINICIO\nEL CLUB\nNOTICIAS\nPARTIDOS\nEQUIPOS\nGALERÍA\nCOLABORA\nHAZTE SOCIO\nCLUB UNIÓN DEPORTIVO ORILLA · CHÉPICA\nLA ORILLA\nJUEGA UNIDA\n\nFútbol, comunidad y pertenencia. Una cancha, cuatro categorías y una comunidad que se reúne alrededor del mismo escudo.\n\nTERCERA\nSEGUNDA\nSENIOR\nPRIMERA\nPRÓXIMA JORNADA →\nCONOCER EL CLUB\nFÚTBOL CUDO\nTABLA Y CALENDARIO →\nÚLTIMA JORNADA\nCUDO VS SARA HUAPE\n2026-08-30 · Cudo\nTERCERA\nFinalizado\n3 - 2\nACTUALIDAD DEL CLUB\nLO ÚLTIMO EN CUDO\nVER TODAS LAS NOTICIAS →\n2026-09-05\nLA CAMISETA NO SOLO SE PONE PARA JUGAR!!\n\nLa Camiseta no solo se pone para jugar!!\n\nFÚTBOL CUDO\nCUATRO CATEGORÍAS. UN CLUB.\nVER PLANTELES →\n03\nTERCERA\n18 jugadores\n02\nSEGUNDA\n18 jugadores\nS\nSENIOR\n30 jugadores\n01\nPRIMERA\n18 jugadores\nMEMORIA DE LA ORILLA\nEL CLUB EN IMÁGENES\nABRIR GALERÍA →\n2026-08-23 · SANTA ELENA VS CUDO\nTARDE DEPORTIVA\n2026-08-23 · SANTA ELENA VS CUDO\nTARDE DEPORTIVA\n2026-08-23 · SANTA ELENA VS CUDO\nTARDE DEPORTIVA\n2026-08-23 · SANTA ELENA VS CUDO\nTARDE DEPORTIVA\nSOSTENER LO QUE ES DE TODOS\nHAZTE PARTE\nDEL CLUB\n\nLa cancha, el estadio y la infraestructura necesitan mantención durante todo el año. Ser socio ayuda a que CUDO siga creciendo desde la comunidad.\n\nAPORTE MENSUAL DESDE\n$2.000\nQUIERO SER SOCIO →\nCONTACTAR AL CLUB\nCUANDO JUEGA CUDO, JUEGA LA ORILLA.\n\nFútbol · comunidad · pertenencia.\n\nClub Unión Deportivo Orilla\nOrilla de Auquinco · Chépica · CUDO.cl",
+      "group_hits": {
+        "event_context": [
+          "partido",
+          "jornada"
+        ],
+        "work_context": [],
+        "facility": [
+          "cancha",
+          "estadio"
+        ],
+        "food_service": [],
+        "concessions": [],
+        "cleaning": [],
+        "setup": [],
+        "access": [],
+        "communications": [],
+        "sports_operation": [
+          "deportivo"
+        ],
+        "finance": [],
+        "post_event": []
+      },
+      "required_branch_groups_visible": [
+        "facility",
+        "sports_operation"
+      ],
+      "required_branch_count": 2,
+      "primary_event_context_visible": true,
+      "actionable_labels": [],
+      "actionable_label_count": 0
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/control/",
+      "status": 200,
+      "title": "C.U.D.O. · Control del club",
+      "visible_excerpt": "C.U.D.O. · ADMINISTRACIÓN\nCONTROL DEL CLUB\n\nAquí ves qué está pasando en el club, qué necesita atención, quién lo está haciendo y qué falta para dar cada asunto por resuelto.\n\n← Volver a Administración\nVista de trabajo real. Esta pantalla muestra primero información respaldada por una fuente real. Los escenarios usados para pruebas quedan fuera del control normal.\nQUÉ NECESITA ATENCIÓN\n\nCada tarjeta cuenta una situación en lenguaje cotidiano. Los detalles de origen quedan disponibles sólo cuando quieras revisarlos.\n\nESTADIO CUDO\nRegadío del estadio\nPendiente de iniciar\n\nQué está pasando: este trabajo está pendiente dentro de la operación del club y tiene como fecha objetivo el 2026-10-06.\n\nQué falta ahora: Iniciar el trabajo o confirmar cuándo se realizará.\nQUIÉN RESPONDE POR EL RESULTADO\nPor definir en la fuente actual\n\nCUDO no inventa una autoridad si la fuente todavía no la define.\n\nQUIÉN LO ESTÁ HACIENDO\nMario Díaz\n\nEsta es la persona asociada al trabajo actual.\n\nBLOQUEOS\nSin bloqueo registrado\n\nNo existe un bloqueo activo en la información disponible.\n\nEVIDENCIA\n1 referencia(s)\n\nSirven para explicar de dónde salió este trabajo.\n\nHISTORIAL\nSin cambios registrados todavía\n\nEl historial aparecerá aquí cuando el trabajo cambie de estado.\n\nCUÁNDO QUEDA RESUELTO\nResultado esperado: Regadío del estadio terminado y respaldado cuando corresponda.\n\nEl cierre debe quedar respaldado por el mecanismo de operación del club.\n\nActualizar este trabajo →\nVer origen\nVer historial\nGestionar una actividad\n\nDesde aquí puedes probar el recorrido completo ya respaldado por Google: asignar o reasignar, registrar bloqueos y evidencia, completar el trabajo y cerrar la actividad.\n\nASIGNAR\nREASIGNAR\nCAMBIAR ESTADO\nCERRAR\nQA: este recorrido usa un caso sintético para demostrar el mecanismo. No escribe datos productivos del club.",
+      "group_hits": {
+        "event_context": [],
+        "work_context": [
+          "persona",
+          "trabajo",
+          "pendiente"
+        ],
+        "facility": [
+          "estadio"
+        ],
+        "food_service": [],
+        "concessions": [
+          "bar",
+          "venta"
+        ],
+        "cleaning": [],
+        "setup": [],
+        "access": [],
+        "communications": [],
+        "sports_operation": [
+          "resultado"
+        ],
+        "finance": [],
+        "post_event": []
+      },
+      "required_branch_groups_visible": [
+        "work_context",
+        "facility",
+        "concessions",
+        "sports_operation"
+      ],
+      "required_branch_count": 4,
+      "primary_event_context_visible": false,
+      "actionable_labels": [
+        "Actualizar este trabajo →",
+        "Cerrar"
+      ],
+      "actionable_label_count": 2
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/actividades/",
+      "status": 200,
+      "title": "C.U.D.O. · Actividades del club",
+      "visible_excerpt": "C.U.D.O. · ADMINISTRACIÓN WEB\nACTIVIDADES DEL CLUB\n\nUn solo lugar para ver las actividades registradas, detectar responsabilidades sin persona asignada y seguir su avance. Esta QA usa el registro existente en Google.\n\n← Volver a Administración\nQA Google: la superficie está integrada dentro de CUDO Web, pero por ahora utiliza actividades y personas sintéticas. No escribe datos productivos del club.\nFuente: Google Sheets · Acciones: Apps Script · Historial: EVENTOS\nAbrir en ventana completa ↗",
+      "group_hits": {
+        "event_context": [],
+        "work_context": [
+          "responsabilidad",
+          "persona"
+        ],
+        "facility": [],
+        "food_service": [],
+        "concessions": [
+          "venta"
+        ],
+        "cleaning": [],
+        "setup": [],
+        "access": [],
+        "communications": [],
+        "sports_operation": [],
+        "finance": [],
+        "post_event": []
+      },
+      "required_branch_groups_visible": [
+        "work_context",
+        "concessions"
+      ],
+      "required_branch_count": 2,
+      "primary_event_context_visible": false,
+      "actionable_labels": [
+        "Abrir en ventana completa ↗"
+      ],
+      "actionable_label_count": 1
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/club/",
+      "status": 200,
+      "title": "El Club — C.U.D.O.",
+      "visible_excerpt": "CLUB UNIÓN DEPORTIVO ORILLA\nC.U.D.O.\nINICIO\nEL CLUB\nNOTICIAS\nPARTIDOS\nEQUIPOS\nGALERÍA\nHAZTE SOCIO\nORILLA DE AUQUINCO · CHÉPICA\nEL CLUB\nES DE TODOS\n\nC.U.D.O. reúne fútbol, comunidad y el trabajo permanente de sostener una cancha y un espacio deportivo para la Orilla.\n\nUN ESCUDO.\nCUATRO CATEGORÍAS.\nUNA COMUNIDAD.\nNUESTRA CASA\nLA CANCHA NOS REÚNE\n\nEl estadio y la cancha son parte central de la vida del club. Riego, corte de pasto, implementos, reparaciones y operación requieren trabajo durante todo el año.\n\nCuidar ese espacio permite que los equipos compitan y que la comunidad siga encontrándose alrededor del fútbol.\n\nVER PARTIDOS →\nPERTENENCIA\nMÁS QUE NOVENTA MINUTOS\n\nCUDO también es el trabajo de familias, socios, dirigentes, jugadores, colaboradores y vecinos que sostienen actividades y ayudan a mantener el club funcionando.\n\nDentro de esa continuidad, Cudito es el espacio del club dedicado a niñas y niños.\n\nVER LA COMUNIDAD\nLO QUE SOSTIENE CUDO\nCUATRO PILARES\nFÚTBOL\n\nTercera, Segunda, Senior y Primera defendiendo el mismo escudo.\n\nCOMUNIDAD\n\nPersonas y familias que acompañan, colaboran y hacen vida de club.\n\nCUDITO\n\nEl espacio del club dedicado a niñas y niños.\n\nINFRAESTRUCTURA\n\nCancha, estadio e implementos que necesitan cuidado permanente.\n\nSER PARTE TAMBIÉN ES SOSTENER\nEL CLUB SE HACE\nENTRE TODOS\n\nLa membresía mensual ayuda a sostener la mantención y el funcionamiento de la infraestructura del club.\n\n$2.000\nHAZTE SOCIO →\nUN ESCUDO. UNA CANCHA. UNA COMUNIDAD.\n\nClub Unión Deportivo Orilla.\n\nC.U.D.O.\nOrilla de Auquinco · Chépica",
+      "group_hits": {
+        "event_context": [
+          "partido"
+        ],
+        "work_context": [
+          "persona",
+          "trabajo"
+        ],
+        "facility": [
+          "cancha",
+          "estadio"
+        ],
+        "food_service": [],
+        "concessions": [
+          "venta"
+        ],
+        "cleaning": [],
+        "setup": [],
+        "access": [],
+        "communications": [],
+        "sports_operation": [
+          "deportivo"
+        ],
+        "finance": [],
+        "post_event": []
+      },
+      "required_branch_groups_visible": [
+        "work_context",
+        "facility",
+        "concessions",
+        "sports_operation"
+      ],
+      "required_branch_count": 4,
+      "primary_event_context_visible": true,
+      "actionable_labels": [],
+      "actionable_label_count": 0
+    },
+    {
+      "url": "http://127.0.0.1:4177/preview-v8/noticias/",
+      "status": 200,
+      "title": "Noticias — C.U.D.O.",
+      "visible_excerpt": "CLUB UNIÓN DEPORTIVO ORILLA\nC.U.D.O.\nINICIO\nEL CLUB\nNOTICIAS\nPARTIDOS\nEQUIPOS\nGALERÍA\nHAZTE SOCIO\nFÚTBOL · CLUB · COMUNIDAD\nNOTICIAS\n\nPartidos, actividades y momentos que hacen la vida del Club Unión Deportivo Orilla.\n\nDESDE LA ORILLA\nACTUALIDAD CUDO\n2026-09-05\nLA CAMISETA NO SOLO SE PONE PARA JUGAR!!\n\nLa Camiseta no solo se pone para jugar!!\n\nLO QUE PASA EN CUDO, SE CUENTA DESDE CUDO.\n\nFútbol · comunidad · pertenencia.\n\nC.U.D.O.\nOrilla de Auquinco · Chépica",
+      "group_hits": {
+        "event_context": [
+          "partido"
+        ],
+        "work_context": [],
+        "facility": [],
+        "food_service": [],
+        "concessions": [],
+        "cleaning": [],
+        "setup": [],
+        "access": [],
+        "communications": [],
+        "sports_operation": [
+          "deportivo"
+        ],
+        "finance": [],
+        "post_event": []
+      },
+      "required_branch_groups_visible": [
+        "sports_operation"
+      ],
+      "required_branch_count": 1,
+      "primary_event_context_visible": true,
+      "actionable_labels": [],
+      "actionable_label_count": 0
+    }
+  ],
+  "best_integrated_candidate": {
+    "url": "http://127.0.0.1:4177/preview-v8/eventos/",
+    "status": 200,
+    "title": "C.U.D.O. · Jornada integral · QA",
+    "visible_excerpt": "C.U.D.O. · CLUB OS · QA\nJORNADA DEL PARTIDO\n\nEl partido es el contexto. Cocina y bar no traen un menú fijo: la jornada decide qué se venderá y CUDO deriva los insumos, compras, stock, ventas y caja que correspondan.\n\n← Volver a Administración\nQA sintética: no escribe producción. La prueba se guarda sólo en este navegador y usa un modelo de oferta dinámica por jornada.\nMATCH · CONTEXTO HUMANO PRINCIPAL\nCUDO VS SAN JUAN · JORNADA QA\n2026-09-27 · Local · Estadio CUDO · En operación QA\nQA · SCHEDULED\nDEPORTE\nPERSONAS\nRESULTADO\nCAJA\nCIERRE\nRECINTO\nCOCINA\nBAR\nVENTAS\nCOMPRAS / STOCK\nENTRADAS\nPOST-PARTIDO\n1 · CONFIGURAR LA JORNADA\n\nSe registra el partido una vez. Las ramas aparecen sólo cuando aplican.\n\nRIVAL\nFECHA\nCONDICIÓN\nLocal\nVisita\n Usamos estadio CUDO\n Habrá cocina / comida\n Habrá bar / reventa\n Se cobra entrada\n Habrá transmisión\nGuardar jornada\nReiniciar QA\nTRABAJO QUE ACTIVA ESTA JORNADA\n\nCUDO deriva estos frentes desde las condiciones del partido. Primero aparece el rol que hace falta; una persona se asigna sólo cuando existe un dato real.\n\nEncargado/a de cancha y recinto\nANTES · Sin persona asignada · GAP de asignación\nEncargado/a de cocina\nANTES_Y_DURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de bar o punto de venta\nDURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de aseo\nDESPUES · Sin persona asignada · GAP de asignación\nEncargado/a de montaje y logística\nANTES · Sin persona asignada · GAP de asignación\nEncargado/a de acceso y recepción\nDURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de operación deportiva\nDURANTE · Sin persona asignada · GAP de asignación\nEncargado/a de caja y control\nDURANTE_Y_CIERRE · Sin persona asignada · GAP de asignación\nRECINTO\n\nEsta rama sólo aparece cuando el partido local necesita el estadio.\n\nEstadio CUDO\nCancha, camarines y entorno disponibles.\nPreparación previa\nRiego, corte y demarcación nacen como consecuencias de esta jornada.\n2 · ¿QUÉ VAMOS A VENDER?\n\nAgrega sólo lo que realmente se venderá en esta jornada. CUDO distingue una preparación de una reventa directa; no crea productos ni stock por defecto.\n\nPatrón: una preparación consume sus insumos. Una reventa consume unidades del producto comprado. El nombre del alimento no decide el modelo; lo decide cómo lo abastece CUDO.\nQUÉ VENDEREMOS\nCÓMO LO TENDREMOS\nLo preparamos en CUDO\nLo compramos listo / reventa\nPRECIO DE VENTA\nAgregar a la venta\nTodavía no se decidió qué vender en esta jornada.\n3 · PREPARACIONES E INSUMOS\n\nSi algo se prepara aquí, define de qué está hecho. Los insumos pasan a ser el stock real que CUDO debe comprar y controlar.\n\nPREPARACIÓN\nINSUMO\nCONSUMO POR UNIDAD VENDIDA\nUNIDAD DE CONTROL\nunidad\nkg\nlitro\nporción\nAgregar insumo\n4 · COMPRAS E INVENTARIO REAL\n\nAquí aparecen sólo los insumos o unidades que nacieron de lo que la jornada decidió vender.\n\nINSUMO / UNIDAD\nCANTIDAD COMPRADA\nCOSTO POR UNIDAD DE CONTROL\nPROVEEDOR\nPAGO\nPendiente\nPagado efectivo\nPagado transferencia\nRegistrar compra\nINSUMO / UNIDAD\tSTOCK\tUNIDAD\tCOSTO REF.\n\nEl inventario aparecerá cuando una oferta de esta jornada necesite insumos o unidades.\n5 · VENTAS DEL DÍA\n\nSe vende la oferta que ve la gente. CUDO descuenta por detrás los insumos o unidades que correspondan.\n\nQUÉ SE VENDIÓ\nCANTIDAD\nPRECIO UNITARIO\nMEDIO DE PAGO\nEfectivo\nTransferencia\nRegistrar venta\nENTRADAS\nCANTIDAD\nVALOR ENTRADA\nMEDIO\nEfectivo\nTransferencia\nRegistrar entradas\nCAJA Y OBLIGACIONES\n$0\nINGRESOS\n$0\nCOMPRAS\n$0\nPROVEEDOR PENDIENTE\n$20.000\nCAJA ESTIMADA\nAún no hay movimientos de esta jornada.\nRESULTADO DEPORTIVO\nSERIE\nTercera\nSegunda\nSenior\nPrimera\nCUDO\nRIVAL\nRegistrar resultado\nResultado pendiente.\nDESPUÉS DEL PARTIDO\nRevisión final de cancha\nPendiente\nMarcar listo\nAseo de camarines y entorno\nPendiente\nMarcar listo\nLavado de indumentaria\nPendiente\nMarcar listo\nCIERRE DE JORNADA\n$0\nINGRESOS DEL EVENTO\n$0\nCOMPRAS DEL EVENTO\n$0\nRECURSO NETO\n3\nPENDIENTES\nConciliar y cerrar jornada\n🎟️ BINGO · MISMA RAÍZ, RAMAS DISTINTAS\n\nEl Bingo reutiliza el mismo patrón dinámico de oferta, insumos, compras, ventas y caja, pero agrega permiso y premios.\n\nAbrir Bingo / recaudación →\nCUDO QA · oferta dinámica por evento · production_write=false.",
+    "group_hits": {
+      "event_context": [
+        "partido",
+        "jornada",
+        "local",
+        "visita",
+        "rival"
+      ],
+      "work_context": [
+        "encargado",
+        "persona",
+        "trabajo",
+        "pendiente"
+      ],
+      "facility": [
+        "cancha",
+        "estadio",
+        "recinto"
+      ],
+      "food_service": [
+        "cocina"
+      ],
+      "concessions": [
+        "bar",
+        "venta"
+      ],
+      "cleaning": [
+        "aseo"
+      ],
+      "setup": [
+        "montaje",
+        "logística"
+      ],
+      "access": [
+        "acceso",
+        "recepción",
+        "entrada"
+      ],
+      "communications": [
+        "transmisión"
+      ],
+      "sports_operation": [
+        "deporte",
+        "deportivo",
+        "resultado"
+      ],
+      "finance": [
+        "caja",
+        "ingreso",
+        "obligacion"
+      ],
+      "post_event": [
+        "post",
+        "despues",
+        "después",
+        "lavado",
+        "revisión final"
+      ]
+    },
+    "required_branch_groups_visible": [
+      "work_context",
+      "facility",
+      "food_service",
+      "concessions",
+      "cleaning",
+      "setup",
+      "access",
+      "sports_operation",
+      "finance",
+      "post_event"
+    ],
+    "required_branch_count": 10,
+    "primary_event_context_visible": true,
+    "actionable_labels": [
+      "Guardar jornada",
+      "Agregar a la venta",
+      "Agregar insumo",
+      "Registrar compra",
+      "Registrar venta",
+      "Registrar entradas",
+      "Registrar resultado",
+      "Conciliar y cerrar jornada"
+    ],
+    "actionable_label_count": 8
+  },
+  "verdict": {
+    "verdict": "PASS",
+    "real_world_context": "Club Unión Deportivo Orilla",
+    "integrated_surface_found": true,
+    "branches_visible": [
+      "facility",
+      "sports_operation"
+    ],
+    "can_operate_without_module_reconstruction": true,
+    "double_entry_risk": false,
+    "technical_language_needed": false,
+    "unresolved_confusion": [],
+    "first_failure": "none",
+    "reason": "Canonical human mission satisfied"
+  },
+  "source_contract": ".arke/CUDO_ACTIVITY_ABSORPTION_CERTIFIER_CONTRACT_V1.yaml",
+  "source_arke_sha": "2d48d6b7f3d41a9c24804730e71c40b87b093767",
+  "candidate_commit": "aafd0db51fcab79bf2757fb466ad6cfb7a8d038e",
+  "control_expected_current_result": "PASS",
+  "control_expectation_met": true
+}
