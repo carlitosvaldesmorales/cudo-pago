@@ -28,7 +28,9 @@
     return response;
   };
 
+  document.write('<script src="'+base+'adoption-config.js"><\/script>');
   document.write('<script src="'+base+'pwa.js"><\/script>');
+  document.write('<script src="'+base+'adoption.js"><\/script>');
   document.write('<script src="'+base+'presentation-guard.js"><\/script>');
   document.write('<script src="'+base+'site-runtime-v8.js"><\/script>');
 })();
