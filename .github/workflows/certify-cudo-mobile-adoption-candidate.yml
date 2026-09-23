@@ -10,7 +10,10 @@ on:
       - 'preview-v8/certification/mobile-capabilities.json'
       - 'preview-v8/tools/certify_mobile_adoption_candidate.mjs'
       - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
+      - 'qa-v8-google/tools/mobile_adoption_event_bridge_fixture_harness.mjs'
+      - '.github/workflows/cudo-mobile-adoption-event.yml'
       - '.github/workflows/certify-cudo-mobile-adoption-candidate.yml'
+      - '.github/workflows/cudo-root-acceptance.yml'
   push:
     branches:
       - 'feat/mobile-production-adoption-evidence-20260923'
@@ -48,10 +51,13 @@ jobs:
           node --check preview-v8/shared/adoption-config.js
           node --check preview-v8/shared/adoption.js
           node --check preview-v8/tools/certify_mobile_adoption_candidate.mjs
+          node --check qa-v8-google/tools/mobile_adoption_event_bridge_fixture_harness.mjs
       - name: Install Playwright browsers
         run: |
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium webkit
+      - name: Certify dormant event-driven bridge contract
+        run: node qa-v8-google/tools/mobile_adoption_event_bridge_fixture_harness.mjs
       - name: Certify candidate in Chromium and WebKit
         run: node preview-v8/tools/certify_mobile_adoption_candidate.mjs
       - name: Validate mobile certification registry
