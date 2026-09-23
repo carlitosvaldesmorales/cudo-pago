@@ -1,0 +1,66 @@
+name: CUDO Partidos Hosted Capture POC
+
+on:
+  push:
+    branches:
+      - ops/partidos-hosted-roundtrip-poc-20260923
+    paths:
+      - '.github/workflows/cudo-partidos-hosted-capture-poc.yml'
+      - 'qa-v8-google/tools/prove_partidos_hosted_capture.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cudo-partidos-hosted-capture-poc
+  cancel-in-progress: false
+
+jobs:
+  prove-host-neutral-capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.44.0
+          npx playwright install --with-deps chromium
+
+      - name: Execute synthetic Partidos capture and correlated downstream verification
+        run: node qa-v8-google/tools/prove_partidos_hosted_capture.mjs
+
+      - name: Persist durable POC evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d evidence/partidos-hosted-capture-poc ]; then
+            echo "::error::Evidence directory missing"
+            exit 1
+          fi
+          git config user.name 'cudo-hosted-partidos[bot]'
+          git config user.email 'actions@users.noreply.github.com'
+          git add evidence/partidos-hosted-capture-poc
+          git commit -m 'evidence(cudo): hosted Partidos capture POC' || true
+          git push origin HEAD:refs/heads/ops/partidos-hosted-roundtrip-poc-20260923
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-partidos-hosted-capture-poc
+          path: evidence/partidos-hosted-capture-poc
+          if-no-files-found: error
+          retention-days: 14
