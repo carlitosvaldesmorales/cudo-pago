@@ -1,0 +1,105 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_REVIEW_ASSIGNMENT_BRIDGE_RESULT_V1",
+  "generated_at": "2026-09-23T11:17:49.064Z",
+  "activity_id": "QA-ACTIVITY-MATCH-PR219-001",
+  "idempotency_key": "CUDO-EVENT-WORK-REVIEW-ASSIGNMENT-PR219-001",
+  "preexisting": false,
+  "writes": {
+    "ACTIVIDADES": 1,
+    "FRENTES": 8,
+    "RESPONSABLES": 8,
+    "TAREAS": 3,
+    "EVENTOS": 12
+  },
+  "production_write": false,
+  "expected": {
+    "workstreams": 8,
+    "tasks": 3
+  },
+  "observed": {
+    "workstreams": 8,
+    "tasks": 3,
+    "unassigned": 8,
+    "blocked": 0
+  },
+  "assignments": [
+    {
+      "workstream_id": "QA-WS-201",
+      "label": "cancha y recinto",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": [
+        {
+          "task_id": "QA-TASK-201",
+          "title": "Revisión final de cancha",
+          "state": "TODO",
+          "assignee": ""
+        }
+      ]
+    },
+    {
+      "workstream_id": "QA-WS-202",
+      "label": "cocina",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": []
+    },
+    {
+      "workstream_id": "QA-WS-203",
+      "label": "bar o punto de venta",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": []
+    },
+    {
+      "workstream_id": "QA-WS-204",
+      "label": "aseo",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": [
+        {
+          "task_id": "QA-TASK-202",
+          "title": "Aseo general del estadio",
+          "state": "TODO",
+          "assignee": "Sandra Salinas"
+        }
+      ]
+    },
+    {
+      "workstream_id": "QA-WS-205",
+      "label": "montaje y logística",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": []
+    },
+    {
+      "workstream_id": "QA-WS-206",
+      "label": "acceso y recepción",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": []
+    },
+    {
+      "workstream_id": "QA-WS-207",
+      "label": "operación deportiva",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": [
+        {
+          "task_id": "QA-TASK-203",
+          "title": "Lavado de camisetas del partido",
+          "state": "TODO",
+          "assignee": "Cecilia"
+        }
+      ]
+    },
+    {
+      "workstream_id": "QA-WS-208",
+      "label": "caja y control",
+      "assignment_state": "UNASSIGNED",
+      "person": "",
+      "tasks": []
+    }
+  ],
+  "decision": "PASS"
+}
