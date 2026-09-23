@@ -1,0 +1,98 @@
+name: Certify CUDO Mobile Adoption Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview-v8/shared/adoption-config.js'
+      - 'preview-v8/shared/adoption.js'
+      - 'preview-v8/tools/certify_mobile_adoption_live_config.mjs'
+      - 'preview-v8/certification/mobile-capabilities.json'
+      - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
+      - '.github/workflows/certify-cudo-mobile-adoption-production.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+      CUDO_LIVE_ADOPTION_CONFIG_URL: https://cudo.cl/preview-v8/shared/adoption-config.js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Certify live enabled configuration
+        run: node preview-v8/tools/certify_mobile_adoption_live_config.mjs
+
+      - name: Verify Apps Script deployment and adoption sheet read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,urllib.parse,urllib.request,pathlib
+
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          DEPLOYMENT_ID='AKfycbzZGwp2q8XEU3rZK5jyaddo5lnXTPcChBdPu-G7cnh6xesdVsOBlL2FA1u6f_qbYlqh'
+          SPREADSHEET_ID='1KnC56IWf2hRxrGU4ksdO-JlzWyl2XJbhbOHKkdx4vms'
+          EXPECTED_HEADERS=['OBSERVED_AT','EVENT_TYPE','APP_VERSION','ROUTE','DISPLAY_MODE','TRIGGER','SOURCE','PRIVACY_CLASS']
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request('https://oauth2.googleapis.com/token',data=body,headers={'Content-Type':'application/x-www-form-urlencoded'}),timeout=30) as r:
+            access=json.load(r)['access_token']
+
+          def get(url):
+            q=urllib.request.Request(url,headers={'Authorization':'Bearer '+access,'Accept':'application/json'})
+            with urllib.request.urlopen(q,timeout=30) as r:
+              return json.load(r)
+
+          deployment=get(f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}/deployments/{DEPLOYMENT_ID}')
+          cfg=deployment.get('deploymentConfig') or {}
+          if cfg.get('versionNumber')!=89 or cfg.get('description')!='CUDO Mobile Adoption production anonymous intake':
+            raise SystemExit('Unexpected Apps Script deployment state')
+
+          rng=urllib.parse.quote('MOBILE_ADOPTION_EVENTS!A1:H2',safe='!:$')
+          values=get(f'https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{rng}').get('values') or []
+          if not values or values[0]!=EXPECTED_HEADERS:
+            raise SystemExit('MOBILE_ADOPTION_EVENTS header contract mismatch')
+
+          rows=values[1:]
+          for row in rows:
+            padded=row+['']*(8-len(row))
+            if padded[1]!='mobile.production.adoption.observed':
+              raise SystemExit('Unexpected event type in adoption evidence')
+            if padded[4]!='standalone':
+              raise SystemExit('Unexpected display mode in adoption evidence')
+            if padded[6]!='CUDO_PWA' or padded[7]!='ANONYMOUS_PRIVACY_MINIMAL':
+              raise SystemExit('Unexpected source/privacy classification')
+
+          out={
+            'ok':True,
+            'deploymentId':DEPLOYMENT_ID,
+            'versionNumber':89,
+            'sheet':'MOBILE_ADOPTION_EVENTS',
+            'headerContract':True,
+            'observedRowsRead':len(rows),
+            'syntheticWrite':False
+          }
+          pathlib.Path('mobile-adoption-production-certification.json').write_text(json.dumps(out,indent=2))
+          print(json.dumps(out,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-adoption-production-${{ github.run_id }}
+          path: mobile-adoption-production-certification.json
+          retention-days: 30
