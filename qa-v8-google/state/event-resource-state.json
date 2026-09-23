@@ -10,7 +10,7 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-EVENT-QA-MATCH-FULLDAY-001",
       "object_type": "ACTIVITY_EVENT",
-      "object_version": 3,
+      "object_version": 4,
       "lifecycle_state": "IN_PROGRESS",
       "data": {
         "activity_kind": "MATCH",
@@ -28,7 +28,16 @@
         ],
         "permit_confirmed": false,
         "permit_ref": "",
-        "donated_prizes": []
+        "donated_prizes": [],
+        "starts_at": "",
+        "location": "",
+        "conditions": {
+          "venue_required": false,
+          "food_sales_enabled": false,
+          "bar_sales_enabled": false,
+          "ticketing_enabled": false,
+          "broadcast_enabled": false
+        }
       },
       "field_semantics": {
         "activity_kind": {
@@ -84,6 +93,24 @@
           "source_refs": [
             "qa://event/donated_prizes"
           ]
+        },
+        "starts_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/starts_at"
+          ]
+        },
+        "location": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/location"
+          ]
+        },
+        "conditions": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/operational_conditions"
+          ]
         }
       },
       "relationships": [],
@@ -92,7 +119,8 @@
         "updated_at": "2026-09-22T05:19:46.230Z",
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
-          "qa://event-resource-governed-persistence"
+          "qa://event-resource-governed-persistence",
+          "qa://event-operational-conditions-schema-v1"
         ],
         "transition_id": "CUDO-TRANS-96366B463848FC409959"
       },
@@ -102,7 +130,7 @@
       "schema_version": "CUDO_SHARED_OBJECT_CONTRACT_V1",
       "object_id": "CUDO-EVENT-QA-BINGO-FULLDAY-001",
       "object_type": "ACTIVITY_EVENT",
-      "object_version": 1,
+      "object_version": 2,
       "lifecycle_state": "IN_PROGRESS",
       "data": {
         "activity_kind": "BINGO",
@@ -113,7 +141,16 @@
         "sport_results": [],
         "permit_confirmed": false,
         "permit_ref": "",
-        "donated_prizes": []
+        "donated_prizes": [],
+        "starts_at": "",
+        "location": "",
+        "conditions": {
+          "venue_required": false,
+          "food_sales_enabled": false,
+          "bar_sales_enabled": false,
+          "ticketing_enabled": false,
+          "broadcast_enabled": false
+        }
       },
       "field_semantics": {
         "activity_kind": {
@@ -169,6 +206,24 @@
           "source_refs": [
             "qa://event/donated_prizes"
           ]
+        },
+        "starts_at": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/starts_at"
+          ]
+        },
+        "location": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/location"
+          ]
+        },
+        "conditions": {
+          "state_kind": "SOURCE",
+          "source_refs": [
+            "qa://event/operational_conditions"
+          ]
         }
       },
       "relationships": [],
@@ -177,7 +232,8 @@
         "updated_at": null,
         "source_system": "CUDO_EVENT_RESOURCE_QA",
         "source_refs": [
-          "qa://event-resource-governed-persistence"
+          "qa://event-resource-governed-persistence",
+          "qa://event-operational-conditions-schema-v1"
         ]
       },
       "legacy_refs": []
