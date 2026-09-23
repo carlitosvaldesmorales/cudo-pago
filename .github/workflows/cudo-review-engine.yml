@@ -14,6 +14,9 @@ on:
       - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
       - 'qa-v8-google/tools/process_work_state_requests.mjs'
       - 'qa-v8-google/tools/process_event_resource_requests.mjs'
+      - 'qa-v8-google/tools/sync_event_work_registry.mjs'
+      - 'qa-v8-google/tools/event_work_registry_fixture_harness.mjs'
+      - 'qa-v8-google/contracts/cudo-event-work-pattern-catalog-v1.json'
       - 'qa-v8-google/tools/event_resource_requests_fixture_harness.mjs'
       - 'qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs'
       - 'qa-v8-google/tools/canonical_financial_core.mjs'
@@ -58,6 +61,9 @@ on:
       - 'qa-v8-google/data/event-resource-qa.json'
       - 'qa-v8-google/tools/process_work_state_requests.mjs'
       - 'qa-v8-google/tools/process_event_resource_requests.mjs'
+      - 'qa-v8-google/tools/sync_event_work_registry.mjs'
+      - 'qa-v8-google/tools/event_work_registry_fixture_harness.mjs'
+      - 'qa-v8-google/contracts/cudo-event-work-pattern-catalog-v1.json'
       - 'qa-v8-google/tools/event_resource_requests_fixture_harness.mjs'
       - 'qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs'
       - 'qa-v8-google/tools/canonical_financial_core.mjs'
@@ -113,6 +119,8 @@ jobs:
           node --check qa-v8-google/tools/persona_review_fixture_harness.mjs
           node --check qa-v8-google/tools/process_work_state_requests.mjs
           node --check qa-v8-google/tools/process_event_resource_requests.mjs
+          node --check qa-v8-google/tools/sync_event_work_registry.mjs
+          node --check qa-v8-google/tools/event_work_registry_fixture_harness.mjs
           node --check qa-v8-google/tools/event_resource_requests_fixture_harness.mjs
           node --check qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs
           node --check qa-v8-google/tools/work_financial_effects.mjs
@@ -140,6 +148,8 @@ jobs:
         run: node qa-v8-google/tools/event_resource_requests_fixture_harness.mjs
       - name: Probar adapter Google QA de Match/Bingo
         run: node qa-v8-google/tools/event_resource_google_adapter_fixture_harness.mjs
+      - name: Probar derivación automática Evento -> trabajo
+        run: node qa-v8-google/tools/event_work_registry_fixture_harness.mjs
 
   review-and-sync:
     if: >-
@@ -208,6 +218,12 @@ jobs:
           git add qa-v8-google/state/event-resource-state.json qa-v8-google/data/event-resource-qa.json
           git commit -m 'CUDO QA: actualizar estado gobernado Match/Bingo'
           git push
+
+      - name: Derivar y reconciliar trabajo operativo desde el evento aplicado
+        if: inputs.source == 'apps_script_event_resource'
+        env:
+          CUDO_EVENT_WORK_REGISTRY_APPLY: 'true'
+        run: node qa-v8-google/tools/sync_event_work_registry.mjs
 
       - name: Sincronizar PUBLICO_EXPORT con el adaptador V8 vigente
         if: inputs.source == 'apps_script_form_submit'
