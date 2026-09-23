@@ -8,6 +8,10 @@ on:
       - 'qa-pr219/**'
       - '.github/workflows/cudo-root-acceptance.yml'
       - '.github/workflows/cudo-arke-project-worker.yml'
+      - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
+      - 'qa-v8-google/tools/mobile_adoption_event_bridge_fixture_harness.mjs'
+      - '.github/workflows/cudo-mobile-adoption-event.yml'
+      - '.github/workflows/certify-cudo-mobile-adoption-candidate.yml'
   workflow_dispatch:
 
 permissions:
