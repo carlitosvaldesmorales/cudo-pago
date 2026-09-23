@@ -41,15 +41,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Validate syntax and no-production boundary
+      - name: Validate syntax and bounded production configuration
         shell: bash
         run: |
           set -euo pipefail
           node --check preview-v8/shared/adoption-config.js
           node --check preview-v8/shared/adoption.js
           node --check preview-v8/tools/certify_mobile_adoption_candidate.mjs
-          grep -q "enabled:false" preview-v8/shared/adoption-config.js
-          ! grep -q "AKfy" preview-v8/shared/adoption-config.js
       - name: Install Playwright browsers
         run: |
           npm install --no-save playwright@1.55.0

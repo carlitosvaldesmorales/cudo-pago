@@ -50,6 +50,12 @@
       "runner": "node preview-v8/tools/certify_mobile_adoption_candidate.mjs",
       "workflow": ".github/workflows/certify-cudo-mobile-adoption-candidate.yml",
       "evidence": "github_actions"
+    },
+    "MOBILE_ADOPTION_PRODUCTION_CONFIG": {
+      "source": "local",
+      "runner": "node preview-v8/tools/certify_mobile_adoption_live_config.mjs",
+      "workflow": ".github/workflows/certify-cudo-mobile-adoption-production.yml",
+      "evidence": "cudo-mobile-adoption-production-${GITHUB_RUN_ID}"
     }
   },
   "capabilities": [
@@ -174,11 +180,13 @@
     },
     {
       "id": "mobile_production_adoption_evidence",
-      "status": "candidate",
+      "status": "active",
       "release_blocking": true,
       "manual_gate": false,
       "tests": [
-        "MOBILE_ADOPTION_CANDIDATE_E2E"
+        "MOBILE_ADOPTION_CANDIDATE_E2E",
+        "MOBILE_ADOPTION_PRODUCTION_CONFIG",
+        "LIVE_PRODUCTION_E2E"
       ]
     }
   ],
