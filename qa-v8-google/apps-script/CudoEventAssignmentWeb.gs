@@ -14,8 +14,7 @@ function cudoEventAssignmentRows_(sheetId,name){
   }).filter(function(r){return h.some(function(x){return r[x];});});
 }
 
-function cudoEventAssignablePeople_(){
-  cudoPersonaReviewer_();
+function cudoEventAssignablePeopleCore_(){
   const byId={};
   cudoWorkRows_().forEach(function(r){
     const id=String(r.RESPONSIBLE_ACTOR_ID||'').trim();
@@ -38,7 +37,12 @@ function cudoEventAssignablePeople_(){
   });
 }
 
-function cudoEventAssignmentState_(activityId){
+function cudoEventAssignablePeople_(){
+  cudoPersonaReviewer_();
+  return cudoEventAssignablePeopleCore_();
+}
+
+function cudoEventAssignmentState_(activityId, trustedInternal){
   const aid=String(activityId||CUDO_EVENT_ASSIGNMENT_DEFAULT_ACTIVITY_ID_);
   const activities=cudoEventAssignmentRows_(CUDO_EVENT_ASSIGNMENT_SHEET_ID_,'ACTIVIDADES');
   const activity=activities.find(function(r){return r.activity_id===aid;});
@@ -56,7 +60,7 @@ function cudoEventAssignmentState_(activityId){
       return Object.assign({},f,{assignment:byWs[f.workstream_id]||{},tasks:tasksByWs[f.workstream_id]||[]});
     }),
     events:events,
-    people:cudoEventAssignablePeople_()
+    people:trustedInternal===true?cudoEventAssignablePeopleCore_():cudoEventAssignablePeople_()
   };
 }
 
@@ -178,11 +182,10 @@ function cudoEventAssignmentHandlePost_(e){
 }
 
 function cudoEventAssignmentProbe(){
-  const reviewer=cudoPersonaReviewer_();
-  const state=cudoEventAssignmentState_(CUDO_EVENT_ASSIGNMENT_DEFAULT_ACTIVITY_ID_);
+  const state=cudoEventAssignmentState_(CUDO_EVENT_ASSIGNMENT_DEFAULT_ACTIVITY_ID_,true);
   return {
     ok:true,
-    reviewer:reviewer,
+    execution_authority:'EXECUTION_API_MYSELF',
     activity_id:state.activity.activity_id,
     workstreams:state.workstreams.length,
     tasks:state.workstreams.reduce(function(n,w){return n+(w.tasks||[]).length;},0),
