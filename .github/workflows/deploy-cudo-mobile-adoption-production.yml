@@ -1,0 +1,117 @@
+name: Deploy CUDO Mobile Adoption Production
+
+on:
+  push:
+    branches:
+      - 'ops/mobile-adoption-production-deploy-20260923'
+    paths:
+      - '.github/workflows/deploy-cudo-mobile-adoption-production.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy isolated adoption intake without synthetic event
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,urllib.parse,urllib.request
+
+          SCRIPT_ID='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
+          SOURCE=pathlib.Path('qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs').read_text()
+
+          body=urllib.parse.urlencode({
+            'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
+            'client_secret':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_SECRET'],
+            'refresh_token':os.environ['CUDO_GOOGLE_REFRESH_TOKEN'],
+            'grant_type':'refresh_token'
+          }).encode()
+          with urllib.request.urlopen(urllib.request.Request(
+            'https://oauth2.googleapis.com/token',
+            data=body,
+            headers={'Content-Type':'application/x-www-form-urlencoded'}
+          ),timeout=30) as r:
+            access=json.load(r)['access_token']
+
+          def req(url,method='GET',payload=None):
+            q=urllib.request.Request(
+              url,
+              data=None if payload is None else json.dumps(payload).encode(),
+              headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
+              method=method
+            )
+            with urllib.request.urlopen(q,timeout=30) as r:
+              raw=r.read()
+              return json.loads(raw) if raw else {}
+
+          base=f'https://script.googleapis.com/v1/projects/{SCRIPT_ID}'
+          current=req(base+'/content')
+          original=[{'name':f['name'],'type':f['type'],'source':f.get('source','')} for f in current.get('files',[])]
+          if not original:
+            raise SystemExit('Apps Script project content empty')
+
+          manifest={'timeZone':'America/Santiago','webapp':{'access':'ANYONE_ANONYMOUS','executeAs':'USER_DEPLOYING'}}
+          isolated=[
+            {'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))},
+            {'name':'CudoMobileAdoptionWeb','type':'SERVER_JS','source':SOURCE},
+          ]
+
+          deployment=None
+          try:
+            req(base+'/content','PUT',{'files':isolated})
+            verify=req(base+'/content')
+            found=[f for f in verify.get('files',[]) if f.get('name')=='CudoMobileAdoptionWeb']
+            if len(found)!=1 or found[0].get('source')!=SOURCE:
+              raise SystemExit('Adoption source verification failed')
+
+            version=req(base+'/versions','POST',{
+              'description':'CUDO Mobile Adoption production '+os.environ.get('GITHUB_SHA','')[:12]
+            })
+            vn=version['versionNumber']
+            deployment=req(base+'/deployments','POST',{
+              'versionNumber':vn,
+              'manifestFileName':'appsscript',
+              'description':'CUDO Mobile Adoption production anonymous intake'
+            })
+            did=deployment['deploymentId']
+            deployed=req(base+'/deployments/'+did)
+            actual=(deployed.get('deploymentConfig') or {}).get('versionNumber')
+            if actual!=vn:
+              raise SystemExit('Deployment version mismatch')
+
+            web='https://script.google.com/macros/s/'+did+'/exec'
+            out={
+              'ok':True,
+              'scriptId':SCRIPT_ID,
+              'versionNumber':vn,
+              'deploymentId':did,
+              'webAppUrl':web,
+              'access':'ANYONE_ANONYMOUS',
+              'executeAs':'USER_DEPLOYING',
+              'syntheticProductionEventCreated':False,
+              'sourceVerified':True
+            }
+            pathlib.Path('mobile-adoption-production-deployment.json').write_text(json.dumps(out,indent=2))
+            print('WEB_APP_URL='+web)
+            print(json.dumps(out,indent=2))
+          finally:
+            req(base+'/content','PUT',{'files':original})
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cudo-mobile-adoption-production-${{ github.run_id }}
+          path: mobile-adoption-production-deployment.json
+          retention-days: 30
