@@ -1,0 +1,54 @@
+name: CUDO Event Work Review Assignment Bridge
+
+on:
+  push:
+    branches:
+      - ops/event-work-review-assignment-20260923
+    paths:
+      - '.github/workflows/cudo-event-work-review-assignment-bridge.yml'
+      - 'qa-v8-google/tools/materialize_event_work_review_assignment.mjs'
+      - 'preview-v8/data/event-work-review-config-qa.json'
+      - 'control/cudo-event-work-review-assignment-apply.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check explicit apply authorization
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPLY=$(node -p "require('./control/cudo-event-work-review-assignment-apply.json').apply")
+          echo "apply=$APPLY" >> "$GITHUB_OUTPUT"
+          if [ "$APPLY" != "true" ]; then
+            echo "Read-only default: apply authorization is false."
+          fi
+      - name: Materialize event-derived work into Google QA
+        if: steps.gate.outputs.apply == 'true'
+        run: node qa-v8-google/tools/materialize_event_work_review_assignment.mjs
+      - name: Persist bridge evidence
+        if: steps.gate.outputs.apply == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'cudo-event-work-bridge[bot]'
+          git config user.email 'actions@users.noreply.github.com'
+          git add evidence/event-work-review-assignment/apply.json
+          git commit -m 'evidence(cudo): materialize event work review assignment bridge' || true
+          git push origin HEAD:refs/heads/ops/event-work-review-assignment-20260923
