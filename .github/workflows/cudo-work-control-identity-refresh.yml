@@ -1,0 +1,39 @@
+name: CUDO Work Control Identity Refresh
+
+on:
+  push:
+    branches:
+      - agent/match-full-club-day-roundtrip-20260921
+    paths:
+      - '.github/workflows/cudo-work-control-identity-refresh.yml'
+      - 'control/cudo-work-control-identity-refresh.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check explicit QA projection gate
+        id: gate
+        run: |
+          APPLY=$(node -p "require('./control/cudo-work-control-identity-refresh.json').apply")
+          EXPECTED=$(node -p "require('./control/cudo-work-control-identity-refresh.json').expected_pending")
+          echo "apply=$APPLY" >> "$GITHUB_OUTPUT"
+          echo "expected=$EXPECTED" >> "$GITHUB_OUTPUT"
+      - name: Refresh existing WORK_CONTROL only when no work requests are pending
+        if: steps.gate.outputs.apply == 'true'
+        env:
+          CUDO_WORK_EXPECT_PENDING: ${{ steps.gate.outputs.expected }}
+        run: node qa-v8-google/tools/process_work_state_requests.mjs
