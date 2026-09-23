@@ -130,11 +130,35 @@ async function main(){
     await dateInput.fill('2026-09-30');
 
     const timeItem=question(page,/Hora del partido/i);
-    const hour=timeItem.locator('input[aria-label="Hora"]:visible').first();
-    const minute=timeItem.locator('input[aria-label="Minuto"]:visible').first();
-    if(await hour.count()!==1||await minute.count()!==1) throw new Error('Time inputs missing');
-    await hour.fill('15');
-    await minute.fill('00');
+    const visibleTimeInputs=timeItem.locator('input:visible');
+    const timeCount=await visibleTimeInputs.count();
+    const timeShape=[];
+    for(let i=0;i<timeCount;i++){
+      const el=visibleTimeInputs.nth(i);
+      timeShape.push({
+        index:i,
+        type:await el.getAttribute('type'),
+        aria:await el.getAttribute('aria-label'),
+        placeholder:await el.getAttribute('placeholder')
+      });
+    }
+    evidence.time_input_shape=timeShape;
+    const hour=timeItem.locator('input[aria-label="Hora"]:visible,input[aria-label*="hour" i]:visible').first();
+    const minute=timeItem.locator('input[aria-label="Minuto"]:visible,input[aria-label*="minute" i]:visible').first();
+    if(await hour.count()===1&&await minute.count()===1){
+      await hour.fill('15');
+      await minute.fill('00');
+    }else if(timeCount>=2){
+      await visibleTimeInputs.nth(0).fill('15');
+      await visibleTimeInputs.nth(1).fill('00');
+    }else if(timeCount===1){
+      const only=visibleTimeInputs.first();
+      const type=await only.getAttribute('type');
+      if(type==='time') await only.fill('15:00');
+      else throw new Error('Single unsupported time input: '+JSON.stringify(timeShape));
+    }else{
+      throw new Error('Time inputs missing: '+JSON.stringify(timeShape));
+    }
 
     evidence.selections.categoria=await select(page,/Serie o categoría/i,/^TERCERA$/i);
     await fillText(page,/Equipo local/i,'CUDO');
