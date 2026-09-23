@@ -1,0 +1,49 @@
+name: CUDO Private Event Assignment Entry
+
+on:
+  push:
+    branches:
+      - agent/match-full-club-day-roundtrip-20260921
+    paths:
+      - 'preview-v8/admin/index.html'
+      - 'preview-v8/admin/forms-config.json'
+      - 'preview-v8/admin/assignments.html'
+      - 'preview-v8/eventos/index.html'
+      - 'preview-v8/tools/qa_admin_entry.mjs'
+      - '.github/workflows/cudo-private-event-assignment-entry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Certify admin entry contract
+        run: node preview-v8/tools/qa_admin_entry.mjs
+      - name: Certify event to private assignment routing
+        run: |
+          python3 - <<'PY'
+          import json,pathlib,re
+          cfg=json.loads(pathlib.Path('preview-v8/admin/forms-config.json').read_text())
+          admin=pathlib.Path('preview-v8/admin/index.html').read_text()
+          redirect=pathlib.Path('preview-v8/admin/assignments.html').read_text()
+          event=pathlib.Path('preview-v8/eventos/index.html').read_text()
+          url=cfg.get('event_assignment_url','')
+          checks={
+            'private_assignment_url': url.startswith('https://script.google.com/macros/s/') and 'view=assignments' in url,
+            'admin_private_entry': 'eventAssignmentLink' in admin and 'Revisar y asignar responsables' in admin,
+            'safe_redirect': "forms-config.json" in redirect and "activity" in redirect and "location.replace" in redirect,
+            'event_routes_private': "../admin/assignments.html?activity=" in event,
+            'public_event_does_not_embed_real_names': not any(n in event for n in ['Maximiliano Figueroa','Mario Díaz','Cecilia','Sandra Salinas'])
+          }
+          print(json.dumps(checks,indent=2,ensure_ascii=False))
+          if not all(checks.values()):
+            raise SystemExit('private event assignment entry contract failed')
+          PY
