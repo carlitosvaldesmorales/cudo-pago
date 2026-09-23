@@ -91,6 +91,51 @@ function cudoEventAssignmentAppendEvent_(activityId,workstreamId,type,actorRef,p
   ]);
 }
 
+function cudoEventAssignmentAppendByHeaders_(sheetName,valuesByHeader){
+  const sh=SpreadsheetApp.openById(CUDO_EVENT_ASSIGNMENT_SHEET_ID_).getSheetByName(sheetName);
+  if(!sh) throw new Error('Hoja no encontrada: '+sheetName);
+  const values=sh.getDataRange().getDisplayValues();
+  if(!values.length) throw new Error('Encabezados no encontrados: '+sheetName);
+  const h=values[0];
+  sh.appendRow(h.map(function(k){return Object.prototype.hasOwnProperty.call(valuesByHeader,k)?valuesByHeader[k]:'';}));
+}
+function cudoEventAssignmentDeleteById_(sheetName,idColumn,idValue){
+  const sh=SpreadsheetApp.openById(CUDO_EVENT_ASSIGNMENT_SHEET_ID_).getSheetByName(sheetName);
+  if(!sh) throw new Error('Hoja no encontrada: '+sheetName);
+  const values=sh.getDataRange().getDisplayValues();
+  if(!values.length) return 0;
+  const h=values[0],idx=h.indexOf(idColumn);
+  if(idx<0) throw new Error('Columna ID no encontrada: '+idColumn);
+  let removed=0;
+  for(let i=values.length-1;i>=1;i--){
+    if(String(values[i][idx])===String(idValue)){sh.deleteRow(i+1);removed++;}
+  }
+  return removed;
+}
+
+function cudoEventAssignCore_(activityId,workstreamId,personRef,requestedBy,trustedInternal){
+  const state=cudoEventAssignmentState_(activityId,trustedInternal===true);
+  const ws=state.workstreams.find(function(x){return x.workstream_id===workstreamId;});
+  if(!ws) throw new Error('La responsabilidad no pertenece a esta actividad');
+  const current=ws.assignment||{};
+  const person=state.people.find(function(p){return p.person_ref===personRef;});
+  if(!person) throw new Error('La persona no está autorizada como identidad asignable');
+  const now=Utilities.formatDate(new Date(),'America/Santiago',"yyyy-MM-dd'T'HH:mm:ssXXX");
+  const previous=current.person_display||current.person_ref||'';
+  cudoEventAssignmentUpdateById_('RESPONSABLES','assignment_id',current.assignment_id,{
+    person_ref:person.person_ref,
+    person_display:person.person_display,
+    assignment_state:'ASSIGNED',
+    assigned_at:now,
+    confirmed_at:''
+  });
+  if(ws.state==='REQUIRED_UNASSIGNED') cudoEventAssignmentUpdateById_('FRENTES','workstream_id',workstreamId,{state:'READY'});
+  const type=current.person_ref?'ROLE_REASSIGNED':'ROLE_ASSIGNED';
+  cudoEventAssignmentAppendEvent_(activityId,workstreamId,type,person.person_ref,previous,person.person_display,(current.person_ref?'Responsabilidad reasignada':'Responsabilidad asignada')+' por '+requestedBy);
+  SpreadsheetApp.flush();
+  return {person_ref:person.person_ref,source:person.source,event_type:type};
+}
+
 function cudoEventAssignmentEsc_(v){return cudoPersonaEsc_(v);}
 
 function cudoEventAssignmentRender_(message,activityId){
@@ -152,20 +197,7 @@ function cudoEventAssignmentHandlePost_(e){
 
   if(action==='ASSIGN_PERSON'){
     const personRef=String(e.parameter.person_ref||'').trim();
-    const person=state.people.find(function(p){return p.person_ref===personRef;});
-    if(!person) throw new Error('La persona no está autorizada como identidad asignable');
-    const previous=current.person_display||current.person_ref||'';
-    cudoEventAssignmentUpdateById_('RESPONSABLES','assignment_id',current.assignment_id,{
-      person_ref:person.person_ref,
-      person_display:person.person_display,
-      assignment_state:'ASSIGNED',
-      assigned_at:now,
-      confirmed_at:''
-    });
-    if(ws.state==='REQUIRED_UNASSIGNED') cudoEventAssignmentUpdateById_('FRENTES','workstream_id',workstreamId,{state:'READY'});
-    const type=current.person_ref?'ROLE_REASSIGNED':'ROLE_ASSIGNED';
-    cudoEventAssignmentAppendEvent_(activityId,workstreamId,type,person.person_ref,previous,person.person_display,(current.person_ref?'Responsabilidad reasignada':'Responsabilidad asignada')+' por '+reviewer);
-    SpreadsheetApp.flush();
+    cudoEventAssignCore_(activityId,workstreamId,personRef,reviewer,false);
     return cudoEventAssignmentRender_('Asignación guardada y auditada.',activityId);
   }
 
@@ -194,4 +226,51 @@ function cudoEventAssignmentProbe(){
     sources:Array.from(new Set(state.people.map(function(p){return p.source;}))).sort(),
     production_write:false
   };
+}
+
+function cudoEventAssignmentMutationProbe(){
+  const activityId='QA-ACTIVITY-IDENTITY-991';
+  const workstreamId='QA-WS-991';
+  const assignmentId='QA-ASG-991';
+  const people=cudoEventAssignablePeopleCore_();
+  if(!people.length) throw new Error('No validated people available');
+  const person=people[0];
+  const now=Utilities.formatDate(new Date(),'America/Santiago',"yyyy-MM-dd'T'HH:mm:ssXXX");
+  cudoEventAssignmentDeleteById_('RESPONSABLES','assignment_id',assignmentId);
+  cudoEventAssignmentDeleteById_('FRENTES','workstream_id',workstreamId);
+  cudoEventAssignmentDeleteById_('ACTIVIDADES','activity_id',activityId);
+  try{
+    cudoEventAssignmentAppendByHeaders_('ACTIVIDADES',{
+      activity_id:activityId,title:'QA identidad asignable',activity_type:'QA_IDENTITY_ASSIGNMENT',
+      starts_at:now,status:'IN_PREPARATION',provenance:'SYNTHETIC',created_at:now,updated_at:now
+    });
+    cudoEventAssignmentAppendByHeaders_('FRENTES',{
+      workstream_id:workstreamId,activity_id:activityId,capability_tag:'QA_IDENTITY',
+      label:'Responsabilidad QA identidad',activation_reason:'QA_IDENTITY_PROBE',
+      state:'REQUIRED_UNASSIGNED',accountable_role_id:'QA-ROLE-991',human_gate:'NONE',progress_pct:0
+    });
+    cudoEventAssignmentAppendByHeaders_('RESPONSABLES',{
+      assignment_id:assignmentId,workstream_id:workstreamId,role_instance_id:'QA-ROLE-991',
+      display_role:'Responsabilidad QA identidad',person_ref:'',person_display:'',
+      assignment_state:'UNASSIGNED',assigned_at:'',confirmed_at:'',provenance:'SYNTHETIC'
+    });
+    const applied=cudoEventAssignCore_(activityId,workstreamId,person.person_ref,'EXECUTION_API_MYSELF',true);
+    const state=cudoEventAssignmentState_(activityId,true);
+    const a=state.workstreams[0].assignment||{};
+    const audit=state.events.some(function(e){return e.event_type==='ROLE_ASSIGNED'&&e.workstream_id===workstreamId;});
+    if(a.person_ref!==person.person_ref||a.assignment_state!=='ASSIGNED'||!audit) throw new Error('Identity assignment roundtrip failed');
+    return {
+      ok:true,
+      identity_source:applied.source,
+      stable_id_present:Boolean(a.person_ref),
+      assignment_state:a.assignment_state,
+      audit_event:applied.event_type,
+      production_write:false
+    };
+  } finally {
+    cudoEventAssignmentDeleteById_('RESPONSABLES','assignment_id',assignmentId);
+    cudoEventAssignmentDeleteById_('FRENTES','workstream_id',workstreamId);
+    cudoEventAssignmentDeleteById_('ACTIVIDADES','activity_id',activityId);
+    SpreadsheetApp.flush();
+  }
 }
