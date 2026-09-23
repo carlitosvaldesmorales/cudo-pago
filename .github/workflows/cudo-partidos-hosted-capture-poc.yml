@@ -33,13 +33,20 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Playwright Chromium
-        run: |
-          npm install --no-save playwright@1.44.0
-          npx playwright install --with-deps chromium
-
       - name: Execute synthetic Partidos capture and correlated downstream verification
-        run: node qa-v8-google/tools/prove_partidos_hosted_capture.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull mcr.microsoft.com/playwright:v1.55.0-noble
+          docker run --rm \
+            -e GITHUB_RUN_ID \
+            -e CUDO_GOOGLE_OAUTH_CLIENT_ID \
+            -e CUDO_GOOGLE_OAUTH_CLIENT_SECRET \
+            -e CUDO_GOOGLE_REFRESH_TOKEN \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            mcr.microsoft.com/playwright:v1.55.0-noble \
+            bash -lc "npm install --no-save --package-lock=false playwright@1.55.0 >/dev/null && node qa-v8-google/tools/prove_partidos_hosted_capture.mjs"
 
       - name: Persist durable POC evidence
         if: always()
