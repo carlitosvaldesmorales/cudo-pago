@@ -15,6 +15,7 @@ const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-serie
 const expectedAdminActions=[
   {label:'Control del club · QA',path:'control/',provider:'CUDO_INTERNAL',readyToken:'Qué necesita atención'},
   {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL',readyToken:'Actividades del club',backend:'GOOGLE_APPS_SCRIPT_EMBED'},
+  {label:'Revisar y asignar responsables',host:'script.google.com',provider:'GOOGLE_APPS_SCRIPT_PRIVATE'},
   {label:'Eventos del club · QA',path:'eventos/',provider:'CUDO_INTERNAL',readyToken:'Partido Mock Programado'},
   {label:'Completar mi ficha',host:'tally.so',provider:'TALLY'},
   {label:'Publicar una noticia',host:'tally.so',provider:'TALLY'},

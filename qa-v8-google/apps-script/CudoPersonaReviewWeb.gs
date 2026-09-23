@@ -72,10 +72,12 @@ function cudoPersonaHandlePost_(e){
 function doGet(e){
   const view=String((e&&e.parameter&&e.parameter.view)||'persona').trim().toLowerCase();
   if(view==='work') return cudoWorkRender_('');
+  if(view==='assignments') return cudoEventAssignmentRender_('',String((e&&e.parameter&&e.parameter.activity)||'').trim());
   return cudoPersonaRender_('');
 }
 function doPost(e){
   const kind=String((e&&e.parameter&&e.parameter.kind)||'PERSONA').trim().toUpperCase();
   if(kind==='WORK_ITEM') return cudoWorkHandlePost_(e);
+  if(kind==='EVENT_ASSIGNMENT') return cudoEventAssignmentHandlePost_(e);
   return cudoPersonaHandlePost_(e);
 }
