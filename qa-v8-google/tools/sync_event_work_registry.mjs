@@ -74,8 +74,13 @@ export function planRegistryReconcile({eventModel,catalog,tables,at='2026-09-23T
 
   const upsert=(tab,idHeader,id,obj)=>{
     const table=tables[tab],existing=table.rows.find(r=>clean(r[idHeader])===id);
-    if(existing) mutations.push({op:'update',tab,row:existing.__row,values:rowValues(table.headers,{...existing,...obj})});
-    else mutations.push({op:'append',tab,values:rowValues(table.headers,obj)});
+    if(existing){
+      const merged={...existing,...obj};
+      const changed=table.headers.some(h=>String(existing[h]??'')!==String(merged[h]??''));
+      if(changed) mutations.push({op:'update',tab,row:existing.__row,values:rowValues(table.headers,merged)});
+    }else{
+      mutations.push({op:'append',tab,values:rowValues(table.headers,obj)});
+    }
     return existing;
   };
   const appendAudit=(obj)=>{
@@ -88,9 +93,13 @@ export function planRegistryReconcile({eventModel,catalog,tables,at='2026-09-23T
     if(!derived.configured){summary.push({event_id:event.event_id,configured:false,reason:derived.reason});continue;}
     const aid=derived.activity_id,status=event.closed?'DONE':'IN_PREPARATION';
     const existingActivity=activities.rows.find(r=>clean(r.activity_id)===aid);
+    const activityChanged=!existingActivity||['title','activity_type','starts_at','status'].some(key=>{
+      const next={title:event.display_name,activity_type:event.kind,starts_at:event.starts_at,status}[key];
+      return String(existingActivity?.[key]??'')!==String(next??'');
+    });
     upsert('ACTIVIDADES','activity_id',aid,{
       activity_id:aid,title:event.display_name,activity_type:event.kind,starts_at:event.starts_at,status,
-      provenance:'SYNTHETIC',created_at:existingActivity?.created_at||at,updated_at:at
+      provenance:'SYNTHETIC',created_at:existingActivity?.created_at||at,updated_at:activityChanged?at:(existingActivity?.updated_at||at)
     });
     if(!existingActivity){
       appendAudit({event_id:'QA-EVT-AUTO-'+aid+'-CREATED',activity_id:aid,workstream_id:'',task_id:'',timestamp:at,event_type:'ACTIVITY_CREATED',actor_type:'SYSTEM',actor_ref:'CUDO_EVENT_WORK_RECONCILER',previous_state:'',new_state:status,comment:'Actividad creada desde ACTIVITY_EVENT canónico',provenance:'SYNTHETIC'});
@@ -132,7 +141,8 @@ export function planRegistryReconcile({eventModel,catalog,tables,at='2026-09-23T
         upsert('TAREAS','task_id',task.task_id,{
           task_id:task.task_id,workstream_id:ws.workstream_id,title:task.title,state:existingTask?.state||'TODO',
           due_at:existingTask?.due_at||'',assignee_ref:existingTask?.assignee_ref||'',assignee_display:existingTask?.assignee_display||'',
-          priority:existingTask?.priority||'NORMAL',updated_at:at
+          priority:existingTask?.priority||'NORMAL',
+          updated_at:(!existingTask||clean(existingTask.title)!==task.title||clean(existingTask.workstream_id)!==ws.workstream_id)?at:(existingTask.updated_at||at)
         });
         if(!existingTask){
           appendAudit({event_id:'QA-EVT-AUTO-'+task.task_id+'-CREATED',activity_id:aid,workstream_id:ws.workstream_id,task_id:task.task_id,timestamp:at,event_type:'TASK_CREATED',actor_type:'SYSTEM',actor_ref:'CUDO_EVENT_WORK_RECONCILER',previous_state:'',new_state:'TODO',comment:'Tarea derivada automáticamente: '+task.title,provenance:'SYNTHETIC'});
