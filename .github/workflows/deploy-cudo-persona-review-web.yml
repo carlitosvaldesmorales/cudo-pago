@@ -59,6 +59,7 @@ jobs:
           if manifest is None: manifest={}
           manifest['timeZone']='America/Santiago'
           manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
+          manifest['executionApi']={'access':'MYSELF'}
           files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
           files.append({'name':'CudoWorkStateWeb','type':'SERVER_JS','source':work_source})
           files.append({'name':'CudoEventAssignmentWeb','type':'SERVER_JS','source':assignment_source})
@@ -71,6 +72,30 @@ jobs:
           url='https://script.google.com/macros/s/'+did+'/exec'
           if url!=stable_url: raise SystemExit('stable private admin URL changed unexpectedly')
           out={'ok':True,'scriptId':sid,'versionNumber':vn,'deploymentId':did,'webAppUrl':url,'access':'MYSELF','executeAs':'USER_DEPLOYING','eventAssignmentsView':url+'?view=assignments'}
+          import time
+          probe_url=f'https://script.googleapis.com/v1/scripts/{sid}:run'
+          probe=None
+          last=None
+          for _ in range(10):
+            try:
+              probe=req(probe_url,'POST',{'function':'cudoEventAssignmentProbe','parameters':[],'devMode':False})
+              if probe.get('response',{}).get('result',{}).get('ok'):
+                break
+            except Exception as exc:
+              last=exc
+            time.sleep(3)
+          result=(probe or {}).get('response',{}).get('result',{})
+          if not result.get('ok'):
+            raise SystemExit('Apps Script Execution API probe failed: '+repr(last or probe))
+          if result.get('activity_id')!='QA-ACTIVITY-MATCH-PR219-001':
+            raise SystemExit('Private assignment probe returned wrong activity')
+          if int(result.get('workstreams') or 0)<8:
+            raise SystemExit('Private assignment probe missing workstreams')
+          if int(result.get('assignable_people') or 0)<4:
+            raise SystemExit('Private assignment probe missing validated identities')
+          if result.get('production_write') is not False:
+            raise SystemExit('Private assignment probe production flag invalid')
+          out['runtimeProbe']=result
           pathlib.Path('persona-review-deployment.json').write_text(json.dumps(out,indent=2))
           print(json.dumps(out,indent=2))
           PY
