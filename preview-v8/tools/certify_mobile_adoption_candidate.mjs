@@ -8,7 +8,18 @@ const serverSource=fs.readFileSync('qa-v8-google/apps-script/CudoMobileAdoptionW
 
 const fail=message=>{throw new Error('MOBILE ADOPTION CANDIDATE: '+message)};
 
-if(!configSource.includes("enabled:false")) fail('candidate config must remain disabled by default');
+const configWindow={};
+new Function('window',configSource)(configWindow);
+const fileConfig=configWindow.CUDO_ADOPTION_CONFIG;
+if(!fileConfig||fileConfig.schema_version!=='CUDO_MOBILE_ADOPTION_CONFIG_V1') fail('invalid adoption config schema');
+if(typeof fileConfig.enabled!=='boolean') fail('adoption enabled must be boolean');
+if(fileConfig.enabled){
+  let url;
+  try{url=new URL(String(fileConfig.endpoint||''));}catch{fail('enabled adoption endpoint is invalid')}
+  if(url.protocol!=='https:'||url.hostname!=='script.google.com'||!url.pathname.startsWith('/macros/s/')||!url.pathname.endsWith('/exec')) fail('enabled adoption endpoint is outside approved Apps Script surface');
+}else if(String(fileConfig.endpoint||'')!==''){
+  fail('disabled adoption config must not retain endpoint');
+}
 if(!siteSource.includes("adoption-config.js")||!siteSource.includes("adoption.js")) fail('site loader does not bind adoption candidate');
 for(const forbidden of ['userAgent','Session.getActiveUser','Session.getEffectiveUser','MailApp','email','device_id','deviceId']){
   if(serverSource.includes(forbidden)) fail('server source contains forbidden identity/PII token: '+forbidden);
@@ -111,7 +122,8 @@ console.log(JSON.stringify({
   ok:true,
   classification:'PASS_MOBILE_ADOPTION_CANDIDATE_E2E',
   production_write:false,
-  production_promotion:false,
+  production_promotion:fileConfig.enabled===true,
+  config_state:fileConfig.enabled?'ENABLED':'DISABLED',
   privacy:'ANONYMOUS_PRIVACY_MINIMAL',
   scenarios:results
 },null,2));
