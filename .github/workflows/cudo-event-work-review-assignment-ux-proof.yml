@@ -1,0 +1,48 @@
+name: CUDO Event Work Review Assignment UX Proof
+
+on:
+  push:
+    branches:
+      - ops/event-work-review-assignment-20260923
+    paths:
+      - '.github/workflows/cudo-event-work-review-assignment-ux-proof.yml'
+      - 'qa-v8-google/tools/prove_event_work_review_assignment_ux.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Certify live activity deep-link and assignment UX
+        run: |
+          set -euo pipefail
+          docker pull mcr.microsoft.com/playwright:v1.55.0-noble
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            mcr.microsoft.com/playwright:v1.55.0-noble \
+            bash -lc "npm install --no-save --package-lock=false playwright@1.55.0 >/dev/null && node qa-v8-google/tools/prove_event_work_review_assignment_ux.mjs"
+      - name: Persist UX evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -d evidence/event-work-review-assignment ]; then
+            git config user.name 'cudo-event-work-ux[bot]'
+            git config user.email 'actions@users.noreply.github.com'
+            git add evidence/event-work-review-assignment
+            git commit -m 'evidence(cudo): certify event work review assignment UX' || true
+            git push origin HEAD:refs/heads/ops/event-work-review-assignment-20260923
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cudo-event-work-review-assignment-ux
+          path: evidence/event-work-review-assignment
+          if-no-files-found: warn
