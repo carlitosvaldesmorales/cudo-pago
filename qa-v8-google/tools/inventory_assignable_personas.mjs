@@ -2,6 +2,8 @@ import fs from 'node:fs';
 
 const SHEET_ID='1X4fefDQaaktoTGjzU77SXFrYj4n9JuaUm45Tnldiu0Y';
 const RANGE="'PERSONAS_CONTROL'!A:AZ";
+const WORK_SHEET_ID='1BEb1eIpJhcVb7WzaSQ7J_YzbjOhzIyPfcb8lLAIJPvw';
+const WORK_RANGE="'WORK_CONTROL'!A:AZ";
 const OUT='evidence/event-work-real-people/personas-inventory.json';
 
 async function token(){
@@ -25,6 +27,17 @@ async function main(){
   const d=await r.json();
   if(!r.ok) throw new Error('Sheets HTTP '+r.status+': '+(d.error?.message||'unknown'));
   const rows=d.values||[], headers=(rows[0]||[]).map(clean);
+  const workUrl='https://sheets.googleapis.com/v4/spreadsheets/'+WORK_SHEET_ID+'/values/'+encodeURIComponent(WORK_RANGE)+'?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE';
+  const wr=await fetch(workUrl,{headers:{Authorization:'Bearer '+access}});
+  const wd=await wr.json();
+  if(!wr.ok) throw new Error('WORK_CONTROL HTTP '+wr.status+': '+(wd.error?.message||'unknown'));
+  const workRows=wd.values||[], workHeaders=(workRows[0]||[]).map(clean);
+  const workObjects=workRows.slice(1).map(row=>Object.fromEntries(workHeaders.map((h,i)=>[h,clean(row[i])]))).filter(o=>workHeaders.some(h=>o[h]));
+  const actorMap=new Map();
+  for(const row of workObjects){
+    const actorId=clean(row.RESPONSIBLE_ACTOR_ID),name=clean(row.RESPONSIBLE);
+    if(actorId&&name&&!actorMap.has(actorId)) actorMap.set(actorId,{person_ref:actorId,person_display:name,source:'ACTOR_OPERATIONAL',status:'ACTIVE_EVIDENCE_BACKED'});
+  }
   const objects=rows.slice(1).map(row=>Object.fromEntries(headers.map((h,i)=>[h,clean(row[i])]))).filter(o=>headers.some(h=>o[h]));
   const safeFields=['ID_PERSONA','NOMBRE_PUBLICO','RELACION_CUDO','FUNCION_CLUB','ESTADO','PUBLICAR','PRIVACIDAD'];
   const safe=(o)=>Object.fromEntries(safeFields.filter(k=>headers.includes(k)).map(k=>[k,o[k]||'']));
@@ -45,6 +58,13 @@ async function main(){
     active_count:active.length,
     assignable_count:assignable.length,
     assignable_people:assignable.map(safe),
+    operational_actor_projection:{
+      headers:workHeaders,
+      row_count:workObjects.length,
+      actor_count:actorMap.size,
+      actors:[...actorMap.values()]
+    },
+    combined_assignable_count:actorMap.size+assignable.length,
     safe_fields_exposed:safeFields.filter(k=>headers.includes(k)),
     sensitive_fields_omitted:true
   };
