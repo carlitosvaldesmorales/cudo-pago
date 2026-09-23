@@ -57,6 +57,15 @@
         referrerpolicy="strict-origin-when-cross-origin"></iframe>
     </section>
   </main>
+  <script>
+  (function(){
+    var activityParam=new URLSearchParams(window.location.search).get('activity');
+    if(!activityParam)return;
+    var frame=document.getElementById('cudoActivitiesFrame');
+    var base='https://script.google.com/macros/s/AKfycbw1WjtJHJZO5RaJ6mtL6Um9afRKXArw9th-wLtUdY7qmClxvF7S3s1JUNL7-5WUjBCeDQ/exec';
+    frame.src=base+'?activity='+encodeURIComponent(activityParam);
+  })();
+  </script>
   <script src="../shared/pwa.js"></script>
 </body>
 </html>
