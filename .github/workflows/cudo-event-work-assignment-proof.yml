@@ -1,0 +1,47 @@
+name: CUDO Event Work Assignment Proof
+
+on:
+  push:
+    branches:
+      - ops/event-work-review-assignment-20260923
+    paths:
+      - '.github/workflows/cudo-event-work-assignment-proof.yml'
+      - 'qa-v8-google/tools/prove_event_work_assignment.mjs'
+      - 'control/cudo-event-work-assignment-proof.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check explicit synthetic assignment gate
+        id: gate
+        run: |
+          APPLY=$(node -p "require('./control/cudo-event-work-assignment-proof.json').apply")
+          echo "apply=$APPLY" >> "$GITHUB_OUTPUT"
+      - name: Execute assignment and reassignment proof
+        if: steps.gate.outputs.apply == 'true'
+        run: node qa-v8-google/tools/prove_event_work_assignment.mjs
+      - name: Persist evidence
+        if: steps.gate.outputs.apply == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'cudo-assignment-proof[bot]'
+          git config user.email 'actions@users.noreply.github.com'
+          git add evidence/event-work-review-assignment/assignment-proof.json
+          git commit -m 'evidence(cudo): certify event-work assignment and reassignment' || true
+          git push origin HEAD:refs/heads/ops/event-work-review-assignment-20260923
