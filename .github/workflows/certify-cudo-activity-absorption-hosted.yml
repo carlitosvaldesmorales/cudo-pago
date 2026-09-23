@@ -1,0 +1,70 @@
+name: CUDO Hosted Activity Absorption Certifier
+
+on:
+  push:
+    branches:
+      - ops/hosted-activity-certifier-20260922
+    paths:
+      - '.github/workflows/certify-cudo-activity-absorption-hosted.yml'
+      - 'tools/certify_activity_absorption_hosted.py'
+      - '.arke/CUDO_ACTIVITY_ABSORPTION_CERTIFIER_CONTRACT_V1.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  certify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare Python
+        run: python3 -m pip install --disable-pip-version-check pyyaml
+
+      - name: Start local zero-credit Ollama
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull ollama/ollama:latest
+          docker run -d --name cudo-hosted-ollama --network host ollama/ollama:latest
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:11434/api/version >/tmp/ollama-version.json && break
+            sleep 2
+          done
+          cat /tmp/ollama-version.json
+          docker exec cudo-hosted-ollama ollama pull llama3.2:3b
+          curl -fsS http://127.0.0.1:11434/api/tags | tee /tmp/ollama-tags.json
+          jq -e '.models[] | select(.name=="llama3.2:3b")' /tmp/ollama-tags.json >/dev/null
+
+      - name: Run browser-visible independent certifier
+        run: python3 tools/certify_activity_absorption_hosted.py
+
+      - name: Persist evidence on isolated ops branch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d evidence/hosted-activity-certifier ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add evidence/hosted-activity-certifier
+            git commit -m 'evidence(cudo): hosted activity absorption certifier' || true
+            git pull --rebase origin HEAD || true
+            git push origin HEAD || true
+          fi
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-hosted-activity-certifier
+          path: evidence/hosted-activity-certifier
+          if-no-files-found: warn
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f cudo-hosted-ollama >/dev/null 2>&1 || true
