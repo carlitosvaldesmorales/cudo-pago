@@ -1,0 +1,40 @@
+name: CUDO Event Work Registry Inventory
+
+on:
+  push:
+    branches:
+      - ops/event-work-review-assignment-20260923
+    paths:
+      - '.github/workflows/cudo-event-work-registry-inventory.yml'
+      - 'qa-v8-google/tools/inventory_event_work_registry.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Inventory Google activity registry read-only
+        run: node qa-v8-google/tools/inventory_event_work_registry.mjs
+      - name: Persist inventory evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'cudo-event-work-inventory[bot]'
+          git config user.email 'actions@users.noreply.github.com'
+          git add evidence/event-work-review-assignment/inventory.json
+          git commit -m 'evidence(cudo): inventory event work registry contract' || true
+          git push origin HEAD:refs/heads/ops/event-work-review-assignment-20260923
