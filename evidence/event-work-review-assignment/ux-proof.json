@@ -1,0 +1,14 @@
+{
+  "schema_version": "CUDO_EVENT_WORK_REVIEW_ASSIGNMENT_UX_PROOF_V1",
+  "generated_at": "2026-09-23T11:32:34.658Z",
+  "production_write": false,
+  "activity_id": "QA-ACTIVITY-MATCH-PR219-001",
+  "checks": {
+    "activity_title_visible": false,
+    "workstream_visible": false,
+    "task_visible": false,
+    "assignment_visible": false,
+    "assignment_action_visible": false
+  },
+  "decision": "FAIL"
+}
