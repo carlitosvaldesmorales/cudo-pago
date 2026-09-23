@@ -9,6 +9,9 @@ async function main(){
   fs.mkdirSync('evidence/event-work-review-assignment',{recursive:true});
   const browser=await chromium.launch({headless:true});
   const page=await browser.newPage({viewport:{width:1280,height:900}});
+  const browserEvents=[];
+  page.on('console',msg=>browserEvents.push({kind:'console',type:msg.type(),text:msg.text()}));
+  page.on('pageerror',err=>browserEvents.push({kind:'pageerror',text:String(err)}));
   const result={
     schema_version:'CUDO_EVENT_WORK_REVIEW_ASSIGNMENT_UX_PROOF_V1',
     generated_at:new Date().toISOString(),
@@ -19,8 +22,12 @@ async function main(){
   };
   try{
     await page.goto(WEB_APP+'?activity='+encodeURIComponent(ACTIVITY_ID),{waitUntil:'domcontentloaded',timeout:90000});
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(6000);
     const text=(await page.locator('body').innerText()).replace(/\s+/g,' ');
+    result.final_url=page.url();
+    result.page_title=await page.title();
+    result.visible_excerpt=text.slice(0,5000);
+    result.browser_events=browserEvents.slice(0,30);
     result.checks.activity_title_visible=/CUDO vs San Juan/i.test(text);
     result.checks.workstream_visible=/cancha y recinto/i.test(text);
     result.checks.task_visible=/Revisión final de cancha/i.test(text);
