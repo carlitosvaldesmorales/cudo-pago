@@ -8,7 +8,11 @@ let tick=0;const now=()=> '2026-09-22T06:'+String(tick++).padStart(2,'0')+':00.0
 const req=(id,event,action,payload)=>({request_id:id,requested_at:now(),event_id:event,expected_revision:state.store_revision,action,payload,requested_by:'sistemas@cudo.cl',reason:'QA '+action,evidence_ref:'qa://'+id});
 const apply=(id,event,action,payload={})=>{const r=processEventResourceRequests({requests:[req(id,event,action,payload)],stateStore:state,registry,now});state=r.state_store;assert.equal(r.summary[0].status,'APPLIED');return r;};
 
-let r=apply('M-OFFER-C',EVENT_IDS.MATCH,'MATCH_ADD_OFFERING',{name:'Completo QA',mode:'PREPARED',sell_price:2500});
+let r=apply('M-CONFIG',EVENT_IDS.MATCH,'MATCH_CONFIGURE_OPERATION',{starts_at:'2026-09-27T13:00:00-03:00',location:'LOCAL',conditions:{venue_required:true,food_sales_enabled:true,bar_sales_enabled:true,ticketing_enabled:true,broadcast_enabled:false}});
+assert.equal(r.projection.MATCH.starts_at,'2026-09-27T13:00:00-03:00');
+assert.equal(r.projection.MATCH.location,'LOCAL');
+assert.equal(r.projection.MATCH.conditions.food_sales_enabled,true);
+r=apply('M-OFFER-C',EVENT_IDS.MATCH,'MATCH_ADD_OFFERING',{name:'Completo QA',mode:'PREPARED',sell_price:2500});
 apply('M-ING-PAN',EVENT_IDS.MATCH,'MATCH_ADD_INGREDIENT',{offering_id:'OFFER-COMPLETO_QA',item_name:'Pan',qty_per_sale:1,unit:'unidad'});
 apply('M-ING-VIE',EVENT_IDS.MATCH,'MATCH_ADD_INGREDIENT',{offering_id:'OFFER-COMPLETO_QA',item_name:'Vienesa',qty_per_sale:1,unit:'unidad'});
 apply('M-OFFER-B',EVENT_IDS.MATCH,'MATCH_ADD_OFFERING',{name:'Bebida lata QA',mode:'DIRECT_RESALE',sell_price:1500});
@@ -36,5 +40,5 @@ apply('M-CLOSE',EVENT_IDS.MATCH,'MATCH_CLOSE',{});r=apply('B-CLOSE',EVENT_IDS.BI
 const final=buildEventResourceProjection(state);assert.equal(final.commerce_model,'DYNAMIC_EVENT_OFFERINGS_RECIPE_AND_RESALE');assert.equal(final.MATCH.commerce.offerings.length,2);assert.equal(final.BINGO.commerce.offerings.length,1);assert.equal(final.production_write,false);
 const event=state.objects.find(x=>x.object_id===EVENT_IDS.MATCH);
 assert.throws(()=>buildSourceChangeCommand({objects:state.objects,surface:'CUDO_WEB_EVENT_RESOURCE_QA',objectId:event.object_id,field:'sales_revenue',value:999,requestedBy:'sistemas@cudo.cl',reason:'negative control',evidenceRefs:['qa://negative']}),/direct surface write blocked/);
-const applied=state.audit.filter(x=>x.status==='APPLIED');assert.ok(applied.length>=14);assert.ok(applied.every(x=>x.transaction_id));
+const applied=state.audit.filter(x=>x.status==='APPLIED');assert.ok(applied.length>=15);assert.ok(applied.every(x=>x.transaction_id));
 console.log(JSON.stringify({schema_version:'CUDO_EVENT_RESOURCE_GOVERNED_PERSISTENCE_CERT_V2',pass:true,final_revision:state.store_revision,applied_requests:applied.length,dynamic_offerings:true,prepared_recipe_consumption:true,direct_resale_consumption:true,stale_revision_fail_closed:true,production_write:false},null,2));
