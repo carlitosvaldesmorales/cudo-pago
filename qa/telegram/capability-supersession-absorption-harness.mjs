@@ -54,8 +54,8 @@ try{
   const match=await env.DB.prepare("SELECT match_id FROM matches WHERE competition_id='ANFA-CHEPICA-2026' ORDER BY round_no,match_id LIMIT 1").first();
   assert.ok(match?.match_id,'fixture match required');
   await env.DB.prepare(`INSERT OR REPLACE INTO public_result_submissions
-    (submission_id,match_id,series_code,submitter_id,home_score,away_score,status,created_at,updated_at)
-    VALUES ('qa-absorption-pending',?,'TERCERA','qa-public',1,0,'SUBMITTED',?,?)`)
+    (submission_id,match_id,series_code,submitter_id,home_score,away_score,status,source_event_id,created_at,updated_at)
+    VALUES ('qa-absorption-pending',?,'TERCERA','qa-public',1,0,'SUBMITTED','qa-absorption-event',?,?)`)
     .bind(match.match_id,now,now).run();
 
   calls.length=0;
