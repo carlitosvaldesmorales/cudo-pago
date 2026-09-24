@@ -31,15 +31,21 @@ jobs:
           node --check sports-bus/worker/telegram-dirigentes-home-entry.js
           node --check qa/telegram/results-register-canonical-harness.mjs
           node --check qa/telegram/results-register-role-parity-harness.mjs
+          node --check qa/telegram/capability-supersession-absorption-harness.mjs
       - name: Canonical vertical v2
         run: node qa/telegram/results-register-canonical-harness.mjs
       - name: Role parity contract
         run: node qa/telegram/results-register-role-parity-harness.mjs
+      - name: Supersession capability absorption
+        run: node qa/telegram/capability-supersession-absorption-harness.mjs
       - name: Root contract assertions
         run: |
           set -euo pipefail
           grep -q 'RESULT: PASS' <(node qa/telegram/results-register-canonical-harness.mjs)
           grep -q 'RESULT: PASS' <(node qa/telegram/results-register-role-parity-harness.mjs)
+          grep -q 'RESULT: PASS' <(node qa/telegram/capability-supersession-absorption-harness.mjs)
+          grep -q 'SUPERSESSION_REQUIRES_CAPABILITY_ABSORPTION' docs/architecture/capability-supersession-absorption-adn-v1.md
+          grep -q 'ROUTING_PRECEDENCE_MUST_NOT_HIDE_AUTHORIZED_CAPABILITIES' docs/architecture/capability-supersession-absorption-adn-v1.md
           grep -q 'HUMAN_WORK_UNIT_NEQ_PERSISTENCE_UNIT' docs/product/module-registry.json
           grep -q 'TRANSACTIONAL_CHAT_SINGLE_LIVE_SURFACE_WHEN_SUPPORTED' docs/product/module-registry.json
           grep -q 'results-register-visual-contract-v2.md' docs/product/module-registry.json
