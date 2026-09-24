@@ -1,0 +1,156 @@
+{
+  "schema_version": "SUPER_ADMIN_CAPABILITY_REACHABILITY_V1",
+  "as_of": "2026-09-23",
+  "role": "SUPER_ADMIN",
+  "source_of_authority": "sports-bus/worker/access-control.js",
+  "rule": "Every declared SUPER_ADMIN capability must have an explicit reachability disposition. GAP does not authorize implementation without discovery.",
+  "dispositions": [
+    {
+      "capability": "READ_COMPETITION",
+      "status": "MOVED",
+      "entrypoints": [
+        "tp:home -> tp:public",
+        "public championship/results surfaces"
+      ],
+      "evidence": [
+        "telegram-audience-root-entry.js",
+        "public-competition-hub-entry.js"
+      ],
+      "note": "Public competition reading is shared capability reached through the Public audience, not duplicated in Admin Global."
+    },
+    {
+      "capability": "OBSERVE_RESULT",
+      "status": "MOVED",
+      "entrypoints": [
+        "tp:home -> tp:public -> public result contribution"
+      ],
+      "evidence": [
+        "public-result-entry.js",
+        "contributor-observation-entry.js"
+      ],
+      "note": "SUPER_ADMIN can use the shared public contribution capability without changing identity or authority."
+    },
+    {
+      "capability": "REVIEW_RESULT",
+      "status": "ABSORBED",
+      "entrypoints": [
+        "pr:pending"
+      ],
+      "evidence": [
+        "telegram-dirigentes-home-entry.js",
+        "public-result-entry.js"
+      ],
+      "note": "Pending result observations are visible from the canonical Admin Global home."
+    },
+    {
+      "capability": "GOVERN_RESULTS",
+      "status": "ABSORBED",
+      "entrypoints": [
+        "rg:list",
+        "rg:r:<match>:<series>"
+      ],
+      "evidence": [
+        "telegram-dirigentes-home-entry.js",
+        "result-governance-entry.js",
+        "capability-supersession-absorption-harness.mjs"
+      ],
+      "note": "Existing governed results can be corrected, disputed, resolved, annulled/restored and audited."
+    },
+    {
+      "capability": "MANAGE_CLUB_RESULTS",
+      "status": "ABSORBED",
+      "entrypoints": [
+        "rr:dates",
+        "rg:list"
+      ],
+      "evidence": [
+        "results-register-v2-entry.js",
+        "result-governance-entry.js"
+      ],
+      "note": "Canonical capture has competition-wide SUPER_ADMIN scope and hands existing results to governance."
+    },
+    {
+      "capability": "MANAGE_ACCESS",
+      "status": "ABSORBED",
+      "entrypoints": [
+        "tp:requests",
+        "tp:admins"
+      ],
+      "evidence": [
+        "telegram-dirigentes-home-entry.js",
+        "access-request-review-entry.js",
+        "dirigentes-lifecycle-entry.js"
+      ],
+      "note": "Access requests and CLUB_ADMIN lifecycle are reachable from Admin Global."
+    },
+    {
+      "capability": "MANAGE_CLUBS",
+      "status": "GAP",
+      "gap_id": "GAP_SUPER_ADMIN_MANAGE_CLUBS_RUNTIME",
+      "evidence": [
+        "platform-tenancy-entry.js exposes GET/read projections only",
+        "platform-operator-entry.js manages CLUB_ADMIN identities, not club/tenant lifecycle"
+      ],
+      "next_discovery": "Determine whether club/tenant create-update-disable lifecycle is a current product requirement or intentionally static configuration.",
+      "note": "Do not create club-management UX until the required lifecycle is evidenced."
+    },
+    {
+      "capability": "MANAGE_CONTENT",
+      "status": "GAP",
+      "gap_id": "GAP_SUPER_ADMIN_MANAGE_CONTENT_BOUNDARY",
+      "evidence": [
+        "No Sports Event Bus worker references MANAGE_CONTENT",
+        "CUDO Web content administration belongs to the CUDO tenant bounded context"
+      ],
+      "next_discovery": "Resolve what platform-level content MANAGE_CONTENT means before mapping it to CUDO tenant administration.",
+      "note": "Do not conflate CUDO club content with Fútbol Chépica platform content."
+    },
+    {
+      "capability": "VIEW_AUDIT",
+      "status": "GAP",
+      "gap_id": "GAP_SUPER_ADMIN_AUDIT_HUMAN_SURFACE",
+      "evidence": [
+        "permission_audit is persisted by operational handlers",
+        "No canonical Telegram human surface for browsing operational audit was found"
+      ],
+      "next_discovery": "Determine the minimum human audit questions that must be answerable and whether an existing API/read model can expose them safely.",
+      "note": "Persistence of audit records is not equivalent to a consumable audit capability."
+    },
+    {
+      "capability": "PUBLISH_MATCH_EVENT",
+      "status": "GAP",
+      "gap_id": "GAP_SUPER_ADMIN_PUBLISH_MATCH_EVENT_SCOPE",
+      "evidence": [
+        "Capability is declared in access-control matrix",
+        "No Sports Event Bus worker implementation references PUBLISH_MATCH_EVENT",
+        "Current Chépica Play contract explicitly excludes match coverage/live-event capture"
+      ],
+      "next_discovery": "Confirm the intended meaning and current scope of publishing a match event before implementation.",
+      "note": "A declared authorization does not prove a product requirement."
+    },
+    {
+      "capability": "MANAGE_POLICY",
+      "status": "GAP",
+      "gap_id": "GAP_SUPER_ADMIN_MANAGE_POLICY_RUNTIME",
+      "evidence": [
+        "Capability is declared for SUPER_ADMIN",
+        "platform-operator-entry.js explicitly excludes policy management",
+        "No worker implementation references MANAGE_POLICY beyond authorization boundary"
+      ],
+      "next_discovery": "Identify which platform policies are intended to be mutable at runtime and which must remain versioned configuration.",
+      "note": "Do not create a policy console by inference."
+    },
+    {
+      "capability": "GRANT_SUPER_ADMIN",
+      "status": "GAP",
+      "gap_id": "GAP_SUPER_ADMIN_RECOVERY_AND_SECOND_ADMIN",
+      "evidence": [
+        "Access matrix declares GRANT_SUPER_ADMIN",
+        "legacy /setupadmin closes once one verified SUPER_ADMIN exists",
+        "FUTBOL-CHEPICA-MULTICLUB-01 G5 records second SUPER_ADMIN/recovery as GAP"
+      ],
+      "next_discovery": "Security design and human authorization for recovery/second global administrator.",
+      "note": "This is a privileged security boundary and is not auto-materialized."
+    }
+  ]
+}
