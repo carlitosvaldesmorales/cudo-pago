@@ -32,18 +32,23 @@ jobs:
           node --check qa/telegram/results-register-canonical-harness.mjs
           node --check qa/telegram/results-register-role-parity-harness.mjs
           node --check qa/telegram/capability-supersession-absorption-harness.mjs
+          node --check qa/telegram/super-admin-capability-reachability-harness.mjs
       - name: Canonical vertical v2
         run: node qa/telegram/results-register-canonical-harness.mjs
       - name: Role parity contract
         run: node qa/telegram/results-register-role-parity-harness.mjs
       - name: Supersession capability absorption
         run: node qa/telegram/capability-supersession-absorption-harness.mjs
+      - name: SUPER_ADMIN capability reachability
+        run: node qa/telegram/super-admin-capability-reachability-harness.mjs
       - name: Root contract assertions
         run: |
           set -euo pipefail
           grep -q 'RESULT: PASS' <(node qa/telegram/results-register-canonical-harness.mjs)
           grep -q 'RESULT: PASS' <(node qa/telegram/results-register-role-parity-harness.mjs)
           grep -q 'RESULT: PASS' <(node qa/telegram/capability-supersession-absorption-harness.mjs)
+          grep -q 'RESULT: PASS' <(node qa/telegram/super-admin-capability-reachability-harness.mjs)
+          grep -q 'SUPER_ADMIN_CAPABILITY_REACHABILITY_V1' docs/architecture/super-admin-capability-reachability-v1.json
           grep -q 'SUPERSESSION_REQUIRES_CAPABILITY_ABSORPTION' docs/architecture/capability-supersession-absorption-adn-v1.md
           grep -q 'ROUTING_PRECEDENCE_MUST_NOT_HIDE_AUTHORIZED_CAPABILITIES' docs/architecture/capability-supersession-absorption-adn-v1.md
           grep -q 'HUMAN_WORK_UNIT_NEQ_PERSISTENCE_UNIT' docs/product/module-registry.json
