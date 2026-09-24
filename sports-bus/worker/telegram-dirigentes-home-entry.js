@@ -119,21 +119,25 @@ function isVerifiedClubAdmin(reporter){
 
 async function renderDirigentesHome(db,reporter,actorId){
   if(isSuperAdmin(reporter)){
-    const [pending,active,total]=await Promise.all([
+    const [pendingAccess,pendingResults,active,total]=await Promise.all([
       db.prepare("SELECT COUNT(*) AS n FROM access_requests WHERE status='PENDING'").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM public_result_submissions WHERE status='SUBMITTED'").first(),
       db.prepare("SELECT COUNT(*) AS n FROM reporters WHERE role='CLUB_ADMIN' AND active=1").first(),
       db.prepare("SELECT COUNT(*) AS n FROM reporters WHERE role='CLUB_ADMIN'").first()
     ]);
-    const pendingN=Number(pending?.n||0);
+    const pendingAccessN=Number(pendingAccess?.n||0);
+    const pendingResultsN=Number(pendingResults?.n||0);
     const activeN=Number(active?.n||0);
     const totalN=Number(total?.n||0);
     return {
       state:'AUTHORIZED_GLOBAL',
-      text:`🛡 FÚTBOL CHÉPICA · ADMIN GLOBAL\n\nSolicitudes pendientes: ${pendingN}\nDirigentes activos: ${activeN}/${totalN}`,
+      text:`🛡 FÚTBOL CHÉPICA · ADMIN GLOBAL\n\nSolicitudes pendientes: ${pendingAccessN}\nResultados por revisar: ${pendingResultsN}\nDirigentes activos: ${activeN}/${totalN}`,
       keyboard:[
-        [{text:`🔔 Solicitudes (${pendingN})`,callback_data:'tp:requests'}],
+        [{text:`🔔 Solicitudes (${pendingAccessN})`,callback_data:'tp:requests'}],
+        [{text:`🟡 Resultados pendientes (${pendingResultsN})`,callback_data:'pr:pending'}],
         [{text:`👥 Dirigentes (${activeN}/${totalN})`,callback_data:'tp:admins'}],
         [{text:'⚽ Registrar resultados',callback_data:CANONICAL_RESULTS_ENTRY}],
+        [{text:'🛡 Gobierno de resultados',callback_data:'rg:list'}],
         [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
         [{text:'🏠 Inicio',callback_data:'tp:home'}]
       ]
