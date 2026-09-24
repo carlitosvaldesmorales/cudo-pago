@@ -345,7 +345,7 @@ async function showMatchDashboard(env,chatId,ctx,actorId,match,messageId=null,no
       complete++;
       const verified=off.validation_status==='VERIFIED';
       lines.push(`${verified?'✅':'⚠️'} ${SERIES_LABEL[code]}   ${off.home_score} — ${off.away_score}   ${verified?'OFICIAL':'EN REVISIÓN'}`);
-      buttons.push({text:`${verified?'✅':'⚠️'} ${SERIES_LABEL[code]} ${off.home_score}-${off.away_score}`,callback_data:ctx.officialAuthority?`rr:exists:${match.match_id}:${code}`:`rr:series:${match.match_id}:${code}`});
+      buttons.push({text:`${verified?'✅':'⚠️'} ${SERIES_LABEL[code]} ${off.home_score}-${off.away_score}`,callback_data:ctx.officialAuthority?`rg:r:${match.match_id}:${code}`:`rr:series:${match.match_id}:${code}`});
       continue;
     }
     lines.push(`▫️ ${SERIES_LABEL[code]}   — — —`);
@@ -356,7 +356,8 @@ async function showMatchDashboard(env,chatId,ctx,actorId,match,messageId=null,no
   rows.push([{text:'✅ Terminar carga del partido',callback_data:`rr:finish:${match.match_id}`}]);
   rows.push([{text:`⬅️ Volver a ${match.round_label||`Fecha ${match.round_no}`}`,callback_data:`rr:date:${match.round_no}`}]);
   const prefix=notice?`${notice}\n\n`:'';
-  const text=`${prefix}⚽ ${match.round_label||`Fecha ${match.round_no}`}\n${match.home_name} — ${match.away_name}\n\nRESULTADOS DEL PARTIDO · ${complete}/4 con dato\n\n${lines.join('\n')}\n\nSelecciona una serie para completar o revisar.`;
+  const guidance=ctx.officialAuthority?'Selecciona una serie para completar o administrar.':'Selecciona una serie para completar o revisar.';
+  const text=`${prefix}⚽ ${match.round_label||`Fecha ${match.round_no}`}\n${match.home_name} — ${match.away_name}\n\nRESULTADOS DEL PARTIDO · ${complete}/4 con dato\n\n${lines.join('\n')}\n\n${guidance}`;
   await render(env,chatId,messageId,text,{inline_keyboard:rows});
 }
 
