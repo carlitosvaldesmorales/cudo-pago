@@ -77,7 +77,7 @@ if(process.argv[1] && import.meta.url===new URL('file://'+process.argv[1]).href)
     // refresh-token responses MUST never be emitted, including on failures.
     console.log('ARKE_CUDO_GOOGLE_API_REUSE_RECEIPT='+JSON.stringify(result));
   } catch(e) {
-    console.error('ARKE_CUDO_GOOGLE_API_REUSE_GATE=DENIED '+String(e?.message||'UNKNOWN').replace(/[^A-Z0-9_]/g,'_').slice(0,100));
+    console.error('ARKE_CUDO_GOOGLE_API_REUSE_GATE=DENIED');
     process.exitCode=1;
   }
 }
