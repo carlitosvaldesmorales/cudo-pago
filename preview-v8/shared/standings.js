@@ -2,7 +2,7 @@
 const API='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const WS=API.replace(/^http/,'ws');
 const MAX_ROUND=5;
-const V='20261020-canonical02';
+const V='20261020-canonical03';
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 const slugMap={
   'JUVENTUD DE CHEPICA':'juventud-chepica.png','SANTA ELENA LA RUDA':'santa-elena-la-ruda.png','INDEPENDIENTE':'independiente.png',
@@ -86,10 +86,12 @@ async function boot(){
       loaded=true;
       draw();
     }catch(e){
-      console.error('standings_canonical',e);
       if(!loaded){
+        console.error('standings_canonical',e);
         root.dataset.resultSource='error';
         root.querySelector('#standTables').innerHTML='<div class="champ-status">Tabla temporalmente no disponible. La autoridad canónica no respondió.</div>';
+      }else{
+        console.warn('standings_refresh_transient',e);
       }
     }finally{
       refreshing=false;

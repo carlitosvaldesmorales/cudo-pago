@@ -38,7 +38,8 @@ jobs:
           grep -Fq "/stream/ws/" preview-v8/shared/standings.js
           grep -Fq "visibilitychange" preview-v8/shared/standings.js
           grep -Fq "lastRefresh" preview-v8/shared/standings.js
-          grep -Fq "standings.js?v=20261020-canonical02" preview-v8/partidos/index.html
+          grep -Fq "standings_refresh_transient" preview-v8/shared/standings.js
+          grep -Fq "standings.js?v=20261020-canonical03" preview-v8/partidos/index.html
           if grep -Fq "generalComplete" preview-v8/shared/standings.js; then
             echo 'No se permite descartar una jornada completa porque una serie no puntúe.' >&2
             exit 1
@@ -81,7 +82,7 @@ jobs:
           PAGE="https://cudo.cl/preview-v8/partidos/?qa=${GITHUB_SHA}"
           for i in $(seq 1 50); do
             if curl -LfsS "$PAGE" -o /tmp/partidos.html \
-              && grep -q 'standings.js?v=20261020-canonical02' /tmp/partidos.html \
+              && grep -q 'standings.js?v=20261020-canonical03' /tmp/partidos.html \
               && grep -q 'id="champStandings"' /tmp/partidos.html; then
               exit 0
             fi
@@ -93,7 +94,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -LfsS "https://cudo.cl/preview-v8/shared/standings.js?v=20261020-canonical02&qa=${GITHUB_SHA}" -o /tmp/standings-public.js
+          curl -LfsS "https://cudo.cl/preview-v8/shared/standings.js?v=20261020-canonical03&qa=${GITHUB_SHA}" -o /tmp/standings-public.js
           grep -Fq '/api/v1/public-standings' /tmp/standings-public.js
           grep -Fq 'public-standings-v2' /tmp/standings-public.js
           grep -Fq '<th>PJ</th><th>PTS</th><th>AJ</th><th>3ª</th><th>2ª</th><th>1ª</th>' /tmp/standings-public.js
