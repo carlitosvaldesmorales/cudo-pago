@@ -1,6 +1,8 @@
 (()=>{
 const API='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
-const V='20261020-canonical01';
+const WS=API.replace(/^http/,'ws');
+const MAX_ROUND=5;
+const V='20261020-canonical02';
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 const slugMap={
   'JUVENTUD DE CHEPICA':'juventud-chepica.png','SANTA ELENA LA RUDA':'santa-elena-la-ruda.png','INDEPENDIENTE':'independiente.png',
@@ -58,29 +60,75 @@ async function loadJson(path){
 }
 async function boot(){
   const root=document.getElementById('champStandings');if(!root)return;
-  try{
-    const [standings,resultDoc]=await Promise.all([loadJson('/api/v1/public-standings'),loadJson('/api/v1/series-results')]);
-    if(standings.contract!=='public-standings-v2'||!Array.isArray(standings.groups)||!Array.isArray(resultDoc.results))throw Error('canonical_contract');
-    root.dataset.resultSource='public-standings-v2';
-    root.dataset.rendererVersion=V;
-    const details=detailIndex(standings,resultDoc.results);
-    let group='A';
-    const draw=()=>{
-      const current=(standings.groups||[]).find(g=>String(g.group_id).toUpperCase()===group);
-      if(!current)throw Error(`missing_group_${group}`);
-      const general=(current.championships||[]).find(c=>c.championship_code==='PRINCIPAL')?.rows||[];
-      const senior=(current.championships||[]).find(c=>c.championship_code==='SENIOR')?.rows||[];
-      root.querySelector('#standTables').innerHTML=generalTable(general,details)+seniorTable(senior,details);
-      root.querySelectorAll('[data-stand-group]').forEach(b=>b.classList.toggle('active',b.dataset.standGroup===group));
-      root.querySelector('#standGroupLabel').textContent=`Grupo ${group}`;
+  let group='A',standings=null,details=new Map(),loaded=false,refreshing=false,queued=false,refreshTimer=null;
+  const sockets=new Map();
+  const draw=()=>{
+    if(!standings)return;
+    const current=(standings.groups||[]).find(g=>String(g.group_id).toUpperCase()===group);
+    if(!current)throw Error(`missing_group_${group}`);
+    const general=(current.championships||[]).find(c=>c.championship_code==='PRINCIPAL')?.rows||[];
+    const senior=(current.championships||[]).find(c=>c.championship_code==='SENIOR')?.rows||[];
+    root.querySelector('#standTables').innerHTML=generalTable(general,details)+seniorTable(senior,details);
+    root.querySelectorAll('[data-stand-group]').forEach(b=>b.classList.toggle('active',b.dataset.standGroup===group));
+    root.querySelector('#standGroupLabel').textContent=`Grupo ${group}`;
+  };
+  const refresh=async()=>{
+    if(refreshing){queued=true;return;}
+    refreshing=true;
+    try{
+      const [nextStandings,resultDoc]=await Promise.all([loadJson('/api/v1/public-standings'),loadJson('/api/v1/series-results')]);
+      if(nextStandings.contract!=='public-standings-v2'||!Array.isArray(nextStandings.groups)||!Array.isArray(resultDoc.results))throw Error('canonical_contract');
+      standings=nextStandings;
+      details=detailIndex(nextStandings,resultDoc.results);
+      root.dataset.resultSource='public-standings-v2';
+      root.dataset.rendererVersion=V;
+      root.dataset.lastRefresh=new Date().toISOString();
+      loaded=true;
+      draw();
+    }catch(e){
+      console.error('standings_canonical',e);
+      if(!loaded){
+        root.dataset.resultSource='error';
+        root.querySelector('#standTables').innerHTML='<div class="champ-status">Tabla temporalmente no disponible. La autoridad canónica no respondió.</div>';
+      }
+    }finally{
+      refreshing=false;
+      if(queued){queued=false;queueMicrotask(refresh);}
+    }
+  };
+  const scheduleRefresh=()=>{
+    clearTimeout(refreshTimer);
+    refreshTimer=setTimeout(refresh,120);
+  };
+  const connectRound=round=>{
+    if(document.visibilityState==='hidden')return;
+    const current=sockets.get(round);
+    if(current&&current.readyState<=1)return;
+    const ws=new WebSocket(`${WS}/stream/ws/${round}`);
+    sockets.set(round,ws);
+    ws.onmessage=event=>{
+      try{
+        const payload=JSON.parse(event.data);
+        if(payload.type==='results.snapshot'&&Number(payload.round_no)===round)scheduleRefresh();
+      }catch{}
     };
-    root.addEventListener('click',e=>{const b=e.target.closest('[data-stand-group]');if(b){group=b.dataset.standGroup;draw()}});
-    draw();
-  }catch(e){
-    console.error('standings_canonical',e);
-    root.dataset.resultSource='error';
-    root.querySelector('#standTables').innerHTML='<div class="champ-status">Tabla temporalmente no disponible. La autoridad canónica no respondió.</div>';
-  }
+    ws.onerror=()=>ws.close();
+    ws.onclose=()=>{
+      if(sockets.get(round)===ws)sockets.delete(round);
+      if(document.visibilityState==='visible')setTimeout(()=>connectRound(round),2000);
+    };
+  };
+  const reconcileVisible=()=>{
+    if(document.visibilityState!=='visible')return;
+    refresh();
+    if('WebSocket'in window)for(let round=1;round<=MAX_ROUND;round++)connectRound(round);
+  };
+  root.addEventListener('click',e=>{const b=e.target.closest('[data-stand-group]');if(b){group=b.dataset.standGroup;draw()}});
+  document.addEventListener('visibilitychange',reconcileVisible);
+  window.addEventListener('focus',reconcileVisible);
+  window.addEventListener('pageshow',reconcileVisible);
+  await refresh();
+  if('WebSocket'in window)for(let round=1;round<=MAX_ROUND;round++)connectRound(round);
 }
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot();
 })();
