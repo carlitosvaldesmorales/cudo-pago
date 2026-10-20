@@ -1,0 +1,516 @@
+{
+  "ok": true,
+  "contract": "public-standings-v2",
+  "competition_id": "ANFA-CHEPICA-2026",
+  "competition_model": "TWO_INDEPENDENT_CHAMPIONSHIPS_SHARED_MATCHDAY",
+  "championships": {
+    "PRINCIPAL": {
+      "label": "Campeonato Principal",
+      "included_series": [
+        "TERCERA",
+        "SEGUNDA",
+        "PRIMERA"
+      ],
+      "max_points_per_matchday": 9
+    },
+    "SENIOR": {
+      "label": "Campeonato Senior",
+      "included_series": [
+        "SENIOR"
+      ],
+      "max_points_per_matchday": 3,
+      "independent_from": "PRINCIPAL"
+    }
+  },
+  "rules": {
+    "points_by_series": {
+      "TERCERA": {
+        "win": 2,
+        "draw": 1,
+        "loss": 0,
+        "championship_code": "PRINCIPAL"
+      },
+      "SEGUNDA": {
+        "win": 3,
+        "draw": 1,
+        "loss": 0,
+        "championship_code": "PRINCIPAL"
+      },
+      "PRIMERA": {
+        "win": 4,
+        "draw": 2,
+        "loss": 0,
+        "championship_code": "PRINCIPAL"
+      },
+      "SENIOR": {
+        "win": 3,
+        "draw": 1,
+        "loss": 0,
+        "championship_code": "SENIOR"
+      }
+    },
+    "tiebreak_order": [
+      "TOTAL_POINTS",
+      "HEAD_TO_HEAD_POINTS",
+      "PLAYOFF_MATCH"
+    ],
+    "goal_difference_is_tiebreaker": false,
+    "only_verified_results": true
+  },
+  "groups": [
+    {
+      "group_id": "A",
+      "championships": [
+        {
+          "championship_code": "PRINCIPAL",
+          "label": "Campeonato Principal",
+          "independent": true,
+          "included_series": [
+            "TERCERA",
+            "SEGUNDA",
+            "PRIMERA"
+          ],
+          "max_points_per_matchday": 9,
+          "rows": [
+            {
+              "team_id": "PENAROL_LA_MINA",
+              "team_name": "Peñarol La Mina",
+              "group_id": "A",
+              "championship_code": "PRINCIPAL",
+              "points": 9,
+              "base_points": 9,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 5,
+              "goals_against": 1,
+              "goal_difference": 4,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 1
+            },
+            {
+              "team_id": "JUVENTUD_CHEPICA",
+              "team_name": "Juventud de Chépica",
+              "group_id": "A",
+              "championship_code": "PRINCIPAL",
+              "points": 7,
+              "base_points": 7,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 5,
+              "goals_against": 1,
+              "goal_difference": 4,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 2
+            },
+            {
+              "team_id": "SANTA_ELENA",
+              "team_name": "Santa Elena La Ruda",
+              "group_id": "A",
+              "championship_code": "PRINCIPAL",
+              "points": 5,
+              "base_points": 5,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 4,
+              "goals_against": 3,
+              "goal_difference": 1,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 3
+            },
+            {
+              "team_id": "CUDO",
+              "team_name": "Unión Orilla",
+              "group_id": "A",
+              "championship_code": "PRINCIPAL",
+              "points": 4,
+              "base_points": 4,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 3,
+              "goals_against": 4,
+              "goal_difference": -1,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 4
+            },
+            {
+              "team_id": "SAN_JUAN",
+              "team_name": "San Juan",
+              "group_id": "A",
+              "championship_code": "PRINCIPAL",
+              "points": 2,
+              "base_points": 2,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 1,
+              "goals_against": 5,
+              "goal_difference": -4,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 5
+            },
+            {
+              "team_id": "INDEPENDIENTE",
+              "team_name": "Independiente",
+              "group_id": "A",
+              "championship_code": "PRINCIPAL",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 1,
+              "goals_against": 5,
+              "goal_difference": -4,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 6
+            }
+          ]
+        },
+        {
+          "championship_code": "SENIOR",
+          "label": "Campeonato Senior",
+          "independent": true,
+          "included_series": [
+            "SENIOR"
+          ],
+          "max_points_per_matchday": 3,
+          "rows": [
+            {
+              "team_id": "JUVENTUD_CHEPICA",
+              "team_name": "Juventud de Chépica",
+              "group_id": "A",
+              "championship_code": "SENIOR",
+              "points": 3,
+              "base_points": 3,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 4,
+              "goals_against": 1,
+              "goal_difference": 3,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 1
+            },
+            {
+              "team_id": "PENAROL_LA_MINA",
+              "team_name": "Peñarol La Mina",
+              "group_id": "A",
+              "championship_code": "SENIOR",
+              "points": 3,
+              "base_points": 3,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 2,
+              "goals_against": 1,
+              "goal_difference": 1,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 1
+            },
+            {
+              "team_id": "CUDO",
+              "team_name": "Unión Orilla",
+              "group_id": "A",
+              "championship_code": "SENIOR",
+              "points": 3,
+              "base_points": 3,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 2,
+              "goals_against": 0,
+              "goal_difference": 2,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 1
+            },
+            {
+              "team_id": "INDEPENDIENTE",
+              "team_name": "Independiente",
+              "group_id": "A",
+              "championship_code": "SENIOR",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 1,
+              "goals_against": 2,
+              "goal_difference": -1,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 4
+            },
+            {
+              "team_id": "SAN_JUAN",
+              "team_name": "San Juan",
+              "group_id": "A",
+              "championship_code": "SENIOR",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 1,
+              "goals_against": 4,
+              "goal_difference": -3,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 4
+            },
+            {
+              "team_id": "SANTA_ELENA",
+              "team_name": "Santa Elena La Ruda",
+              "group_id": "A",
+              "championship_code": "SENIOR",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 0,
+              "goals_against": 2,
+              "goal_difference": -2,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "group_id": "B",
+      "championships": [
+        {
+          "championship_code": "PRINCIPAL",
+          "label": "Campeonato Principal",
+          "independent": true,
+          "included_series": [
+            "TERCERA",
+            "SEGUNDA",
+            "PRIMERA"
+          ],
+          "max_points_per_matchday": 9,
+          "rows": [
+            {
+              "team_id": "HURACAN",
+              "team_name": "Huracán",
+              "group_id": "B",
+              "championship_code": "PRINCIPAL",
+              "points": 9,
+              "base_points": 9,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 8,
+              "goals_against": 2,
+              "goal_difference": 6,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 1
+            },
+            {
+              "team_id": "LAS_CRUCES",
+              "team_name": "Las Cruces",
+              "group_id": "B",
+              "championship_code": "PRINCIPAL",
+              "points": 9,
+              "base_points": 9,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 8,
+              "goals_against": 0,
+              "goal_difference": 8,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 1
+            },
+            {
+              "team_id": "LAS_PALMERAS",
+              "team_name": "Las Palmeras",
+              "group_id": "B",
+              "championship_code": "PRINCIPAL",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 2,
+              "goals_against": 8,
+              "goal_difference": -6,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 3
+            },
+            {
+              "team_id": "SAN_AGUSTIN",
+              "team_name": "San Agustín",
+              "group_id": "B",
+              "championship_code": "PRINCIPAL",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 3,
+              "goals_for": 0,
+              "goals_against": 8,
+              "goal_difference": -8,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 3
+            },
+            {
+              "team_id": "SAN_RAMON",
+              "team_name": "San Ramón",
+              "group_id": "B",
+              "championship_code": "PRINCIPAL",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 0,
+              "verified_series": 0,
+              "goals_for": 0,
+              "goals_against": 0,
+              "goal_difference": 0,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 3
+            }
+          ]
+        },
+        {
+          "championship_code": "SENIOR",
+          "label": "Campeonato Senior",
+          "independent": true,
+          "included_series": [
+            "SENIOR"
+          ],
+          "max_points_per_matchday": 3,
+          "rows": [
+            {
+              "team_id": "LAS_CRUCES",
+              "team_name": "Las Cruces",
+              "group_id": "B",
+              "championship_code": "SENIOR",
+              "points": 3,
+              "base_points": 3,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 1,
+              "goals_against": 0,
+              "goal_difference": 1,
+              "head_to_head_points": null,
+              "tied": false,
+              "tiebreak_status": "NONE",
+              "position": 1
+            },
+            {
+              "team_id": "HURACAN",
+              "team_name": "Huracán",
+              "group_id": "B",
+              "championship_code": "SENIOR",
+              "points": 1,
+              "base_points": 1,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 0,
+              "goals_against": 0,
+              "goal_difference": 0,
+              "head_to_head_points": 1,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 2
+            },
+            {
+              "team_id": "LAS_PALMERAS",
+              "team_name": "Las Palmeras",
+              "group_id": "B",
+              "championship_code": "SENIOR",
+              "points": 1,
+              "base_points": 1,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 0,
+              "goals_against": 0,
+              "goal_difference": 0,
+              "head_to_head_points": 1,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 2
+            },
+            {
+              "team_id": "SAN_AGUSTIN",
+              "team_name": "San Agustín",
+              "group_id": "B",
+              "championship_code": "SENIOR",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 1,
+              "verified_series": 1,
+              "goals_for": 0,
+              "goals_against": 1,
+              "goal_difference": -1,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 4
+            },
+            {
+              "team_id": "SAN_RAMON",
+              "team_name": "San Ramón",
+              "group_id": "B",
+              "championship_code": "SENIOR",
+              "points": 0,
+              "base_points": 0,
+              "adjustment_points": 0,
+              "played_matchdays": 0,
+              "verified_series": 0,
+              "goals_for": 0,
+              "goals_against": 0,
+              "goal_difference": 0,
+              "head_to_head_points": 0,
+              "tied": true,
+              "tiebreak_status": "PLAYOFF_REQUIRED",
+              "position": 4
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

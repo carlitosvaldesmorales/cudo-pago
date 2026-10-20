@@ -12,6 +12,7 @@ const publicData=['noticias','equipos','plantel','partidos','tabla','galeria'];
 const forbiddenPublicTokens=['storage.tally.so/private','accessToken=','signature='];
 const fixture=JSON.parse(fs.readFileSync('preview-v8/data/championship-fixture.json','utf8'));
 const series=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-series-results.json','utf8'));
+const publicStandings=JSON.parse(fs.readFileSync('preview-v8/data/anfa-chepica-2026-public-standings.json','utf8'));
 const expectedAdminActions=[
   {label:'Control del club · QA',path:'control/',provider:'CUDO_INTERNAL',readyToken:'Qué necesita atención'},
   {label:'Actividades del club',path:'actividades/',provider:'CUDO_INTERNAL',readyToken:'Actividades del club',backend:'GOOGLE_APPS_SCRIPT_EMBED'},
@@ -86,6 +87,7 @@ function installControlledExternalRoutes(context){
   if(liveMode) return Promise.resolve();
   const matches=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/matches(?:\?|$)/;
   const seriesResults=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/series-results(?:\?|$)/;
+  const standings=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/public-standings(?:\?|$)/;
   return Promise.all([
     context.route(matches,route=>route.fulfill({
       status:200,
@@ -96,6 +98,11 @@ function installControlledExternalRoutes(context){
       status:200,
       contentType:'application/json',
       body:JSON.stringify({ok:true,results:series.results||[]})
+    })),
+    context.route(standings,route=>route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify(publicStandings)
     }))
   ]);
 }
