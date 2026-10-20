@@ -253,12 +253,12 @@
         "TELEGRAM"
       ],
       "canonical_telegram": "@FutbolChepicaBot",
-      "stage": "IMPLEMENTED",
+      "stage": "QA_CERTIFIED",
       "visual_contract": "APPROVED",
       "product_validation": "APPROVED",
       "technical_implementation": "DONE",
-      "qa": "PARTIAL",
-      "runtime_evidence": "TECHNICAL_ONLY_PENDING_DEPLOY",
+      "qa": "PASS",
+      "runtime_evidence": "VERIFIED_SECRETARIAT_WRITE_SURFACE",
       "consumable": false,
       "dependencies": [],
       "runtime_paths": [
@@ -269,7 +269,7 @@
         "sports-bus/worker/secretariat-standings-entry.js",
         "sports-bus/telegram-route-clarity-entry.js"
       ],
-      "gap": "Deploy, QA de runtime y certificación del flujo Secretaría en Telegram pendientes.",
+      "gap": "Validación humana de fluidez visual del Golden Path Secretaría en Telegram pendiente; mecanismo técnico y runtime certificados.",
       "policy_variants": [
         "scope",
         "authority",
@@ -277,7 +277,21 @@
       ],
       "visual_contract_ref": "docs/product/results-govern-secretariat-visual-contract-v1.md",
       "product_validation_evidence": "docs/product/results-govern-secretariat-product-approval-2026-10-20.md",
-      "implementation_secretariat_entry": "sports-bus/worker/secretariat-standings-entry.js"
+      "implementation_secretariat_entry": "sports-bus/worker/secretariat-standings-entry.js",
+      "qa_evidence": [
+        "PR #233 all checks green before merge",
+        "secretariat-standings-adjustment-harness.mjs: RESULT PASS",
+        "Validate Canonical Results Register run 39495497394: SUCCESS",
+        "Validate Public Standings Runtime run 39495497340: SUCCESS",
+        "Audit Sunday Readiness run 39495497559: SUCCESS"
+      ],
+      "deployment_evidence": "Deploy Sports Event Bus run 39495497359: SUCCESS; migration 0029 applied; Worker and Telegram runtime validated",
+      "runtime_smoke": [
+        "Deploy run 39495497359 schema + Worker + primary Telegram + destination Telegram SUCCESS",
+        "3 active Secretariat resolutions and 6 active standings adjustments persisted in D1",
+        "public-standings-v2 reflects Group A administrative deltas after real claims",
+        "historical series scores remain unchanged and VERIFIED"
+      ]
     }
   ],
   "current_frontier": {
