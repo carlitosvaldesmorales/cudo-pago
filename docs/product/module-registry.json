@@ -16,11 +16,17 @@
     "model": "TWO_INDEPENDENT_CHAMPIONSHIPS_SHARED_MATCHDAY",
     "championships": {
       "PRINCIPAL": {
-        "series": ["TERCERA", "SEGUNDA", "PRIMERA"],
+        "series": [
+          "TERCERA",
+          "SEGUNDA",
+          "PRIMERA"
+        ],
         "max_points_per_matchday": 9
       },
       "SENIOR": {
-        "series": ["SENIOR"],
+        "series": [
+          "SENIOR"
+        ],
         "independent_from": "PRINCIPAL",
         "max_points_per_matchday": 3
       }
@@ -69,8 +75,19 @@
       "goal": "Consultar resultados publicados de la jornada deportiva sin mezclar autoridad de campeonatos",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
-      "channels": ["TELEGRAM", "WEB", "API", "STREAMING"],
+      "consumers": [
+        "PUBLIC",
+        "CLUB_ADMIN",
+        "CHEPICA_PLAY",
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": [
+        "TELEGRAM",
+        "WEB",
+        "API",
+        "STREAMING"
+      ],
       "canonical_telegram": "@FutbolChepicaBot",
       "stage": "CONSUMABLE",
       "visual_contract": "APPROVED",
@@ -100,8 +117,18 @@
       "goal": "Consultar un campeonato completo por pantalla, mostrando juntos sus grupos A y B con formato móvil seguro",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
-      "channels": ["TELEGRAM", "API", "WEB"],
+      "consumers": [
+        "PUBLIC",
+        "CLUB_ADMIN",
+        "CHEPICA_PLAY",
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": [
+        "TELEGRAM",
+        "API",
+        "WEB"
+      ],
       "canonical_telegram": "@FutbolChepicaBot",
       "domain_contract": "docs/architecture/competition-domain-adn-v2.md",
       "presentation_architecture": "docs/architecture/human-presentation-adn-v1.md",
@@ -129,7 +156,9 @@
         "SENIOR independent_from=PRINCIPAL"
       ],
       "consumable": false,
-      "dependencies": ["RESULTS-READ"],
+      "dependencies": [
+        "RESULTS-READ"
+      ],
       "runtime_paths": [
         "sports-bus/worker/competition-domain.js",
         "sports-bus/worker/public-standings-entry.js",
@@ -148,10 +177,23 @@
       "persistence_unit": "MATCH_SERIES",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PUBLIC", "CLUB_ADMIN", "CHEPICA_PLAY", "PLATFORM_OPERATOR", "SUPER_ADMIN"],
-      "channels": ["TELEGRAM"],
+      "consumers": [
+        "PUBLIC",
+        "CLUB_ADMIN",
+        "CHEPICA_PLAY",
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": [
+        "TELEGRAM"
+      ],
       "canonical_telegram": "@FutbolChepicaBot",
-      "policy_variants": ["scope", "authority", "submission_status", "provenance"],
+      "policy_variants": [
+        "scope",
+        "authority",
+        "submission_status",
+        "provenance"
+      ],
       "stage": "QA_CERTIFIED",
       "visual_contract": "APPROVED",
       "visual_contract_ref": "docs/product/results-register-visual-contract-v2.md",
@@ -200,27 +242,42 @@
       "id": "RESULTS-GOVERN",
       "capability_key": "RESULTS-GOVERN",
       "name": "Gobernar resultado",
-      "goal": "Validar, corregir, disputar, resolver, anular o restaurar un resultado según autoridad",
+      "goal": "Validar, corregir, disputar, resolver, anular o restaurar resultados y aplicar resoluciones de Secretaría que afecten la tabla sin alterar el marcador histórico",
       "human_facing": true,
       "canonical": true,
-      "consumers": ["PLATFORM_OPERATOR", "SUPER_ADMIN"],
-      "channels": ["TELEGRAM"],
+      "consumers": [
+        "PLATFORM_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "channels": [
+        "TELEGRAM"
+      ],
       "canonical_telegram": "@FutbolChepicaBot",
-      "stage": "DEFINED",
-      "visual_contract": "PENDING",
-      "product_validation": "PENDING",
-      "technical_implementation": "EXISTS_AHEAD_OF_GATE",
+      "stage": "IMPLEMENTED",
+      "visual_contract": "APPROVED",
+      "product_validation": "APPROVED",
+      "technical_implementation": "DONE",
       "qa": "PARTIAL",
-      "runtime_evidence": "TECHNICAL_ONLY",
+      "runtime_evidence": "TECHNICAL_ONLY_PENDING_DEPLOY",
       "consumable": false,
       "dependencies": [],
       "runtime_paths": [
         "sports-bus/worker/result-governance-entry.js",
         "sports-bus/worker/result-governance-ux-entry.js",
         "sports-bus/worker/result-correction-flow-entry.js",
-        "sports-bus/worker/platform-operator-entry.js"
+        "sports-bus/worker/platform-operator-entry.js",
+        "sports-bus/worker/secretariat-standings-entry.js",
+        "sports-bus/telegram-route-clarity-entry.js"
       ],
-      "gap": "La capacidad existe técnicamente pero su contrato de producto sigue pendiente."
+      "gap": "Deploy, QA de runtime y certificación del flujo Secretaría en Telegram pendientes.",
+      "policy_variants": [
+        "scope",
+        "authority",
+        "secretariat_adjustment_requires_super_admin"
+      ],
+      "visual_contract_ref": "docs/product/results-govern-secretariat-visual-contract-v1.md",
+      "product_validation_evidence": "docs/product/results-govern-secretariat-product-approval-2026-10-20.md",
+      "implementation_secretariat_entry": "sports-bus/worker/secretariat-standings-entry.js"
     }
   ],
   "current_frontier": {
