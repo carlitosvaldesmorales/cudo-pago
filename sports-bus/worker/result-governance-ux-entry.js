@@ -141,6 +141,7 @@ async function showResult(env,token,chatId,callback,reporter,matchId,seriesCode)
   if(isSuperAdmin(reporter)){
     if(row.validation_status==='VERIFIED'){
       buttons.push([{text:'✏️ Corregir marcador',callback_data:`rg:correct:${row.match_id}:${row.series_code}`,style:'primary'}]);
+      buttons.push([{text:'🏛️ Reclamo Secretaría',callback_data:`sec:start:${row.match_id}:${row.series_code}`}]);
       buttons.push([{text:'⚠️ Poner en disputa',callback_data:`rg:dispute:${row.match_id}:${row.series_code}`}]);
       buttons.push([{text:'🚫 Anular resultado',callback_data:`rg:annul:${row.match_id}:${row.series_code}`,style:'danger'}]);
     }else if(row.validation_status==='DISPUTED'){

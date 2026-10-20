@@ -33,15 +33,29 @@ jobs:
       - name: Self-test hard runtime lock
         run: |
           set -euo pipefail
-          # RESULTS-REGISTER ya es CONSUMABLE y RESULTS-READ recuperó su aprobación
-          # previa como PRODUCT_VALIDATED. Probar el bloqueo con el módulo que sí
-          # permanece antes de PRODUCT_VALIDATED: RESULTS-GOVERN.
+          cp docs/product/module-registry.json /tmp/module-registry.json
+          restore_registry(){ cp /tmp/module-registry.json docs/product/module-registry.json; }
+          trap restore_registry EXIT
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='docs/product/module-registry.json';
+          const d=JSON.parse(fs.readFileSync(p,'utf8'));
+          const m=d.modules.find(x=>x.id==='RESULTS-GOVERN');
+          if(!m) throw new Error('RESULTS-GOVERN missing');
+          m.stage='DEFINED';
+          m.visual_contract='PENDING';
+          m.product_validation='PENDING';
+          m.technical_implementation='EXISTS_AHEAD_OF_GATE';
+          fs.writeFileSync(p,JSON.stringify(d,null,2)+'\n');
+          NODE
           if CHANGED_FILES='sports-bus/worker/result-governance-entry.js' node scripts/validate-module-registry.mjs; then
-            echo 'Gate failed: RESULTS-GOVERN runtime advanced before PRODUCT_VALIDATED' >&2
+            echo 'Gate failed: synthetic pre-validation runtime advance was not blocked' >&2
             exit 1
           fi
+          restore_registry
+          trap - EXIT
           CHANGED_FILES='docs/architecture/canonical-capability-event-projection-v1.md' node scripts/validate-module-registry.mjs
-          echo 'PASS canonical gate blocks pre-validation runtime work and allows validated module implementation'
+          echo 'PASS canonical gate blocks synthetic pre-validation runtime work and allows validated module implementation'
       - name: Block PR runtime changes ahead of product validation
         if: github.event_name == 'pull_request'
         run: |
