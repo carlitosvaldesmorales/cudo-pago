@@ -2,6 +2,7 @@ import worker from './telegram-migration-entry.js';
 import { handlePublicResultsTableView } from './worker/public-results-table-view.js';
 import { handleResultGovernanceUxRequest } from './worker/result-governance-ux-entry.js';
 import { handleResultCorrectionFlow } from './worker/result-correction-flow-entry.js';
+import { handleSecretariatStandingsRequest } from './worker/secretariat-standings-entry.js';
 import { handleResultGovernanceScopeRequest } from './worker/result-governance-scope-entry.js';
 import { handlePublicResultGovernanceStatus } from './worker/public-result-governance-status-entry.js';
 import { handlePublicChampionshipRequest } from './worker/public-championship-entry.js';
@@ -39,8 +40,10 @@ async function releaseCorrectionSessionForCommand(request, env) {
   if (supplied !== expected) return false;
 
   try {
-    await env.DB.prepare('DELETE FROM telegram_result_governance_sessions WHERE telegram_user_id=?')
-      .bind(String(message.from.id)).run();
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM telegram_result_governance_sessions WHERE telegram_user_id=?').bind(String(message.from.id)),
+      env.DB.prepare('DELETE FROM telegram_secretariat_sessions WHERE telegram_user_id=?').bind(String(message.from.id))
+    ]);
     return true;
   } catch {
     return false;
@@ -136,6 +139,9 @@ export default {
 
     const correctionFlow = await handleResultCorrectionFlow(request.clone(), env);
     if (correctionFlow) return correctionFlow;
+
+    const secretariat = await handleSecretariatStandingsRequest(request.clone(), env);
+    if (secretariat) return secretariat;
 
     const governanceScope = await handleResultGovernanceScopeRequest(request.clone(), env);
     if (governanceScope) return governanceScope;
