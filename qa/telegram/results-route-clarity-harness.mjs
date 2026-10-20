@@ -112,7 +112,7 @@ function assertApprovedMatrix(slot) {
   assert.doesNotMatch(out.text, /<pre>/);
   assert.doesNotMatch(out.text, /RESULTADOS REGISTRADOS/);
   const callbacks = (out.reply_markup?.inline_keyboard || []).flat().map(x => x.callback_data);
-  assert.deepEqual(callbacks, ['p3:search', 'p3:public']);
+  assert.deepEqual(callbacks, ['p3:search', 'nav:back']);
 }
 
 async function run() {
