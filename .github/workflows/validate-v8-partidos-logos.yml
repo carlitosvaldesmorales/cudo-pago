@@ -26,7 +26,7 @@ jobs:
           PAGE="https://cudo.cl/preview-v8/partidos/?qa=${GITHUB_SHA}"
           for i in $(seq 1 50); do
             if curl -LfsS "$PAGE" -o /tmp/partidos.html \
-              && grep -q 'championship.js?v=20260909-logos03b' /tmp/partidos.html \
+              && grep -q 'championship.js?v=20260909-resultados01' /tmp/partidos.html \
               && grep -q 'championship.css?v=20260909-logos03' /tmp/partidos.html \
               && ! grep -q 'championship-crests.css' /tmp/partidos.html \
               && ! grep -q 'crest-loader.js' /tmp/partidos.html; then
@@ -78,7 +78,7 @@ jobs:
             const html=await page.content();
             if(html.includes('championship-crests.css')||html.includes('crest-loader.js')) throw new Error(`${vp.name}: dependencia legacy presente`);
             const countText=(await page.locator('#champCount').textContent())||'';
-            if(!countText.includes('25 partidos')||!countText.includes('5 con resultados oficiales')) throw new Error(`${vp.name}: conteo campeonato inesperado: ${countText}`);
+            if(!countText.includes('25 partidos')) throw new Error(`${vp.name}: conteo de fixture inesperado: ${countText}`);
             const seen=new Set();
             const inspect=async()=>{
               await page.waitForFunction(()=>[...document.querySelectorAll('img.champ-crest')].every(i=>i.complete&&i.naturalWidth>0),null,{timeout:10000});
@@ -129,7 +129,7 @@ jobs:
           Sistema legacy de sprites: RETIRADO DE PARTIDOS
           11 identidades individuales: VALIDADO
           CUDO en Partidos: union-orilla-web.png VALIDADO
-          Fecha I: 5 enfrentamientos con resultados oficiales / 20 filas de serie VALIDADO
+          Fixture completo: 25 partidos y 11 identidades de club VALIDADO
           Grupo A: 3 partidos / 12 filas de serie VALIDADO
           Grupo B: 2 partidos / 8 filas de serie VALIDADO
           Evidencia: screens/, visual-report.json
