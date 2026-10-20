@@ -13,6 +13,7 @@ const publicContracts={
 };
 const fixture=readJson('preview-v8/data/championship-fixture.json');
 const series=readJson('preview-v8/data/anfa-chepica-2026-series-results.json');
+const publicStandings=readJson('preview-v8/data/anfa-chepica-2026-public-standings.json');
 
 const views=[
   {name:'inicio',path:'/',signature:'.hero-v8'},
@@ -41,6 +42,7 @@ const banned=/\b(QA|SEED|MOCK|PREVIEW|FUENTE PÚBLICA|CONTRATO VISUAL|DATOS DE P
 async function installControlledSportsRoutes(context){
   const matches=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/matches(?:\?|$)/;
   const seriesResults=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/series-results(?:\?|$)/;
+  const standings=/^https:\/\/cudo-sports-event-bus\.carlos-valdes-morales\.workers\.dev\/api\/v1\/public-standings(?:\?|$)/;
   await Promise.all([
     context.route(matches,route=>route.fulfill({
       status:200,
@@ -51,6 +53,11 @@ async function installControlledSportsRoutes(context){
       status:200,
       contentType:'application/json',
       body:JSON.stringify({ok:true,results:series.results||[]})
+    })),
+    context.route(standings,route=>route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify(publicStandings)
     }))
   ]);
 }
