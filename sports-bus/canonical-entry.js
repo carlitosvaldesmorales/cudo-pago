@@ -12,6 +12,7 @@ import { handleAccessRequestIntake } from './worker/access-request-intake-entry.
 import { handleAccessRequestConfirmation } from './worker/access-request-confirm-entry.js';
 import { handleAccessRequestReview } from './worker/access-request-review-entry.js';
 import { prepareTelegramEntryContext } from './worker/telegram-entry-context.js';
+import { handleMatchDisciplineRequest } from './worker/match-discipline-entry.js';
 
 export { ResultsStreamHub };
 
@@ -109,6 +110,8 @@ export default {
 
     const canonical=await canonicalTelegramRuntime(request,env);
     if(canonical){
+      const discipline=await handleMatchDisciplineRequest(canonical.request,canonical.env,ctx);
+      if(discipline) return discipline;
       const result=await handleResultsRegisterRequest(canonical.request,canonical.env,ctx);
       if(result) return result;
     }

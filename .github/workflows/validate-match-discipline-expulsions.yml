@@ -1,0 +1,64 @@
+name: Validate Match Discipline Expulsions
+
+on:
+  pull_request:
+    branches: [feature/sports-event-bus-v1]
+    paths:
+      - 'sports-bus/migrations/0031_match_discipline_expulsions.sql'
+      - 'sports-bus/worker/match-discipline-entry.js'
+      - 'sports-bus/worker/results-register-v2-entry.js'
+      - 'sports-bus/worker/telegram-dirigentes-home-entry.js'
+      - 'sports-bus/canonical-entry.js'
+      - 'qa/telegram/match-discipline-expulsions-harness.mjs'
+      - 'qa/telegram/results-register-canonical-harness.mjs'
+      - 'qa/telegram/dirigentes-home-canonical-harness.mjs'
+      - 'qa/telegram/super-admin-capability-reachability-harness.mjs'
+      - 'docs/product/telegram-match-discipline-expulsions-v1.md'
+      - 'docs/architecture/super-admin-capability-reachability-v1.json'
+      - '.github/workflows/validate-match-discipline-expulsions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Syntax
+        run: |
+          set -euo pipefail
+          node --check sports-bus/worker/match-discipline-entry.js
+          node --check sports-bus/worker/results-register-v2-entry.js
+          node --check sports-bus/worker/telegram-dirigentes-home-entry.js
+          node --check sports-bus/canonical-entry.js
+          node --check qa/telegram/match-discipline-expulsions-harness.mjs
+          python3 -m json.tool docs/architecture/super-admin-capability-reachability-v1.json >/dev/null
+
+      - name: Validate disciplinary registry
+        run: |
+          set -euo pipefail
+          node qa/telegram/match-discipline-expulsions-harness.mjs | tee /tmp/discipline.log
+          grep -q 'PASS confirmed expulsion persists factual incident + event + audit without automatic sanction' /tmp/discipline.log
+          grep -q 'PASS normalized duplicate expulsion fails closed' /tmp/discipline.log
+          grep -q 'PASS mistaken expulsion can be voided without deleting history' /tmp/discipline.log
+          grep -q 'PASS current PUBLISH_MATCH_EVENT boundary keeps canonical discipline writes SUPER_ADMIN-only' /tmp/discipline.log
+          grep -q 'RESULT: PASS' /tmp/discipline.log
+
+      - name: Validate canonical reachability and regressions
+        run: |
+          set -euo pipefail
+          node qa/telegram/results-register-canonical-harness.mjs | tee /tmp/results.log
+          grep -q 'PASS SUPER_ADMIN match dashboard exposes and routes to canonical Expulsados entrypoint' /tmp/results.log
+          grep -q 'RESULT: PASS' /tmp/results.log
+          node qa/telegram/dirigentes-home-canonical-harness.mjs | tee /tmp/home.log
+          grep -q 'RESULT: PASS' /tmp/home.log
+          node qa/telegram/super-admin-capability-reachability-harness.mjs | tee /tmp/reachability.log
+          grep -q 'PASS PUBLISH_MATCH_EVENT is now bounded to canonical expulsion registration' /tmp/reachability.log
+          grep -q 'RESULT: PASS' /tmp/reachability.log
+          grep -q 'EXPULSION_FACT_NEQ_SANCTION_DECISION' docs/product/telegram-match-discipline-expulsions-v1.md

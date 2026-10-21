@@ -1,4 +1,4 @@
-import { ROLE, effectiveRole, getActivePartnerMembership } from './access-control.js';
+import { CAPABILITY, ROLE, effectiveRole, getActivePartnerMembership, hasCapability } from './access-control.js';
 import { publishRoundSnapshots } from './results-stream-entry.js';
 import { applyResultsRegisterPolicy, outcomeNotice } from './results-register-policy.js';
 import { NAVIGATION_ACTION, navigationButton } from './telegram-navigation-contract.js';
@@ -294,7 +294,8 @@ async function actorContext(db,actorId){
   const role=effectiveRole(reporter);
   const membership=await getActivePartnerMembership(db,actorId,COMPETITION_ID);
   const officialAuthority=!!reporter&&Number(reporter.active)===1&&reporter.trust_level==='VERIFIED'&&[ROLE.CLUB_ADMIN,ROLE.PLATFORM_OPERATOR,ROLE.SUPER_ADMIN].includes(role);
-  return {reporter,role,membership,officialAuthority,scopeClub:role===ROLE.CLUB_ADMIN&&reporter?.trust_level==='VERIFIED'?reporter.club_id:null,denied:false};
+  const disciplineAuthority=!!reporter&&Number(reporter.active)===1&&reporter.trust_level==='VERIFIED'&&hasCapability(reporter,CAPABILITY.PUBLISH_MATCH_EVENT);
+  return {reporter,role,membership,officialAuthority,disciplineAuthority,scopeClub:role===ROLE.CLUB_ADMIN&&reporter?.trust_level==='VERIFIED'?reporter.club_id:null,denied:false};
 }
 
 async function scopedMatch(db,ctx,matchId){
@@ -353,6 +354,11 @@ async function showMatchDashboard(env,chatId,ctx,actorId,match,messageId=null,no
   }
 
   const rows=[[buttons[0],buttons[1]],[buttons[2],buttons[3]]];
+  if(ctx.disciplineAuthority){
+    const dq=await env.DB.prepare("SELECT COUNT(*) AS n FROM match_disciplinary_incidents WHERE match_id=? AND incident_status='ACTIVE'").bind(match.match_id).first();
+    const dn=Number(dq?.n||0);
+    rows.push([{text:`🟥 Expulsados (${dn})`,callback_data:`disc:match:${match.match_id}`}]);
+  }
   rows.push([{text:'✅ Terminar carga del partido',callback_data:`rr:finish:${match.match_id}`}]);
   rows.push([{text:`⬅️ Volver a ${match.round_label||`Fecha ${match.round_no}`}`,callback_data:`rr:date:${match.round_no}`}]);
   const prefix=notice?`${notice}\n\n`:'';

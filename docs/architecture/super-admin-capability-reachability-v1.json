@@ -118,15 +118,21 @@
     },
     {
       "capability": "PUBLISH_MATCH_EVENT",
-      "status": "GAP",
-      "gap_id": "GAP_SUPER_ADMIN_PUBLISH_MATCH_EVENT_SCOPE",
+      "status": "ABSORBED",
       "evidence": [
-        "Capability is declared in access-control matrix",
-        "No Sports Event Bus worker implementation references PUBLISH_MATCH_EVENT",
-        "Current Chépica Play contract explicitly excludes match coverage/live-event capture"
+        "User intent confirmed on 2026-10-21: register expelled players per match in Telegram to maintain the disciplinary record",
+        "sports-bus/worker/match-discipline-entry.js authorizes writes through PUBLISH_MATCH_EVENT",
+        "sports-bus/migrations/0031_match_discipline_expulsions.sql persists factual disciplinary incidents",
+        "qa/telegram/match-discipline-expulsions-harness.mjs proves create, duplicate guard, immutable void history and audit",
+        "Current Chépica Play contract remains excluded from match-event capture"
       ],
-      "next_discovery": "Confirm the intended meaning and current scope of publishing a match event before implementation.",
-      "note": "A declared authorization does not prove a product requirement."
+      "bounded_scope": "Canonical SUPER_ADMIN-only registration of match expulsions (player expelled) with no automatic sanction consequence.",
+      "remaining_gap": "Competition-specific suspension/fine/eligibility policy and any authority expansion beyond SUPER_ADMIN require separate explicit materialization.",
+      "note": "PUBLISH_MATCH_EVENT now has one real bounded product meaning; do not generalize it to arbitrary live events.",
+      "entrypoints": [
+        "Dirigentes → Registrar resultados → Partido → Expulsados",
+        "Dirigentes → Expulsados / sanciones"
+      ]
     },
     {
       "capability": "MANAGE_POLICY",

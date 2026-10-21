@@ -28,7 +28,7 @@ globalThis.fetch=async(url,init={})=>{
   return new Response(JSON.stringify({ok:true,result:{message_id:body.message_id||55}}),{status:200,headers:{'content-type':'application/json'}});
 };
 
-const ACTOR={PUBLIC:{id:9931001,first_name:'Publico'},CLUB:{id:9931002,first_name:'Dirigente'}};
+const ACTOR={PUBLIC:{id:9931001,first_name:'Publico'},CLUB:{id:9931002,first_name:'Dirigente'},SUPER:{id:9931004,first_name:'Admin Global'}};
 let updateId=930000;
 function applyMigrations(){for(const f of fs.readdirSync(migrations).filter(x=>x.endsWith('.sql')).sort())env.DB.exec(fs.readFileSync(path.join(migrations,f),'utf8'));}
 async function safeSecret(){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(env.TELEGRAM_WEBHOOK_SECRET));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('');}
@@ -105,6 +105,19 @@ try{
   const foreign=round3.find(m=>m.match_id!==own.match_id&&m.home_id!=='UNION-ORILLA'&&m.away_id!=='UNION-ORILLA');assert.ok(foreign);
   r=await cb(ACTOR.CLUB,`rr:match:${foreign.match_id}`);assert.equal(r.handled,'results_register_scope_denied');
   console.log('PASS forged out-of-scope match callback is rejected');
+
+  await seed(ACTOR.SUPER,'SUPER_ADMIN',null,'VERIFIED');
+  calls.length=0;
+  r=await cb(ACTOR.SUPER,`rr:match:${publicMatch.match_id}`);
+  assert.equal(r.handled,'results_register_match_dashboard');
+  const superDashboard=[...calls].reverse().find(x=>x.method==='editMessageText'||x.method==='sendMessage');
+  const superButtons=(superDashboard?.body?.reply_markup?.inline_keyboard||[]).flat();
+  assert.ok(superButtons.some(x=>x.callback_data===`disc:match:${publicMatch.match_id}`&&/Expulsados/.test(x.text)));
+  r=await cb(ACTOR.SUPER,`disc:match:${publicMatch.match_id}`);
+  assert.equal(r.handled,'match_discipline_match');
+  const disciplineSurface=[...calls].reverse().find(x=>x.method==='editMessageText'||x.method==='sendMessage');
+  assert.match(String(disciplineSurface?.body?.text||''),/EXPULSADOS DEL PARTIDO/);
+  console.log('PASS SUPER_ADMIN match dashboard exposes and routes to canonical Expulsados entrypoint');
 
   r=await guided(ACTOR.CLUB,own,'PRIMERA',1,0);assert.equal(r.outcome,'FIRST_OFFICIAL');
   const official=await one("SELECT * FROM match_series_results WHERE match_id=? AND series_code='PRIMERA'",own.match_id);assert.equal(Number(official.home_score),1);assert.equal(Number(official.away_score),0);assert.equal(official.validation_status,'VERIFIED');

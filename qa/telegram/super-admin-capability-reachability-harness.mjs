@@ -32,13 +32,13 @@ for(const item of dispositions){
 }
 
 const byCapability=Object.fromEntries(dispositions.map(x=>[x.capability,x]));
-for(const capability of ['REVIEW_RESULT','GOVERN_RESULTS','MANAGE_CLUB_RESULTS','MANAGE_ACCESS']){
+for(const capability of ['REVIEW_RESULT','GOVERN_RESULTS','MANAGE_CLUB_RESULTS','MANAGE_ACCESS','PUBLISH_MATCH_EVENT']){
   assert.equal(byCapability[capability]?.status,'ABSORBED',`${capability} must remain absorbed by the canonical admin surface`);
 }
 assert.equal(byCapability.READ_COMPETITION?.status,'MOVED');
 assert.equal(byCapability.OBSERVE_RESULT?.status,'MOVED');
 
-for(const capability of ['MANAGE_CLUBS','MANAGE_CONTENT','VIEW_AUDIT','PUBLISH_MATCH_EVENT','MANAGE_POLICY','GRANT_SUPER_ADMIN']){
+for(const capability of ['MANAGE_CLUBS','MANAGE_CONTENT','VIEW_AUDIT','MANAGE_POLICY','GRANT_SUPER_ADMIN']){
   assert.equal(byCapability[capability]?.status,'GAP',`${capability} must remain an explicit GAP until evidence changes`);
 }
 
@@ -47,5 +47,6 @@ assert.match(byCapability.GRANT_SUPER_ADMIN.note,/security boundary/i);
 
 console.log('PASS all declared SUPER_ADMIN capabilities have an explicit reachability disposition');
 console.log('PASS result/access capabilities remain reachable after canonical surface supersession');
+console.log('PASS PUBLISH_MATCH_EVENT is now bounded to canonical expulsion registration');
 console.log('PASS unresolved privileged/platform capabilities remain explicit GAPs instead of inferred features');
 console.log('RESULT: PASS');
