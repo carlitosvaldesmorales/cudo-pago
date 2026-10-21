@@ -136,6 +136,9 @@ try{
   assert.match(screen.body.text,/ADMIN GLOBAL/);
   assert.ok(callbacks(screen).includes('tp:requests'));
   assert.ok(callbacks(screen).includes('tp:admins'));
+  assert.ok(callbacks(screen).includes('disc:list'));
+  assert.ok(labels(screen).some(label=>/Expulsados \/ sanciones/.test(label)));
+  assert.match(screen.body.text,/Expulsados activos: 0/);
   assert.ok(callbacks(screen).includes('rr:dates'));
   assert.ok(!callbacks(screen).includes('tp:mymatches'),'SUPER_ADMIN must not fork into the legacy club/global result capture');
   assert.ok(labels(screen).includes('⚽ Registrar resultados'));

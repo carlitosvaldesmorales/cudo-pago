@@ -119,13 +119,14 @@ function isVerifiedClubAdmin(reporter){
 
 async function renderDirigentesHome(db,reporter,actorId){
   if(isSuperAdmin(reporter)){
-    const [pendingAccess,pendingResults,clubActive,clubTotal,associationActive,associationTotal]=await Promise.all([
+    const [pendingAccess,pendingResults,clubActive,clubTotal,associationActive,associationTotal,activeExpulsions]=await Promise.all([
       db.prepare("SELECT COUNT(*) AS n FROM access_requests WHERE status='PENDING'").first(),
       db.prepare("SELECT COUNT(*) AS n FROM public_result_submissions WHERE status='SUBMITTED'").first(),
       db.prepare("SELECT COUNT(*) AS n FROM reporters WHERE role='CLUB_ADMIN' AND active=1").first(),
       db.prepare("SELECT COUNT(*) AS n FROM reporters WHERE role='CLUB_ADMIN'").first(),
       db.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE role='ASSOCIATION_DIRIGENTE' AND scope_type='PLATFORM' AND scope_id='FUTBOL-CHEPICA' AND active=1").first(),
-      db.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE role='ASSOCIATION_DIRIGENTE' AND scope_type='PLATFORM' AND scope_id='FUTBOL-CHEPICA'").first()
+      db.prepare("SELECT COUNT(*) AS n FROM actor_scope_grants WHERE role='ASSOCIATION_DIRIGENTE' AND scope_type='PLATFORM' AND scope_id='FUTBOL-CHEPICA'").first(),
+      db.prepare("SELECT COUNT(*) AS n FROM match_disciplinary_incidents WHERE incident_status='ACTIVE'").first()
     ]);
     const pendingAccessN=Number(pendingAccess?.n||0);
     const pendingResultsN=Number(pendingResults?.n||0);
@@ -133,15 +134,17 @@ async function renderDirigentesHome(db,reporter,actorId){
     const clubTotalN=Number(clubTotal?.n||0);
     const associationActiveN=Number(associationActive?.n||0);
     const associationTotalN=Number(associationTotal?.n||0);
+    const activeExpulsionsN=Number(activeExpulsions?.n||0);
     return {
       state:'AUTHORIZED_GLOBAL',
-      text:`🛡 FÚTBOL CHÉPICA · ADMIN GLOBAL\n\nSolicitudes pendientes: ${pendingAccessN}\nResultados por revisar: ${pendingResultsN}\nDirigentes clubes: ${clubActiveN}/${clubTotalN}\nDirigentes asociación: ${associationActiveN}/${associationTotalN}`,
+      text:`🛡 FÚTBOL CHÉPICA · ADMIN GLOBAL\n\nSolicitudes pendientes: ${pendingAccessN}\nResultados por revisar: ${pendingResultsN}\nExpulsados activos: ${activeExpulsionsN}\nDirigentes clubes: ${clubActiveN}/${clubTotalN}\nDirigentes asociación: ${associationActiveN}/${associationTotalN}`,
       keyboard:[
         [{text:`🔔 Solicitudes (${pendingAccessN})`,callback_data:'tp:requests'}],
         [{text:`🟡 Resultados pendientes (${pendingResultsN})`,callback_data:'pr:pending'}],
         [{text:'👥 Dirigentes',callback_data:'tp:admins'}],
         [{text:'⚽ Registrar resultados',callback_data:CANONICAL_RESULTS_ENTRY}],
         [{text:'🛡 Gobierno de resultados',callback_data:'rg:list'}],
+        [{text:`🟥 Expulsados / sanciones (${activeExpulsionsN})`,callback_data:'disc:list'}],
         [{text:'📋 Resultados registrados',callback_data:'tp:registered'}],
         [{text:'🏠 Inicio',callback_data:'tp:home'}]
       ]
