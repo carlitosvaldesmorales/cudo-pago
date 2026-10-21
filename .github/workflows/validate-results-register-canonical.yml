@@ -45,6 +45,8 @@ jobs:
         run: node qa/telegram/super-admin-capability-reachability-harness.mjs
       - name: Secretariat standings adjustments
         run: node qa/telegram/secretariat-standings-adjustment-harness.mjs
+      - name: Secretariat awarded-win migration
+        run: node qa/telegram/secretariat-awarded-win-migration-harness.mjs
       - name: Root contract assertions
         run: |
           set -euo pipefail
@@ -53,6 +55,7 @@ jobs:
           grep -q 'RESULT: PASS' <(node qa/telegram/capability-supersession-absorption-harness.mjs)
           grep -q 'RESULT: PASS' <(node qa/telegram/super-admin-capability-reachability-harness.mjs)
           grep -q 'RESULT: PASS' <(node qa/telegram/secretariat-standings-adjustment-harness.mjs)
+          grep -q 'RESULT: PASS' <(node qa/telegram/secretariat-awarded-win-migration-harness.mjs)
           grep -q 'SUPER_ADMIN_CAPABILITY_REACHABILITY_V1' docs/architecture/super-admin-capability-reachability-v1.json
           grep -q 'SUPERSESSION_REQUIRES_CAPABILITY_ABSORPTION' docs/architecture/capability-supersession-absorption-adn-v1.md
           grep -q 'ROUTING_PRECEDENCE_MUST_NOT_HIDE_AUTHORIZED_CAPABILITIES' docs/architecture/capability-supersession-absorption-adn-v1.md
@@ -61,7 +64,7 @@ jobs:
           grep -q 'results-register-visual-contract-v2.md' docs/product/module-registry.json
           grep -q 'ONE_RESULT_CAPTURE_CAPABILITY_ALL_IDENTITIES' docs/architecture/results-register-role-parity-adn-v1.md
           grep -q 'ROLE_CHANGES_SCOPE_AND_AUTHORITY_NOT_CAPTURE_UX' docs/architecture/results-register-role-parity-adn-v1.md
-          grep -q 'SECRETARIAT_POINTS_TRANSFER_PRESERVES_SCORE' docs/product/secretariat-standings-telegram-v1.md
+          grep -q 'SECRETARIAT_AWARD_WIN_PRESERVES_SCORE' docs/product/secretariat-standings-telegram-v1.md
           grep -q 'editMessageText' sports-bus/worker/results-register-v2-entry.js
           grep -q 'RESULTADOS DEL PARTIDO' sports-bus/worker/results-register-v2-entry.js
           grep -q 'showMatchDashboard' sports-bus/worker/results-register-v2-entry.js

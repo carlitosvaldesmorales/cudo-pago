@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import worker from '../../sports-bus/canonical-entry.js';
-import {sportingPointsForTeam} from '../../sports-bus/worker/secretariat-standings-entry.js';
+import {sportingPointsForTeam,administrativeAwardForSanction} from '../../sports-bus/worker/secretariat-standings-entry.js';
 import {D1SqliteAdapter} from './d1-sqlite-adapter.mjs';
 
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
@@ -80,8 +80,11 @@ try{
 
   assert.equal(sportingPointsForTeam({series_code:'SEGUNDA',home_id:'SAN-JUAN',away_id:'JUV-CHEPICA',home_score:0,away_score:3},'JUV-CHEPICA'),3);
   assert.equal(sportingPointsForTeam({series_code:'TERCERA',home_id:'JUV-CHEPICA',away_id:'INDEPENDIENTE',home_score:1,away_score:0},'JUV-CHEPICA'),2);
-  assert.equal(sportingPointsForTeam({series_code:'SEGUNDA',home_id:'SANTA-ELENA',away_id:'JUV-CHEPICA',home_score:1,away_score:1},'JUV-CHEPICA'),1);
-  console.log('PASS transfer amount follows actual sporting points, including draw=1');
+  const drawRow={series_code:'SEGUNDA',home_id:'SANTA-ELENA',away_id:'JUV-CHEPICA',home_score:1,away_score:1};
+  assert.equal(sportingPointsForTeam(drawRow,'JUV-CHEPICA'),1);
+  const drawAward=administrativeAwardForSanction(drawRow,'JUV-CHEPICA');
+  assert.deepEqual(drawAward,{policy:'AWARD_OPPONENT_WIN',sanctioned_team_id:'JUV-CHEPICA',beneficiary_team_id:'SANTA-ELENA',sanctioned_points_before:1,sanctioned_target_points:0,sanctioned_delta:-1,beneficiary_points_before:1,beneficiary_target_points:3,beneficiary_delta:2});
+  console.log('PASS awarded-win policy converts Segunda draw 1-1 points into sanctioned 0 / beneficiary 3');
 
   let out=await callback(SUPER,'rg:r:A-F1-M3:SEGUNDA');
   assert.equal(out.handled,'result_governance_ux_detail');
@@ -102,8 +105,8 @@ try{
   assert.equal(out.handled,'secretariat_adjustment_start');
   const startCallbacks=callbacks();
   assert.ok(startCallbacks.includes('sec:pick:A-F1-M3:SEGUNDA:AWAY'));
-  assert.match(String(lastScreen().text),/Juventud de Chépica: <b>3<\/b> pts deportivos/);
-  console.log('PASS Secretaría previews sporting points without changing score');
+  assert.match(String(lastScreen().text),/Juventud de Chépica: <b>3<\/b> pts en cancha/);
+  console.log('PASS Secretaría previews awarded-win policy without changing score');
 
   out=await callback(SUPER,'sec:pick:A-F1-M3:SEGUNDA:AWAY');
   assert.equal(out.handled,'secretariat_adjustment_wait_reason');
@@ -112,7 +115,7 @@ try{
   assert.equal(session.beneficiary_team_id,'SAN-JUAN');
   assert.equal(session.points_amount,3);
   assert.equal(session.phase,'AWAIT_REASON');
-  console.log('PASS transfer direction + amount materialized in bounded session');
+  console.log('PASS awarded-win direction + target win points materialized in bounded session');
 
   out=await message(SUPER,'Carnet vencido');
   assert.equal(out.handled,'secretariat_adjustment_confirmation');
@@ -130,13 +133,16 @@ try{
   const resolution=await one("SELECT * FROM secretariat_standings_resolutions WHERE match_id='A-F1-M3' AND series_code='SEGUNDA' AND status='ACTIVE'");
   assert.ok(resolution);
   assert.equal(resolution.points_amount,3);
+  assert.equal(resolution.resolution_policy,'AWARD_OPPONENT_WIN');
   assert.equal(resolution.sanctioned_team_id,'JUV-CHEPICA');
   assert.equal(resolution.beneficiary_team_id,'SAN-JUAN');
+  assert.equal(resolution.sanctioned_points_delta,-3);
+  assert.equal(resolution.beneficiary_points_delta,3);
   const adjustments=await all("SELECT team_id,points_delta FROM standings_adjustments WHERE adjustment_id LIKE ? ORDER BY team_id",`${resolution.resolution_id}%`);
   assert.deepEqual(adjustments.map(x=>[x.team_id,x.points_delta]),[['JUV-CHEPICA',-3],['SAN-JUAN',3]]);
-  assert.ok(await one("SELECT * FROM events WHERE event_type='standings.secretariat.points_transferred' AND match_id='A-F1-M3'"));
-  assert.ok(await one("SELECT * FROM permission_audit WHERE action='APPLY_SECRETARIAT_STANDINGS_ADJUSTMENT' AND resource_id=?",resolution.resolution_id));
-  console.log('PASS atomic -3/+3 resolution preserves historical score + audit');
+  assert.ok(await one("SELECT * FROM events WHERE event_type='standings.secretariat.win_awarded' AND match_id='A-F1-M3'"));
+  assert.ok(await one("SELECT * FROM permission_audit WHERE action='APPLY_SECRETARIAT_AWARDED_WIN' AND resource_id=?",resolution.resolution_id));
+  console.log('PASS atomic awarded win -3/+3 preserves historical score + audit');
 
   const standingsRes=await worker.fetch(new Request('https://qa.invalid/api/v1/public-standings'),env,{});
   assert.equal(standingsRes.status,200);
@@ -146,14 +152,53 @@ try{
   const juv=principal.rows.find(x=>x.team_id==='JUV-CHEPICA');
   assert.equal(sj.adjustment_points,3);
   assert.equal(juv.adjustment_points,-3);
-  console.log('PASS public-standings-v2 consumes Secretaría transfer automatically');
+  console.log('PASS public-standings-v2 consumes Secretaría awarded-win adjustments automatically');
 
   await callback(SUPER,'sec:start:A-F1-M3:SEGUNDA');
   out=await callback(SUPER,'sec:pick:A-F1-M3:SEGUNDA:AWAY');
   assert.equal(out.handled,'secretariat_adjustment_duplicate_guard');
   assert.equal((await all("SELECT * FROM secretariat_standings_resolutions WHERE match_id='A-F1-M3' AND series_code='SEGUNDA'")).length,1);
   assert.equal((await all("SELECT * FROM standings_adjustments WHERE adjustment_id LIKE ?",`${resolution.resolution_id}%`)).length,2);
-  console.log('PASS duplicate transfer blocked');
+  console.log('PASS duplicate awarded-win resolution blocked');
+
+  // Critical regression: a draw is not a one-point transfer. The beneficiary receives the full win value.
+  const drawNow=new Date().toISOString();
+  await env.DB.prepare(`INSERT OR REPLACE INTO match_series_results
+    (result_id,match_id,series_code,home_score,away_score,validation_status,source_type,source_label,source_ref,played_on,created_at,updated_at)
+    VALUES ('A-F3-M1-SEGUNDA','A-F3-M1','SEGUNDA',1,1,'VERIFIED','QA_FIXTURE','QA Secretaría awarded-win regression','qa-a-f3-m1-segunda','2026-09-13',?,?)`)
+    .bind(drawNow,drawNow).run();
+  out=await callback(SUPER,'sec:start:A-F3-M1:SEGUNDA');
+  assert.equal(out.handled,'secretariat_adjustment_start');
+  assert.ok(callbacks().includes('sec:pick:A-F3-M1:SEGUNDA:AWAY'));
+  assert.match(String(lastScreen().text),/otorgará al rival los <b>3 pts de victoria<\/b>/);
+  out=await callback(SUPER,'sec:pick:A-F3-M1:SEGUNDA:AWAY');
+  assert.equal(out.handled,'secretariat_adjustment_wait_reason');
+  session=await one('SELECT * FROM telegram_secretariat_sessions WHERE telegram_user_id=?',String(SUPER.id));
+  assert.equal(session.points_amount,3);
+  assert.match(String(lastScreen().text),/Juventud de Chépica: <b>1 → 0<\/b> pts \(-1\)/);
+  assert.match(String(lastScreen().text),/Santa Elena La Ruda: <b>1 → 3<\/b> pts \(\+2\)/);
+  await message(SUPER,'Fallo de Secretaría: victoria para Santa Elena La Ruda');
+  out=await callback(SUPER,'sec:apply');
+  assert.equal(out.handled,'secretariat_adjustment_applied');
+  const drawResolution=await one("SELECT * FROM secretariat_standings_resolutions WHERE match_id='A-F3-M1' AND series_code='SEGUNDA' AND status='ACTIVE'");
+  assert.equal(drawResolution.resolution_policy,'AWARD_OPPONENT_WIN');
+  assert.equal(drawResolution.points_amount,3);
+  assert.equal(drawResolution.sanctioned_points_before,1);
+  assert.equal(drawResolution.sanctioned_target_points,0);
+  assert.equal(drawResolution.sanctioned_points_delta,-1);
+  assert.equal(drawResolution.beneficiary_points_before,1);
+  assert.equal(drawResolution.beneficiary_target_points,3);
+  assert.equal(drawResolution.beneficiary_points_delta,2);
+  const drawAdjustments=await all("SELECT team_id,points_delta FROM standings_adjustments WHERE adjustment_id LIKE ? ORDER BY team_id",`${drawResolution.resolution_id}%`);
+  assert.deepEqual(drawAdjustments.map(x=>[x.team_id,x.points_delta]),[['JUV-CHEPICA',-1],['SANTA-ELENA',2]]);
+  const drawScore=await one("SELECT home_score,away_score FROM match_series_results WHERE match_id='A-F3-M1' AND series_code='SEGUNDA'");
+  assert.equal(drawScore.home_score,1);
+  assert.equal(drawScore.away_score,1);
+  const standings2=await (await worker.fetch(new Request('https://qa.invalid/api/v1/public-standings'),env,{})).json();
+  const principal2=championship(standings2,'A','PRINCIPAL');
+  assert.equal(principal2.rows.find(x=>x.team_id==='SANTA-ELENA').adjustment_points,2);
+  assert.equal(principal2.rows.find(x=>x.team_id==='JUV-CHEPICA').adjustment_points,-4);
+  console.log('PASS regression: Segunda 1-1 + Secretaría win => Juventud -1 and Santa Elena +2, score preserved');
 
   console.log('RESULT: PASS');
 }finally{
