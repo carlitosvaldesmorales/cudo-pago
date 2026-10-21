@@ -9,6 +9,8 @@ on:
       - 'sports-bus/cors-entry.js'
       - 'sports-bus/migrations/**'
       - 'qa/telegram/dirigentes-lifecycle-harness.mjs'
+      - 'sports-bus/worker/telegram-dirigentes-home-entry.js'
+      - 'docs/product/telegram-dirigentes-directory-v2.md'
       - 'qa/telegram/d1-sqlite-adapter.mjs'
       - '.github/workflows/validate-dirigentes-lifecycle.yml'
   workflow_dispatch:
@@ -36,7 +38,11 @@ jobs:
         run: |
           set -euo pipefail
           node qa/telegram/dirigentes-lifecycle-harness.mjs | tee /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS Dirigentes directory separates Clubes and Asociación' /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS Asociación affiliation reuses actor_scope_grants with zero capabilities and preserves base role' /tmp/dirigentes-lifecycle.log
+          grep -q 'PASS association affiliation suspend/reactivate is audited without changing permissions' /tmp/dirigentes-lifecycle.log
           grep -q 'PASS list and detail expose CLUB_ADMIN lifecycle to SUPER_ADMIN' /tmp/dirigentes-lifecycle.log
+          grep -q 'AFFILIATION_NEQ_AUTHORITY' docs/product/telegram-dirigentes-directory-v2.md
           grep -q 'PASS suspend/reactivate/revoke transitions preserve identity and audit history' /tmp/dirigentes-lifecycle.log
           grep -q 'PASS repeated transitions are functionally idempotent' /tmp/dirigentes-lifecycle.log
           grep -q 'PASS crafted callbacks cannot mutate SUPER_ADMIN identities' /tmp/dirigentes-lifecycle.log
