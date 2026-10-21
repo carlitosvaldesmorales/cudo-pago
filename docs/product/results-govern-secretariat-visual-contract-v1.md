@@ -1,8 +1,9 @@
-# RESULTS-GOVERN · Contrato de Secretaría v1
+# RESULTS-GOVERN · Contrato de Secretaría v2
 
-Estado: **APROBADO POR PRODUCTO · 2026-10-20**  
-Canal inicial: Telegram · @FutbolChepicaBot  
+Estado: **APROBADO POR PRODUCTO · CORREGIDO 2026-10-21**
+Canal inicial: Telegram · @FutbolChepicaBot
 Módulo canónico: `RESULTS-GOVERN`
+Política administrativa: `AWARD_OPPONENT_WIN`
 
 ## Intención humana
 
@@ -10,28 +11,31 @@ Resolver desde Telegram reclamos de Secretaría que cambian la tabla de posicion
 
 ## Invariante
 
-`SECRETARIAT_POINTS_TRANSFER_PRESERVES_SCORE`
+`SECRETARIAT_AWARD_WIN_PRESERVES_SCORE`
 
-Una resolución de Secretaría que transfiere puntos:
+Una resolución de Secretaría que adjudica el partido al rival:
 
 - parte desde un resultado oficial `VERIFIED`;
-- muestra el marcador y los puntos deportivos obtenidos por ambos clubes en la serie;
+- muestra el marcador y los puntos obtenidos en cancha por ambos clubes;
 - permite seleccionar el club sancionado;
-- calcula automáticamente los puntos realmente obtenidos por ese club;
+- calcula los puntos objetivo reglamentarios de esa serie;
+- sancionado → puntos de derrota;
+- beneficiado → puntos de victoria;
+- calcula un delta independiente para cada club;
 - pide un motivo humano;
-- muestra una confirmación explícita `-X / +X`;
+- muestra confirmación explícita de puntos antes → objetivo;
 - al confirmar, escribe ajustes de tabla y auditoría;
 - conserva el marcador histórico sin cambios.
 
 ## Golden Path
 
-### 1. Entrada desde Gobierno de resultados
+### 1. Entrada
 
 ```text
 🧾 RESULTADO OFICIAL
 
-Fecha I · Grupo A
-San Juan 0–3 Juventud de Chépica
+Fecha III · Grupo A
+Santa Elena La Ruda 1–1 Juventud de Chépica
 Segunda
 
 ✅ Oficial
@@ -49,27 +53,26 @@ La acción de Secretaría sólo aparece a `SUPER_ADMIN` verificado.
 ```text
 🏛️ RECLAMO DE SECRETARÍA
 
-San Juan 0–3 Juventud de Chépica
+Santa Elena La Ruda 1–1 Juventud de Chépica
 Segunda
 
-San Juan: 0 pts deportivos
-Juventud de Chépica: 3 pts deportivos
+Santa Elena La Ruda: 1 pt en cancha
+Juventud de Chépica: 1 pt en cancha
 
-[↔️ 3 pts · Juventud de Chépica → San Juan]
+[🏛️ Dar triunfo a Santa Elena La Ruda · -1 / +2]
+[🏛️ Dar triunfo a Juventud de Chépica · -1 / +2]
 [⬅️ Resultado]
 ```
-
-No se ofrece una transferencia desde un club que obtuvo 0 puntos.
 
 ### 3. Motivo
 
 ```text
 🏛️ MOTIVO DEL RECLAMO
 
-Se propone:
-• Juventud de Chépica: -3 pts
-• San Juan: +3 pts
-• Marcador: se conserva 0–3
+Se propone adjudicar administrativamente la victoria a Santa Elena La Ruda:
+• Juventud de Chépica: 1 → 0 pts (-1)
+• Santa Elena La Ruda: 1 → 3 pts (+2)
+• Marcador: se conserva 1–1
 
 Escribe ahora el motivo de Secretaría.
 ```
@@ -79,13 +82,14 @@ Escribe ahora el motivo de Secretaría.
 ```text
 🏛️ CONFIRMAR RESOLUCIÓN DE SECRETARÍA
 
-Fecha I · Segunda
-San Juan 0–3 Juventud de Chépica
+Fecha III · Segunda
+Santa Elena La Ruda 1–1 Juventud de Chépica
 
-• Juventud de Chépica: -3 pts
-• San Juan: +3 pts
+Fallo: victoria administrativa para Santa Elena La Ruda
+• Juventud de Chépica: 1 → 0 pts (-1)
+• Santa Elena La Ruda: 1 → 3 pts (+2)
 • Marcador histórico: sin cambios
-• Motivo: carnet vencido
+• Motivo: ...
 
 [✅ Aplicar resolución]
 [Cancelar]
@@ -96,48 +100,58 @@ San Juan 0–3 Juventud de Chépica
 ```text
 ✅ RESOLUCIÓN DE SECRETARÍA APLICADA
 
-Juventud de Chépica: -3 pts
-San Juan: +3 pts
-Marcador 0–3: sin cambios
+Victoria administrativa para Santa Elena La Ruda
+Juventud de Chépica: 1 → 0 pts (-1)
+Santa Elena La Ruda: 1 → 3 pts (+2)
+Marcador 1–1: sin cambios
 
 La Tabla de posiciones ya consume estos ajustes automáticamente.
 ```
 
 ## Cálculo de puntos
 
-El monto transferido es el puntaje deportivo que el club sancionado obtuvo realmente en esa serie:
+La decisión administrativa fija el resultado **en puntos de tabla**, no transfiere el puntaje que el sancionado obtuvo en cancha.
 
 - Tercera: victoria 2, empate 1, derrota 0.
 - Segunda: victoria 3, empate 1, derrota 0.
 - Primera: victoria 4, empate 2, derrota 0.
 - Senior: victoria 3, empate 1, derrota 0.
 
-Esto significa que si Segunda terminó 1–1 y el club sancionado tenía 1 punto, el cambio administrativo es exactamente `-1 / +1`; no se inventa un triunfo de 3 puntos.
+Para cada club:
+
+`delta = puntos_objetivo_administrativo - puntos_obtenidos_en_cancha`
+
+Ejemplo Segunda 1–1:
+- sancionado: `0 - 1 = -1`;
+- beneficiado: `3 - 1 = +2`.
 
 ## Negativos obligatorios
 
 1. CLUB_ADMIN no ve ni puede forzar la acción de Secretaría.
 2. Resultado no VERIFIED no admite ajuste.
-3. Club con 0 puntos deportivos no genera transferencia.
+3. Un fallo que ya coincide con los puntos deportivos no duplica ajustes.
 4. Cambio concurrente de marcador o governance version invalida la sesión.
 5. Una resolución activa equivalente no puede aplicarse dos veces.
 6. Cancelar no cambia la tabla.
 7. Aplicar no cambia el marcador.
 8. Cada resolución deja evento y `permission_audit`.
 9. La tabla pública deriva de `public-standings-v2`; Telegram no recalcula posiciones.
+10. Un empate adjudicado nunca usa `-1/+1` por simple transferencia: usa los puntos objetivo de derrota/victoria.
 
 ## Persistencia
 
 - Resolución: `secretariat_standings_resolutions`.
+- Política: `resolution_policy = AWARD_OPPONENT_WIN`.
 - Débito/crédito: `standings_adjustments`.
 - Sesión temporal: `telegram_secretariat_sessions`.
 - Auditoría: `permission_audit`.
-- Evento: `standings.secretariat.points_transferred`.
+- Evento nuevo: `standings.secretariat.win_awarded`.
+- Corrección histórica: `standings.secretariat.award_win.corrected`.
 
 ## Evidencia requerida
 
-- harness determinista del flujo y negativos;
+- harness determinista del flujo y del caso empate 1–1 → -1/+2;
 - validación del Module Registry;
 - deploy con migración D1;
 - prueba de runtime Telegram/Worker;
-- verificación de `public-standings-v2` posterior a ajustes reales.
+- verificación de `public-standings-v2` posterior a la corrección real.
