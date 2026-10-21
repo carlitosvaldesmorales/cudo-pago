@@ -122,18 +122,87 @@ async function run() {
   applyMigrations();
   await seed();
 
-  // 1) SUPER_ADMIN can enter the global lifecycle surface and list CLUB_ADMIN.
+  // 1) SUPER_ADMIN sees one Dirigentes directory split into Clubes + Asociación.
   let payload = await invoke(messageUpdate('900001', '/dirigentes'));
   assert.equal(payload.handled, 'global_admin_menu');
   assert.match(lastMessageTo('900001').text, /ADMIN GLOBAL/);
+  assert.match(lastMessageTo('900001').text, /Dirigentes clubes: 1\/1/);
+  assert.match(lastMessageTo('900001').text, /Dirigentes asociación: 0\/0/);
 
   telegramCalls.length = 0;
   payload = await invoke(callbackUpdate('900001', 'tp:admins'));
+  assert.equal(payload.handled, 'dirigentes_directory');
+  let listView = lastMessageTo('900001');
+  let listButtons = listView.reply_markup.inline_keyboard.flat();
+  assert.match(listView.text, /🏟 Clubes: 1\/1 activos/);
+  assert.match(listView.text, /🏛 Asociación: 0\/0 activos/);
+  assert.ok(listButtons.some(x => x.callback_data === 'tp:admins:clubs'));
+  assert.ok(listButtons.some(x => x.callback_data === 'tp:admins:association'));
+
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:admins:clubs'));
   assert.equal(payload.handled, 'club_admin_list');
-  const listView = lastMessageTo('900001');
+  listView = lastMessageTo('900001');
   assert.match(listView.text, /1 registro\(s\)/);
-  const listButtons = listView.reply_markup.inline_keyboard.flat();
+  listButtons = listView.reply_markup.inline_keyboard.flat();
   assert.ok(listButtons.some(x => /Club QA · Dirigente QA/.test(x.text) && x.callback_data === 'tp:admin:900002'));
+
+  // Association uses existing actor_scope_grants as an affiliation, not a new permission role.
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:admins:association'));
+  assert.equal(payload.handled, 'association_dirigente_list');
+  let associationView = lastMessageTo('900001');
+  assert.match(associationView.text, /Todavía no hay dirigentes de la Asociación vinculados/);
+  assert.ok(associationView.reply_markup.inline_keyboard.flat().some(x => x.callback_data === 'tp:assoc-add'));
+
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:assoc-add'));
+  assert.equal(payload.handled, 'association_dirigente_candidates');
+  const candidateView = lastMessageTo('900001');
+  assert.ok(candidateView.reply_markup.inline_keyboard.flat().some(x => /Usuario QA/.test(x.text) && x.callback_data === 'tp:assoc-add:900004'));
+
+  const beforeAssociationReporter = await reporter('900004');
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:assoc-add:900004'));
+  assert.equal(payload.handled, 'association_dirigente_linked');
+  assert.equal(payload.permission_change, false);
+  const afterAssociationReporter = await reporter('900004');
+  assert.equal(afterAssociationReporter.role, beforeAssociationReporter.role);
+  assert.equal(afterAssociationReporter.club_id, beforeAssociationReporter.club_id);
+  assert.equal(afterAssociationReporter.trust_level, beforeAssociationReporter.trust_level);
+  let associationGrant = await env.DB.prepare(`SELECT * FROM actor_scope_grants
+    WHERE telegram_user_id='900004' AND role='ASSOCIATION_DIRIGENTE' AND scope_type='PLATFORM' AND scope_id='FUTBOL-CHEPICA'`).first();
+  assert.ok(associationGrant);
+  assert.equal(associationGrant.active, 1);
+  assert.equal(associationGrant.capabilities_json, '[]');
+  assert.equal(await countAudit('LINK_ASSOCIATION_DIRIGENTE', '900004'), 1);
+  assert.equal(await countEvent('telegram.association_dirigente.linked', '900004'), 1);
+
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:assoc:900004'));
+  assert.equal(payload.handled, 'association_dirigente_detail');
+  associationView = lastMessageTo('900001');
+  assert.match(associationView.text, /Usuario QA/);
+  assert.match(associationView.text, /Afiliación: ✅ ACTIVA/);
+  assert.match(associationView.text, /no concede capacidades adicionales/i);
+
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:assoc-suspend:900004'));
+  assert.equal(payload.handled, 'association_dirigente_suspended');
+  associationGrant = await env.DB.prepare(`SELECT * FROM actor_scope_grants
+    WHERE telegram_user_id='900004' AND role='ASSOCIATION_DIRIGENTE' AND scope_type='PLATFORM' AND scope_id='FUTBOL-CHEPICA'`).first();
+  assert.equal(associationGrant.active, 0);
+  assert.equal((await reporter('900004')).role, 'REPORTER');
+  assert.equal(await countAudit('SUSPEND_ASSOCIATION_DIRIGENTE', '900004'), 1);
+
+  telegramCalls.length = 0;
+  payload = await invoke(callbackUpdate('900001', 'tp:assoc-reactivate:900004'));
+  assert.equal(payload.handled, 'association_dirigente_reactivated');
+  associationGrant = await env.DB.prepare(`SELECT * FROM actor_scope_grants
+    WHERE telegram_user_id='900004' AND role='ASSOCIATION_DIRIGENTE' AND scope_type='PLATFORM' AND scope_id='FUTBOL-CHEPICA'`).first();
+  assert.equal(associationGrant.active, 1);
+  assert.equal((await reporter('900004')).role, 'REPORTER');
+  assert.equal(await countAudit('REACTIVATE_ASSOCIATION_DIRIGENTE', '900004'), 1);
 
   telegramCalls.length = 0;
   payload = await invoke(callbackUpdate('900001', 'tp:admin:900002'));
@@ -221,6 +290,9 @@ async function run() {
   assert.equal(target.active, 1);
   assert.equal(await countAudit('SUSPEND_CLUB_ADMIN', '900002'), 1, 'only the earlier authorized suspend exists');
 
+  console.log('PASS Dirigentes directory separates Clubes and Asociación');
+  console.log('PASS Asociación affiliation reuses actor_scope_grants with zero capabilities and preserves base role');
+  console.log('PASS association affiliation suspend/reactivate is audited without changing permissions');
   console.log('PASS list and detail expose CLUB_ADMIN lifecycle to SUPER_ADMIN');
   console.log('PASS suspend/reactivate/revoke transitions preserve identity and audit history');
   console.log('PASS repeated transitions are functionally idempotent');
