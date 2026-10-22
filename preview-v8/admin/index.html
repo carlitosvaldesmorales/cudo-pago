@@ -29,7 +29,8 @@
       <p>Registra y revisa el trabajo del club desde una sola vista: qué actividades existen, quién está a cargo, qué falta asignar y qué está bloqueado.</p>
       <div class="admingrid">
         <a class="admincard operations" href="../control/"><strong>Control del club · QA</strong><span>Qué está pasando en el club, qué necesita atención, quién lo está haciendo y qué falta para resolverlo. El origen de cada dato sigue disponible.</span><em>Abrir Control del club →</em></a>
-        <a class="admincard operations" href="../actividades/"><strong>Actividades del club</strong><span>Registro operativo respaldado por Google. Muestra cada actividad, sus responsabilidades, personas asignadas, tareas, bloqueos e historial.</span><em>Ver y asignar actividades →</em></a>
+        <a class="admincard operations" href="../actividades/"><strong>Actividades del club</strong><span>Registro operativo respaldado por Google. Muestra cada actividad, sus responsabilidades, tareas, bloqueos e historial.</span><em>Ver actividades →</em></a>
+        <a id="eventAssignmentLink" class="admincard operations disabled" href="#"><strong>Revisar y asignar responsables</strong><span>Acceso privado para asignar o reasignar personas CUDO validadas a las responsabilidades que nacen de cada evento.</span><em id="eventAssignmentState">Preparando administración privada…</em></a>
         <a class="admincard operations" href="../eventos/"><strong>Eventos del club · QA</strong><span>Vista algebraica del Club OS: abre Partido o Bingo y muestra sólo las ramas activas de trabajo, recursos, finanzas y evidencia.</span><em>Ver patrón dinámico →</em></a>
       </div>
     </section>
@@ -80,7 +81,7 @@
   <script src="../shared/pwa.js"></script>
   <script>
     const enable=(id,state,url,label='Abrir formulario →')=>{if(!url)return;const a=document.getElementById(id);a.href=url;a.target='_blank';a.rel='noopener';a.classList.remove('disabled');document.getElementById(state).textContent=label};
-    fetch('./forms-config.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(cfg=>{if(!cfg)return;enable('maintenanceLink','maintenanceState',cfg.maintenance_url);enable('personaReviewLink','personaReviewState',cfg.persona_review_url,'Abrir solicitudes →');enable('reviewLink','reviewState',cfg.review_url)}).catch(()=>{});
+    fetch('./forms-config.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(cfg=>{if(!cfg)return;enable('maintenanceLink','maintenanceState',cfg.maintenance_url);enable('eventAssignmentLink','eventAssignmentState',cfg.event_assignment_url,'Revisar y asignar →');enable('personaReviewLink','personaReviewState',cfg.persona_review_url,'Abrir solicitudes →');enable('reviewLink','reviewState',cfg.review_url)}).catch(()=>{});
   </script>
 </body>
 </html>
