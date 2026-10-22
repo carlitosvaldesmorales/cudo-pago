@@ -1,0 +1,46 @@
+name: Reconcile CUDO Automatic Development
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'preview-v8/certification/mobile-capabilities.json'
+      - 'preview-v8/tools/reconcile_mobile_capabilities.mjs'
+      - '.github/workflows/reconcile-cudo-auto-development.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate reconciler syntax
+        run: node --check preview-v8/tools/reconcile_mobile_capabilities.mjs
+
+      - name: Validate deterministic classification logic
+        run: node preview-v8/tools/reconcile_mobile_capabilities.mjs --self-test
+
+      - name: Reconcile real GitHub Actions evidence read-only
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node preview-v8/tools/reconcile_mobile_capabilities.mjs
+
+      - name: Publish reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cudo-auto-development-reconciliation-${{ github.run_id }}
+          path: qa-auto-development-reconciler/
+          if-no-files-found: error
+          retention-days: 30
