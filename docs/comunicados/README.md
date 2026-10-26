@@ -17,3 +17,7 @@ Conservar fecha, emisor, clasificación, versión y contenido fuente. El conteni
 
 ## Intranet futura
 Antes de implementar acceso interno y público, verificar autenticación, roles y capacidades ya disponibles en CUDO V8. No se crea ni despliega intranet en esta entrega.
+
+## PDF archivado
+- [Comunicado CUDO-COM-2026-001 (A4, 1 página)](CUDO-COM-2026-001.pdf).
+- Archivo versionado, con trazabilidad Git. Publicación pública pendiente de revisión editorial y merge.

@@ -38,3 +38,6 @@ Muchas gracias por seguir creyendo en nuestros colores. **¡Vamos CUDO, vamos ju
 
 **Carlos Valdés Morales**  
 Presidente · Club Unión Deportivo Orilla
+
+
+**Archivo PDF para distribución:** [CUDO-COM-2026-001.pdf](CUDO-COM-2026-001.pdf) (1 página A4).
