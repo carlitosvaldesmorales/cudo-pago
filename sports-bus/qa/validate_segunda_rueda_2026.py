@@ -89,7 +89,7 @@ for iteration in range(2):
         assert back["away_id"] == original["home_id"]
         assert back["home_name"] == original["away_name"]
         assert back["away_name"] == original["home_name"]
-        assert back["kickoff_at"] is None
+        assert back["kickoff_at"] == {6:"2026-11-01",7:"2026-11-08",8:"2026-11-15",9:"2026-11-22",10:"2026-11-29"}[back["round_no"]]
         assert back["home_score"] is None and back["away_score"] is None
         assert back["status"]=="SCHEDULED" and back["validation_status"]=="PENDING"
     assert [tuple(r) for r in db.execute("SELECT * FROM match_series_results")]==[tuple(r) for r in history]
