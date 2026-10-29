@@ -40,6 +40,12 @@ jobs:
         run: node qa/telegram/public-competition-hub-harness.mjs
       - name: Championship domain contract
         run: node qa/web/public-standings-harness.mjs
+      - name: Validar segunda rueda (SQLite sin tocar D1)
+        run: |
+          if [ -f sports-bus/migrations/20261029_segunda_rueda_2026.sql ]; then
+            test -f sports-bus/qa/validate_segunda_rueda_2026.py
+            python3 sports-bus/qa/validate_segunda_rueda_2026.py
+          fi
       - name: ADN source contract
         run: |
           set -euo pipefail
