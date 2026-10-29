@@ -30,7 +30,7 @@ function render(d){
  let round=available.includes(6)?6:1,group='A';
  const dateLabel=m=>{
    const iso=String(m?.kickoff_at||'').slice(0,10);
-   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return '';
+   if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(iso))return '';
    const d=new Date(iso+'T12:00:00');
    return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('es-CL',{weekday:'short',day:'numeric',month:'short'}).format(d);
  };
