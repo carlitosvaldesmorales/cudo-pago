@@ -26,9 +26,7 @@ WHERE m.competition_id='ANFA-CHEPICA-2026'
   AND (SELECT COUNT(*) FROM matches
        WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=25
   AND (SELECT COUNT(*) FROM byes
-       WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=5
-  AND (SELECT COUNT(*) FROM matches
-       WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=25;
+       WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=5;
 
 INSERT OR IGNORE INTO byes (
   bye_id,competition_id,season_id,group_id,round_no,team_id,source_label,created_at
@@ -40,4 +38,6 @@ FROM byes AS b
 WHERE b.competition_id='ANFA-CHEPICA-2026'
   AND b.round_no BETWEEN 1 AND 5
   AND (SELECT COUNT(*) FROM byes
-       WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=5;
+       WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=5
+  AND (SELECT COUNT(*) FROM matches
+       WHERE competition_id='ANFA-CHEPICA-2026' AND round_no BETWEEN 1 AND 5)=25;
