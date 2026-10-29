@@ -2,7 +2,7 @@ const API='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const WS='wss://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const SERIES=['TERCERA','SEGUNDA','SENIOR','PRIMERA'];
 const LABEL={TERCERA:'3ª',SEGUNDA:'2ª',SENIOR:'Senior',PRIMERA:'1ª'};
-const MAX_ROUND=5;
+const MAX_ROUND=10;
 
 const els={
   round:document.getElementById('round'),reload:document.getElementById('reload'),connection:document.getElementById('connection'),
@@ -14,7 +14,7 @@ let socket=null,retryTimer=null,currentRound=readRound(),snapshot=null;
 
 function readRound(){
   const value=Number(new URL(location.href).searchParams.get('fecha'));
-  return Number.isInteger(value)&&value>=1&&value<=MAX_ROUND?value:3;
+  return Number.isInteger(value)&&value>=1&&value<=MAX_ROUND?value:6;
 }
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}

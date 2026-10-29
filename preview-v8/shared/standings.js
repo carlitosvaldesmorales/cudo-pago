@@ -1,8 +1,8 @@
 (()=>{
 const API='https://cudo-sports-event-bus.carlos-valdes-morales.workers.dev';
 const WS=API.replace(/^http/,'ws');
-const MAX_ROUND=5;
-const V='20261020-canonical03';
+const MAX_ROUND=10;
+const V='20261029-canonical04';
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 const slugMap={
   'JUVENTUD DE CHEPICA':'juventud-chepica.png','SANTA ELENA LA RUDA':'santa-elena-la-ruda.png','INDEPENDIENTE':'independiente.png',
