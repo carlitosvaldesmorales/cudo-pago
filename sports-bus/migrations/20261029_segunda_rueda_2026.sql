@@ -1,6 +1,8 @@
 -- ANFA Chepica 2026: segunda rueda (localias invertidas).
 -- Fuente: declaracion de regla por responsable CUDO, 2026-10-29.
--- No se asignan fechas ni horarios sin programacion oficial.
+-- Calendario de fechas por regla del propietario (domingo semanal desde 2026-11-01).
+-- No se infiere hora de inicio. kickoff_at almacena solo YYYY-MM-DD.
+-- La suspensiones se corrigen en su propia fecha sin alterar match_id ni resultados.
 -- Idempotente; se niega la insercion si la primera rueda no tiene 25 partidos.
 INSERT OR IGNORE INTO matches (
   match_id,competition_id,season_id,round_label,kickoff_at,
@@ -13,11 +15,11 @@ SELECT
   'Fecha ' || CASE m.round_no
     WHEN 1 THEN 'VI' WHEN 2 THEN 'VII' WHEN 3 THEN 'VIII'
     WHEN 4 THEN 'IX' WHEN 5 THEN 'X' END,
-  NULL,
+  date('2026-11-01', '+' || ((m.round_no-1)*7) || ' days'),
   m.away_id,m.away_name,m.home_id,m.home_name,
   'SCHEDULED',NULL,NULL,'PENDING',NULL,datetime('now'),
   m.group_id,m.round_no+5,'Segunda rueda: inversion de localias',
-  'CUDO:intencion-2026-10-29:horario-por-confirmar'
+  'CUDO:regla-confirmada-2026-10-29:domingo-semanal-sin-hora'
 FROM matches AS m
 WHERE m.competition_id='ANFA-CHEPICA-2026'
   AND m.round_no BETWEEN 1 AND 5
