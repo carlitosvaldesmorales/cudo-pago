@@ -28,6 +28,12 @@ function render(d){
  const map=new Map(d.results.map(x=>[x.match_id,x]));
  const available=[...new Set(d.matches.map(rn).filter(x=>x>=1&&x<=10))].sort((a,b)=>a-b);
  let round=available.includes(6)?6:1,group='A';
+ const dateLabel=m=>{
+   const iso=String(m?.kickoff_at||'').slice(0,10);
+   if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(iso))return '';
+   const d=new Date(iso+'T12:00:00');
+   return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat('es-CL',{weekday:'short',day:'numeric',month:'short'}).format(d);
+ };
  const draw=()=>{
    document.getElementById('champRoundTitle').textContent=`FECHA ${ROMAN[round]}`;
    document.querySelectorAll('.champ-date-btn').forEach(x=>x.classList.toggle('active',+x.dataset.round===round));
@@ -35,9 +41,10 @@ function render(d){
    const rows=d.matches.filter(x=>rn(x)===round&&grp(x)===group);
    document.getElementById('champMatchList').innerHTML=(rows.map(x=>card(x,map)).join('')||'<div class="champ-status">Sin partidos.</div>')+(d.byes||[]).filter(x=>Number(x.round_no)===round&&String(x.group_id).toUpperCase()===group).map(x=>`<div class="champ-status">Fecha libre: ${esc(x.team_name||x.team_id)}</div>`).join('');
    const withResults=rows.filter(x=>map.has(x.match_id)).length;
-   document.getElementById('champPublished').textContent=withResults?`${withResults} partido${withResults===1?'':'s'} con resultados verificados por serie`:'Fixture programado · resultados pendientes';
+   const scheduled=dateLabel(rows[0]);
+   document.getElementById('champPublished').textContent=withResults?`${withResults} partido${withResults===1?'':'s'} con resultados verificados por serie`:`${scheduled?scheduled+' · ':''}Fixture programado · resultados pendientes`;
  };
- document.getElementById('champDateTabs').innerHTML=available.map(n=>`<button class="champ-date-btn ${n===round?'active':''}" data-round="${n}" type="button">Fecha ${ROMAN[n]}</button>`).join('');
+ document.getElementById('champDateTabs').innerHTML=available.map(n=>{const sample=d.matches.find(m=>rn(m)===n);const date=dateLabel(sample);return `<button class="champ-date-btn ${n===round?'active':''}" data-round="${n}" type="button">Fecha ${ROMAN[n]}${date?' · '+esc(date):''}</button>`}).join('');
  document.getElementById('champDateTabs').onclick=e=>{const b=e.target.closest('[data-round]');if(b){round=+b.dataset.round;draw()}};
  document.getElementById('champGroupSwitch').onclick=e=>{const b=e.target.closest('[data-group]');if(b){group=b.dataset.group;draw()}};
  document.querySelector('[data-action="current"]')?.addEventListener('click',()=>{round=available.includes(6)?6:1;draw();document.getElementById('champFixture').scrollIntoView({behavior:'smooth'})});
