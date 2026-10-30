@@ -77,6 +77,16 @@ jobs:
             https://raw.githubusercontent.com/carlitosvaldesmorales/cudo-pago/40432a99bcb535236cf36bc233a05ff784df0749/tools/qa/cudo_r3_vendor_rsvp_overlay.py \
             -o /tmp/cudo_r3_vendor_rsvp_overlay.py
           python3 /tmp/cudo_r3_vendor_rsvp_overlay.py upstream/apps/web/tests/integration/database-auth.test.ts
+      - name: Apply pinned isolated QA fix for atomic RSVP audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/carlitosvaldesmorales/cudo-pago/5174b6e266ee44f06ffaa41e2eff46acd9a53120/tools/qa/cudo_r3_vendor_rsvp_audit_overlay.py \
+            -o /tmp/cudo_r3_vendor_rsvp_audit_overlay.py
+          python3 /tmp/cudo_r3_vendor_rsvp_audit_overlay.py \
+            upstream/packages/db/src/event-admin.ts \
+            upstream/apps/web/tests/integration/database-auth.test.ts
       - name: Test vendor PostgreSQL and authenticated application logic
         working-directory: upstream
         shell: bash
