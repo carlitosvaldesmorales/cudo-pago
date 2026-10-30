@@ -1,0 +1,86 @@
+name: CUDO R3 - Teamsster OSS isolated QA
+on:
+  push:
+    branches:
+      - qa/cudo-r3-teamsster-hosted-20261029
+    paths:
+      - .github/workflows/cudo-r3-teamsster-oss-qa.yml
+
+# No GitHub credential, CUDO secret, self-hosted runner or production access.
+permissions: {}
+concurrency:
+  group: cudo-r3-oss-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    if: github.repository == 'carlitosvaldesmorales/cudo-pago'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16.13
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: cudo_mvp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U ci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      CI: 'true'
+      HUSKY: '0'
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/cudo_mvp_ci
+      TEST_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/cudo_mvp_ci
+      BETTER_AUTH_SECRET: qa-synthetic-not-a-real-secret-please-do-not-use
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+    steps:
+      - name: Fetch and verify pinned public Teamsster source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet --filter=blob:none https://github.com/evillollive/Teamsster.git ./upstream
+          cd upstream
+          git checkout --quiet --detach 17176072438b1235cfffe2f10af9ce8adc9442b3
+          test "$(git rev-parse HEAD)" = "17176072438b1235cfffe2f10af9ce8adc9442b3"
+          printf '%s  %s\n' 59fa9b1724f065042a9615e12715fc487f0232291942795180ac07cc6c5a81fd pnpm-lock.yaml | sha256sum --check
+          echo "CUDO_R3_VENDOR_SOURCE_AND_LOCK_PIN_PASS"
+      - name: Set up Node 20 (standard hosted runner)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frozen vendor dependencies without lifecycle scripts
+        working-directory: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.12.4 --activate
+          pnpm install --frozen-lockfile --ignore-scripts
+          echo "CUDO_R3_OSS_DEPENDENCIES_INSTALLED"
+      - name: Check vendor database migrations against disposable PostgreSQL
+        working-directory: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm db:migrate
+          echo "CUDO_R3_VENDOR_MIGRATION_PASS"
+      - name: Test vendor PostgreSQL and authenticated application logic
+        working-directory: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm test:integration
+          echo "CUDO_R3_VENDOR_POSTGRES_AUTH_INTEGRATION_PASS"
+      - name: Run upstream Chromium app journey with disposable PostgreSQL
+        working-directory: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @teamsster/web exec playwright install --with-deps chromium
+          pnpm e2e
+          echo "CUDO_R3_VENDOR_BROWSER_E2E_PASS"
