@@ -69,6 +69,14 @@ jobs:
           set -euo pipefail
           pnpm db:migrate
           echo "CUDO_R3_VENDOR_MIGRATION_PASS"
+      - name: Add pinned QA-only RSVP test to authentic vendor integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            https://raw.githubusercontent.com/carlitosvaldesmorales/cudo-pago/40432a99bcb535236cf36bc233a05ff784df0749/tools/qa/cudo_r3_vendor_rsvp_overlay.py \
+            -o /tmp/cudo_r3_vendor_rsvp_overlay.py
+          python3 /tmp/cudo_r3_vendor_rsvp_overlay.py upstream/apps/web/tests/integration/database-auth.test.ts
       - name: Test vendor PostgreSQL and authenticated application logic
         working-directory: upstream
         shell: bash
