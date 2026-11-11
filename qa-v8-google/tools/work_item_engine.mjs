@@ -309,6 +309,31 @@ export function materializeResponsibilityWorkState({objects,now='2026-09-18T15:0
   return {ok:true,objects:state,created,audit:audited,production_write:false};
 }
 
+// CUDO adaptation: explicit unassigned work; no inferred person or financial rule.
+export function createUnassignedWorkItem({objects,workItemId,expectedState,title,requestedBy,evidenceRefs=[],now}){
+  const state=clone(objects);
+  const fail=status=>({ok:false,status,objects:state,audit:null});
+  if(expectedState!=='ABSENT') return fail('EXPECTED_ABSENT_REQUIRED');
+  if(state.some(x=>x.object_id===workItemId)) return fail('EXPECTED_STATE_CONFLICT');
+  if(!/^CUDO-WORK-[A-Z0-9_-]+$/.test(workItemId)||!title?.trim()||title.length>500||!requestedBy) return fail('INVALID_CREATION');
+  const transitionId=stableTransitionId({workItemId,title,requestedBy,evidenceRefs,now});
+  const work={schema_version:'CUDO_SHARED_OBJECT_CONTRACT_V1',object_id:workItemId,
+    object_type:'WORK_ITEM',object_version:1,lifecycle_state:'OPEN',
+    data:{work_kind:'EXPLICIT_UNASSIGNED',title:title.trim(),responsible_actor_id:null,
+      responsible_display_name:'Sin asignar',assignment_state:'UNASSIGNED',resource_id:null,
+      resource_display_name:null,source_object_id:null,source_display_name:'Solicitud Web explícita',
+      due_date:null,priority:'NORMAL',trigger_reason:'EXPLICIT_WEB_REQUEST',
+      financial_context_semantics:'NO_FINANCIAL_RULE_DECLARED'},
+    field_semantics:{title:{state_kind:'SOURCE',rule_ids:[]}},relationships:[],
+    provenance:{created_at:now,updated_at:null,source_system:'CUDO_WORK_STATE_WEB',
+      source_refs:[...evidenceRefs],transition_id:transitionId,requested_by:requestedBy},legacy_refs:[]};
+  state.push(work);
+  return {ok:true,status:'APPLIED',objects:state,production_write:false,
+    audit:{transition_id:transitionId,work_id:workItemId,from:'ABSENT',to:'OPEN',
+      performed_by_actor_id:null,authenticated_requester:requestedBy,reason:title,
+      evidence_refs:[...evidenceRefs],timestamp:now}};
+}
+
 export function transitionWorkItem({
   objects,
   workItemId,
