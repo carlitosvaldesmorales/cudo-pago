@@ -54,6 +54,16 @@ assert.equal(controlMutation.values[0][9],'FINANCIAL_CONTEXT');
 assert.equal(controlMutation.values[0][10],'FINANCIAL_CONTEXT_SEMANTICS');
 assert.equal(controlMutation.values[0][11],'FINANCIAL_EFFECT');
 assert.equal(controlMutation.values[0][12],'OUTSTANDING_CLP');
+assert.equal(controlMutation.range,'WORK_CONTROL!A:P');
+assert.equal(controlMutation.values[0].length,16);
+assert.equal(controlMutation.values[0][15],'RESPONSIBLE_ACTOR_ID');
+for(const row of controlMutation.values.slice(1)){
+  const expected=start.projection.items.find(x=>x.work_id===row[0]);
+  assert.ok(expected,'Every WORK_CONTROL row must correspond to an actual WORK_ITEM');
+  assert.equal(row.length,16,'Never leave stale actor identity outside replaced projection');
+  assert.equal(row[15],expected.responsible?.actor_id??'',
+    'RESPONSIBLE_ACTOR_ID must follow the WORK_ITEM, never a former row');
+}
 const scheduleText=controlMutation.values.slice(1).map(row=>String(row[8]||''));
 const controlText=controlMutation.values.slice(1).map(row=>String(row[9]||''));
 assert.ok(controlText.includes('CLP 50000 · EVERY_TWO_MONTHS'));
