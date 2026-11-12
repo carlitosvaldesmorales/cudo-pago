@@ -150,50 +150,27 @@ jobs:
           print(json.dumps(evidence,indent=2))
           PY
 
-      - name: Mint dedicated CUDO to ARKE token
-        id: arke_token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.CUDO_TO_ARKE_APP_ID }}
-          private-key: ${{ secrets.CUDO_TO_ARKE_APP_PRIVATE_KEY }}
-          owner: carlitosvaldesmorales
-          repositories: arke-root
-          permission-contents: write
-
-      - name: Dispatch validated event to ARKE
+      # CUDO owns this validated observation and its immutable Actions artifact.
+      # Prior implementation dispatched it to arke-root; that cross-project
+      # dependency was removed because it was not required to validate the
+      # source or preserve evidence. No fallback to ARKE is permitted.
+      - name: Verify CUDO-owned event receipt before archiving
         shell: bash
-        env:
-          GH_TOKEN: ${{ steps.arke_token.outputs.token }}
-          INPUT_OBSERVED_AT: ${{ inputs.observed_at }}
-          INPUT_EVENT_TYPE: ${{ inputs.event_type }}
-          INPUT_APP_VERSION: ${{ inputs.app_version }}
-          INPUT_ROUTE: ${{ inputs.route }}
-          INPUT_DISPLAY_MODE: ${{ inputs.display_mode }}
-          INPUT_TRIGGER: ${{ inputs.trigger }}
-          INPUT_SOURCE_SYSTEM: ${{ inputs.source_system }}
-          INPUT_PRIVACY_CLASS: ${{ inputs.privacy_class }}
-          INPUT_SHEET_ROW: ${{ inputs.sheet_row }}
         run: |
           set -euo pipefail
-          jq -n \
-            --arg observed_at "$INPUT_OBSERVED_AT" \
-            --arg event_type "$INPUT_EVENT_TYPE" \
-            --arg app_version "$INPUT_APP_VERSION" \
-            --arg route "$INPUT_ROUTE" \
-            --arg display_mode "$INPUT_DISPLAY_MODE" \
-            --arg trigger "$INPUT_TRIGGER" \
-            --arg source "$INPUT_SOURCE_SYSTEM" \
-            --arg privacy_class "$INPUT_PRIVACY_CLASS" \
-            --arg sheet_row "$INPUT_SHEET_ROW" \
-            --arg source_repository "$GITHUB_REPOSITORY" \
-            --arg source_run_id "$GITHUB_RUN_ID" \
-            --arg source_head_sha "$GITHUB_SHA" \
-            '{event_type:"cudo_mobile_adoption_observed",client_payload:{
-              observed_at:$observed_at,event_type:$event_type,app_version:$app_version,route:$route,
-              display_mode:$display_mode,trigger:$trigger,source:$source,privacy_class:$privacy_class,
-              sheet_row:$sheet_row,source_repository:$source_repository,source_run_id:$source_run_id,
-              source_head_sha:$source_head_sha,synthetic:false,polling:false}}' > /tmp/dispatch.json
-          gh api --method POST repos/carlitosvaldesmorales/arke-root/dispatches --input /tmp/dispatch.json
+          python3 - <<'PY'
+          import json, pathlib, os
+          p=pathlib.Path('mobile-adoption-real-event.json')
+          event=json.loads(p.read_text(encoding='utf-8'))
+          assert event['schema_version']=='CUDO_MOBILE_ADOPTION_REAL_EVENT_EVIDENCE_V1'
+          assert event['source_repository']==os.environ['GITHUB_REPOSITORY']
+          assert event['source_run_id']==os.environ['GITHUB_RUN_ID']
+          assert event['source_head_sha']==os.environ['GITHUB_SHA']
+          assert event['synthetic'] is False and event['polling'] is False
+          assert event['source']=='CUDO_PWA'
+          assert event['privacy_class']=='ANONYMOUS_PRIVACY_MINIMAL'
+          print('CUDO_MOBILE_ADOPTION_OWN_RECEIPT_VALIDATED=PASS')
+          PY
 
       - uses: actions/upload-artifact@v4
         with:
