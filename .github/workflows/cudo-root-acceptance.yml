@@ -7,6 +7,7 @@ on:
       - 'preview-v8/**'
       - 'qa-pr219/**'
       - '.github/workflows/cudo-root-acceptance.yml'
+      - 'docs/CUDO_REPARACION_DESVIOS_20261112.md'
       - 'qa-v8-google/contracts/cudo-operational-sovereignty-v1.json'
       - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
       - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
