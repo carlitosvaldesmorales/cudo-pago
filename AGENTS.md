@@ -19,3 +19,6 @@
 
 ## Control de regresión
 Ejecutar `node qa-v8-google/tools/certify_operational_sovereignty.mjs` junto con las pruebas del motor. Si el guard falla, corregir el acoplamiento CUDO real: no modificar el guard para esconder la regresión. Ninguna de estas instrucciones equivale por sí misma a que el flujo institucional end-to-end esté certificado.
+
+## Prioridad CUDO bonos 2026 · contrato de misión (12-11-2026)
+Al retomar venta de bonos, **leer antes de decidir** [intención 0 y continuidad sin desvíos en CUDO vNext](https://github.com/carlitosvaldesmorales/cudo-vnext/blob/release/cudo-bonos-2026-rc-guarded/docs/CUDO_BONOS_INTENCION_0_Y_CONTINUIDAD_SIN_DESVIOS_20261112.md). El alcance es CLP 2.000 por participación, medio de pago existente, confirmación real del ingreso, registro y números D1, comprobante boarding pass con QR. La verificación de Mastercard TEST y la emisión del QR ya tienen recibos; no reabrir. Priorizar defectos y conexiones del release, delegados a los agentes existentes si están disponibles, sin nuevos motores ni solicitudes técnicas al propietario. Prohibido confundir esta delegación con autorización para enviar email/WhatsApp, escribir a autoridades externas, modificar roles, activar dinero o publicar la campaña. Cada efecto externo necesita el GO correspondiente.
