@@ -82,7 +82,7 @@ for(const forbiddenSource of [
 const agentRules=read('AGENTS.md');
 assert.ok(agentRules.includes('CUDO es la autoridad de su propia operación'));
 assert.ok(agentRules.includes('ARKĒ es solo una fuente opcional de patrones'));
-assert.ok(agentRules.includes('exige autorización de `arke-root/main`'));
+assert.ok(agentRules.includes('ningún trabajo ordinario de CUDO exige autorización de arke-root/main'));
 
 console.log('CUDO_OPERATIONAL_SOVEREIGNTY_CONTRACT=PASS');
 console.log('CUDO_NATIVE_ENGINE_EXISTS=PASS');
