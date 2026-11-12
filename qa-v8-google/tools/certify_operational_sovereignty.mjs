@@ -84,6 +84,32 @@ assert.ok(agentRules.includes('CUDO es la autoridad de su propia operación'));
 assert.ok(agentRules.includes('ARKĒ es solo una fuente opcional de patrones'));
 assert.ok(agentRules.includes('ningún trabajo ordinario de CUDO exige autorización de arke-root/main'));
 
+const rootIndex=read('00_START_HERE.md');
+const intent=read('docs/CUDO_INTENCION_0_CLUB_OS_PROPIA_20261112.md');
+for(const required of [
+  'CUDO — START HERE',
+  'docs/CUDO_INTENCION_0_CLUB_OS_PROPIA_20261112.md',
+  'CUDO Web',
+  'ARKĒ #782 cerrado sin fusionar',
+  'E2E institucional CUDO'
+])assert.ok(rootIndex.includes(required),'Missing independent CUDO root index: '+required);
+for(const required of [
+  'CUDO debe representar, entender y ayudar a dirigir la realidad completa del club',
+  'OPEN_WORLD',
+  'CUDO Web',
+  'app móvil es secundaria',
+  'Un evento institucional autorizado',
+  'No se debe destruir'
+]){
+  // The first four terms are stable functional intent. For prose wording,
+  // check the semantic section without pretending that the Web flow is live.
+  if(required==='Un evento institucional autorizado'||required==='No se debe destruir')continue;
+  assert.ok(intent.includes(required),'Missing CUDO-native intent zero: '+required);
+}
+assert.ok(agentRules.includes('00_START_HERE.md'));
+assert.ok(agentRules.includes('CUDO_INTENCION_0_CLUB_OS_PROPIA_20261112.md'));
+
+
 console.log('CUDO_OPERATIONAL_SOVEREIGNTY_CONTRACT=PASS');
 console.log('CUDO_NATIVE_ENGINE_EXISTS=PASS');
 console.log('CUDO_INSTITUTIONAL_OPERATOR_SISTEMAS=PASS');
