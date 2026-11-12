@@ -48,6 +48,14 @@ function cudoWorkActions_(state){
 function cudoWorkRender_(message){
   const reviewer=cudoWorkReviewer_();
   const rows=cudoWorkRows_();
+  const createForm='<section class="card"><h2>Crear trabajo sin asignar</h2><form method="post">'+
+    '<input type="hidden" name="kind" value="WORK_ITEM">'+
+    '<input type="hidden" name="action" value="CREATE">'+
+    '<input type="hidden" name="expected_state" value="ABSENT">'+
+    '<input type="hidden" name="work_id" value="CUDO-WORK-WEB-'+Utilities.getUuid().replace(/-/g,'').toUpperCase()+'">'+
+    '<label>¿Qué trabajo se necesita?</label><textarea name="reason" maxlength="500" required></textarea>'+
+    '<label>Origen o evidencia (opcional)</label><input name="evidence_ref">'+
+    '<p>Quedará sin asignar. No registra cobros ni pagos.</p><div class="actions"><button>Crear trabajo</button></div></form></section>';
   const cards=rows.map(function(r){
     const actions=cudoWorkActions_(r.STATE).map(function(a){
       return '<button name="action" value="'+cudoWorkEsc_(a[0])+'">'+cudoWorkEsc_(a[1])+'</button>';
@@ -99,7 +107,7 @@ function cudoWorkRender_(message){
     '<main class="wrap content">'+
     (message?'<div class="msg">'+cudoWorkEsc_(message)+'</div>':'')+
     '<div class="note">QA: las acciones se procesan por el motor canónico; WORK_CONTROL es sólo una proyección.</div>'+
-    (cards||'<div class="card">No hay trabajo operacional.</div>')+
+    createForm+(cards||'<div class="card">No hay trabajo operacional.</div>')+
     '</main></body></html>';
 
   return HtmlService.createHtmlOutput(html)
@@ -115,22 +123,26 @@ function cudoWorkHandlePost_(e){
   const evidenceRef=String(e.parameter.evidence_ref||'').trim();
 
   if(!/^CUDO-WORK-[A-Z0-9_-]+$/.test(workId)) throw new Error('WORK_ID inválido');
-  if(!['OPEN','IN_PROGRESS','BLOCKED','WAITING_EXTERNAL','DONE','CANCELLED'].includes(expectedState)){
+  if(!['ABSENT','OPEN','IN_PROGRESS','BLOCKED','WAITING_EXTERNAL','DONE','CANCELLED'].includes(expectedState)){
     throw new Error('Estado esperado inválido');
   }
-  if(!['START','BLOCK','WAIT_EXTERNAL','REOPEN','COMPLETE','CANCEL'].includes(action)){
+  if(!['CREATE','START','BLOCK','WAIT_EXTERNAL','REOPEN','COMPLETE','CANCEL'].includes(action)){
     throw new Error('Acción inválida');
   }
   if(!reason) throw new Error('Debe indicar motivo o comentario');
   if(action==='COMPLETE'&&!evidenceRef) throw new Error('Completar requiere evidencia');
 
   const current=cudoWorkRows_().find(function(r){return r.WORK_ID===workId;});
-  if(!current) throw new Error('Trabajo no encontrado');
-  if(current.STATE!==expectedState) throw new Error('El estado cambió. Recargue antes de actuar.');
+  if(action==='CREATE'){
+    // Effective user is the deployment identity, not proof of the visitor.
+    if(String(Session.getActiveUser().getEmail()||'').toLowerCase()!==reviewer) throw new Error('Identidad activa requerida');
+    if(expectedState!=='ABSENT'||current||reason.length>500) throw new Error('Creación inválida o trabajo existente');
+  }else if(!current) throw new Error('Trabajo no encontrado');
+  if(action!=='CREATE'&&current.STATE!==expectedState) throw new Error('El estado cambió. Recargue antes de actuar.');
 
   const ts=Utilities.formatDate(new Date(),'UTC',"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
   const payload={
-    ts:ts,
+    ts:action==='CREATE'?null:ts,
     work_id:workId,
     expected_state:expectedState,
     action:action,

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {transitionWorkItem,buildClubOperationalStateProjection} from './work_item_engine.mjs';
+import {createUnassignedWorkItem,transitionWorkItem,buildClubOperationalStateProjection} from './work_item_engine.mjs';
 import {deriveFinancialObligationsFromCompletedWork,enrichOperationalProjectionWithFinancialEffects} from './work_financial_effects.mjs';
 import {buildFinancialSnapshot} from './canonical_financial_core.mjs';
 
@@ -147,13 +147,21 @@ export function planWorkStateRequests({
       continue;
     }
     if(existingRequestIds.has(requestId)){
+      if(action==='CREATE'){
+        const prior=state.audit.find(x=>x.request_id===requestId);
+        if(prior.from!=='ABSENT'||prior.work_id!==workId||prior.reason!==reason||prior.requested_by!==requestedBy||JSON.stringify(prior.evidence_refs)!==JSON.stringify(evidenceRef?[evidenceRef]:[])){
+          sheetMutations.push(requestResultMutation(req.__row,'BLOCKED','REQUEST_ID_CONFLICT',appliedAt));
+          summary.push({row:req.__row,request_id:requestId,work_id:workId,status:'REQUEST_ID_CONFLICT'});
+          continue;
+        }
+      }
       const result='Solicitud ya aplicada anteriormente';
       sheetMutations.push(requestResultMutation(req.__row,'APPLIED',result,appliedAt));
       summary.push({row:req.__row,request_id:requestId,work_id:workId,status:'DUPLICATE_ALREADY_APPLIED'});
       continue;
     }
 
-    const nextState=ACTION_TO_STATE[action];
+    const nextState=action==='CREATE'?'OPEN':ACTION_TO_STATE[action];
     if(!nextState){
       const result='Bloqueado: acción no implementada';
       sheetMutations.push(requestResultMutation(req.__row,'BLOCKED',result,appliedAt));
@@ -161,7 +169,10 @@ export function planWorkStateRequests({
       continue;
     }
 
-    const transition=transitionWorkItem({
+    const transition=action==='CREATE' ? createUnassignedWorkItem({
+      objects:state.objects,workItemId:workId,expectedState,title:reason,requestedBy,
+      evidenceRefs:evidenceRef?[evidenceRef]:[],now:appliedAt
+    }) : transitionWorkItem({
       objects:state.objects,
       workItemId:workId,
       expectedState,

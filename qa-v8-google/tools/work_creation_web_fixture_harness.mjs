@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import crypto from 'node:crypto';
+import {planWorkStateRequests,REQUEST_HEADERS} from './process_work_state_requests.mjs';
+const source=fs.readFileSync('qa-v8-google/apps-script/CudoWorkStateWeb.gs','utf8');
+let active='sistemas@cudo.cl', controls=[], appended=[], dispatches=0;
+const output=html=>({html,setTitle(){return this},setXFrameOptionsMode(){return this}});
+const context=vm.createContext({Session:{getActiveUser:()=>({getEmail:()=>active}),getEffectiveUser:()=>({getEmail:()=> 'sistemas@cudo.cl'})},
+  Utilities:{getUuid:()=> 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',formatDate:()=> '2026-11-11T19:30:00.000Z',DigestAlgorithm:{SHA_256:'sha256'},Charset:{UTF_8:'utf8'},
+    computeDigest:(_,v)=>[...crypto.createHash('sha256').update(v).digest()]},
+  SpreadsheetApp:{openById:()=>({getSheetByName:name=>name==='WORK_CONTROL'?{getDataRange:()=>({getDisplayValues:()=>controls})}:{appendRow:row=>appended.push(row)}})},
+  HtmlService:{createHtmlOutput:output,XFrameOptionsMode:{DENY:'DENY'}},cudoReviewDispatch_:()=>dispatches++});
+vm.runInContext(source,context);
+const html=context.cudoWorkRender_('').html;
+assert.match(html,/Crear trabajo sin asignar/);
+const workId=html.match(/name="work_id" value="([^"]+)"/)[1];
+const event={parameter:{work_id:workId,expected_state:'ABSENT',action:'CREATE',reason:'Revisar acceso sintético QA',evidence_ref:'qa://synthetic/work-origin'}};
+context.cudoWorkHandlePost_(event);
+assert.equal(appended.length,1);assert.equal(dispatches,1);
+context.cudoWorkHandlePost_(event);
+assert.equal(appended[0][0],appended[1][0],'same rendered submission is stable across retry');
+const empty={schema_version:'CUDO_OPERATIONAL_WORK_STATE_STORE_V1',objects:[],audit:[]};
+const plan=rows=>planWorkStateRequests({requestValues:[REQUEST_HEADERS,...rows],stateStore:empty,now:()=> '2026-11-11T19:31:00.000Z'});
+const result=plan(appended);
+assert.deepEqual(result.summary.map(x=>x.status),['APPLIED','DUPLICATE_ALREADY_APPLIED']);
+assert.equal(result.state_store.objects.length,1);assert.equal(result.state_store.audit.length,1);
+const work=result.state_store.objects[0];
+assert.equal(work.data.assignment_state,'UNASSIGNED');assert.equal(work.data.responsible_actor_id,null);
+assert.equal(result.state_store.audit[0].performed_by_actor_id,null);
+assert.equal(result.state_store.audit[0].authenticated_requester,'sistemas@cudo.cl');
+assert.equal(result.projection.items[0].responsible.display_name,'Sin asignar');
+assert.equal(result.state_store.objects.some(x=>x.object_type.startsWith('FINANCIAL_')),false);
+assert.equal(result.sheet_mutations.filter(x=>x.kind==='WORK_AUDIT').length,1);
+const control=result.sheet_mutations.find(x=>x.kind==='WORK_CONTROL');
+controls=JSON.parse(JSON.stringify(control.values));
+assert.match(context.cudoWorkRender_('').html,/Revisar acceso sintético QA/);
+assert.throws(()=>context.cudoWorkHandlePost_(event),/existente/);
+const conflict=planWorkStateRequests({requestValues:[REQUEST_HEADERS,[...appended[0]]],stateStore:{...result.state_store,audit:[]}});
+assert.equal(conflict.summary[0].status,'EXPECTED_STATE_CONFLICT');
+const altered=[...appended[0]];altered[5]='Otro título';
+const collision=planWorkStateRequests({requestValues:[REQUEST_HEADERS,altered],stateStore:result.state_store});
+assert.equal(collision.summary[0].status,'REQUEST_ID_CONFLICT');
+assert.equal(collision.state_store.audit.length,1);
+const bad=[...appended[0]];bad[7]='unknown@example.com';assert.equal(plan([bad]).summary[0].status,'BLOCKED_REQUESTER');
+const stale=[...appended[0]];stale[3]='OPEN';assert.equal(plan([stale]).summary[0].status,'EXPECTED_ABSENT_REQUIRED');
+const tooLong=[...appended[0]];tooLong[5]='x'.repeat(501);assert.equal(plan([tooLong]).summary[0].status,'INVALID_CREATION');
+active='';controls=[];assert.throws(()=>context.cudoWorkHandlePost_(event),/Identidad activa requerida/);
+assert.equal(appended.length,2);
+console.log(JSON.stringify({ok:true,synthetic:true,flow:'Apps Script render -> POST -> request rows -> existing processor -> canonical WORK_ITEM -> WORK_AUDIT append plan -> WORK_CONTROL readback render',real_google_writes:0,financial_effects:0,actor_invented:false,production_write:false}));
