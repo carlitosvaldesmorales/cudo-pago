@@ -66,16 +66,23 @@ assert.equal(forbidden.test("require ARKE_FOREMAN before CUDO work"),true);
 // Audit the exact formerly coupled live workflow. It may validate with official
 // Google Sheets and archive CUDO evidence; dispatching to ARKE is not a precondition.
 const adoption=read('.github/workflows/cudo-mobile-adoption-event.yml');
-assert.match(adoption,/CUDO_MOBILE_ADOPTION_REAL_EVENT_EVIDENCE_V1/);
-assert.match(adoption,/Validate real adoption against canonical Sheet/);
-assert.match(adoption,/CUDO_MOBILE_ADOPTION_OWN_RECEIPT_VALIDATED=PASS/);
-assert.match(adoption,/actions\\/upload-artifact@v4/);
-assert.doesNotMatch(adoption,/CUDO_TO_ARKE_APP_|repos\\/carlitosvaldesmorales\\/arke-root\\/dispatches|repositories: arke-root|Mint dedicated CUDO to ARKE token|Dispatch validated event to ARKE/);
+assert.ok(adoption.includes('CUDO_MOBILE_ADOPTION_REAL_EVENT_EVIDENCE_V1'));
+assert.ok(adoption.includes('Validate real adoption against canonical Sheet'));
+assert.ok(adoption.includes('CUDO_MOBILE_ADOPTION_OWN_RECEIPT_VALIDATED=PASS'));
+assert.ok(adoption.includes('actions/upload-artifact@v4'));
+for(const forbiddenSource of [
+  'CUDO_TO_ARKE_APP_',
+  'repos/carlitosvaldesmorales/arke-root/dispatches',
+  'repositories: arke-root',
+  'Mint dedicated CUDO to ARKE token',
+  'Dispatch validated event to ARKE'
+]){
+  assert.ok(!adoption.includes(forbiddenSource),'Forbidden external routing: '+forbiddenSource);
+}
 const agentRules=read('AGENTS.md');
-assert.match(agentRules,/CUDO es la autoridad de su propia operación/);
-assert.match(agentRules,/ARKĒ.*(patrones|referencia)/);
-assert.match(agentRules,/no exige autorización de arke-root\\/main/);
-
+assert.ok(agentRules.includes('CUDO es la autoridad de su propia operación'));
+assert.ok(agentRules.includes('ARKĒ es solo una fuente opcional de patrones'));
+assert.ok(agentRules.includes('no exige autorización de arke-root/main'));
 
 console.log('CUDO_OPERATIONAL_SOVEREIGNTY_CONTRACT=PASS');
 console.log('CUDO_NATIVE_ENGINE_EXISTS=PASS');
