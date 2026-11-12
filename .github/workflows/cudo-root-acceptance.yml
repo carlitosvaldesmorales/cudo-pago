@@ -7,6 +7,8 @@ on:
       - 'preview-v8/**'
       - 'qa-pr219/**'
       - '.github/workflows/cudo-root-acceptance.yml'
+      - 'qa-v8-google/tools/process_work_state_requests.mjs'
+      - 'qa-v8-google/tools/work_state_requests_fixture_harness.mjs'
       - 'docs/CUDO_REPARACION_DESVIOS_20261112.md'
       - '00_START_HERE.md'
       - 'AGENTS.md'
@@ -76,24 +78,26 @@ jobs:
           print('PASS_QA_SLOT_ISOLATED_FROM_PRODUCTION')
           PY
 
-      - name: Validar worker ARKĒ event-driven sin polling
+      - name: Verificar adaptador histórico ARKĒ solo si está presente
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          text=Path('.github/workflows/cudo-arke-project-worker.yml').read_text(encoding='utf-8')
-          assert 'repository_dispatch:' in text
-          assert 'arke_cudo_handoff' in text
-          assert 'schedule:' not in text
-          assert '*/5' not in text
-          assert 'runs-on: ubuntu-latest' in text
-          assert 'runs-on: self-hosted' not in text
-          assert 'raw.githubusercontent.com/carlitosvaldesmorales/arke-root' not in text
-          assert 'github.event.client_payload.patch_b64' in text
-          assert 'target_main_allowed' in text
-          assert 'production_write' in text
-          print('PASS_ARKE_PROJECT_WORKER_EVENT_DRIVEN_NO_POLLING')
+          path=Path('.github/workflows/cudo-arke-project-worker.yml')
+          if not path.is_file():
+              print('CUDO_EXTERNAL_PATTERN_ADAPTER_ABSENT_OPTIONAL=PASS')
+          else:
+              text=path.read_text(encoding='utf-8')
+              for marker in ('repository_dispatch:', 'arke_cudo_handoff',
+                             'runs-on: ubuntu-latest',
+                             'github.event.client_payload.patch_b64',
+                             'target_main_allowed', 'production_write'):
+                  assert marker in text, 'Unsafe optional adapter: '+marker
+              for forbidden in ('schedule:', '*/5', 'runs-on: self-hosted',
+                                'raw.githubusercontent.com/carlitosvaldesmorales/arke-root'):
+                  assert forbidden not in text, 'Unsafe optional adapter: '+forbidden
+              print('CUDO_EXTERNAL_PATTERN_ADAPTER_PRESENT_BUT_OPTIONAL=PASS')
           PY
 
       - uses: actions/setup-node@v4
@@ -102,6 +106,9 @@ jobs:
 
       - name: Certificar autonomía operativa propia de CUDO
         run: node qa-v8-google/tools/certify_operational_sovereignty.mjs
+
+      - name: Certificar identidad del responsable en proyección de trabajo
+        run: node qa-v8-google/tools/work_state_requests_fixture_harness.mjs
 
       - name: Validar sintaxis del gate
         run: node --check preview-v8/tools/certify_root_acceptance.mjs
