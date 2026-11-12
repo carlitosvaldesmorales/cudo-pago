@@ -7,6 +7,11 @@ on:
       - 'preview-v8/**'
       - 'qa-pr219/**'
       - '.github/workflows/cudo-root-acceptance.yml'
+      - 'qa-v8-google/contracts/cudo-operational-sovereignty-v1.json'
+      - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - '.github/workflows/certify-cudo-operational-work-state.yml'
+      - 'docs/CUDO_AUTONOMIA_OPERACIONAL_20261112.md'
       - '.github/workflows/validate-v8-partidos-logos.yml'
       - '.github/workflows/cudo-arke-project-worker.yml'
       - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
@@ -90,6 +95,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Certificar autonomía operativa propia de CUDO
+        run: node qa-v8-google/tools/certify_operational_sovereignty.mjs
 
       - name: Validar sintaxis del gate
         run: node --check preview-v8/tools/certify_root_acceptance.mjs
