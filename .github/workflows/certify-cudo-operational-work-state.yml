@@ -19,6 +19,9 @@ on:
       - 'qa-v8-google/contracts/cudo-real-work-irrigation-v1.json'
       - 'qa-v8-google/tools/work_item_engine.mjs'
       - 'qa-v8-google/tools/certify_work_item_engine.mjs'
+      - 'qa-v8-google/contracts/cudo-operational-sovereignty-v1.json'
+      - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
       - 'qa-v8-google/operacion/**'
       - 'qa-v8-google/data/operacion.json'
@@ -33,6 +36,9 @@ on:
       - 'qa-v8-google/contracts/cudo-real-work-grass-cut-v1.json'
       - 'qa-v8-google/tools/work_item_engine.mjs'
       - 'qa-v8-google/tools/certify_work_item_engine.mjs'
+      - 'qa-v8-google/contracts/cudo-operational-sovereignty-v1.json'
+      - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
       - 'qa-v8-google/operacion/**'
       - 'qa-v8-google/data/operacion.json'
@@ -64,6 +70,8 @@ jobs:
         run: node qa-v8-google/tools/certify_shared_object_contract.mjs
       - name: Certify responsibility work state cluster
         run: node qa-v8-google/tools/certify_work_item_engine.mjs
+      - name: Enforce CUDO-owned operation without ARKE runtime dependency
+        run: node qa-v8-google/tools/certify_operational_sovereignty.mjs
       - name: Certify post-match operational fan-out
         run: node qa-v8-google/tools/certify_post_match_work_state.mjs
       - name: Certify seasonal irrigation work
