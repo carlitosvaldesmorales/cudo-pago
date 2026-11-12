@@ -40,3 +40,26 @@ La desviación fue causada por el ejecutor/arquitecto asistente que trató las p
 ## Regla para recuperar sesiones
 
 Al retomar CUDO: leer primero el `AGENTS.md` y el estado versionado **de CUDO**, su fuente de runtime y este inventario. No abrir ni usar un work item ARKĒ para admitir CUDO. Los errores aquí inventariados son deuda rastreable hasta que se certifique cada corrección; no reescribir sus registros históricos ni negar que ocurrió el desvío.
+
+---
+
+## Readback posterior independiente — 2026-11-12 (estado de cierre, sin inferencias)
+
+**A partir de este punto, las expresiones históricas «este PR» o «requiere CI» en D02 se leen como relato de la fase de preparación, no como estado pendiente.**
+
+| Control observado | Resultado auténtico |
+|---|---|
+| [CUDO Pago #247](https://github.com/carlitosvaldesmorales/cudo-pago/pull/247) | **MERGED** en `cudo-pago/main`, commit `60b4e5de62d0c2e910b658e403871ad045f0296e`. Validadores previos `root-acceptance`, `certify` (2) PASS. Post-merge `build`, `deploy`, `report-build-status` PASS |
+| Workflow de adopción móvil CUDO, leído desde `main` | Conservar verificación de fila Google Sheets y `actions/upload-artifact@v4`. No contiene `repos/carlitosvaldesmorales/arke-root/dispatches`. **No** afirma que haya ocurrido un evento institucional nuevo |
+| [CUDO vNext #67](https://github.com/carlitosvaldesmorales/cudo-vnext/pull/67) | **MERGED** solo en `release/cudo-bonos-2026-rc-guarded`, commit `0e4a97cb34f42ea7930cc1b4d7f904b56738df0b`; controles `Cloudflare Pages`, `receipt-guards`, `preview-readback`, `release-bundle`, `production-public-readback` PASS. No merge de bonos a productivo |
+| [ARKĒ #782](https://github.com/carlitosvaldesmorales/arke-root/pull/782) | **CLOSED, NOT MERGED** a las 13:09:39Z; `arke-root/main` seguía en `2a0db206df9cb7ca94103fd550798daa8c2f82ab`. No se reactivó Foreman para CUDO |
+| [CUDO Pago #245](https://github.com/carlitosvaldesmorales/cudo-pago/pull/245) | **OPEN** con rectificación visible al comienzo de la descripción: su trabajo nativo no depende de admisión ARKĒ. Faltan prueba real Apps Script/Sheets y autorización institucional para acciones concretas |
+| [CUDO vNext #42](https://github.com/carlitosvaldesmorales/cudo-vnext/pull/42) | **OPEN** con rectificación visible al comienzo de la descripción. Sigue candidato de release, no GO monetario |
+| Cloudflare Pages, inspección read-only | Preview success. Producción `CUDO_BONOS_PRODUCTION_ENV=false`, `CUDO_BONOS_PUBLIC_HOST_ACTIVE=false`, `RIFA_QA_ACTIVE=false`, `RIFA_QA_MP_TEST_ACTIVE=false`; QA TEST activa y sin dinero productivo |
+| End-to-end institucional real | **NO CERTIFICADO**. Ningún `WORK_ITEM` real, webhook auténtico, grant financiero o permiso municipal fue creado o aprobado por estas correcciones |
+
+### Conclusión de la auditoría, no del producto
+
+**Desvío de autoridad y acoplamiento live identificado:** corregido en fuentes CUDO versionadas y protegido por QA. **Autonomía operativa del club:** parcial, pendiente de demostrar con un evento y recibo reales sin dependencia del chat. Los GAP legítimos de autorizaciones y dinero no desaparecieron y no deben ocultarse dentro de «independencia».
+
+La responsabilidad de revisar y corregir desvíos técnicos futuros recae sobre el sistema ejecutor y sus controles en CUDO; el propietario no actuará como coordinador manual ni aprobará retrospectivamente inferencias falsas. Se preservan todas las huellas históricas.
