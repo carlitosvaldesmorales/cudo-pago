@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   deploy:
@@ -32,7 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json,os,pathlib,urllib.parse,urllib.request
+          import json,os,pathlib,urllib.parse,urllib.request,urllib.error,sys,re
 
           sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
           source=pathlib.Path('qa-v8-google/apps-script/CudoWorkStateWeb.gs').read_text()
@@ -58,9 +57,27 @@ jobs:
               headers={'Authorization':'Bearer '+access,'Content-Type':'application/json'},
               method=method
             )
-            with urllib.request.urlopen(q) as r:
-              raw=r.read()
-              return json.loads(raw) if raw else {}
+            try:
+              with urllib.request.urlopen(q,timeout=35) as r:
+                raw=r.read()
+                return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as error:
+              # Only the Google error classification is shown: never tokens,
+              # authorization headers, input payload, contacts or raw source.
+              try:
+                payload_error=json.loads(error.read(8192)).get('error',{})
+              except (ValueError,UnicodeError):
+                payload_error={}
+              detail=str(payload_error.get('message','UNSPECIFIED_GOOGLE_API_ERROR'))
+              detail=re.sub(r'[A-Za-z0-9_-]{60,}','[REDACTED]',detail)[:240]
+              method_name=method if method in ('GET','PUT','POST') else 'UNKNOWN'
+              operation='CONTENT_UPDATE' if '/content' in url else (
+                'DEPLOYMENT_UPDATE' if '/deployments/' in url else 'GOOGLE_APPS_SCRIPT_API')
+              print(json.dumps({'contract':'CUDO_GOOGLE_APPS_SCRIPT_PROVIDER_ERROR_V1',
+                'operation':operation,'method':method_name,'http':error.code,
+                'status':str(payload_error.get('status','UNKNOWN'))[:48],
+                'reason':detail,'production_money_write':False}),file=sys.stderr)
+              raise SystemExit('CUDO_GOOGLE_API_REJECTION_FAIL_CLOSED')
 
           base=f'https://script.googleapis.com/v1/projects/{sid}'
           # Keep the SAME private deployment already linked by CUDO.
@@ -159,47 +176,25 @@ jobs:
           CUDO_REQUIRE_CASH_LIVE: 'true'
         run: node qa-v8-google/tools/readback_existing_work_script_project.mjs
 
-      - name: Registrar recibo de ejecución en PR CUDO #253 existente
-        if: always() && github.ref == 'refs/heads/main'
+      - name: Recibo técnico persistente en este mismo workflow CUDO
+        if: always()
         env:
-          GH_TOKEN: ${{ github.token }}
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           LIVE_VERIFY_OUTCOME: ${{ steps.verify.outcome }}
-          GIT_SHA: ${{ github.sha }}
-          RUN_ID: ${{ github.run_id }}
-          REPO: ${{ github.repository }}
         shell: bash
         run: |
-          python3 - <<'PYSCRIPT'
-          import json,os,urllib.request
-          status='DEPLOYMENT_AND_LIVE_READBACK_OK' if (
-            os.environ.get('DEPLOY_OUTCOME')=='success' and
-            os.environ.get('LIVE_VERIFY_OUTCOME')=='success') else 'DEPLOYMENT_OR_LIVE_READBACK_GAP'
-          comment='\n'.join([
-            'CUDO EXISTING_WORK_STATE_DEPLOYMENT_RECEIPT_V1',
-            'status='+status,
-            'code_sha='+os.environ.get('GIT_SHA',''),
-            'deploy_step='+os.environ.get('DEPLOY_OUTCOME',''),
-            'live_version_readback='+os.environ.get('LIVE_VERIFY_OUTCOME',''),
-            'workflow_run='+os.environ.get('RUN_ID',''),
-            'money_writer_enabled=false',
-            'same_private_project=true',
-            'existing_deployment_only=true'
-          ])
-          req=urllib.request.Request(
-            'https://api.github.com/repos/'+os.environ['REPO']+'/issues/253/comments',
-            data=json.dumps({'body':comment}).encode(),
-            headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],
-                     'Accept':'application/vnd.github+json',
-                     'X-GitHub-Api-Version':'2022-11-28',
-                     'Content-Type':'application/json'},
-            method='POST'
-          )
-          with urllib.request.urlopen(req,timeout=30) as r:
-            print('CUDO_DEPLOYMENT_DURABLE_RECEIPT_POSTED='+str(r.status==201))
-          PYSCRIPT
+          {
+            echo '## CUDO_EXISTING_WORK_STATE_DEPLOYMENT_RECEIPT_V1'
+            echo "- despliegue_existente: ${DEPLOY_OUTCOME}"
+            echo "- version_live_verificada: ${LIVE_VERIFY_OUTCOME}"
+            echo '- dinero_productivo: NO ACTIVADO'
+            echo '- proyecto_o_deployment_nuevo: NO'
+            echo '- cuenta_tesorero_nueva: NO'
+            echo '- fuente: mismo Apps Script institucional CUDO'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Guardar evidencia de despliegue
+        continue-on-error: true # GitHub Actions artifact quota is separate from deployment verification
         uses: actions/upload-artifact@v4
         with:
           name: cudo-work-state-web-qa-${{ github.run_id }}
