@@ -8,6 +8,10 @@ on:
       - 'qa-v8-google/contracts/cudo-projection-persistence-fixture-v1.json'
       - 'qa-v8-google/tools/projection_persistence_adapters.mjs'
       - 'qa-v8-google/tools/certify_projection_persistence_adapters.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_caja_institutional_sink.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_caja_institutional_sink_fixture_harness.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_institutional_sheet_live_readback.mjs'
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs'
       - '.github/workflows/certify-cudo-projection-persistence-adapters.yml'
   push:
     branches:
@@ -17,6 +21,10 @@ on:
       - 'qa-v8-google/contracts/cudo-projection-persistence-fixture-v1.json'
       - 'qa-v8-google/tools/projection_persistence_adapters.mjs'
       - 'qa-v8-google/tools/certify_projection_persistence_adapters.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_caja_institutional_sink.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_caja_institutional_sink_fixture_harness.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_institutional_sheet_live_readback.mjs'
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs'
       - '.github/workflows/certify-cudo-projection-persistence-adapters.yml'
   workflow_dispatch:
 
@@ -38,3 +46,21 @@ jobs:
           node --check qa-v8-google/tools/certify_projection_persistence_adapters.mjs
       - name: Certify projection and persistence adapters
         run: node qa-v8-google/tools/certify_projection_persistence_adapters.mjs
+      - name: Certify existing institutional cash sink (synthetic; zero external writes)
+        run: node qa-v8-google/tools/cudo_bonos_caja_institutional_sink_fixture_harness.mjs
+
+  institutional-book-readback:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Real read-only institutional CUDO Ledger V1 schema check
+        run: node qa-v8-google/tools/cudo_bonos_institutional_sheet_live_readback.mjs

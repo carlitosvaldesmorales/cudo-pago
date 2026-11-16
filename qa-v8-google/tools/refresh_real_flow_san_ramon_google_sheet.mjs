@@ -131,7 +131,7 @@ export function planQaSheetRefresh({currentObligations,currentManifest,expectedC
   };
 }
 
-async function getAccessToken(){
+export async function getAccessToken(){
   const client_id=process.env.CUDO_GOOGLE_OAUTH_CLIENT_ID;
   const client_secret=process.env.CUDO_GOOGLE_OAUTH_CLIENT_SECRET;
   const refresh_token=process.env.CUDO_GOOGLE_REFRESH_TOKEN;
@@ -149,8 +149,9 @@ async function getAccessToken(){
   return data.access_token;
 }
 
-async function readRange(token,range){
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${QA_SPREADSHEET_ID}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE`;
+export async function readRange(token,range,spreadsheetId=QA_SPREADSHEET_ID){
+  if(![QA_SPREADSHEET_ID,'1f0TYrlHOMef6dx08o6LxJb4va4nEL0CNBt8dTsdcNbo'].includes(spreadsheetId)) throw Error('SHEET_READ_NOT_ALLOWLISTED');
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE`;
   const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});
   const data=await r.json();
   if(!r.ok) throw new Error(`Sheets read ${range} HTTP ${r.status}: ${data.error?.message||'unknown'}`);
