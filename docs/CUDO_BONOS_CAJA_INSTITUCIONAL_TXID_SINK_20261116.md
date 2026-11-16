@@ -11,6 +11,13 @@
 - Se reutilizaron getAccessToken y readRange del adaptador Google OAuth **preexistente** refresh_real_flow_san_ramon_google_sheet.mjs, manteniendo el write QA estrictamente en su allowlist San Ramón. El workflow existente certify-cudo-projection-persistence-adapters.yml ahora ejecuta: prueba sintética de idempotencia (sin escrituras externas), y **readback real de cabeceras** de las tres pestañas mediante los secretos ya disponibles en GitHub Actions. Sin un nuevo OAuth, almacén ni servicio.
 - Harness sintético: 2 movimientos CASH/BANK de CLP 2.000 cada uno, un tercero aprobado por MP pero no abonado; plan de 6 filas auditables, aplicación 6, replay 0, conflicto de monto/duplicado/actor no autenticado/revisión cambiada denegados; el movimiento MP no llega a caja. **0 pesos reales** modificados por el harness.
 
+## 16-11-2026 · Corrección de admisión D1 (sin otra caja)
+
+- El aplicador del MISMO escritor institucional exige ahora readAuthoritativeCudoFinancialSource() conectado al read model privado CUDO OIDC + grant, sin confiar en la proyección del llamador. Si falta el readback falla CUDO_INSTITUTIONAL_AUTHENTICATED_D1_SOURCE_NOT_WIRED; si difiere del contrato, obligaciones, movimientos y hashes de D1 falla CUDO_INSTITUTIONAL_D1_SOURCE_READBACK_MISMATCH.
+- Antes de escribir las tres filas del mismo TX_ID bajo lock vuelve a consultar la fuente financiera. Si D1 cambió falla CUDO_INSTITUTIONAL_D1_SOURCE_CHANGED_BEFORE_COMMIT. Reutiliza readCudoTreasurySheetsProjection ya presente en cudo-vnext y el mismo LockService de Apps Script privado.
+- Un sourceRevision no es firma criptográfica: la lectura independiente debe proceder del canal CUDO autenticado de fuente real y nunca devolver simplemente el JSON proporcionado por el llamador. Prueba de regresión: sourceProof alterado y cambio D1 bajo lock rechazados. Cero cambios en Sheets.
+- El enlace operativo sigue pendiente de autenticar la sesión Google nativa de sistemas@cudo.cl y transportar readback privado D1 al ejecutor lock. No se habilita cobro, QR real ni arqueo sintético.
+
 ## GAP institucional restante (no ignorar)
 
 1. La fuente sourceProofs viene de la **misma D1 y verificador de fuente real** de CUDO Bonos; no se acepta un JSON arbitrario ni declaración del comprador como autoridad. La API autenticada OIDC y grants reales deben suministrar el readback al escritor institucional.

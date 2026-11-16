@@ -43,8 +43,11 @@ async function test(){
  assert.ok(p.planned.every(x=>!x.txId.startsWith('MOV:MP:')),'MP approved must remain THIRD_PARTY unbanked');
  assert.equal(p.planned.find(x=>x.sheet===SHEETS.ledger.name).rowIndex,2);
  assert.equal(book.CUDO_LEDGER_V1[1][5],45000);
- let calls=0,locks=0;
- const adapter={async authorizedInstitutionalPrincipal(){return 'sistemas@cudo.cl'},async readBook(){return copy(book)},
+ let calls=0,locks=0,d1Reads=0;
+ const remoteAuthoritative=copy(source);
+ const adapter={async authorizedInstitutionalPrincipal(){return 'sistemas@cudo.cl'},
+  async readAuthoritativeCudoFinancialSource(){d1Reads++;return copy(remoteAuthoritative)},
+  async readBook(){return copy(book)},
   async withInstitutionalExclusiveLock(f){locks++;return f()},
   async batchWriteAndReadback({mutations,spreadsheetId}){
    calls++;assert.equal(mutations.length,6);assert.ok(spreadsheetId);
@@ -52,11 +55,11 @@ async function test(){
    return {applied:mutations.length,verified:true};
   }};
  const dry=await applyCudoBonosInstitutionalCashSync({source,adapter,recordedAt:stamp,apply:false});
- assert.equal(dry.status,'DRY_RUN');assert.equal(calls,0);assert.equal(locks,0);
+ assert.equal(dry.status,'DRY_RUN');assert.equal(calls,0);assert.equal(locks,0);assert.equal(d1Reads,1);
  const applied=await applyCudoBonosInstitutionalCashSync({source,adapter,recordedAt:stamp,apply:true});
  assert.equal(applied.status,'APPLIED_AND_VERIFIED');assert.equal(applied.writesApplied,6);
  const replay=await applyCudoBonosInstitutionalCashSync({source,adapter,recordedAt:stamp,apply:true});
- assert.equal(replay.status,'NOOP_ALREADY_CURRENT');assert.equal(calls,1);assert.equal(locks,1);
+ assert.equal(replay.status,'NOOP_ALREADY_CURRENT');assert.equal(calls,1);assert.equal(locks,1);assert.equal(d1Reads,4);
  const identical=planCudoBonosInstitutionalCashSync({source,existingBook:book,recordedAt:'2026-11-17T09:00:00Z'});
  assert.equal(identical.planned.length,0,'replay with different wall-clock timestamp remains NOOP');
  const broken=copy(book);broken.CUDO_LEDGER_V1[2][5]=999;
@@ -72,11 +75,31 @@ async function test(){
  assert.throws(()=>planCudoBonosInstitutionalCashSync({source:{...source,sourceRevision:'FAKE'},existingBook:book,recordedAt:stamp}),/PRIVATE_SOURCE/);
  await assert.rejects(applyCudoBonosInstitutionalCashSync({source,adapter:{},recordedAt:stamp,apply:true}),/SINGLE_WRITER_LOCK_REQUIRED/);
  await assert.rejects(applyCudoBonosInstitutionalCashSync({source,adapter:{...adapter,authorizedInstitutionalPrincipal:async()=>null},recordedAt:stamp,apply:true}),/AUTHENTICATED_PRINCIPAL_REQUIRED/);
- const raceBook=makeBook();const raced={async authorizedInstitutionalPrincipal(){return 'sistemas@cudo.cl'},async readBook(){return copy(raceBook)},async withInstitutionalExclusiveLock(f){raceBook.CUDO_LEDGER_V1.push(['NEW_EXTERNAL_TX']);return f()},async batchWriteAndReadback(){throw Error('SHOULD_NOT_WRITE')}};
+ const raceBook=makeBook();const raced={async authorizedInstitutionalPrincipal(){return 'sistemas@cudo.cl'},
+  async readAuthoritativeCudoFinancialSource(){return copy(source)},
+  async readBook(){return copy(raceBook)},async withInstitutionalExclusiveLock(f){raceBook.CUDO_LEDGER_V1.push(['NEW_EXTERNAL_TX']);return f()},async batchWriteAndReadback(){throw Error('SHOULD_NOT_WRITE')}};
  await assert.rejects(applyCudoBonosInstitutionalCashSync({source,adapter:raced,recordedAt:stamp,apply:true}),/SOURCE_CHANGED_BEFORE_COMMIT/);
  // No backed-by-cash entries: empty source means none gets written to institutional book.
  const empty={...source,tables:{...source.tables,FINANCIAL_MOVEMENTS:[source.tables.FINANCIAL_MOVEMENTS[0]],FINANCIAL_OBLIGATIONS:[source.tables.FINANCIAL_OBLIGATIONS[0]]},sourceProofs:[]};
  assert.equal(planCudoBonosInstitutionalCashSync({source:empty,existingBook:book,recordedAt:stamp}).planned.length,0);
- console.log(JSON.stringify({ok:true,contract:'CUDO_BONOS_INSTITUTIONAL_CASH_SYNC_PLAN_V1',originalLedgerHistoryPreserved:true,syntheticProofs:2,plannedMutations:6,mpUnbankedNotBooked:true,replayStatus:replay.status,externalRaceRejected:true,wrongMoneyRejected:true,singleWriterRequired:true,productionWrites:0}));
+ // A snapshot bearing the exact valid schema and sourceRevision but a
+ // different evidence/movement cannot be accepted as the institution's
+ // authoritative D1, even when a caller asserts it is reconciled.
+ const forged=copy(source);forged.sourceProofs[0].sourceRefDigest=hex('fake-valid-looking-receipt');
+ await assert.rejects(applyCudoBonosInstitutionalCashSync({source:forged,adapter,recordedAt:stamp,apply:true}),/D1_SOURCE_READBACK_MISMATCH/);
+ await assert.rejects(applyCudoBonosInstitutionalCashSync({source,adapter:{...adapter,readAuthoritativeCudoFinancialSource:null},recordedAt:stamp}),/AUTHENTICATED_D1_SOURCE_NOT_WIRED/);
+ // Fresh book exercises in-lock readback after independent D1 verification.
+ const fresh=makeBook();
+ let changeCount=0;const changed={
+  ...adapter,async readBook(){return copy(fresh)},
+  async readAuthoritativeCudoFinancialSource(){changeCount++;const r=copy(source);
+   if(changeCount===2)r.sourceProofs[0].sourceRefDigest=hex('bank-reversal');
+   return r;
+  },async batchWriteAndReadback(){throw Error('SHOULD_NOT_WRITE_D1_CHANGED')}
+ };
+ await assert.rejects(applyCudoBonosInstitutionalCashSync({source,adapter:changed,recordedAt:stamp,apply:true}),/D1_SOURCE_CHANGED_BEFORE_COMMIT/);
+ assert.equal(changeCount,2);
+
+ console.log(JSON.stringify({ok:true,contract:'CUDO_BONOS_INSTITUTIONAL_CASH_SYNC_PLAN_V1',originalLedgerHistoryPreserved:true,syntheticProofs:2,plannedMutations:6,mpUnbankedNotBooked:true,replayStatus:replay.status,externalRaceRejected:true,wrongMoneyRejected:true,singleWriterRequired:true,independentD1ProofRequired:true,d1ChangedInLockRejected:true,productionWrites:0}));
 }
 await test();
