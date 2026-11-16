@@ -46,6 +46,9 @@ const headScopes=manifestSource.oauthScopes;
 // Scopes are permissions metadata, not tokens or identities. Never print
 // private document contents, OAuth token or contact data.
 const scope='https://www.googleapis.com/auth/userinfo.email';
+if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&
+  !(Array.isArray(activeScopes)&&activeScopes.includes(scope)))
+ throw Error('CUDO_USERINFO_EMAIL_SCOPE_MISSING_FROM_LIVE_DEPLOYMENT');
 if(activeManifest.webapp?.access!=='MYSELF'||activeManifest.webapp?.executeAs!=='USER_DEPLOYING')
  throw Error('CUDO_EXISTING_DEPLOYMENT_PRIVATE_SCOPE_CHANGED');
 const result={
@@ -67,7 +70,8 @@ const result={
  workFilePresent:true,cashFileAlreadyPresent:files.some(f=>f.name==='CudoBonosCajaReadiness'),
  existingDeploymentCount:(deployments.deployments||[]).length,
  moneyWriterActive:false,
- runtimeGap:installed?null:'CUDO_STABLE_DEPLOYMENT_NOT_YET_UPDATED',
+ runtimeGap:!installed?'CUDO_STABLE_DEPLOYMENT_NOT_YET_UPDATED':
+  !(Array.isArray(activeScopes)&&activeScopes.includes(scope))?'CUDO_USERINFO_SCOPE_MISSING':null,
  performedMutation:false
 };
 console.log(JSON.stringify(result));
