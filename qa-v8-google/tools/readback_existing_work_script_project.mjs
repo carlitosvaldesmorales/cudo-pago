@@ -2,6 +2,7 @@
 // deploy-cudo-work-state-web-qa.yml. Uses the same CUDO Google OAuth secret
 // source in GitHub Actions. Does NOT update script/deployment or expose token.
 import {getAccessToken} from './refresh_real_flow_san_ramon_google_sheet.mjs';
+import {readFileSync} from 'node:fs';
 const id='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8';
 const stable='AKfycbxae8ZOaPJElvF9cTa0EdDzb-KBm4nItqHSnUdZngQ2nRnEEy3nX3AJMQHsySt5lE99Sw';
 const token=await getAccessToken();
@@ -31,6 +32,11 @@ const workLive=(live.files||[]).find(f=>f.name==='CudoWorkStateWeb'&&f.type==='S
 const manifestLive=(live.files||[]).find(f=>f.name==='appsscript'&&f.type==='JSON');
 const installed=!!cash?.source?.includes('CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1')&&
  !!workLive?.source?.includes('cudoBonosCajaReadiness_()')&&!!manifestLive;
+// The same source files as the existing CUDO Apps Script deployment job.
+// Compare only in memory; never send provider code or private data to logs.
+const localWork=readFileSync(new URL('../apps-script/CudoWorkStateWeb.gs',import.meta.url),'utf8');
+const localCash=readFileSync(new URL('../apps-script/CudoBonosCajaReadiness.gs',import.meta.url),'utf8');
+const activeSourceIdentical=workLive?.source===localWork&&cash?.source===localCash;
 if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&!installed)
  throw Error('CUDO_STABLE_DEPLOYMENT_LIVE_CASH_PREFLIGHT_NOT_PRESENT');
 if(!manifestLive)throw Error('CUDO_EXISTING_DEPLOYMENT_VERSION_MANIFEST_MISSING');
@@ -43,6 +49,7 @@ const result={
  stableDeploymentPresent:true,
  stableDeploymentVersion:stableVersion,
  cashPreflightPresentInActiveVersion:installed,
+ activeSourceIdenticalToRepo:activeSourceIdentical,
  privateWorkPanelCallsCashPreflight:installed,
  stableDeploymentAccess:manifestSource.webapp?.access||'UNSPECIFIED',
  stableDeploymentExecuteAs:manifestSource.webapp?.executeAs||'UNSPECIFIED',
