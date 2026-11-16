@@ -2,7 +2,7 @@ name: Deploy CUDO Persona Tally Intake Web
 
 on:
   push:
-    branches: [main, feat/persona-tally-event-ingestion]
+    branches: [main, feat/persona-tally-event-ingestion, feat/persona-telegram-admin-notify-20260917]
     paths:
       - 'qa-v8-google/apps-script/CudoPersonaIntakeWeb.gs'
       - '.github/workflows/deploy-cudo-persona-intake-web.yml'
@@ -126,7 +126,9 @@ jobs:
             if response.get('state')!=expected_state:
               raise SystemExit('Webhook returned unexpected governance state: '+json.dumps(response.get('state')))
             if response.get('notification',{}).get('reason')!='CERTIFICATION':
-              raise SystemExit('Certification webhook unexpectedly notified administrator')
+              raise SystemExit('Certification webhook unexpectedly notified administrator by mail')
+            if response.get('telegramNotification',{}).get('reason')!='CERTIFICATION':
+              raise SystemExit('Certification webhook unexpectedly notified administrator by Telegram')
 
             a1=urllib.parse.quote(f'PERSONAS_CONTROL!A{row}:W{row}',safe='!:$')
             values=api(f'https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{a1}')

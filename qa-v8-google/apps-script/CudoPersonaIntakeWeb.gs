@@ -3,6 +3,9 @@ const CUDO_PERSONA_INTAKE_SHEET_='PERSONAS_CONTROL';
 const CUDO_PERSONA_TALLY_FORM_ID_='9qeq5p';
 const CUDO_PERSONA_NOTIFY_='sistemas@cudo.cl';
 const CUDO_PERSONA_ADMIN_URL_='https://cudo.cl/preview-v8/admin/';
+const CUDO_PERSONA_TELEGRAM_BOT_TOKEN_PROP_='CUDO_TELEGRAM_BOT_TOKEN';
+const CUDO_PERSONA_TELEGRAM_CHAT_ID_PROP_='CUDO_TELEGRAM_CHAT_ID';
+const CUDO_PERSONA_TELEGRAM_THREAD_ID_PROP_='CUDO_TELEGRAM_MESSAGE_THREAD_ID';
 const CUDO_PERSONA_INTAKE_KEY_SHA256_='__CUDO_PERSONA_INTAKE_KEY_SHA256__';
 
 function cudoPersonaIntakeDigestHex_(value){
@@ -123,6 +126,61 @@ function cudoPersonaIntakeNotify_(record,isCertification){
   }
 }
 
+
+function cudoPersonaIntakeTelegramNotify_(record,isCertification){
+  if(isCertification) return {sent:false,reason:'CERTIFICATION'};
+  const props=PropertiesService.getScriptProperties();
+  const dedupe='CUDO_PERSONA_TELEGRAM_NOTIFIED_'+record.submissionId;
+  if(props.getProperty(dedupe)==='1') return {sent:false,reason:'ALREADY_NOTIFIED'};
+
+  const token=String(props.getProperty(CUDO_PERSONA_TELEGRAM_BOT_TOKEN_PROP_)||'').trim();
+  const chatId=String(props.getProperty(CUDO_PERSONA_TELEGRAM_CHAT_ID_PROP_)||'').trim();
+  const threadId=String(props.getProperty(CUDO_PERSONA_TELEGRAM_THREAD_ID_PROP_)||'').trim();
+  if(!token||!chatId) return {sent:false,reason:'NOT_CONFIGURED'};
+
+  const message=[
+    '📋 CUDO · Nueva ficha pendiente',
+    '👤 '+record.name,
+    '🤝 '+record.relation,
+    '⏳ Pendiente de revisión',
+    '',
+    'Revisar solicitudes: '+CUDO_PERSONA_ADMIN_URL_,
+  ].join('\n');
+
+  const payload={chat_id:chatId,text:message};
+  if(/^\d+$/.test(threadId)) payload.message_thread_id=Number(threadId);
+
+  try{
+    const response=UrlFetchApp.fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
+      method:'post',
+      contentType:'application/json',
+      payload:JSON.stringify(payload),
+      muteHttpExceptions:true,
+    });
+    const code=response.getResponseCode();
+    let body={};
+    try{ body=JSON.parse(response.getContentText()||'{}'); }catch(ignore){}
+    if(code!==200||body.ok!==true){
+      return {
+        sent:false,
+        reason:'TELEGRAM_HTTP_'+code,
+        error:cudoPersonaIntakeSafeText_(body.description||response.getContentText(),300),
+      };
+    }
+    props.setProperty(dedupe,'1');
+    return {
+      sent:true,
+      messageId:body&&body.result&&body.result.message_id?String(body.result.message_id):'',
+    };
+  }catch(err){
+    return {
+      sent:false,
+      reason:'TELEGRAM_ERROR',
+      error:cudoPersonaIntakeSafeText_(err&&err.message?err.message:String(err),300),
+    };
+  }
+}
+
 function doPost(e){
   const supplied=String(e&&e.parameter&&e.parameter.key||'');
   if(!supplied||cudoPersonaIntakeDigestHex_(supplied)!==CUDO_PERSONA_INTAKE_KEY_SHA256_){
@@ -153,7 +211,8 @@ function doPost(e){
     const state=cudoPersonaIntakeState_(sheet,row);
     cudoPersonaIntakeAssertGovernance_(state);
     const notification=cudoPersonaIntakeNotify_(record,cert);
-    return cudoPersonaIntakeJson_({ok:true,inserted,duplicate:!inserted,idPersona:record.idPersona,submissionId:record.submissionId,row,state,notification});
+    const telegramNotification=cudoPersonaIntakeTelegramNotify_(record,cert);
+    return cudoPersonaIntakeJson_({ok:true,inserted,duplicate:!inserted,idPersona:record.idPersona,submissionId:record.submissionId,row,state,notification,telegramNotification});
   } finally {
     lock.releaseLock();
   }
