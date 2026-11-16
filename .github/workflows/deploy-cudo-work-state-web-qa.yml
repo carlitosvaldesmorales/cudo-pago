@@ -92,13 +92,18 @@ jobs:
             raise SystemExit('Fail closed: original CUDO deployment identity changed')
           # Idempotent release: an earlier retry may already have changed the
           # SAME stable deployment even if its post-write GET was stale.
+          identity_scope='https://www.googleapis.com/auth/userinfo.email'
           old_version=previous.get('versionNumber')
           if isinstance(old_version,int) and old_version>0:
             old_live=req(base+'/content?versionNumber='+str(old_version))
             old_work=[f for f in old_live.get('files',[]) if f.get('name')=='CudoWorkStateWeb']
             old_cash=[f for f in old_live.get('files',[]) if f.get('name')=='CudoBonosCajaReadiness']
+            active_manifests=[f for f in old_live.get('files',[]) if f.get('name')=='appsscript' and f.get('type')=='JSON']
+            old_scopes=(json.loads(active_manifests[0].get('source') or '{}').get('oauthScopes',[])
+                        if len(active_manifests)==1 else [])
             if len(old_work)==1 and old_work[0].get('source')==source and \
-               len(old_cash)==1 and old_cash[0].get('source')==cash_source:
+               len(old_cash)==1 and old_cash[0].get('source')==cash_source and \
+               isinstance(old_scopes,list) and identity_scope in old_scopes:
               receipt={'ok':True,'scriptId':sid,'deploymentId':stable,
                 'versionNumber':old_version,'existingDeploymentUpdated':False,
                 'noChangeNeeded':True,'sourceVerified':True,'cash_writer_enabled':False,
@@ -121,6 +126,15 @@ jobs:
 
           if manifest is None:
             raise SystemExit('Fail closed: Apps Script manifest missing')
+          # Retain the exact permission set already authorized by CUDO.
+          # Session.getEffectiveUser() requires userinfo.email per Google.
+          # Do not replace the historical Sheets, Forms or URLFetch scopes.
+          scopes=manifest.get('oauthScopes')
+          if not isinstance(scopes,list) or not scopes or len(set(scopes))!=len(scopes) or \
+             not all(isinstance(x,str) and x.startswith('https://www.googleapis.com/auth/') for x in scopes):
+            raise SystemExit('CUDO_APPS_SCRIPT_EXISTING_SCOPES_CANNOT_BE_SAFELY_EXTENDED')
+          if identity_scope not in scopes:
+            manifest['oauthScopes']=scopes+[identity_scope]
           manifest['timeZone']='America/Santiago'
           manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
           files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
@@ -172,6 +186,9 @@ jobs:
               'attempts':8,'money_writer_enabled':False}),file=sys.stderr)
             raise SystemExit('Fail closed: original deployment revision did not converge')
           live=req(base+'/content?versionNumber='+str(vn))
+          live_manifests=[f for f in live.get('files',[]) if f.get('name')=='appsscript' and f.get('type')=='JSON']
+          if len(live_manifests)!=1 or identity_scope not in json.loads(live_manifests[0].get('source') or '{}').get('oauthScopes',[]):
+            raise SystemExit('CUDO_APPS_SCRIPT_USERINFO_SCOPE_MISSING_IN_VERSIONED_DEPLOYMENT')
           if not any(f.get('name')=='CudoBonosCajaReadiness' and
                      'CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1' in f.get('source','')
                      for f in live.get('files',[])):

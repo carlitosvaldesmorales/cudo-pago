@@ -41,6 +41,14 @@ if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&!installed)
  throw Error('CUDO_STABLE_DEPLOYMENT_LIVE_CASH_PREFLIGHT_NOT_PRESENT');
 if(!manifestLive)throw Error('CUDO_EXISTING_DEPLOYMENT_VERSION_MANIFEST_MISSING');
 const activeManifest=JSON.parse(manifestLive.source||'{}');
+const activeScopes=activeManifest.oauthScopes;
+const headScopes=manifestSource.oauthScopes;
+// Scopes are permissions metadata, not tokens or identities. Never print
+// private document contents, OAuth token or contact data.
+const scope='https://www.googleapis.com/auth/userinfo.email';
+if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&
+  !(Array.isArray(activeScopes)&&activeScopes.includes(scope)))
+ throw Error('CUDO_USERINFO_EMAIL_SCOPE_MISSING_FROM_LIVE_DEPLOYMENT');
 if(activeManifest.webapp?.access!=='MYSELF'||activeManifest.webapp?.executeAs!=='USER_DEPLOYING')
  throw Error('CUDO_EXISTING_DEPLOYMENT_PRIVATE_SCOPE_CHANGED');
 const result={
@@ -50,13 +58,20 @@ const result={
  stableDeploymentVersion:stableVersion,
  cashPreflightPresentInActiveVersion:installed,
  activeSourceIdenticalToRepo:activeSourceIdentical,
+ headExplicitScopes:Array.isArray(headScopes),
+ headOauthScopeCount:Array.isArray(headScopes)?headScopes.length:0,
+ activeExplicitScopes:Array.isArray(activeScopes),
+ activeOauthScopeCount:Array.isArray(activeScopes)?activeScopes.length:0,
+ headUserinfoEmailScopeGranted:Array.isArray(headScopes)&&headScopes.includes(scope),
+ activeUserinfoEmailScopeDeclared:Array.isArray(activeScopes)&&activeScopes.includes(scope),
  privateWorkPanelCallsCashPreflight:installed,
  stableDeploymentAccess:manifestSource.webapp?.access||'UNSPECIFIED',
  stableDeploymentExecuteAs:manifestSource.webapp?.executeAs||'UNSPECIFIED',
  workFilePresent:true,cashFileAlreadyPresent:files.some(f=>f.name==='CudoBonosCajaReadiness'),
  existingDeploymentCount:(deployments.deployments||[]).length,
  moneyWriterActive:false,
- runtimeGap:installed?null:'CUDO_STABLE_DEPLOYMENT_NOT_YET_UPDATED',
+ runtimeGap:!installed?'CUDO_STABLE_DEPLOYMENT_NOT_YET_UPDATED':
+  !(Array.isArray(activeScopes)&&activeScopes.includes(scope))?'CUDO_USERINFO_SCOPE_MISSING':null,
  performedMutation:false
 };
 console.log(JSON.stringify(result));
