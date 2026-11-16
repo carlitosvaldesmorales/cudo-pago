@@ -58,6 +58,16 @@ jobs:
               return json.loads(raw) if raw else {}
 
           base=f'https://script.googleapis.com/v1/projects/{sid}'
+          # Keep the SAME private deployment already linked by CUDO.
+          # Google Scripts deployments.update: PUT with deploymentConfig.
+          stable='AKfycbxae8ZOaPJElvF9cTa0EdDzb-KBm4nItqHSnUdZngQ2nRnEEy3nX3AJMQHsySt5lE99Sw'
+          deployments=req(base+'/deployments?pageSize=200').get('deployments',[])
+          existing=[d for d in deployments if d.get('deploymentId')==stable]
+          if len(existing)!=1:
+            raise SystemExit('Fail closed: original CUDO work-state deployment not found')
+          previous=existing[0].get('deploymentConfig') or {}
+          if previous.get('scriptId')!=sid or previous.get('manifestFileName')!='appsscript':
+            raise SystemExit('Fail closed: original CUDO deployment identity changed')
           current=req(base+'/content')
           files=[]
           manifest=None
@@ -92,12 +102,20 @@ jobs:
             'description':'CUDO Work State QA '+os.environ.get('GITHUB_SHA','')[:12]
           })
           vn=version['versionNumber']
-          dep=req(base+'/deployments','POST',{
-            'versionNumber':vn,
-            'manifestFileName':'appsscript',
-            'description':'CUDO Work State private QA'
+          dep=req(base+'/deployments/'+stable,'PUT',{
+            'deploymentConfig':{
+              'scriptId':sid,
+              'versionNumber':vn,
+              'manifestFileName':'appsscript',
+              'description':'CUDO Work State private QA · caja read-only'
+            }
           })
           did=dep['deploymentId']
+          if did!=stable or dep.get('deploymentConfig',{}).get('versionNumber')!=vn:
+            raise SystemExit('Fail closed: existing CUDO Work State deployment not updated')
+          verify_deploy=req(base+'/deployments/'+stable)
+          if verify_deploy.get('deploymentConfig',{}).get('versionNumber')!=vn:
+            raise SystemExit('Fail closed: deployment revision readback mismatch')
           url='https://script.google.com/macros/s/'+did+'/exec?view=work'
           out={
             'ok':True,
@@ -108,6 +126,9 @@ jobs:
             'access':'MYSELF',
             'executeAs':'USER_DEPLOYING',
             'sourceVerified':True,
+            'existingDeploymentUpdated':True,
+            'newProjectCreated':False,
+            'newDeploymentCreated':False,
             'cash_writer_enabled':False,\n            'institutional_operator_verified_at_deploy':False,\n            'production_write':False,
             'live_transition_executed':False
           }

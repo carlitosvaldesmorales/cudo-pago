@@ -51,6 +51,8 @@ x=probe({missing:'EFD_LOG_V1'});assert.match(x.error,/TAB_MISSING/);assert.equal
 x=probe({headers:{...tables,CUDO_LEDGER_V1:[...tables.CUDO_LEDGER_V1.slice(0,-1),'NOT_TX_ID']}});assert.match(x.error,/HEADER_CHANGED/);assert.equal(x.releases,1);tested++;
 assert.ok(panel.includes('cudoBonosCajaReadiness_()')&&panel.includes('escritura de dinero inactiva'));
 assert.ok(deploy.includes("name':'CudoBonosCajaReadiness'"));
+assert.ok(deploy.includes("deployments/'+stable,'PUT'")&&deploy.includes('existingDeploymentUpdated'));
+assert.ok(!deploy.includes("req(base+'/deployments','POST'"),'do not invent another deployment');
 assert.ok(deploy.includes("'access':'MYSELF'")||deploy.includes("'access':'MYSELF'")); // existing manifest is private
 assert.doesNotMatch(source,/\b(?:appendRow|setValues|setValue|deleteRow|clearContent|UrlFetchApp\.fetch)\s*\(/);
 console.log(JSON.stringify({ok:true,contract:'CUDO_BONOS_EXISTING_PRIVATE_APPS_SCRIPT_LOCK_CERT_V1',
