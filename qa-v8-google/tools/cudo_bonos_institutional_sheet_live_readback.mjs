@@ -23,16 +23,25 @@ export async function readInstitutionalSchemaWithOriginalOAuth(){
  // Verify the OAuth subject against the CUDO operator selected by the owner.
  const identity=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{
   headers:{authorization:'Bearer '+token,accept:'application/json'}});
- if(!identity.ok)throw Error('GOOGLE_OAUTH_OPERATOR_IDENTITY_READBACK_REQUIRED');
- const who=await identity.json();
- if(who?.email_verified!==true||String(who.email||'').toLowerCase()!=='sistemas@cudo.cl')
-  throw Error('GOOGLE_OAUTH_CUDO_INSTITUTIONAL_OPERATOR_MISMATCH');
+ // The original Sheets refresh OAuth grant may omit the OpenID/email scope.
+ // That gap must block a MONEY WRITER, but must not stop a harmless READ-ONLY
+ // header certification. Do not re-authenticate, copy tokens or assume role.
+ let institutionallyAuthorized=false;
+ if(identity.ok){
+  const who=await identity.json();
+  if(who?.email_verified!==true||String(who.email||'').toLowerCase()!=='sistemas@cudo.cl')
+   throw Error('GOOGLE_OAUTH_CUDO_INSTITUTIONAL_OPERATOR_MISMATCH');
+  institutionallyAuthorized=true;
+ }
  for(const spec of Object.values(SHEETS)){
   const last=String.fromCharCode(64+spec.header.length);
   // Header and first historic row are sufficient for schema validation.
   data[spec.name]=await readRange(token,"'"+spec.name+"'!A1:"+last+"2",SHEET_ID);
  }
- return inspectInstitutionalHeaderReadback(data);
+ return {...inspectInstitutionalHeaderReadback(data),
+  institutionalPrincipalVerified:institutionallyAuthorized,
+  financialWriterAuthorized:institutionallyAuthorized,
+  ...(institutionallyAuthorized?{}:{identityGap:'GOOGLE_OAUTH_USERINFO_SCOPE_NOT_PROVEN'})};
 }
 const isMain=process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url;
 if(isMain){
