@@ -20,6 +20,7 @@ on:
       - 'qa-v8-google/tools/certify_cudo_bonos_existing_scriptlock.mjs'
       - 'qa-v8-google/tools/readback_existing_work_script_project.mjs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
+      - '.github/workflows/deploy-cudo-work-state-web-qa.yml'
       - 'docs/CUDO_AUTONOMIA_OPERACIONAL_20261112.md'
       - '.github/workflows/validate-v8-partidos-logos.yml'
       - '.github/workflows/cudo-arke-project-worker.yml'
