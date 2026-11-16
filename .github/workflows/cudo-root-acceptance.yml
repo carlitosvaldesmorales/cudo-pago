@@ -21,6 +21,12 @@ on:
       - '.github/workflows/validate-v8-partidos-logos.yml'
       - '.github/workflows/cudo-arke-project-worker.yml'
       - 'qa-v8-google/apps-script/CudoMobileAdoptionWeb.gs'
+      - 'qa-v8-google/tools/cudo_bonos_caja_institutional_sink.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_caja_institutional_sink_fixture_harness.mjs'
+      - 'qa-v8-google/tools/cudo_bonos_institutional_sheet_live_readback.mjs'
+      - 'qa-v8-google/tools/refresh_real_flow_san_ramon_google_sheet.mjs'
+      - '.github/workflows/certify-cudo-projection-persistence-adapters.yml'
+      - 'docs/CUDO_BONOS_CAJA_INSTITUCIONAL_TXID_SINK_20261116.md'
       - 'qa-v8-google/tools/mobile_adoption_event_bridge_fixture_harness.mjs'
       - '.github/workflows/cudo-mobile-adoption-event.yml'
       - '.github/workflows/certify-cudo-mobile-adoption-candidate.yml'
@@ -106,6 +112,9 @@ jobs:
 
       - name: Certificar autonomía operativa propia de CUDO
         run: node qa-v8-google/tools/certify_operational_sovereignty.mjs
+
+      - name: Certificar integridad TX_ID e idempotencia de caja institucional CUDO
+        run: node qa-v8-google/tools/cudo_bonos_caja_institutional_sink_fixture_harness.mjs
 
       - name: Certificar identidad del responsable en proyección de trabajo
         run: node qa-v8-google/tools/work_state_requests_fixture_harness.mjs
