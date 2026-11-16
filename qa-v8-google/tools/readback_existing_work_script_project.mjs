@@ -19,15 +19,37 @@ if(original.length!==1||!manifest)throw Error('CUDO_EXISTING_SCRIPT_PROJECT_NOT_
 const manifestSource=JSON.parse(manifest.source||'{}');
 const deployments=await get('/deployments?pageSize=200');
 const known=(deployments.deployments||[]).find(d=>d.deploymentId===stable);
+if(!known)throw Error('EXISTING_STABLE_CUDO_WORK_DEPLOYMENT_MISSING');
+const stableVersion=Number(known.deploymentConfig?.versionNumber);
+if(!Number.isSafeInteger(stableVersion)||stableVersion<=0)
+ throw Error('EXISTING_WORK_DEPLOYMENT_VERSION_UNVERIFIED');
+// Verify the IMMUTABLE version actually serving the existing public URL,
+// not merely the editable HEAD source that an incomplete deploy can change.
+const live=await get('/content?versionNumber='+stableVersion);
+const cash=(live.files||[]).find(f=>f.name==='CudoBonosCajaReadiness'&&f.type==='SERVER_JS');
+const workLive=(live.files||[]).find(f=>f.name==='CudoWorkStateWeb'&&f.type==='SERVER_JS');
+const manifestLive=(live.files||[]).find(f=>f.name==='appsscript'&&f.type==='JSON');
+const installed=!!cash?.source?.includes('CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1')&&
+ !!workLive?.source?.includes('cudoBonosCajaReadiness_()')&&!!manifestLive;
+if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&!installed)
+ throw Error('CUDO_STABLE_DEPLOYMENT_LIVE_CASH_PREFLIGHT_NOT_PRESENT');
+if(!manifestLive)throw Error('CUDO_EXISTING_DEPLOYMENT_VERSION_MANIFEST_MISSING');
+const activeManifest=JSON.parse(manifestLive.source||'{}');
+if(activeManifest.webapp?.access!=='MYSELF'||activeManifest.webapp?.executeAs!=='USER_DEPLOYING')
+ throw Error('CUDO_EXISTING_DEPLOYMENT_PRIVATE_SCOPE_CHANGED');
 const result={
  contract:'CUDO_EXISTING_WORK_SCRIPT_PROJECT_READBACK_V1',ok:true,
  existingProjectVerified:true,projectKind:'CUDO_WORK_STATE_PRIVATE',
- stableDeploymentPresent:!!known,
+ stableDeploymentPresent:true,
+ stableDeploymentVersion:stableVersion,
+ cashPreflightPresentInActiveVersion:installed,
+ privateWorkPanelCallsCashPreflight:installed,
  stableDeploymentAccess:manifestSource.webapp?.access||'UNSPECIFIED',
  stableDeploymentExecuteAs:manifestSource.webapp?.executeAs||'UNSPECIFIED',
  workFilePresent:true,cashFileAlreadyPresent:files.some(f=>f.name==='CudoBonosCajaReadiness'),
  existingDeploymentCount:(deployments.deployments||[]).length,
  moneyWriterActive:false,
+ runtimeGap:installed?null:'CUDO_STABLE_DEPLOYMENT_NOT_YET_UPDATED',
  performedMutation:false
 };
 console.log(JSON.stringify(result));
