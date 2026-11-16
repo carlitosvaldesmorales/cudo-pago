@@ -19,6 +19,17 @@ const iso=s=>new Date(s).toISOString();
 const ledgerChannel=channel=>channel==='CASH'?'CAJA_CLUB':channel==='BANK_TRANSFER'?'BANCO':null;
 const digest=x=>createHash('sha256').update(String(x)).digest('hex');
 const nonempty=r=>r.some(v=>v!==''&&v!==undefined&&v!==null);
+// This is NOT a signature verification: it binds the caller's requested
+// projection to an independently fetched readback from the existing private
+// CUDO D1 treasury source. The adapter must fetch the readback itself using
+// its authorized institutional service context, never echo caller input.
+function sameCudoCanonicalFinancialSource(requested,independentlyRead){
+ if(!independentlyRead||typeof independentlyRead!=='object')return false;
+ // Bind the entire immutable contract (orders, amounts, reconciliations,
+ // provenance and source proofs) rather than trusting sourceRevision alone.
+ return same(requested,independentlyRead);
+}
+
 
 function normalizeBook(book){
  if(!book||typeof book!=='object')failure('CUDO_INSTITUTIONAL_BOOK_MISSING');
@@ -122,23 +133,36 @@ export async function applyCudoBonosInstitutionalCashSync({source,adapter,record
  if(!adapter||typeof adapter.withInstitutionalExclusiveLock!=='function'||
     typeof adapter.readBook!=='function'||typeof adapter.batchWriteAndReadback!=='function')
   failure('CUDO_INSTITUTIONAL_SINGLE_WRITER_LOCK_REQUIRED');
+ // One cannot settle CASH or BANK from a caller-supplied projection, even
+ // when the caller included a plausible sourceRevision and evidence digest.
+ // The production adapter must fetch its own source from the original
+ // authorization-protected CUDO D1 treasury read model.
+ if(typeof adapter.readAuthoritativeCudoFinancialSource!=='function')
+  failure('CUDO_INSTITUTIONAL_AUTHENTICATED_D1_SOURCE_NOT_WIRED');
  // A friendly email in the source payload is not an operator authorization.
  // The trusted Sheets adapter must attest its actual Google account before
  // any financial operation (or dry-run with PII/private institutional data).
  if(typeof adapter.authorizedInstitutionalPrincipal!=='function'||
     await adapter.authorizedInstitutionalPrincipal()!=='sistemas@cudo.cl')
   failure('CUDO_INSTITUTIONAL_AUTHENTICATED_PRINCIPAL_REQUIRED');
- const plan=planCudoBonosInstitutionalCashSync({source,existingBook:await adapter.readBook(),recordedAt});
+ const trusted=await adapter.readAuthoritativeCudoFinancialSource();
+ if(!sameCudoCanonicalFinancialSource(source,trusted))
+  failure('CUDO_INSTITUTIONAL_D1_SOURCE_READBACK_MISMATCH');
+ const plan=planCudoBonosInstitutionalCashSync({source:trusted,existingBook:await adapter.readBook(),recordedAt});
  if(!apply)return {...plan,status:'DRY_RUN',writesApplied:0};
  if(!plan.planned.length)return {...plan,status:'NOOP_ALREADY_CURRENT',writesApplied:0};
  return adapter.withInstitutionalExclusiveLock(async()=>{
-  // Source-revision/CAS-like readback under exclusive writer lock, not
-  // concurrent append calls. Underlying adapter must batch atomically.
-  const current=planCudoBonosInstitutionalCashSync({source,existingBook:await adapter.readBook(),recordedAt});
+  // Lock applies to this institution's Sheets writer. Re-fetch D1 under
+  // that lock so a new cash count, reversal or reconciliation cannot be
+  // silently booked using an earlier caller snapshot.
+  const trustedUnderLock=await adapter.readAuthoritativeCudoFinancialSource();
+  if(!sameCudoCanonicalFinancialSource(trusted,trustedUnderLock))
+   failure('CUDO_INSTITUTIONAL_D1_SOURCE_CHANGED_BEFORE_COMMIT');
+  const current=planCudoBonosInstitutionalCashSync({source:trustedUnderLock,existingBook:await adapter.readBook(),recordedAt});
   if(!same(current.planned,plan.planned))failure('CUDO_INSTITUTIONAL_SOURCE_CHANGED_BEFORE_COMMIT');
   const write=await adapter.batchWriteAndReadback({spreadsheetId:SHEET_ID,mutations:current.planned});
   if(write?.verified!==true||write.applied!==current.planned.length)failure('CUDO_INSTITUTIONAL_POST_WRITE_UNVERIFIED');
-  const check=planCudoBonosInstitutionalCashSync({source,existingBook:await adapter.readBook(),recordedAt});
+  const check=planCudoBonosInstitutionalCashSync({source:trustedUnderLock,existingBook:await adapter.readBook(),recordedAt});
   if(check.planned.length!==0)failure('CUDO_INSTITUTIONAL_FINAL_READBACK_INCOMPLETE');
   return {...plan,status:'APPLIED_AND_VERIFIED',writesApplied:plan.planned.length,dryRun:false};
  });
