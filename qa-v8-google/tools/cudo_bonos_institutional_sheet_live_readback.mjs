@@ -19,6 +19,14 @@ export function inspectInstitutionalHeaderReadback(book){
 }
 export async function readInstitutionalSchemaWithOriginalOAuth(){
  const token=await getAccessToken(),data={};
+ // Google Sheets sharing alone is NOT an authorization to book real money.
+ // Verify the OAuth subject against the CUDO operator selected by the owner.
+ const identity=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{
+  headers:{authorization:'Bearer '+token,accept:'application/json'}});
+ if(!identity.ok)throw Error('GOOGLE_OAUTH_OPERATOR_IDENTITY_READBACK_REQUIRED');
+ const who=await identity.json();
+ if(who?.email_verified!==true||String(who.email||'').toLowerCase()!=='sistemas@cudo.cl')
+  throw Error('GOOGLE_OAUTH_CUDO_INSTITUTIONAL_OPERATOR_MISMATCH');
  for(const spec of Object.values(SHEETS)){
   const last=String.fromCharCode(64+spec.header.length);
   // Header and first historic row are sufficient for schema validation.
