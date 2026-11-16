@@ -25,6 +25,9 @@ on:
       - 'docs/CUDO_INTENCION_0_CLUB_OS_PROPIA_20261112.md'
       - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
       - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/apps-script/CudoBonosCajaReadiness.gs'
+      - 'qa-v8-google/tools/certify_cudo_bonos_existing_scriptlock.mjs'
+      - 'qa-v8-google/tools/readback_existing_work_script_project.mjs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
       - 'qa-v8-google/operacion/**'
       - 'qa-v8-google/data/operacion.json'
@@ -45,6 +48,9 @@ on:
       - 'docs/CUDO_INTENCION_0_CLUB_OS_PROPIA_20261112.md'
       - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
       - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/apps-script/CudoBonosCajaReadiness.gs'
+      - 'qa-v8-google/tools/certify_cudo_bonos_existing_scriptlock.mjs'
+      - 'qa-v8-google/tools/readback_existing_work_script_project.mjs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
       - 'qa-v8-google/operacion/**'
       - 'qa-v8-google/data/operacion.json'
@@ -62,6 +68,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Certify existing CUDO Apps Script operator identity and cash LockService in QA fixture
+        run: node qa-v8-google/tools/certify_cudo_bonos_existing_scriptlock.mjs
+
       - name: Validate syntax
         run: |
           node --check qa-v8-google/tools/certify_shared_object_contract.mjs
@@ -86,3 +95,20 @@ jobs:
         run: node qa-v8-google/tools/certify_work_financial_effects.mjs
       - name: Certify CUDO Web operational projection
         run: node qa-v8-google/tools/certify_operational_web_projection.mjs
+
+
+  existing-work-script-project-readback:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CUDO_GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_ID }}
+      CUDO_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.CUDO_GOOGLE_OAUTH_CLIENT_SECRET }}
+      CUDO_GOOGLE_REFRESH_TOKEN: ${{ secrets.CUDO_GOOGLE_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Read exact original CUDO Work State private Apps Script project
+        run: node qa-v8-google/tools/readback_existing_work_script_project.mjs

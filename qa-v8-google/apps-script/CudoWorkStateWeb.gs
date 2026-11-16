@@ -48,6 +48,26 @@ function cudoWorkActions_(state){
 function cudoWorkRender_(message){
   const reviewer=cudoWorkReviewer_();
   const rows=cudoWorkRows_();
+  // Show the institutional readiness proof in the EXISTING private panel.
+  // A failed probe is displayed as a GAP, never escalated into a write.
+  var cashReadiness;
+  try{
+    cashReadiness=cudoBonosCajaReadiness_();
+  }catch(error){
+    cashReadiness={identityVerified:false,scriptLockVerified:false,
+      headersVerified:false,financialWriterEnabled:false,
+      reason:'CUDO_CASH_SOURCE_READBACK_UNAVAILABLE'};
+  }
+  const cashPreflightStatus=cashReadiness.identityVerified&&
+    cashReadiness.scriptLockVerified&&cashReadiness.headersVerified
+    ?'Identidad y bloqueo de Apps Script comprobados · escritura de dinero inactiva'
+    :'Caja: verificación técnica pendiente · escritura de dinero inactiva';
+  const cashPreflightCard='<article class="card">'+
+    '<div class="meta">CUDO · Caja institucional existente</div>'+
+    '<h2>Estado de la conexión de caja</h2>'+
+    '<p>'+cudoWorkEsc_(cashPreflightStatus)+'</p>'+
+    '<p><small>Contrato: CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1. '+
+    'No acredita cobros, saldos ni entrega de premios.</small></p></article>';
   const cards=rows.map(function(r){
     const actions=cudoWorkActions_(r.STATE).map(function(a){
       return '<button name="action" value="'+cudoWorkEsc_(a[0])+'">'+cudoWorkEsc_(a[1])+'</button>';
@@ -99,7 +119,7 @@ function cudoWorkRender_(message){
     '<main class="wrap content">'+
     (message?'<div class="msg">'+cudoWorkEsc_(message)+'</div>':'')+
     '<div class="note">QA: las acciones se procesan por el motor canónico; WORK_CONTROL es sólo una proyección.</div>'+
-    (cards||'<div class="card">No hay trabajo operacional.</div>')+
+    cashPreflightCard+\n    (cards||'<div class="card">No hay trabajo operacional.</div>')+
     '</main></body></html>';
 
   return HtmlService.createHtmlOutput(html)
