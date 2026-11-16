@@ -6,6 +6,10 @@ import vm from 'node:vm';
 const source=readFileSync(new URL('../apps-script/CudoBonosCajaReadiness.gs',import.meta.url),'utf8');
 const panel=readFileSync(new URL('../apps-script/CudoWorkStateWeb.gs',import.meta.url),'utf8');
 const deploy=readFileSync(new URL('../../.github/workflows/deploy-cudo-work-state-web-qa.yml',import.meta.url),'utf8');
+// Compile BOTH real Apps Script modules, not only the fixture contract.
+// Google refuses invalid .gs source in projects.updateContent (HTTP 400).
+new vm.Script(panel,{filename:'CudoWorkStateWeb.gs'});
+new vm.Script(source,{filename:'CudoBonosCajaReadiness.gs'});
 const tables={
  CUDO_LEDGER_V1:['FECHA','FLUJO','CUENTA','DOMINIO','ITEM','MONTO','PROYECTO','DESCRIPCION','REGISTRADO_POR','TIMESTAMP_REG','TX_ID'],
  EFD_LOG_V1:['TX_ID','LADO','ACTOR','MONTO','FECHA','AREA','CONTEXTO','ETIQUETA','DESCRIPCION','USUARIO','TIMESTAMP_REG'],

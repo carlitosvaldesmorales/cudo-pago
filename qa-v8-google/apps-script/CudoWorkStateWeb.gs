@@ -119,7 +119,8 @@ function cudoWorkRender_(message){
     '<main class="wrap content">'+
     (message?'<div class="msg">'+cudoWorkEsc_(message)+'</div>':'')+
     '<div class="note">QA: las acciones se procesan por el motor canónico; WORK_CONTROL es sólo una proyección.</div>'+
-    cashPreflightCard+\n    (cards||'<div class="card">No hay trabajo operacional.</div>')+
+    cashPreflightCard+
+    (cards||'<div class="card">No hay trabajo operacional.</div>')+
     '</main></body></html>';
 
   return HtmlService.createHtmlOutput(html)
