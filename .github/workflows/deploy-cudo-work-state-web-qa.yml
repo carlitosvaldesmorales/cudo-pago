@@ -90,6 +90,24 @@ jobs:
           previous=existing[0].get('deploymentConfig') or {}
           if previous.get('scriptId')!=sid or previous.get('manifestFileName')!='appsscript':
             raise SystemExit('Fail closed: original CUDO deployment identity changed')
+          # Idempotent release: an earlier retry may already have changed the
+          # SAME stable deployment even if its post-write GET was stale.
+          old_version=previous.get('versionNumber')
+          if isinstance(old_version,int) and old_version>0:
+            old_live=req(base+'/content?versionNumber='+str(old_version))
+            old_work=[f for f in old_live.get('files',[]) if f.get('name')=='CudoWorkStateWeb']
+            old_cash=[f for f in old_live.get('files',[]) if f.get('name')=='CudoBonosCajaReadiness']
+            if len(old_work)==1 and old_work[0].get('source')==source and \
+               len(old_cash)==1 and old_cash[0].get('source')==cash_source:
+              receipt={'ok':True,'scriptId':sid,'deploymentId':stable,
+                'versionNumber':old_version,'existingDeploymentUpdated':False,
+                'noChangeNeeded':True,'sourceVerified':True,'cash_writer_enabled':False,
+                'newProjectCreated':False,'newDeploymentCreated':False,
+                'institutional_operator_verified_at_deploy':False,
+                'production_write':False,'live_transition_executed':False}
+              pathlib.Path('work-state-web-deployment.json').write_text(json.dumps(receipt,indent=2))
+              print(json.dumps(receipt,indent=2))
+              sys.exit(0)
           current=req(base+'/content')
           files=[]
           manifest=None
@@ -136,9 +154,23 @@ jobs:
           did=dep['deploymentId']
           if did!=stable or dep.get('deploymentConfig',{}).get('versionNumber')!=vn:
             raise SystemExit('Fail closed: existing CUDO Work State deployment not updated')
-          verify_deploy=req(base+'/deployments/'+stable)
-          if verify_deploy.get('deploymentConfig',{}).get('versionNumber')!=vn:
-            raise SystemExit('Fail closed: deployment revision readback mismatch')
+          # Google Apps Script deployment metadata can lag the successful PUT.
+          # Require the new version to appear in a bounded GET readback; if
+          # another actor supersedes it, fail closed rather than pretending GO.
+          observed_version=None
+          for attempt in range(1,9):
+            verify_deploy=req(base+'/deployments/'+stable)
+            observed_version=verify_deploy.get('deploymentConfig',{}).get('versionNumber')
+            if str(observed_version)==str(vn):
+              break
+            if attempt<8:
+              import time
+              time.sleep(min(attempt,3))
+          else:
+            print(json.dumps({'contract':'CUDO_STABLE_DEPLOYMENT_REVISION_GAP_V1',
+              'expected_version':str(vn),'observed_version':str(observed_version),
+              'attempts':8,'money_writer_enabled':False}),file=sys.stderr)
+            raise SystemExit('Fail closed: original deployment revision did not converge')
           live=req(base+'/content?versionNumber='+str(vn))
           if not any(f.get('name')=='CudoBonosCajaReadiness' and
                      'CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1' in f.get('source','')
