@@ -16,6 +16,8 @@ on:
       - 'qa-v8-google/contracts/cudo-operational-sovereignty-v1.json'
       - 'qa-v8-google/tools/certify_operational_sovereignty.mjs'
       - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/apps-script/CudoBonosCajaReadiness.gs'
+      - 'qa-v8-google/tools/certify_cudo_bonos_existing_scriptlock.mjs'
       - '.github/workflows/certify-cudo-operational-work-state.yml'
       - 'docs/CUDO_AUTONOMIA_OPERACIONAL_20261112.md'
       - '.github/workflows/validate-v8-partidos-logos.yml'
@@ -109,6 +111,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+
+      - name: Comprobar identidad y bloqueo de caja en el Apps Script CUDO existente
+        run: node qa-v8-google/tools/certify_cudo_bonos_existing_scriptlock.mjs
 
       - name: Certificar autonomía operativa propia de CUDO
         run: node qa-v8-google/tools/certify_operational_sovereignty.mjs

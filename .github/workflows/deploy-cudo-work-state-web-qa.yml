@@ -5,7 +5,7 @@ on:
     branches:
       - 'fix/cudo-root-acceptance-gate-20260921'
     paths:
-      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'
+      - 'qa-v8-google/apps-script/CudoWorkStateWeb.gs'\n      - 'qa-v8-google/apps-script/CudoBonosCajaReadiness.gs'
       - '.github/workflows/deploy-cudo-work-state-web-qa.yml'
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
           import json,os,pathlib,urllib.parse,urllib.request
 
           sid='1NI73jgr_PFvrsHy27ejE_kLbTWwLbM1Y8Nyc6mRaWlcCaLlZrpEB3Ud8'
-          source=pathlib.Path('qa-v8-google/apps-script/CudoWorkStateWeb.gs').read_text()
+          source=pathlib.Path('qa-v8-google/apps-script/CudoWorkStateWeb.gs').read_text()\n          cash_source=pathlib.Path('qa-v8-google/apps-script/CudoBonosCajaReadiness.gs').read_text()
 
           body=urllib.parse.urlencode({
             'client_id':os.environ['CUDO_GOOGLE_OAUTH_CLIENT_ID'],
@@ -62,7 +62,7 @@ jobs:
           files=[]
           manifest=None
           for f in current.get('files',[]):
-            if f.get('name')=='CudoWorkStateWeb':
+            if f.get('name') in ('CudoWorkStateWeb','CudoBonosCajaReadiness'):
               continue
             if f.get('name')=='appsscript' and f.get('type')=='JSON':
               manifest=json.loads(f.get('source') or '{}')
@@ -74,13 +74,19 @@ jobs:
           manifest['timeZone']='America/Santiago'
           manifest['webapp']={'access':'MYSELF','executeAs':'USER_DEPLOYING'}
           files.append({'name':'appsscript','type':'JSON','source':json.dumps(manifest,separators=(',',':'))})
-          files.append({'name':'CudoWorkStateWeb','type':'SERVER_JS','source':source})
+          files.append({'name':'CudoWorkStateWeb','type':'SERVER_JS','source':source})\n          files.append({'name':'CudoBonosCajaReadiness','type':'SERVER_JS','source':cash_source})
 
           req(base+'/content','PUT',{'files':files})
           verify=req(base+'/content')
           found=[f for f in verify.get('files',[]) if f.get('name')=='CudoWorkStateWeb']
           if len(found)!=1 or found[0].get('source')!=source:
             raise SystemExit('Fail closed: CudoWorkStateWeb source verification failed')
+          cash_found=[f for f in verify.get('files',[]) if f.get('name')=='CudoBonosCajaReadiness']
+          if len(cash_found)!=1 or cash_found[0].get('source')!=cash_source:
+            raise SystemExit('Fail closed: CUDO institutional cash preflight source verification failed')
+          if 'SpreadsheetApp' not in cash_source or 'LockService.getScriptLock' not in cash_source:
+            raise SystemExit('Fail closed: CUDO institution preflight missing lock/source')
+
 
           version=req(base+'/versions','POST',{
             'description':'CUDO Work State QA '+os.environ.get('GITHUB_SHA','')[:12]
@@ -102,7 +108,7 @@ jobs:
             'access':'MYSELF',
             'executeAs':'USER_DEPLOYING',
             'sourceVerified':True,
-            'production_write':False,
+            'cash_writer_enabled':False,\n            'institutional_operator_verified_at_deploy':False,\n            'production_write':False,
             'live_transition_executed':False
           }
           pathlib.Path('work-state-web-deployment.json').write_text(json.dumps(out,indent=2))
