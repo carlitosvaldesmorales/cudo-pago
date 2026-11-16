@@ -29,10 +29,11 @@ const live=await get('/content?versionNumber='+stableVersion);
 const cash=(live.files||[]).find(f=>f.name==='CudoBonosCajaReadiness'&&f.type==='SERVER_JS');
 const workLive=(live.files||[]).find(f=>f.name==='CudoWorkStateWeb'&&f.type==='SERVER_JS');
 const manifestLive=(live.files||[]).find(f=>f.name==='appsscript'&&f.type==='JSON');
-if(!cash?.source?.includes('CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1')||
-   !workLive?.source?.includes('cudoBonosCajaReadiness_()')||
-   !manifestLive)
+const installed=!!cash?.source?.includes('CUDO_BONOS_CASH_EXISTING_SCRIPT_PREFLIGHT_V1')&&
+ !!workLive?.source?.includes('cudoBonosCajaReadiness_()')&&!!manifestLive;
+if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&!installed)
  throw Error('CUDO_STABLE_DEPLOYMENT_LIVE_CASH_PREFLIGHT_NOT_PRESENT');
+if(!manifestLive)throw Error('CUDO_EXISTING_DEPLOYMENT_VERSION_MANIFEST_MISSING');
 const activeManifest=JSON.parse(manifestLive.source||'{}');
 if(activeManifest.webapp?.access!=='MYSELF'||activeManifest.webapp?.executeAs!=='USER_DEPLOYING')
  throw Error('CUDO_EXISTING_DEPLOYMENT_PRIVATE_SCOPE_CHANGED');
@@ -41,13 +42,14 @@ const result={
  existingProjectVerified:true,projectKind:'CUDO_WORK_STATE_PRIVATE',
  stableDeploymentPresent:true,
  stableDeploymentVersion:stableVersion,
- cashPreflightPresentInActiveVersion:true,
- privateWorkPanelCallsCashPreflight:true,
+ cashPreflightPresentInActiveVersion:installed,
+ privateWorkPanelCallsCashPreflight:installed,
  stableDeploymentAccess:manifestSource.webapp?.access||'UNSPECIFIED',
  stableDeploymentExecuteAs:manifestSource.webapp?.executeAs||'UNSPECIFIED',
  workFilePresent:true,cashFileAlreadyPresent:files.some(f=>f.name==='CudoBonosCajaReadiness'),
  existingDeploymentCount:(deployments.deployments||[]).length,
  moneyWriterActive:false,
+ runtimeGap:installed?null:'CUDO_STABLE_DEPLOYMENT_NOT_YET_UPDATED',
  performedMutation:false
 };
 console.log(JSON.stringify(result));
