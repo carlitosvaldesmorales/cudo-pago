@@ -41,6 +41,11 @@ if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&!installed)
  throw Error('CUDO_STABLE_DEPLOYMENT_LIVE_CASH_PREFLIGHT_NOT_PRESENT');
 if(!manifestLive)throw Error('CUDO_EXISTING_DEPLOYMENT_VERSION_MANIFEST_MISSING');
 const activeManifest=JSON.parse(manifestLive.source||'{}');
+const activeScopes=activeManifest.oauthScopes;
+const headScopes=manifestSource.oauthScopes;
+// Scopes are permissions metadata, not tokens or identities. Never print
+// private document contents, OAuth token or contact data.
+const scope='https://www.googleapis.com/auth/userinfo.email';
 if(activeManifest.webapp?.access!=='MYSELF'||activeManifest.webapp?.executeAs!=='USER_DEPLOYING')
  throw Error('CUDO_EXISTING_DEPLOYMENT_PRIVATE_SCOPE_CHANGED');
 const result={
@@ -50,6 +55,12 @@ const result={
  stableDeploymentVersion:stableVersion,
  cashPreflightPresentInActiveVersion:installed,
  activeSourceIdenticalToRepo:activeSourceIdentical,
+ headExplicitScopes:Array.isArray(headScopes),
+ headOauthScopeCount:Array.isArray(headScopes)?headScopes.length:0,
+ activeExplicitScopes:Array.isArray(activeScopes),
+ activeOauthScopeCount:Array.isArray(activeScopes)?activeScopes.length:0,
+ headUserinfoEmailScopeGranted:Array.isArray(headScopes)&&headScopes.includes(scope),
+ activeUserinfoEmailScopeDeclared:Array.isArray(activeScopes)&&activeScopes.includes(scope),
  privateWorkPanelCallsCashPreflight:installed,
  stableDeploymentAccess:manifestSource.webapp?.access||'UNSPECIFIED',
  stableDeploymentExecuteAs:manifestSource.webapp?.executeAs||'UNSPECIFIED',
