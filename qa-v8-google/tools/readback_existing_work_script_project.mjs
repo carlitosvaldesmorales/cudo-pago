@@ -18,15 +18,28 @@ const original=files.filter(f=>f.name==='CudoWorkStateWeb'&&f.type==='SERVER_JS'
 const manifest=files.find(f=>f.name==='appsscript'&&f.type==='JSON');
 if(original.length!==1||!manifest)throw Error('CUDO_EXISTING_SCRIPT_PROJECT_NOT_CUDO_WORK_STATE');
 const manifestSource=JSON.parse(manifest.source||'{}');
-const deployments=await get('/deployments?pageSize=200');
-const known=(deployments.deployments||[]).find(d=>d.deploymentId===stable);
-if(!known)throw Error('EXISTING_STABLE_CUDO_WORK_DEPLOYMENT_MISSING');
-const stableVersion=Number(known.deploymentConfig?.versionNumber);
-if(!Number.isSafeInteger(stableVersion)||stableVersion<=0)
- throw Error('EXISTING_WORK_DEPLOYMENT_VERSION_UNVERIFIED');
-// Verify the IMMUTABLE version actually serving the existing public URL,
-// not merely the editable HEAD source that an incomplete deploy can change.
-const live=await get('/content?versionNumber='+stableVersion);
+// Google Apps Script GET metadata can lag a successful deployments.update.
+// In the deploy workflow we require convergence; in PR QA this remains a
+// single read-only probe. Never guess a version or use mutable HEAD as proof.
+const requireLive=process.env.CUDO_REQUIRE_CASH_LIVE==='true';
+const scope='https://www.googleapis.com/auth/userinfo.email';
+let deployments,known,stableVersion,live,readbackAttempts=0;
+for(let attempt=0;attempt<(requireLive?8:1);attempt++){
+ readbackAttempts=attempt+1;
+ deployments=await get('/deployments?pageSize=200');
+ known=(deployments.deployments||[]).find(d=>d.deploymentId===stable);
+ if(!known)throw Error('EXISTING_STABLE_CUDO_WORK_DEPLOYMENT_MISSING');
+ stableVersion=Number(known.deploymentConfig?.versionNumber);
+ if(!Number.isSafeInteger(stableVersion)||stableVersion<=0)
+  throw Error('EXISTING_WORK_DEPLOYMENT_VERSION_UNVERIFIED');
+ live=await get('/content?versionNumber='+stableVersion);
+ if(!requireLive)break;
+ const manifestProbe=(live.files||[]).find(f=>f.name==='appsscript'&&f.type==='JSON');
+ const scopes=manifestProbe?JSON.parse(manifestProbe.source||'{}').oauthScopes:[];
+ if(Array.isArray(scopes)&&scopes.includes(scope))break;
+ if(attempt===7)throw Error('CUDO_USERINFO_SCOPE_NOT_CONVERGED_AFTER_8_GOOGLE_READBACKS');
+ await new Promise(resolve=>setTimeout(resolve,Math.min((attempt+1)*900,2700)));
+}
 const cash=(live.files||[]).find(f=>f.name==='CudoBonosCajaReadiness'&&f.type==='SERVER_JS');
 const workLive=(live.files||[]).find(f=>f.name==='CudoWorkStateWeb'&&f.type==='SERVER_JS');
 const manifestLive=(live.files||[]).find(f=>f.name==='appsscript'&&f.type==='JSON');
@@ -45,7 +58,6 @@ const activeScopes=activeManifest.oauthScopes;
 const headScopes=manifestSource.oauthScopes;
 // Scopes are permissions metadata, not tokens or identities. Never print
 // private document contents, OAuth token or contact data.
-const scope='https://www.googleapis.com/auth/userinfo.email';
 if(process.env.CUDO_REQUIRE_CASH_LIVE==='true'&&
   !(Array.isArray(activeScopes)&&activeScopes.includes(scope)))
  throw Error('CUDO_USERINFO_EMAIL_SCOPE_MISSING_FROM_LIVE_DEPLOYMENT');
@@ -56,6 +68,7 @@ const result={
  existingProjectVerified:true,projectKind:'CUDO_WORK_STATE_PRIVATE',
  stableDeploymentPresent:true,
  stableDeploymentVersion:stableVersion,
+ readbackAttempts:readbackAttempts,
  cashPreflightPresentInActiveVersion:installed,
  activeSourceIdenticalToRepo:activeSourceIdentical,
  headExplicitScopes:Array.isArray(headScopes),
